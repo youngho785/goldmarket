@@ -1,13 +1,13 @@
 // src/components/products/ProductCard.js
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { addFavorite, removeFavorite } from "../../services/favoritesService";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import { useFavorites } from "../../context/FavoritesContext";
+import { useAuthContext } from "../../context/AuthContext";
 
-// Card 컨테이너 스타일
 const Card = styled.div`
   border: 1px solid #ccc;
   padding: 16px;
@@ -19,24 +19,34 @@ const Card = styled.div`
   align-items: center;
   transition: transform 0.3s;
   cursor: pointer;
+
   &:hover {
     transform: translateY(-5px);
   }
+
+  /* 반응형: 작은 화면에서 카드 여백 및 패딩 축소 */
+  @media (max-width: 480px) {
+    padding: 12px;
+  }
 `;
 
-// 이미지 스타일
 const ProductImage = styled.img`
-  width: 300px;
-  height: 200px;
+  width: 100%;
+  max-width: 300px;   /* 이미지가 차지할 최대 너비 */
+  height: 200px;      /* 고정 높이 */
   object-fit: contain;
   margin-bottom: 12px;
   border-radius: 4px;
+
+  @media (max-width: 480px) {
+    max-width: 100%;
+  }
 `;
 
-// 이미지가 없을 때의 placeholder 스타일
 const Placeholder = styled.div`
-  width: 300px;
-  height: 200px;
+  width: 100%;
+  max-width: 300px;   /* 이미지가 없는 경우에도 동일 너비 */
+  height: 200px;      /* 고정 높이 */
   margin-bottom: 12px;
   display: flex;
   align-items: center;
@@ -44,45 +54,49 @@ const Placeholder = styled.div`
   background-color: ${({ theme }) => theme.colors.background || "#f8f9fa"};
   border: 1px solid #ccc;
   border-radius: 4px;
+
+  @media (max-width: 480px) {
+    max-width: 100%;
+  }
 `;
 
-// 제목 스타일
+// 이하 텍스트 스타일들
 const Title = styled.h3`
   font-size: 1.3em;
   margin-bottom: 8px;
   color: ${({ theme }) => theme.colors.text || "#333"};
+  text-align: center;
 `;
 
-// 설명 스타일
 const Description = styled.p`
   font-size: 1em;
   margin-bottom: 8px;
   text-align: center;
+  color: #555;
 `;
 
-// 가격 스타일
 const Price = styled.p`
   font-size: 1em;
   font-weight: bold;
   margin-bottom: 8px;
   color: ${({ theme }) => theme.colors.primary || "#007bff"};
+  text-align: center;
 `;
 
-// 카테고리 스타일
 const CategoryText = styled.p`
   font-size: 0.9em;
   margin-bottom: 8px;
   color: ${({ theme }) => theme.colors.secondary || "#666"};
+  text-align: center;
 `;
 
-// 타임스탬프 스타일
 const Timestamp = styled.p`
   font-size: 0.8em;
   color: #555;
   margin-bottom: 12px;
+  text-align: center;
 `;
 
-// 찜하기 버튼 스타일
 const FavoriteButton = styled.button`
   background-color: ${({ theme }) => theme.colors.primary || "#007bff"};
   color: #fff;
@@ -92,6 +106,7 @@ const FavoriteButton = styled.button`
   font-size: 1em;
   cursor: pointer;
   transition: background-color 0.3s;
+
   &:hover {
     background-color: ${({ theme }) => theme.colors.accent || "#0056b3"};
   }
@@ -100,6 +115,7 @@ const FavoriteButton = styled.button`
 export default function ProductCard({ product, isFavorited = false }) {
   const navigate = useNavigate();
   const { favorites, setFavorites } = useFavorites();
+  const { user } = useAuthContext();
   const [favorited, setFavorited] = useState(isFavorited);
 
   // createdAt 필드 처리 (Firestore Timestamp 또는 ISO 문자열)
@@ -108,41 +124,48 @@ export default function ProductCard({ product, isFavorited = false }) {
       ? new Date(product.createdAt.seconds * 1000)
       : new Date(product.createdAt);
 
-  // 전역 favorites 상태에 해당 상품이 있는지 확인
+  // 전역 favorites 상태에서 해당 상품이 찜 상태인지 확인
   useEffect(() => {
     const isFav = favorites.some(
-      (fav) => fav.favoriteProductId === product.id || fav.id === product.id
+      (fav) =>
+        (fav.favoriteProductId && fav.favoriteProductId === product.id) ||
+        (fav.id && fav.id === product.id)
     );
     setFavorited(isFav);
   }, [favorites, product.id]);
 
-  const handleToggleFavorite = async (e) => {
-    // 카드 클릭 이벤트 전파 방지 (상세페이지 이동 방지)
-    e.stopPropagation();
-    try {
-      if (favorited) {
-        await removeFavorite("defaultUser", product.id);
-        setFavorited(false);
-        setFavorites((prev) =>
-          prev.filter(
-            (fav) =>
-              fav.favoriteProductId !== product.id && fav.id !== product.id
-          )
-        );
-        alert("찜 목록에서 제거되었습니다.");
-      } else {
-        const newFavoriteId = await addFavorite("defaultUser", product);
-        setFavorited(true);
-        setFavorites((prev) => [
-          ...prev,
-          { ...product, id: newFavoriteId, favoriteProductId: product.id },
-        ]);
-        alert("찜 목록에 추가되었습니다.");
+  // 찜 토글
+  const handleToggleFavorite = useCallback(
+    async (e) => {
+      e.stopPropagation();
+      try {
+        const uid = user ? user.uid : "defaultUser";
+        if (favorited) {
+          await removeFavorite(uid, product.id);
+          setFavorited(false);
+          setFavorites((prev) =>
+            prev.filter(
+              (fav) =>
+                (fav.favoriteProductId && fav.favoriteProductId !== product.id) &&
+                (fav.id && fav.id !== product.id)
+            )
+          );
+          alert("찜 목록에서 제거되었습니다.");
+        } else {
+          const newFavoriteId = await addFavorite(uid, product);
+          setFavorited(true);
+          setFavorites((prev) => [
+            ...prev,
+            { ...product, id: newFavoriteId, favoriteProductId: product.id },
+          ]);
+          alert("찜 목록에 추가되었습니다.");
+        }
+      } catch (error) {
+        console.error("찜하기 작업 실패:", error);
       }
-    } catch (error) {
-      console.error("찜하기 작업 실패:", error);
-    }
-  };
+    },
+    [favorited, product, setFavorites, user]
+  );
 
   return (
     <Card onClick={() => navigate(`/product/${product.id}`)}>
@@ -165,7 +188,6 @@ export default function ProductCard({ product, isFavorited = false }) {
           {formatDistanceToNow(createdDate, { addSuffix: true, locale: ko })}
         </Timestamp>
       )}
-      {/* FavoriteButton의 클릭 시 이벤트 전파를 방지 */}
       <FavoriteButton onClick={handleToggleFavorite}>
         {favorited ? "찜하기 취소하기" : "찜하기"}
       </FavoriteButton>

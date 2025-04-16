@@ -18,6 +18,7 @@ export default function Profile() {
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState(null);
 
+  // 사용자 프로필 정보 불러오기
   useEffect(() => {
     if (user) {
       const getProfile = async () => {
@@ -63,10 +64,12 @@ export default function Profile() {
     }
   };
 
+  // 인풋 변경 핸들러
   const handleChange = (e) => {
     setProfile({ ...profile, [e.target.name]: e.target.value });
   };
 
+  // 프로필 수정 제출
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -116,12 +119,7 @@ export default function Profile() {
           </div>
           <div style={{ marginBottom: "10px" }}>
             <label>이메일: </label>
-            <input
-              type="text"
-              name="email"
-              value={profile.email}
-              disabled
-            />
+            <input type="text" name="email" value={profile.email} disabled />
           </div>
           <div style={{ marginBottom: "10px" }}>
             <label>전화번호: </label>
@@ -152,7 +150,7 @@ export default function Profile() {
           <p>이메일: {profile.email}</p>
           <p>전화번호: {profile.phone || "미등록"}</p>
           <button onClick={() => setEditing(true)}>프로필 수정</button>
-          {/* 거래 평가 내역 요약 추가 */}
+          {/* 판매자라면 자신의 거래 평가 내역 요약을 표시 */}
           <TransactionReviewsSummary sellerId={user.uid} />
         </div>
       )}

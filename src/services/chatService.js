@@ -12,8 +12,7 @@ import {
   onSnapshot,
   orderBy,
   getDoc,
-  arrayUnion,
-  increment
+  increment  // arrayUnion 제거
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 

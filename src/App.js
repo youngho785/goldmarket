@@ -6,10 +6,12 @@ import { theme } from "./theme";
 import GlobalStyle from "./styles/GlobalStyle";
 import Navbar from "./components/common/Navbar";
 import Footer from "./components/common/Footer";
-import Home from "./pages/Home";
+import LandingPage from "./pages/LandingPage";
+import TradeHome from "./pages/TradeHome";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Sell from "./pages/Sell";
+import MyProducts from "./pages/MyProducts";
 import ChatList from "./pages/ChatList";
 import ChatRoom from "./pages/ChatRoom";
 import ProductDetail from "./pages/ProductDetail";
@@ -21,6 +23,9 @@ import TransactionReviewsSummaryWrapper from "./pages/TransactionReviewsSummaryW
 import FCMNotifications from "./components/common/FCMNotifications";
 import useFCM from "./hooks/useFCM";
 import StatisticsDashboard from "./pages/StatisticsDashboard";
+import GoldExchange from "./pages/GoldExchange";
+import AdminGoldExchangeRequests from "./pages/AdminGoldExchangeRequests";
+import ScrollRestoration from "./components/ScrollRestoration";
 import { FavoritesProvider } from "./context/FavoritesContext";
 import { AuthProvider } from "./context/AuthContext";
 
@@ -35,29 +40,27 @@ export default function App() {
         <FavoritesProvider>
           <GlobalStyle />
           <BrowserRouter>
+            <ScrollRestoration />
             <Navbar />
             <FCMNotifications />
             <Routes>
-              <Route path="/" element={<Home />} />
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/trade" element={<TradeHome />} />
               <Route path="/sell" element={<Sell />} />
+              <Route path="/my-products" element={<MyProducts />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
-              {/* 채팅 */}
               <Route path="/chat" element={<ChatList />} />
               <Route path="/chat/:chatId" element={<ChatRoom />} />
               <Route path="/product/:id" element={<ProductDetail />} />
               <Route path="/favorites" element={<Favorites />} />
               <Route path="/profile" element={<Profile />} />
-              <Route
-                path="/transactionReview"
-                element={<TransactionReview targetUserId="defaultUser" />}
-              />
+              <Route path="/transactionReview" element={<TransactionReview targetUserId="defaultUser" />} />
               <Route path="/admin" element={<AdminDashboard />} />
-              <Route
-                path="/transactionReviews/:sellerId"
-                element={<TransactionReviewsSummaryWrapper />}
-              />
+              <Route path="/transactionReviews/:sellerId" element={<TransactionReviewsSummaryWrapper />} />
               <Route path="/statistics" element={<StatisticsDashboard />} />
+              <Route path="/gold-exchange" element={<GoldExchange />} />
+              <Route path="/AdminGoldExchangeRequests" element={<AdminGoldExchangeRequests />} />
             </Routes>
             <Footer />
           </BrowserRouter>

@@ -1,6 +1,6 @@
 // src/pages/TransactionReview.js
 import React, { useState } from "react";
-import { updateUserProfile, fetchUserProfile } from "../services/userService";
+import { updateUserProfile } from "../services/userService"; // fetchUserProfile 제거
 
 export default function TransactionReview({ targetUserId }) {
   const [rating, setRating] = useState(5);
@@ -8,17 +8,12 @@ export default function TransactionReview({ targetUserId }) {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState(null);
 
-  // 여기서는 단순히 targetUserId의 프로필에 평가 정보를 추가하는 예시입니다.
-  // 실제로는 거래 리뷰 테이블을 별도로 관리하고, 사용자 프로필의 신뢰도를 계산하는 로직이 필요합니다.
+  // targetUserId의 프로필에 평가 정보를 업데이트하는 예시입니다.
+  // 실제로는 거래 리뷰 테이블을 별도로 관리하는 것이 좋습니다.
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // 기존 사용자 프로필을 가져와서, 평점과 리뷰 정보를 업데이트합니다.
-      const profile = await fetchUserProfile(targetUserId);
       const newReview = { rating, comment, date: new Date().toISOString() };
-
-      // 기존 평점 정보가 있다면 평점 배열에 추가하거나, 단순 평균 평점을 업데이트하는 방식으로 처리할 수 있습니다.
-      // 여기서는 간단하게 "lastReview" 필드로 저장합니다.
       await updateUserProfile(targetUserId, {
         lastReview: newReview,
       });
@@ -58,7 +53,7 @@ export default function TransactionReview({ targetUserId }) {
             required
             rows={4}
             style={{ width: "100%" }}
-          />
+          ></textarea>
         </div>
         <button type="submit">평가 제출</button>
       </form>

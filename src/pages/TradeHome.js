@@ -1,8 +1,13 @@
-// src/pages/Home.js
-import React, { useEffect, useState } from "react";
-import { fetchProducts } from "../services/productService"; // 상품 데이터를 불러오는 함수
+// 예시: 디바운싱을 위한 훅 사용 예시 (lodash.debounce 사용)
+import debounce from "lodash.debounce";
+import React, { useEffect, useState, useCallback } from "react";
+import { Link } from "react-router-dom";
+import styled from "styled-components";
+import { fetchProducts } from "../services/productService";
 import ProductList from "../components/products/ProductList";
 import GoldPriceDisplay from "../components/common/GoldPriceDisplay";
+
+// ... (Styled Components 및 기타 코드 동일)
 
 export default function Home() {
   const [products, setProducts] = useState([]);
@@ -13,8 +18,8 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [maxDistance, setMaxDistance] = useState("");
   const [userLocation, setUserLocation] = useState(null);
+  const [locationError, setLocationError] = useState(null);
 
-  // 카테고리 옵션 설정
   const categoryOptions = ["14k(585)", "18k(750)", "24k", "골드바"];
 
   useEffect(() => {
@@ -32,8 +37,7 @@ export default function Home() {
     getProducts();
   }, []);
 
-  // 검색, 가격, 카테고리, 위치 기반 필터링 함수
-  const handleFilter = () => {
+  const filterProducts = useCallback(() => {
     let filtered = products;
     if (searchTerm.trim() !== "") {
       filtered = filtered.filter((product) =>
@@ -51,7 +55,6 @@ export default function Home() {
         (product) => product.category === selectedCategory
       );
     }
-    // 위치 기반 필터 (옵션)
     if (userLocation && maxDistance.trim() !== "") {
       const distanceLimit = parseFloat(maxDistance);
       filtered = filtered.filter((product) => {
@@ -72,23 +75,44 @@ export default function Home() {
       });
     }
     setDisplayProducts(filtered);
-  };
-
-  useEffect(() => {
-    handleFilter();
   }, [searchTerm, maxPrice, selectedCategory, maxDistance, products, userLocation]);
 
-  // Haversine 공식으로 두 좌표 간 거리 계산
+  // 디바운스 적용
+  const debouncedFilter = useCallback(debounce(filterProducts, 500), [filterProducts]);
+
+  useEffect(() => {
+    debouncedFilter();
+    // 정리: 필터 변경 시 타이머 정리
+    return debouncedFilter.cancel;
+  }, [searchTerm, maxPrice, selectedCategory, maxDistance, products, userLocation, debouncedFilter]);
+
+  // 위치 가져오기 및 에러 처리
+  useEffect(() => {
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setUserLocation({ latitude, longitude });
+        },
+        (error) => {
+          console.error("위치 정보를 가져오는데 실패했습니다:", error);
+          setLocationError("위치 정보를 가져오지 못했습니다.");
+        }
+      );
+    } else {
+      setLocationError("Geolocation API를 사용할 수 없습니다.");
+    }
+  }, []);
+
   function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
-    const R = 6371; // 지구 반지름 (km)
+    const R = 6371;
     const dLat = deg2rad(lat2 - lat1);
     const dLon = deg2rad(lon2 - lon1);
     const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.sin(dLat / 2) ** 2 +
       Math.cos(deg2rad(lat1)) *
         Math.cos(deg2rad(lat2)) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
+        Math.sin(dLon / 2) ** 2;
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   }
@@ -96,30 +120,17 @@ export default function Home() {
     return deg * (Math.PI / 180);
   }
 
-  // 사용자 위치 가져오기
-  useEffect(() => {
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          console.log("사용자 위치:", latitude, longitude);
-          setUserLocation({ latitude, longitude });
-        },
-        (error) => {
-          console.error("위치 정보를 가져오는데 실패했습니다:", error);
-        }
-      );
-    } else {
-      console.error("Geolocation API를 사용할 수 없습니다.");
-    }
-  }, []);
-
   if (loading) return <p>로딩 중...</p>;
 
   return (
     <div style={{ padding: "20px" }}>
+      <HeaderContainer>
+        <TitleLink to="/">귀금속 리사이클 중고거래</TitleLink>
+        <TitleLink to="/gold-exchange">귀금속 999.9랩 금교환</TitleLink>
+      </HeaderContainer>
       <h1>홈페이지</h1>
-      <GoldPriceDisplay />  {/* 금 시세 표시 */}
+      <GoldPriceDisplay />
+      {locationError && <p style={{color:"red"}}>{locationError}</p>}
       <div style={{ marginBottom: "20px" }}>
         <input
           type="text"
@@ -155,7 +166,7 @@ export default function Home() {
           style={{ marginRight: "10px" }}
         />
         <button
-          onClick={handleFilter}
+          onClick={filterProducts}
           style={{
             backgroundColor: "#007bff",
             color: "#fff",
@@ -172,3 +183,24 @@ export default function Home() {
     </div>
   );
 }
+
+// Header 컴포넌트 및 관련 스타일 (예시)
+const HeaderContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 40px;
+  border-bottom: 2px solid #eaeaea;
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+`;
+
+const TitleLink = styled(Link)`
+  font-size: 2em;
+  font-weight: bold;
+  text-decoration: none;
+  color: #007bff;
+  &:hover {
+    text-decoration: underline;
+  }
+`;

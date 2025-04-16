@@ -2,11 +2,12 @@
 import React, { useEffect, useState } from "react";
 import { fetchFavorites } from "../services/favoritesService";
 import ProductList from "../components/products/ProductList";
+import { useFavorites } from "../context/FavoritesContext";
 
 export default function Favorites() {
-  const [favorites, setFavorites] = useState([]);
+  const { favorites, setFavorites } = useFavorites();
   const [loading, setLoading] = useState(true);
-  const userId = "defaultUser"; // 실제 사용자 ID를 AuthContext 등을 통해 받아올 수 있습니다.
+  const userId = "defaultUser"; // 실제 사용자 ID는 AuthContext 등에서 받아오면 됩니다.
 
   useEffect(() => {
     async function getFavorites() {
@@ -20,15 +21,14 @@ export default function Favorites() {
       }
     }
     getFavorites();
-  }, [userId]);
+  }, [userId, setFavorites]);
 
   if (loading) return <p>로딩 중...</p>;
 
   return (
     <div style={{ padding: "20px" }}>
       <h1>찜 목록</h1>
-      {/* 각 ProductCard에 isFavorited prop을 true로 전달하여 버튼 텍스트가 '찜하기 취소하기'가 되도록 함 */}
-      <ProductList products={favorites.map(product => ({ ...product, isFavorited: true }))} />
+      <ProductList products={favorites} />
     </div>
   );
 }
