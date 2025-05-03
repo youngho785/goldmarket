@@ -1,20 +1,18 @@
 // src/components/common/Notifications.js
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { db } from "../../firebase/firebase";
-import {
-  collection,
-  query,
-  where,
-  orderBy,
-  onSnapshot
-} from "firebase/firestore";
+import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
-import { markNotificationAsRead } from "../../services/notificationService"; // 읽음 처리 함수 import
+import { markNotificationAsRead } from "../../services/notificationService";
+import { useNotificationContext } from "../../context/NotificationContext"; // 채팅 알림 카운트
 
 export default function Notifications({ userId }) {
   const [notifications, setNotifications] = useState([]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const navigate = useNavigate();
+  const { unreadChats, clearUnreadChats } = useNotificationContext();
 
   useEffect(() => {
     if (!userId) return;
@@ -29,25 +27,27 @@ export default function Notifications({ userId }) {
         const notis = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
         setNotifications(notis);
       },
-      (error) => {
-        console.error("알림 구독 에러:", error);
-      }
+      (error) => console.error("알림 구독 에러:", error)
     );
     return () => unsubscribe();
   }, [userId]);
 
-  // 알림 항목 클릭 시 해당 알림을 읽음 처리하는 함수
-  const handleNotificationClick = (notificationId) => {
+  const handleNotificationClick = (notificationId, link) => {
+    // 읽음 처리
     markNotificationAsRead(notificationId)
-      .then(() => {
-        // 알림 읽음 후, UI 업데이트(예: 목록에서 제거하거나, 스타일 변경)
-        // 여기서는 단순히 콘솔 로그로 확인합니다.
-        console.log(`Notification ${notificationId} marked as read.`);
-      })
-      .catch((err) => {
-        console.error("알림 읽음 처리 실패:", err);
-      });
+      .then(() => console.log(`Notification ${notificationId} marked as read.`))
+      .catch((err) => console.error("알림 읽음 처리 실패:", err));
+    setDropdownOpen(false);
+    if (link) navigate(link);
   };
+
+  const handleChatClick = () => {
+    clearUnreadChats();
+    setDropdownOpen(false);
+    navigate("/chat");
+  };
+
+  const totalBadge = notifications.filter((n) => !n.read).length + unreadChats;
 
   return (
     <div style={{ position: "relative" }}>
@@ -56,7 +56,7 @@ export default function Notifications({ userId }) {
         style={{ cursor: "pointer", position: "relative" }}
       >
         🔔
-        {notifications.length > 0 && (
+        {totalBadge > 0 && (
           <span
             style={{
               position: "absolute",
@@ -66,39 +66,56 @@ export default function Notifications({ userId }) {
               color: "white",
               borderRadius: "50%",
               padding: "2px 6px",
-              fontSize: "0.8em"
+              fontSize: "0.8em",
             }}
           >
-            {notifications.length}
+            {totalBadge}
           </span>
         )}
       </div>
+
       {dropdownOpen && (
         <div
           style={{
             position: "absolute",
             top: "120%",
             right: 0,
-            width: "300px",
+            width: "320px",
             background: "#fff",
             boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
             zIndex: 100,
             maxHeight: "400px",
-            overflowY: "auto"
+            overflowY: "auto",
           }}
         >
+          {/* 채팅 알림 섹션 */}
+          {unreadChats > 0 && (
+            <div
+              onClick={handleChatClick}
+              style={{
+                padding: "10px",
+                borderBottom: "1px solid #eee",
+                cursor: "pointer",
+                backgroundColor: "#f0f8ff",
+              }}
+            >
+              <strong>새 채팅 메시지 {unreadChats}건</strong>
+            </div>
+          )}
+
+          {/* 일반 알림 목록 */}
           {notifications.length === 0 ? (
             <p style={{ padding: "10px" }}>알림이 없습니다.</p>
           ) : (
             notifications.map((notif) => (
               <div
                 key={notif.id}
-                onClick={() => handleNotificationClick(notif.id)}
+                onClick={() => handleNotificationClick(notif.id, notif.link)}
                 style={{
                   padding: "10px",
                   borderBottom: "1px solid #eee",
                   cursor: "pointer",
-                  backgroundColor: notif.read ? "#fff" : "#f0f8ff"
+                  backgroundColor: notif.read ? "#fff" : "#f9f9f9",
                 }}
               >
                 <p>{notif.message}</p>

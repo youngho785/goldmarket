@@ -1,101 +1,135 @@
-// src/components/common/FCMNotifications.js
-import React, { useState, useEffect } from "react";
+// src/components/FCMNotifications.js
+import React, { useReducer, useEffect } from "react";
+import styled, { keyframes } from "styled-components";
 import useFCM from "../../hooks/useFCM";
+
+const fadeIn = keyframes`
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+`;
+
+const Wrapper = styled.div`
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const Toast = styled.div`
+  background: #333;
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 6px;
+  min-width: 260px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  cursor: ${({ clickable }) => (clickable ? "pointer" : "default")};
+  animation: ${fadeIn} 0.3s ease-out;
+`;
+
+const Header = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+
+  h4 {
+    margin: 0;
+    font-size: 1rem;
+  }
+  button {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 1.2rem;
+    cursor: pointer;
+  }
+`;
+
+const Body = styled.p`
+  margin: 0;
+  font-size: 0.9rem;
+`;
+
+
+// reducer & action types
+const ADD = "ADD";
+const REMOVE = "REMOVE";
+function reducer(state, action) {
+  switch (action.type) {
+    case ADD:
+      // 중복 체크 및 최대 3개 유지
+      if (state.some((n) => n.id === action.toast.id)) return state;
+      return [action.toast, ...state].slice(0, 3);
+    case REMOVE:
+      return state.filter((n) => n.id !== action.id);
+    default:
+      return state;
+  }
+}
 
 export default function FCMNotifications() {
   const { message } = useFCM();
-  const [notifications, setNotifications] = useState([]);
+  const [toasts, dispatch] = useReducer(reducer, []);
 
   useEffect(() => {
-    if (message && message.notification) {
-      // FCM 메시지의 notification 객체를 기반으로 새 알림 객체 생성
-      const newNotification = {
-        id: Date.now(), // 고유 ID (간단한 예시로 타임스탬프 사용)
-        title: message.notification.title,
-        body: message.notification.body,
-        clickAction: message.notification.clickAction || null, // 선택 사항: 클릭 시 이동 URL
-      };
+    const notif = message?.notification;
+    if (!notif) return;
 
-      // 알림 배열에 추가
-      setNotifications((prev) => [...prev, newNotification]);
+    const {
+      notificationId: id = Date.now(),
+      title = "알림",
+      body = "",
+      clickAction,
+    } = notif;
 
-      // 5초 후에 자동으로 알림 제거
-      const timer = setTimeout(() => {
-        setNotifications((prev) =>
-          prev.filter((n) => n.id !== newNotification.id)
-        );
-      }, 5000);
+    const toast = { id, title, body, clickAction };
+    dispatch({ type: ADD, toast });
 
-      return () => clearTimeout(timer);
-    }
+    // 5초 뒤 자동 제거
+    const timer = setTimeout(() => {
+      dispatch({ type: REMOVE, id });
+    }, 5000);
+
+    return () => clearTimeout(timer);
   }, [message]);
 
-  // 알림 클릭 시 clickAction이 있으면 해당 URL로 이동하고, 알림 제거
-  const handleNotificationClick = (notification) => {
-    if (notification.clickAction) {
-      window.location.href = notification.clickAction;
+  const handleClick = (toast) => {
+    if (toast.clickAction) {
+      window.location.href = toast.clickAction;
     }
-    setNotifications((prev) =>
-      prev.filter((n) => n.id !== notification.id)
-    );
+    dispatch({ type: REMOVE, id: toast.id });
   };
 
-  // 수동 해제
-  const handleDismiss = (id, e) => {
+  const handleDismiss = (e, id) => {
     e.stopPropagation();
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    dispatch({ type: REMOVE, id });
   };
 
-  if (notifications.length === 0) return null;
+  if (!toasts.length) return null;
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        top: "10px",
-        right: "10px",
-        zIndex: 1000,
-      }}
-    >
-      {notifications.map((notification) => (
-        <div
-          key={notification.id}
-          style={{
-            backgroundColor: "#333",
-            color: "#fff",
-            padding: "10px 20px",
-            borderRadius: "5px",
-            marginBottom: "10px",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
-            cursor: notification.clickAction ? "pointer" : "default",
-            minWidth: "250px",
-          }}
-          onClick={() => handleNotificationClick(notification)}
+    <Wrapper role="alert" aria-live="assertive">
+      {toasts.map((n) => (
+        <Toast
+          key={n.id}
+          onClick={() => handleClick(n)}
+          clickable={!!n.clickAction}
         >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <h4 style={{ margin: 0 }}>{notification.title}</h4>
+          <Header>
+            <h4>{n.title}</h4>
             <button
-              onClick={(e) => handleDismiss(notification.id, e)}
-              style={{
-                background: "transparent",
-                border: "none",
-                color: "#fff",
-                fontSize: "16px",
-                cursor: "pointer",
-              }}
+              aria-label="알림 닫기"
+              onClick={(e) => handleDismiss(e, n.id)}
             >
               &times;
             </button>
-          </div>
-          <p style={{ margin: 0 }}>{notification.body}</p>
-        </div>
+          </Header>
+          <Body>{n.body}</Body>
+        </Toast>
       ))}
-    </div>
+    </Wrapper>
   );
 }

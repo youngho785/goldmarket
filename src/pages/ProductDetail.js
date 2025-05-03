@@ -1,4 +1,5 @@
-// src/pages/ProductDetail.js
+  // src/pages/ProductDetail.js
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { db } from "../firebase/firebase";
@@ -13,7 +14,7 @@ import { createOrGetChatRoom } from "../services/chatService";
 import { checkPurchasePermission } from "../services/orderService";
 import styled from "styled-components";
 
-// 추가: Form 관련 컴포넌트 정의 (Label, Select, TextArea)
+// Form 관련 Styled-components
 const Label = styled.label`
   font-size: 1rem;
   font-weight: bold;
@@ -39,7 +40,7 @@ const TextArea = styled.textarea`
   resize: vertical;
 `;
 
-// Styled-components for the page layout
+// 페이지 레이아웃 Styled-components
 const Container = styled.div`
   padding: 20px;
   max-width: 1000px;
@@ -245,7 +246,11 @@ export default function ProductDetail() {
       {product.imageUrls?.length > 0 ? (
         <ImageSlider>
           {product.imageUrls.map((url, index) => (
-            <ProductImage key={index} src={url} alt={`${product.title} 이미지 ${index + 1}`} />
+            <ProductImage
+              key={index}
+              src={url}
+              alt={`${product.title} 이미지 ${index + 1}`}
+            />
           ))}
         </ImageSlider>
       ) : (
@@ -300,7 +305,9 @@ export default function ProductDetail() {
                 </form>
               </>
             ) : (
-              <InfoText>구매하신 내역이 없으므로 거래 평가를 남길 수 없습니다.</InfoText>
+              <InfoText>
+                구매하신 내역이 없으므로 거래 평가를 남길 수 없습니다.
+              </InfoText>
             )
           ) : (
             <InfoText>판매자는 거래 평가를 남길 수 없습니다.</InfoText>
@@ -312,7 +319,9 @@ export default function ProductDetail() {
             거래 완료 처리
           </Button>
         ) : (
-          <InfoText>거래가 완료되어야 리뷰 및 거래 평가를 남길 수 있습니다.</InfoText>
+          <InfoText>
+            거래가 완료되어야 리뷰 및 거래 평가를 남길 수 있습니다.
+          </InfoText>
         )
       )}
     </Container>
