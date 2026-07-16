@@ -1,0 +1,18 @@
+User-agent: *
+Disallow: /admin/
+Disallow: /api/
+Disallow: /checkout/
+Disallow: /cart/
+Disallow: /profile/
+Disallow: /chat/
+Disallow: /notifications/
+Disallow: /login
+Disallow: /register
+Allow: /
+
+Sitemap: https://koreagoldmarket.com/sitemap.xml
+Sitemap: https://koreagoldmarket.com/rss.xml
+
+# 네이버 검색로봇
+User-agent: Yeti
+Allow: /

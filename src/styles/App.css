@@ -1,0 +1,7 @@
+/* App 관련 기본 스타일 */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  

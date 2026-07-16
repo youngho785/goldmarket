@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+<channel>
+<title>한국골드마켓 최신 상품</title>
+<link>https://koreagoldmarket.com</link>
+<description>새로 등록된 귀금속 상품을 RSS로 받아보세요.</description>
+<language>ko</language>
+<lastBuildDate>Wed, 19 Nov 2025 07:53:05 GMT</lastBuildDate>
+
+    <item>
+      <title><![CDATA[상품등록 테스트]]></title>
+      <link>https://koreagoldmarket.com/products/5f67A1GRHKEEeyPnprue</link>
+      <description><![CDATA[상품등록 테스트입니다.
+한국골드마켓]]></description>
+      <pubDate>Sun, 31 Aug 2025 23:37:22 GMT</pubDate>
+    </item>
+
+    <item>
+      <title><![CDATA[테스트 2]]></title>
+      <link>https://koreagoldmarket.com/products/HCirxIALXdyUgbckWYkT</link>
+      <description><![CDATA[테스트 목적을 위한 것입니다.]]></description>
+      <pubDate>Sat, 06 Sep 2025 07:32:11 GMT</pubDate>
+    </item>
+
+    <item>
+      <title><![CDATA[테스트 3]]></title>
+      <link>https://koreagoldmarket.com/products/eU3iOrGFeexpP75YxqTP</link>
+      <description><![CDATA[테스트 입니다.
+판매상품이 아닙니다.1111]]></description>
+      <pubDate>Sat, 06 Sep 2025 12:54:01 GMT</pubDate>
+    </item>
+
+    <item>
+      <title><![CDATA[테스트]]></title>
+      <link>https://koreagoldmarket.com/products/pav4WGCOSLQS7gsW8XG9</link>
+      <description><![CDATA[상품등록 테스트입니다.]]></description>
+      <pubDate>Thu, 04 Sep 2025 09:12:41 GMT</pubDate>
+    </item>
+
+    <item>
+      <title><![CDATA[테스트 다]]></title>
+      <link>https://koreagoldmarket.com/products/rEZq1OR6oapSIiAaZ6WR</link>
+      <description><![CDATA[테스트다]]></description>
+      <pubDate>Thu, 18 Sep 2025 09:26:10 GMT</pubDate>
+    </item>
+</channel>
+</rss>

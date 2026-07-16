@@ -1,0 +1,55 @@
+{
+  "name": "goldmarket",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "start": "vite",
+    "build": "vite build",
+    "lint": "eslint .",
+    "fix": "eslint --fix .",
+    "preview": "vite preview",
+
+    "// 설명": "빌드 직전에 sitemap.xml / rss.xml 자동 생성",
+    "prebuild": "node scripts/generate-sitemap.mjs",
+
+    
+    "gen:sitemap": "node scripts/generate-sitemap.mjs",
+
+    
+    "deploy": "npm run build && firebase deploy --only hosting"
+  },
+  "dependencies": {
+    "chart.js": "^4.5.0",
+    "date-fns": "^4.1.0",
+    "firebase": "^12.1.0",
+    "framer-motion": "^12.23.12",
+    "lucide-react": "^0.541.0",
+    "react": "^19.1.1",
+    "react-chartjs-2": "^5.3.0",
+    "react-content-loader": "^7.1.1",
+    "react-datepicker": "^8.7.0",
+    "react-dom": "^19.1.1",
+    "react-icons": "^5.5.0",
+    "react-router-dom": "^7.8.2",
+    "styled-components": "^6.1.19"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.33.0",
+    "@types/react": "^19.1.10",
+    "@types/react-dom": "^19.1.7",
+    "@vitejs/plugin-react": "^5.0.1",
+    "autoprefixer": "^10.4.21",
+    "babel-plugin-styled-components": "^2.1.4",
+    "eslint": "^9.33.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.20",
+    "firebase-admin": "^13.4.0",
+    "globals": "^16.3.0",
+    "postcss": "^8.5.6",
+    "sharp": "^0.34.3",
+    "tailwindcss": "^3.4.17",
+    "vite": "^7.1.2"
+  }
+}

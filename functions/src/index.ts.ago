@@ -1,0 +1,875 @@
+// functions/src/index.ts
+import { initializeApp, getApps } from "firebase-admin/app";
+import { getFirestore, FieldValue, Firestore } from "firebase-admin/firestore";
+import {
+  getMessaging,
+  MulticastMessage,
+  type BatchResponse,
+  type SendResponse,
+} from "firebase-admin/messaging";
+import { onDocumentCreated, onDocumentWritten } from "firebase-functions/v2/firestore";
+import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { onSchedule } from "firebase-functions/v2/scheduler";
+
+/* ───────── Env & Admin ───────── */
+if (!getApps().length) initializeApp();
+const db = (): Firestore => getFirestore();
+
+const IN_EMULATOR = process.env.FUNCTIONS_EMULATOR === "true";
+const WEB_BASE_URL = (process.env.WEB_BASE_URL || process.env.APP_WEB_BASE_URL || "").replace(/\/$/, "");
+const DIRECT_PUSH_FOR_CHAT = process.env.DIRECT_PUSH_FOR_CHAT !== "false"; // 기본 true
+const WEBPUSH_SILENT = process.env.WEBPUSH_SILENT !== "false"; // 기본 true
+const WEBPUSH_URGENCY = process.env.WEBPUSH_URGENCY || "high";
+/** 롤업 모드에서는 채팅 알림 문서를 기본적으로 생성하지 않음 (true로 바꾸면 생성) */
+const USE_NOTIF_DOCS_FOR_CHAT = process.env.USE_NOTIF_DOCS_FOR_CHAT === "true";
+
+/* ───────── Types ───────── */
+type TS = FirebaseFirestore.Timestamp;
+
+interface ChatMessage {
+  sender?: string;
+  text?: string;
+  imageUrl?: string | null;
+  timestamp?: TS | FirebaseFirestore.FieldValue;
+  readBy?: string[];
+}
+
+interface ChatDoc {
+  participants?: string[];
+  participantsMap?: Record<string, boolean>;
+  productTitle?: string;
+  productId?: string;
+  unreadCount?: Record<string, number>;
+  lastMessage?: string;
+  lastMessageAt?: TS | FirebaseFirestore.FieldValue | null;
+  lastMessageId?: string;
+  lastMessageType?: "image" | "text";
+  lastSender?: string;
+  lastUpdated?: TS | FirebaseFirestore.FieldValue;
+  updatedAt?: TS | FirebaseFirestore.FieldValue;
+  lastSeenAt?: Record<string, TS | FirebaseFirestore.FieldValue>;
+}
+
+interface NotificationPayload {
+  type: string;
+  title: string;
+  body: string;
+  link?: string;
+  chatId?: string;
+  messageId?: string;
+  meta?: Record<string, unknown>;
+}
+
+interface GoldProductInput {
+  quantity?: number;
+  inputUnit?: "g" | "don";
+  goldType?: string;
+  exchangeType?: string;
+}
+
+interface GoldExchangeDoc {
+  userId?: string;
+  groupId?: string;
+  status?: "requested" | "scheduled" | "in_progress" | "completed" | "canceled" | "rejected";
+  createdAt?: TS | Date;
+  updatedAt?: TS | Date;
+  visitDate?: string;
+  visitTime?: string;
+  originalQuantity?: number;
+  inputUnit?: "g" | "don";
+  quantity?: number;
+  goldType?: string;
+  exchangeType?: string;
+  finalWeight?: number;
+  finalWeightDon?: number;
+  purityUsed?: number | null;
+  exchangeRatioUsed?: number | null;
+  calcVersion?: number;
+  barsPlan?: Record<string, unknown>;
+}
+
+type ReservedSlotsDoc = Record<
+  string,
+  undefined | true | boolean | string[] | Record<string, boolean>
+>;
+
+/* ───────── Gold utils ───────── */
+const DON_TO_GRAMS = 3.75 as const;
+const DEFAULT_PURITY: Record<string, number> = {
+  "14k(585) 제품(팔찌,목걸이, 반지,귀걸이, 발찌 등)": 0.52,
+  "18k(750) 제품(팔찌,목걸이, 반지,귀걸이, 발찌 등)": 0.7085,
+  "순금 995제품(목걸이,팔찌,반지,귀걸이)": 0.93,
+  "순금 999제품(목걸이,팔찌,반지,귀걸이)": 0.937,
+  "순금 열쇠": 0.925,
+  "순금 동물모양(거북이,두꺼비 등)": 0.92,
+  "순금 마고자 단추 / 색상이 들어있는 제품": 0.9,
+  "999 순금덩어리": 0.96,
+};
+const DEFAULT_EXCHANGE: Record<string, number> = { "999.9골드바": 1 };
+
+const roundTo3 = (n: number): number => {
+  if (!isFinite(n)) return 0;
+  const sign = n < 0 ? -1 : 1;
+  const t = Math.floor(Math.abs(n) * 10000 + 1e-8);
+  let thousands = Math.floor(t / 10);
+  const fourth = t % 10;
+  if (fourth >= 7) thousands += 1;
+  return sign * (thousands / 1000);
+};
+
+/** ✅ 반환 타입 위치 수정 (…): number 가 아니라 …): number { … } */
+function computeFinalWeightFromRates(params: {
+  grams: number;
+  goldType?: string;
+  exchangeType?: string;
+  purity?: Record<string, number>;
+  exchange?: Record<string, number>;
+}): number {
+  const { grams, goldType, exchangeType, purity, exchange } = params;
+  const p = (purity ?? DEFAULT_PURITY)[goldType ?? ""] ?? 0;
+  const e = (exchange ?? DEFAULT_EXCHANGE)[exchangeType ?? ""] ?? 1;
+  return roundTo3(grams * p * e);
+}
+
+/* ───────── Helpers ───────── */
+async function addNotificationForUser(
+  uid: string,
+  payload: NotificationPayload,
+  fixedId?: string
+): Promise<void> {
+  if (!uid) return;
+  const col = db().collection("notifications").doc(uid).collection("items");
+  const ref = fixedId ? col.doc(fixedId) : col.doc();
+  const base: FirebaseFirestore.DocumentData = {
+    ...payload,
+    createdAt: FieldValue.serverTimestamp(),
+    read: false,
+  };
+  if (fixedId) await ref.set(base, { merge: true });
+  else await ref.set(base);
+}
+
+function isTimestampLike(x: unknown): x is TS {
+  return !!x && typeof (x as TS).toDate === "function";
+}
+
+function toDate(v: unknown): Date | null {
+  if (v instanceof Date) return v;
+  if (isTimestampLike(v)) return v.toDate();
+  return null;
+}
+
+async function isUserActive(uid: string, cutoffMs = 60_000): Promise<boolean> {
+  try {
+    const p = await db().doc(`presence/${uid}`).get();
+    const updated = toDate(p.get("updatedAt"));
+    const active = p.get("active") === true;
+    if (!updated || !active) return false;
+    return Date.now() - updated.getTime() <= cutoffMs;
+  } catch {
+    return false;
+  }
+}
+
+async function getUserTokens(uid: string): Promise<string[]> {
+  const snap = await db().doc(`users/${uid}`).get();
+  const tokens = snap.get("fcmTokens");
+  return Array.isArray(tokens) ? tokens.filter((t: unknown) => typeof t === "string") : [];
+}
+
+async function sendMulticastChunked(
+  payload: Omit<MulticastMessage, "tokens">,
+  tokens: string[],
+  onBad?: (bad: string[]) => Promise<void> | void
+) {
+  const messaging = getMessaging();
+  const MAX = 500;
+  for (let i = 0; i < tokens.length; i += MAX) {
+    const chunk = tokens.slice(i, i + MAX);
+    const res: BatchResponse = await messaging.sendEachForMulticast({ tokens: chunk, ...payload });
+    const bad: string[] = [];
+    /** ✅ 콜백 파라미터 타입 명시해서 implicit any 제거 */
+    res.responses.forEach((r: SendResponse, idx: number) => {
+      const code = (r.error as { code?: string } | undefined)?.code ?? "";
+      if (
+        code.includes("registration-token-not-registered") ||
+        code.includes("messaging/registration-token-not-registered") ||
+        code.includes("invalid-argument")
+      ) {
+        bad.push(chunk[idx]);
+      }
+    });
+    if (bad.length && onBad) await onBad(bad);
+  }
+}
+
+function isSlotTaken(raw: ReservedSlotsDoc | undefined, visitDate?: string, visitTime?: string): boolean {
+  if (!raw || !visitDate || !visitTime) return false;
+  const v = (raw as Record<string, unknown>)[visitDate];
+  if (Array.isArray(v) && v.includes(visitTime)) return true;
+  if (v && typeof v === "object" && !Array.isArray(v) && (v as Record<string, boolean>)[visitTime]) return true;
+  if ((raw as Record<string, unknown>)[`${visitDate}.${visitTime}`]) return true;
+  if ((raw as Record<string, unknown>)[`${visitDate} ${visitTime}`]) return true;
+  return false;
+}
+
+/* ───────── 롤업: chatSummaries & chatMeta ─────────
+   chatSummaries/{uid}/threads/{chatId} :
+     { chatId, lastMessage, lastMessageAt, lastSender, productTitle, unread, updatedAt, lastSeenAt? }
+   chatMeta/{uid} :
+     { unreadTotal }
+*/
+async function upsertThreadForReceiver(params: {
+  uid: string;
+  chatId: string;
+  lastMessage: string;
+  lastMessageAt: FirebaseFirestore.FieldValue;
+  lastSender: string;
+  productTitle?: string;
+  incUnread: number; // 보통 1
+}) {
+  const { uid, chatId, lastMessage, lastMessageAt, lastSender, productTitle, incUnread } = params;
+
+  const threadRef = db().doc(`chatSummaries/${uid}/threads/${chatId}`);
+  const metaRef = db().doc(`chatMeta/${uid}`);
+
+  await db().runTransaction(async (tx) => {
+    const tSnap = await tx.get(threadRef);
+    const prevUnread = (tSnap.exists ? Number(tSnap.get("unread") || 0) : 0) || 0;
+    const nextUnread = prevUnread + incUnread;
+
+    const base: FirebaseFirestore.DocumentData = {
+      chatId,
+      lastMessage,
+      lastMessageAt,
+      lastSender,
+      unread: nextUnread,
+      updatedAt: FieldValue.serverTimestamp(),
+      ...(productTitle ? { productTitle } : {}),
+    };
+
+    if (tSnap.exists) tx.update(threadRef, base);
+    else tx.set(threadRef, base);
+
+    const mSnap = await tx.get(metaRef);
+    const cur = (mSnap.exists ? Number(mSnap.get("unreadTotal") || 0) : 0) || 0;
+    tx.set(metaRef, { unreadTotal: cur + incUnread }, { merge: true });
+  });
+}
+
+async function ensureThreadForSender(params: {
+  uid: string;
+  chatId: string;
+  lastMessage: string;
+  lastMessageAt: FirebaseFirestore.FieldValue;
+  lastSender: string;
+  productTitle?: string;
+}) {
+  const { uid, chatId, lastMessage, lastMessageAt, lastSender, productTitle } = params;
+  const threadRef = db().doc(`chatSummaries/${uid}/threads/${chatId}`);
+  const base: FirebaseFirestore.DocumentData = {
+    chatId,
+    lastMessage,
+    lastMessageAt,
+    lastSender,
+    unread: 0,
+    updatedAt: FieldValue.serverTimestamp(),
+    ...(productTitle ? { productTitle } : {}),
+  };
+  await threadRef.set(base, { merge: true });
+}
+
+/* ───────── 1) 메시지 onCreate → 롤업 + 비활동자 푸시 ───────── */
+export const onChatMessageCreate = onDocumentCreated(
+  { region: "asia-northeast3", document: "chats/{chatId}/messages/{messageId}" },
+  async (event) => {
+    try {
+      const snap = event.data;
+      if (!snap) return;
+      const { chatId, messageId } = event.params as { chatId: string; messageId: string };
+      const msg = snap.data() as ChatMessage;
+
+      const sender = msg.sender || "";
+      const raw = msg.imageUrl ? "[이미지]" : (msg.text || "").toString().trim() || "새 메시지";
+      const summary = raw.length > 140 ? `${raw.slice(0, 140)}…` : raw;
+
+      const chatRef = db().doc(`chats/${chatId}`);
+      const chatSnap = await chatRef.get();
+      if (!chatSnap.exists) return;
+      const chat = chatSnap.data() as ChatDoc;
+
+      const participants: string[] = Array.isArray(chat.participants)
+        ? chat.participants
+        : Object.keys(chat.participantsMap || {});
+      const receivers = participants.filter((u) => u && u !== sender);
+
+      // 1) 원본 chats 메타 + 각 수신자의 unreadCount 증가
+      await db().runTransaction(async (tx) => {
+        const nowTs = FieldValue.serverTimestamp();
+        const updates: Record<string, unknown> = {
+          lastMessage: summary,
+          lastMessageAt: nowTs,
+          lastMessageId: messageId,
+          lastMessageType: msg.imageUrl ? "image" : "text",
+          lastSender: sender,
+          lastUpdated: nowTs,
+          updatedAt: nowTs,
+        };
+        receivers.forEach((uid) => {
+          (updates as Record<string, unknown>)[`unreadCount.${uid}`] = FieldValue.increment(1);
+        });
+        tx.set(chatRef, updates, { merge: true });
+      });
+
+      // 2) 롤업: 수신자 threads + meta.unreadTotal 증가, 발신자 thread 보장
+      const now = FieldValue.serverTimestamp();
+      await Promise.all([
+        ensureThreadForSender({
+          uid: sender,
+          chatId,
+          lastMessage: summary,
+          lastMessageAt: now,
+          lastSender: sender,
+          productTitle: chat.productTitle,
+        }),
+        ...receivers.map((uid) =>
+          upsertThreadForReceiver({
+            uid,
+            chatId,
+            lastMessage: summary,
+            lastMessageAt: now,
+            lastSender: sender,
+            productTitle: chat.productTitle,
+            incUnread: 1,
+          })
+        ),
+      ]);
+
+      // 3) 푸시: 비활동자만 data-only (알림문서 생성 X)
+      const presence = await Promise.all(receivers.map((u) => isUserActive(u)));
+      const inactiveUids = receivers.filter((_, i) => !presence[i]);
+
+      if (!IN_EMULATOR && DIRECT_PUSH_FOR_CHAT && inactiveUids.length) {
+        const tokens = (await Promise.all(inactiveUids.map(getUserTokens))).flat();
+        if (tokens.length) {
+          const linkAbs = WEB_BASE_URL ? `${WEB_BASE_URL}/chat/${chatId}` : "";
+          const linkData = linkAbs || `/chat/${chatId}`;
+          const payload: Omit<MulticastMessage, "tokens"> = {
+            data: {
+              type: "chat_message",
+              chatId,
+              messageId,
+              sender: sender || "",
+              body: summary,
+              link: linkData,
+              preferBadge: "true",
+              silent: WEBPUSH_SILENT ? "true" : "false",
+            },
+            android: { priority: "high" },
+            apns: { payload: { aps: { "content-available": 1 } } },
+            webpush: {
+              headers: { Urgency: WEBPUSH_URGENCY, TTL: "600" },
+              fcmOptions: linkAbs ? { link: linkAbs } : undefined,
+            },
+          };
+          await sendMulticastChunked(payload, tokens, async (bad) => {
+            await Promise.all(
+              inactiveUids.map((uid) =>
+                db()
+                  .doc(`users/${uid}`)
+                  .update({
+                    fcmTokens: FieldValue.arrayRemove(...bad),
+                  })
+                  .catch(() => {})
+              )
+            );
+          });
+        }
+      }
+
+      // (옵션) 알림 문서 생성이 필요할 때만
+      if (USE_NOTIF_DOCS_FOR_CHAT) {
+        await Promise.all(
+          receivers.map(async (uid) => {
+            const ref = db().collection("notifications").doc(uid).collection("items").doc();
+            const data: FirebaseFirestore.DocumentData = {
+              type: "chat",
+              title: chat.productTitle || "새 채팅 메시지",
+              body: summary,
+              chatId,
+              messageId,
+              link: `/chat/${chatId}`,
+              createdAt: FieldValue.serverTimestamp(),
+              read: false,
+              meta: { chatId, messageId },
+            };
+            await ref.set(data);
+          })
+        );
+      }
+    } catch (err) {
+      console.error("[onChatMessageCreate] error:", err);
+    }
+  }
+);
+
+/* ───────── 1-b) 읽음 처리 callable → 롤업/메타/원본 동기화 ───────── */
+export const markChatAsReadCallable = onCall<{ chatId: string }>(
+  { region: "asia-northeast3" },
+  async (req) => {
+    const uid = req.auth?.uid;
+    if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+    const chatId = (req.data as { chatId?: string } | undefined)?.chatId;
+    if (!chatId) throw new HttpsError("invalid-argument", "chatId가 필요합니다.");
+
+    const chatRef = db().doc(`chats/${chatId}`);
+    const threadRef = db().doc(`chatSummaries/${uid}/threads/${chatId}`);
+    const metaRef = db().doc(`chatMeta/${uid}`);
+
+    let cleared = 0;
+    await db().runTransaction(async (tx) => {
+      const tSnap = await tx.get(threadRef);
+      const prevUnread = (tSnap.exists ? Number(tSnap.get("unread") || 0) : 0) || 0;
+      cleared = prevUnread;
+
+      const threadUpdate: FirebaseFirestore.DocumentData = {
+        unread: 0,
+        updatedAt: FieldValue.serverTimestamp(),
+        lastSeenAt: FieldValue.serverTimestamp(),
+      };
+      tx.set(threadRef, threadUpdate, { merge: true });
+
+      if (prevUnread > 0) {
+        const mSnap = await tx.get(metaRef);
+        const cur = (mSnap.exists ? Number(mSnap.get("unreadTotal") || 0) : 0) || 0;
+        tx.set(metaRef, { unreadTotal: Math.max(0, cur - prevUnread) }, { merge: true });
+      }
+
+      const chatUpdate: FirebaseFirestore.DocumentData = {
+        [`unreadCount.${uid}`]: 0,
+        [`lastSeenAt.${uid}`]: FieldValue.serverTimestamp(),
+        lastUpdated: FieldValue.serverTimestamp(),
+      };
+      tx.set(chatRef, chatUpdate, { merge: true });
+    });
+
+    // (옵션) 해당 채팅 알림문서들 읽음 처리 (있을 경우)
+    const itemsRef = db().collection(`notifications/${uid}/items`);
+    const qs = await itemsRef
+      .where("chatId", "==", chatId)
+      .where("read", "==", false)
+      .limit(200)
+      .get();
+    if (!qs.empty) {
+      const batch = db().batch();
+      qs.docs.forEach((d) =>
+        batch.update(d.ref, { read: true, readAt: FieldValue.serverTimestamp() })
+      );
+      await batch.commit();
+    }
+
+    return { ok: true, cleared };
+  }
+);
+
+/* ───────── 2) 슬롯 해제 ───────── */
+export const releaseReservedSlot = onCall<{ dateKey: string; time: string }>(
+  { region: "asia-northeast3" },
+  async (req) => {
+    const { dateKey, time } = (req.data || {}) as Partial<{ dateKey: string; time: string }>;
+    if (!dateKey || !time) throw new HttpsError("invalid-argument", "dateKey와 time이 필요합니다.");
+    const ref = db().doc("appConfig/reservedSlots");
+
+    await db().runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      const raw = (snap.exists ? (snap.data() as ReservedSlotsDoc) : {}) as ReservedSlotsDoc;
+
+      const day = raw[dateKey];
+      if (Array.isArray(day)) {
+        const next = day.filter((t) => t !== time);
+        tx.set(ref, { [dateKey]: next } as FirebaseFirestore.DocumentData, { merge: true });
+        return;
+      }
+      if (day && typeof day === "object" && !Array.isArray(day)) {
+        tx.set(
+          ref,
+          { [dateKey]: { [time]: FieldValue.delete() } } as FirebaseFirestore.DocumentData,
+          { merge: true }
+        );
+        return;
+      }
+      tx.set(
+        ref,
+        {
+          [`${dateKey}.${time}`]: FieldValue.delete(),
+          [`${dateKey} ${time}`]: FieldValue.delete(),
+        } as FirebaseFirestore.DocumentData,
+        { merge: true }
+      );
+    });
+
+    return { ok: true, removed: time, dateKey };
+  }
+);
+
+/* ───────── 3) 그룹 생성 + 슬롯 선점 ───────── */
+export const requestGoldExchangeGroup = onCall<{
+  visitDate: string;
+  visitTime: string;
+  name: string;
+  phone: string;
+  address: string;
+  email?: string | null;
+  products?: GoldProductInput[];
+  barsPlan?: Record<string, unknown> | null;
+}>({ region: "asia-northeast3" }, async (req) => {
+  const uid = req.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+
+  const {
+    visitDate,
+    visitTime,
+    name,
+    phone,
+    address,
+    email = null,
+    products = [],
+    barsPlan = null,
+  } = (req.data || {}) as {
+    visitDate?: string;
+    visitTime?: string;
+    name?: string;
+    phone?: string;
+    address?: string;
+    email?: string | null;
+    products?: GoldProductInput[];
+    barsPlan?: Record<string, unknown> | null;
+  };
+
+  if (!visitDate || !visitTime || !name || !phone || !address) {
+    throw new HttpsError("invalid-argument", "방문일/시간, 성명/전화/주소는 필수입니다.");
+  }
+
+  const ratesSnap = await db().doc("appConfig/goldRates").get();
+  const rates = (ratesSnap.exists ? ratesSnap.data() : { purity: DEFAULT_PURITY, exchange: DEFAULT_EXCHANGE }) as {
+    purity?: Record<string, number>;
+    exchange?: Record<string, number>;
+  };
+
+  const slotsRef = db().doc("appConfig/reservedSlots");
+  const exchanges = db().collection("goldExchanges");
+
+  const firstRef = exchanges.doc();
+  const groupId = firstRef.id;
+  const now = FieldValue.serverTimestamp();
+
+  await db().runTransaction(async (tx) => {
+    const sSnap = await tx.get(slotsRef);
+    const sData = (sSnap.exists ? (sSnap.data() as ReservedSlotsDoc) : {}) as ReservedSlotsDoc;
+    if (isSlotTaken(sData, visitDate, visitTime)) {
+      throw new HttpsError("aborted", "이미 예약된 시간입니다.");
+    }
+
+    tx.set(
+      slotsRef,
+      { [visitDate]: { [visitTime]: true } } as FirebaseFirestore.DocumentData,
+      { merge: true }
+    );
+
+    if (Array.isArray(products) && products.length > 0) {
+      for (let i = 0; i < products.length; i++) {
+        const p = products[i] || {};
+        const qty = Number(p.quantity || 0);
+        const unit: "g" | "don" = p.inputUnit === "don" ? "don" : "g";
+        const gramsInput = unit === "g" ? qty : qty * DON_TO_GRAMS;
+        const gramsRounded = roundTo3(gramsInput);
+        const finalG = computeFinalWeightFromRates({
+          grams: gramsRounded,
+          goldType: p.goldType,
+          exchangeType: p.exchangeType || "999.9골드바",
+          purity: rates.purity,
+          exchange: rates.exchange,
+        });
+
+        const r = i === 0 ? firstRef : exchanges.doc();
+        const data: FirebaseFirestore.DocumentData = {
+          userId: uid,
+          groupId,
+          createdAt: now,
+          updatedAt: now,
+          status: "requested",
+          unknown: false,
+          name,
+          phone,
+          address,
+          email,
+          visitDate,
+          visitTime,
+          originalQuantity: qty,
+          inputUnit: unit,
+          quantity: roundTo3(gramsRounded),
+          goldType: p.goldType,
+          exchangeType: p.exchangeType || "999.9골드바",
+          finalWeight: roundTo3(finalG),
+          finalWeightDon: roundTo3(finalG / DON_TO_GRAMS),
+          purityUsed: rates.purity?.[p.goldType ?? ""] ?? null,
+          exchangeRatioUsed: rates.exchange?.[p.exchangeType ?? "999.9골드바"] ?? 1,
+          calcVersion: 4,
+          ...(barsPlan ? { barsPlan } : {}),
+        };
+        tx.set(r, data);
+      }
+    } else {
+      const data: FirebaseFirestore.DocumentData = {
+        userId: uid,
+        groupId,
+        createdAt: now,
+        updatedAt: now,
+        status: "requested",
+        unknown: true,
+        name,
+        phone,
+        address,
+        email,
+        visitDate,
+        visitTime,
+        goldType: "미확인",
+        exchangeType: "999.9골드바",
+        originalQuantity: 0,
+        inputUnit: "g",
+        quantity: 0,
+        finalWeight: 0,
+        finalWeightDon: 0,
+        calcVersion: 4,
+        ...(barsPlan ? { barsPlan } : {}),
+      };
+      tx.set(firstRef, data);
+    }
+  });
+
+  await addNotificationForUser(
+    uid,
+    {
+      type: "exchange_requested",
+      title: "금 교환 요청 접수",
+      body: `방문 예약이 접수되었습니다. (${visitDate} ${visitTime})`,
+      link: "/my-exchanges",
+      meta: { groupId },
+    },
+    `gx-${groupId}`
+  );
+
+  return { ok: true, groupId };
+});
+
+/* ───────── 4) 그룹 상태 변경 ───────── */
+export const setExchangeGroupStatus = onCall<{
+  groupId: string;
+  status: GoldExchangeDoc["status"];
+}>({ region: "asia-northeast3" }, async (req) => {
+  const claims = (req.auth?.token || {}) as Record<string, unknown>;
+  if (!(claims.admin === true || claims.superAdmin === true)) {
+    throw new HttpsError("permission-denied", "관리자 권한이 필요합니다.");
+  }
+
+  const { groupId, status } = (req.data || {}) as {
+    groupId?: string;
+    status?: GoldExchangeDoc["status"];
+  };
+  if (!groupId || !status) throw new HttpsError("invalid-argument", "groupId와 status가 필요합니다.");
+
+  const now = FieldValue.serverTimestamp();
+  const extra: Record<string, unknown> = {};
+  if (status === "scheduled") extra.scheduledAt = now;
+  if (status === "in_progress") extra.startedAt = now;
+  if (status === "completed") extra.completedAt = now;
+  if (status === "canceled") extra.canceledAt = now;
+  if (status === "rejected") extra.rejectedAt = now;
+
+  const col = db().collection("goldExchanges");
+  const qs = await col.where("groupId", "==", groupId).get();
+
+  const batch = db().batch();
+  let targetUid: string | null = null;
+
+  if (!qs.empty) {
+    qs.docs.forEach((d) => {
+      const data = d.data() as GoldExchangeDoc;
+      targetUid = targetUid || (data.userId || null);
+      batch.update(d.ref, { status, updatedAt: now, ...extra } as FirebaseFirestore.DocumentData);
+    });
+  } else {
+    // 혹시 단일 문서가 groupId==docId 로 저장된 케이스 커버
+    const single = await col.doc(groupId).get();
+    if (!single.exists) throw new HttpsError("not-found", "그룹을 찾을 수 없습니다.");
+    const data = single.data() as GoldExchangeDoc;
+    targetUid = data.userId || null;
+    batch.update(single.ref, { status, updatedAt: now, ...extra } as FirebaseFirestore.DocumentData);
+  }
+
+  await batch.commit();
+
+  if (targetUid) {
+    await addNotificationForUser(targetUid, {
+      type: "exchange_status",
+      title: "금 교환 요청 상태 변경",
+      body: `요청(${groupId}) 상태가 '${status}'로 변경되었습니다.`,
+      link: "/my-exchanges",
+      meta: { groupId, newStatus: status },
+    });
+  }
+
+  return { ok: true };
+});
+
+/* ───────── 5) 그룹 요약 집계 ───────── */
+export const aggregateGoldExchangeGroup = onDocumentWritten(
+  { region: "asia-northeast3", document: "goldExchanges/{docId}" },
+  async (event) => {
+    const after = event.data?.after?.data() as GoldExchangeDoc | undefined;
+    const before = event.data?.before?.data() as GoldExchangeDoc | undefined;
+    const groupId = after?.groupId || before?.groupId;
+    if (!groupId) return;
+
+    const qs = await db().collection("goldExchanges").where("groupId", "==", groupId).get();
+    if (qs.empty) {
+      await db().doc(`goldExchangeGroups/${groupId}`).delete().catch(() => {});
+      return;
+    }
+
+    const priority: GoldExchangeDoc["status"][] = [
+      "rejected",
+      "canceled",
+      "completed",
+      "scheduled",
+      "in_progress",
+      "requested",
+    ];
+
+    let totalG = 0;
+    let repStatus: GoldExchangeDoc["status"] = "requested";
+    let createdAt: Date | null = null;
+    let updatedAt: Date | null = null;
+    let visitDate = "",
+      visitTime = "";
+
+    qs.docs.forEach((d) => {
+      const x = d.data() as GoldExchangeDoc;
+      totalG += Number(x.finalWeight || 0);
+
+      const idx = priority.indexOf(x.status || "requested");
+      const ridx = priority.indexOf(repStatus);
+      if (idx > -1 && (ridx === -1 || idx < ridx)) repStatus = x.status || "requested";
+
+      const cDate = toDate(x.createdAt);
+      const uDate = toDate(x.updatedAt);
+      if (!createdAt || (cDate && cDate < createdAt)) createdAt = cDate ?? null;
+      if (!updatedAt || (uDate && uDate > updatedAt)) updatedAt = uDate ?? null;
+
+      visitDate = visitDate || (x.visitDate || "");
+      visitTime = visitTime || (x.visitTime || "");
+    });
+
+    const groupDoc: FirebaseFirestore.DocumentData = {
+      totalG: roundTo3(totalG),
+      totalDon: roundTo3(totalG / DON_TO_GRAMS),
+      repStatus,
+      createdAt: createdAt || FieldValue.serverTimestamp(),
+      updatedAt: updatedAt || FieldValue.serverTimestamp(),
+      visitDate,
+      visitTime,
+    };
+
+    await db().doc(`goldExchangeGroups/${groupId}`).set(groupDoc, { merge: true });
+  }
+);
+
+/* ───────── 6) 알림 onCreate ───────── */
+export const onNotificationCreate = onDocumentCreated(
+  { region: "asia-northeast3", document: "notifications/{uid}/items/{docId}" },
+  async (event) => {
+    try {
+      if (IN_EMULATOR) return;
+      const { uid } = event.params as { uid: string };
+      const notif = (event.data?.data() || {}) as NotificationPayload;
+      const meta = (notif.meta || {}) as Record<string, unknown>;
+
+      // (참고) 채팅은 기본적으로 알림문서를 만들지 않지만,
+      // USE_NOTIF_DOCS_FOR_CHAT=true 인 경우 중복 푸시 방지 플래그를 사용할 수 있습니다.
+      if (meta.noPush === true || meta.suppressPush === true) return;
+
+      const tokens = await getUserTokens(uid);
+      if (!tokens.length) return;
+
+      const title = notif.title || "알림";
+      const body = notif.body || "";
+      const linkAbs =
+        WEB_BASE_URL && notif.link
+          ? `${WEB_BASE_URL}${String(notif.link).startsWith("/") ? "" : "/"}${notif.link}`
+          : "";
+      const linkData = linkAbs || String(notif.link || "");
+
+      const payload: Omit<MulticastMessage, "tokens"> = {
+        data: {
+          type: String(notif.type || "notification"),
+          title,
+          body,
+          link: linkData,
+          preferBadge: "true",
+          silent: WEBPUSH_SILENT ? "true" : "false",
+        },
+        android: { priority: "high" },
+        apns: { payload: { aps: { "content-available": 1 } } },
+        webpush: {
+          headers: { Urgency: WEBPUSH_URGENCY, TTL: "600" },
+          fcmOptions: linkAbs ? { link: linkAbs } : undefined,
+        },
+      };
+
+      await sendMulticastChunked(payload, tokens, async (bad) => {
+        await db()
+          .doc(`users/${uid}`)
+          .update({
+            fcmTokens: FieldValue.arrayRemove(...bad),
+          })
+          .catch(() => {});
+      });
+    } catch (e) {
+      console.error("[onNotificationCreate] error:", e);
+    }
+  }
+);
+
+/* ───────── 7) 슬롯 청소 스케줄러 ───────── */
+export const cleanReservedSlots = onSchedule(
+  { schedule: "every 60 minutes", timeZone: "Asia/Seoul", region: "asia-northeast3" },
+  async () => {
+    const toYmdSeoul = (): string => {
+      const partsArr = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Seoul",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).formatToParts(new Date());
+      const parts = partsArr.reduce<Record<string, string>>((acc, p) => {
+        acc[p.type] = p.value;
+        return acc;
+      }, {});
+      return `${parts.year}-${parts.month}-${parts.day}`;
+    };
+    const today = toYmdSeoul();
+
+    const ref = db().doc("appConfig/reservedSlots");
+    const snap = await ref.get();
+    if (!snap.exists) return;
+    const data = snap.data() as ReservedSlotsDoc;
+
+    const updates: FirebaseFirestore.DocumentData = {};
+    Object.keys(data).forEach((key) => {
+      if (key < today) (updates as Record<string, FirebaseFirestore.FieldValue>)[key] = FieldValue.delete();
+    });
+    if (Object.keys(updates).length) {
+      await ref.set(updates, { merge: true });
+    }
+  }
+);

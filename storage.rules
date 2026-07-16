@@ -1,0 +1,79 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    /* ───────── 공통 헬퍼 ───────── */
+    function signedIn() { return request.auth != null; }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
+    function isAdmin() {
+      return signedIn() &&
+             (request.auth.token.admin == true || request.auth.token.superAdmin == true);
+    }
+
+    // 업로드(생성/갱신) 파일 제약: 15MB 이하 + 이미지 MIME만 허용
+    // ※ delete 요청에는 request.resource가 없으므로 여기서 검사하지 않습니다.
+    function isValidImageUpload() {
+      return request.resource != null
+             && request.resource.size <= 15 * 1024 * 1024
+             && request.resource.contentType.matches('image/.*');
+    }
+
+    /* ───────── 상품 이미지 ─────────
+       - 공개 읽기
+       - 업로드/갱신: 업로더 본인(경로 uid) 또는 관리자만 + 이미지 제약
+       - 삭제: 업로더 본인(경로 uid) 또는 관리자만 (파일 제약 없음)
+    */
+    match /products/{uid}/{allPaths=**} {
+      allow read: if true;
+      allow write:  if (isOwner(uid) || isAdmin()) && isValidImageUpload();
+      allow delete: if (isOwner(uid) || isAdmin());
+    }
+
+    /* ───────── (레거시) productImages/{uid}/... ─────────
+       - 공개 읽기
+       - anonymous 경로 차단
+       - 업로드/갱신: 소유자 또는 관리자 + 이미지 제약
+       - 삭제: 소유자 또는 관리자
+    */
+    match /productImages/{uid}/{allPaths=**} {
+      allow read: if true;
+      allow write:  if uid != "anonymous" && (isOwner(uid) || isAdmin()) && isValidImageUpload();
+      allow delete: if uid != "anonymous" && (isOwner(uid) || isAdmin());
+    }
+
+    /* ───────── 프로필/아바타 ─────────
+       - 공개 읽기
+       - 업로드/갱신: 본인 또는 관리자 + 이미지 제약
+       - 삭제: 본인 또는 관리자
+    */
+    match /profiles/{uid}/{allPaths=**} {
+      allow read: if true;
+      allow write:  if (isOwner(uid) || isAdmin()) && isValidImageUpload();
+      allow delete: if (isOwner(uid) || isAdmin());
+    }
+
+    /* ───────── 프로필 사진(현 경로: profilePhotos/{uid}/...) ─────────
+       - 공개 읽기
+       - 업로드/갱신: 본인 또는 관리자 + 이미지 제약
+       - 삭제: 본인 또는 관리자
+    */
+    match /profilePhotos/{uid}/{allPaths=**} {
+      allow read: if true;
+      allow write:  if (isOwner(uid) || isAdmin()) && isValidImageUpload();
+      allow delete: if (isOwner(uid) || isAdmin());
+    }
+
+    /* ───────── 개인 전용 영역 ─────────
+       - 본인/관리자만 읽기/쓰기/삭제 (파일 형식 제한 없음)
+       - 영수증/임시 업로드 등 비공개 용도
+    */
+    match /users/{uid}/{allPaths=**} {
+      allow read, write, delete: if isOwner(uid) || isAdmin();
+    }
+
+    /* ───────── 기본 거부 ───────── */
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
