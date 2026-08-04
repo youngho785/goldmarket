@@ -17,20 +17,35 @@ import {
 } from "firebase/auth";
 import { compressImage } from "../utils/imageCompression";
 import { callDeleteMyAccount, unregisterPush } from "../firebase/firebase";
+import {
+  cancelBonusGoldUsage,
+  claimWelcomeGoldBonus,
+  getBonusGoldUsageState,
+  getGoldQuizBonusStatus,
+  requestBonusGoldUsage,
+} from "../services/quizClient";
 
 /* ───────────── Styled ───────────── */
 const Container = styled.div`
-  padding: 40px 20px;
-  max-width: 600px;
+  padding: 8px 0 32px;
+  max-width: 720px;
   margin: auto;
-  color: ${({ theme }) => theme.colors.text || "#333"};
+  color: ${({ theme }) => theme.colors.text};
 `;
 const Title = styled.h1`
-  margin-bottom: 24px;
-  color: ${({ theme }) => theme.colors.primary || "#007bff"};
+  position: relative;
+  margin-bottom: 26px;
+  padding-bottom: 14px;
+  color: ${({ theme }) => theme.colors.text};
+  &::after { content: ""; position: absolute; left: 0; bottom: 0; width: 50px; height: 3px; border-radius: 999px; background: ${({ theme }) => theme.gradients.gold}; }
 `;
 const Section = styled.section`
-  margin-bottom: 32px;
+  margin-bottom: 18px;
+  padding: clamp(20px, 4vw, 28px);
+  background: ${({ theme }) => theme.colors.surface};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.large};
+  box-shadow: ${({ theme }) => theme.shadows.card};
 `;
 const Form = styled.form`
   display: flex;
@@ -42,60 +57,78 @@ const FormGroup = styled.div`
   flex-direction: column;
 `;
 const Label = styled.label`
-  font-weight: 600;
-  margin-bottom: 8px;
+  font-weight: 750;
+  margin-bottom: 7px;
+  color: ${({ theme }) => theme.colors.text};
 `;
 const Input = styled.input`
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.small};
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
   font-size: 1rem;
+
+  &::-ms-reveal,
+  &::-ms-clear {
+    display: none;
+  }
+
   &[disabled] {
-    background: #f5f5f5;
+    background: ${({ theme }) => theme.colors.surfaceAlt};
   }
 `;
 const ImgPreview = styled.img`
-  width: 100px;
-  height: 100px;
+  width: 108px;
+  height: 108px;
   object-fit: cover;
   border-radius: 50%;
-  margin-top: 8px;
+  margin-top: 10px;
+  border: 3px solid ${({ theme }) => theme.colors.surface};
+  outline: 1px solid ${({ theme }) => theme.colors.border};
+  box-shadow: ${({ theme }) => theme.shadows.card};
 `;
 const ButtonRow = styled.div`
   display: flex;
   gap: 12px;
 `;
 const Button = styled.button`
+  min-height: 46px;
   padding: 10px 16px;
   font-size: 1rem;
-  background: ${({ theme }) => theme.colors.primary || "#007bff"};
-  color: #fff;
-  border: none;
-  border-radius: 4px;
+  background: ${({ theme }) => theme.gradients.primary};
+  color: ${({ theme }) => theme.on.primary};
+  border: 1px solid transparent;
+  border-radius: ${({ theme }) => theme.radii.small};
+  font-weight: 750;
   cursor: pointer;
   transition: background 0.2s;
   &:disabled {
-    background: #aaa;
+    opacity: .55;
     cursor: not-allowed;
   }
   &:hover:enabled {
-    background: ${({ theme }) => theme.colors.primaryDark || "#0056b3"};
+    filter: brightness(.96);
   }
 `;
 const DangerButton = styled(Button)`
-  background: #e11d48;
+  background: ${({ theme }) => theme.colors.error};
   &:hover:enabled {
-    background: #be123c;
+    filter: brightness(.9);
   }
 `;
 const MessageText = styled.p`
-  color: ${({ $error }) => ($error ? "#d9534f" : "#5cb85c")};
+  color: ${({ $error, theme }) => ($error ? theme.semantic.alertErrorText : theme.semantic.alertSuccessText)};
+  background: ${({ $error, theme }) => ($error ? theme.semantic.alertErrorBg : theme.semantic.alertSuccessBg)};
+  padding: 10px 12px;
+  border-radius: 10px;
   margin-bottom: 16px;
 `;
 const Divider = styled.hr`
   margin: 32px 0;
   border: none;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
 `;
 const VisuallyHidden = styled.input`
   position: absolute !important;
@@ -109,17 +142,115 @@ const VisuallyHidden = styled.input`
   margin: -1px;
 `;
 
-/* ▶ 가입 혜택 배지 (고정 표기) */
-const RewardBadge = styled.div`
-  display: inline-flex;
+const RewardPanel = styled.div`
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid ${({ theme }) => theme.colors.border || "#e5e7eb"};
+  background: ${({ theme }) => theme.semantic.alertSuccessBg};
+  color: ${({ theme }) => theme.semantic.alertSuccessText};
+`;
+
+const RewardTitle = styled.strong`
+  display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid ${({ theme }) => theme.colors.border || "#e5e7eb"};
-  background: ${({ theme }) => theme.colors.surface || "#fff"};
-  color: ${({ theme }) => theme.colors.success || "#10b981"};
+  color: ${({ theme }) => theme.colors.primary};
+  font-size: 1.02rem;
+`;
+
+const RewardRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 9px;
+  border-top: 1px solid ${({ theme }) => theme.colors.border};
+
+  b {
+    white-space: nowrap;
+  }
+`;
+
+const RewardTotal = styled(RewardRow)`
+  color: ${({ theme }) => theme.colors.primary};
   font-weight: 800;
+`;
+
+const RewardNote = styled.p`
+  margin: 0;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: .86rem;
+  line-height: 1.6;
+`;
+
+const RewardAction = styled.button`
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid ${({ theme }) => theme.colors.primary};
+  border-radius: 10px;
+  background: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.on.primary};
+  font-weight: 800;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+  }
+`;
+
+const RewardLink = styled(Link)`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid ${({ theme }) => theme.colors.primary};
+  border-radius: 10px;
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.primary};
+  font-weight: 800;
+`;
+
+const RewardUsagePanel = styled.div`
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 10px;
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
+`;
+
+const RewardSelect = styled.select`
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 11px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 9px;
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
+`;
+
+const RewardCode = styled.strong`
+  display: block;
+  padding: 12px;
+  border: 1px dashed ${({ theme }) => theme.colors.secondary};
+  border-radius: 10px;
+  background: ${({ theme }) => theme.semantic.badgeGoldBg};
+  color: ${({ theme }) => theme.colors.primary};
+  font-family: ${({ theme }) => theme.fonts.numeric};
+  font-size: 1.55rem;
+  letter-spacing: .16em;
+  text-align: center;
+`;
+
+const RewardError = styled.p`
+  margin: 0;
+  color: ${({ theme }) => theme.semantic.alertErrorText};
+  font-size: .9rem;
 `;
 
 /* ───────────── Utils ───────────── */
@@ -141,7 +272,7 @@ function validateNewPassword(pw) {
   if (typeof pw !== "string" || pw.length < 8) {
     return "비밀번호는 최소 8자 이상이어야 합니다.";
   }
-  if (!/[A-Za-z]/.test(pw) || !/\d/.test(pw) || !/[!@#$%^&*()_+{};':\",.<>/?\\|`~-]/.test(pw)) {
+  if (!/[A-Za-z]/.test(pw) || !/\d/.test(pw) || !/[!@#$%^&*()_+{};':",.<>/?\\|`~-]/.test(pw)) {
     return "영문/숫자/특수문자를 모두 포함해야 합니다.";
   }
   return "";
@@ -174,6 +305,22 @@ export default function Profile() {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [goldBonus, setGoldBonus] = useState({
+    loading: true,
+    welcomeClaimed: false,
+    welcomeG: 0,
+    quizClaimed: false,
+    quizG: 0,
+    balanceG: 0,
+    spendableG: 0,
+    usage: null,
+    eligibleGroups: [],
+    usageUnavailable: false,
+  });
+  const [bonusUsageOpen, setBonusUsageOpen] = useState(false);
+  const [selectedBonusGroupId, setSelectedBonusGroupId] = useState("");
+  const [bonusActionBusy, setBonusActionBusy] = useState(false);
+  const [bonusActionError, setBonusActionError] = useState("");
 
   // Password change state
   const [currentPassword, setCurrentPassword] = useState("");
@@ -232,6 +379,148 @@ export default function Profile() {
       }
     })();
   }, [user, auth]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!user?.uid) {
+      setGoldBonus({
+        loading: false,
+        welcomeClaimed: false,
+        welcomeG: 0,
+        quizClaimed: false,
+        quizG: 0,
+        balanceG: 0,
+        spendableG: 0,
+        usage: null,
+        eligibleGroups: [],
+        usageUnavailable: false,
+      });
+      return () => { cancelled = true; };
+    }
+
+    setGoldBonus((current) => ({ ...current, loading: true }));
+    (async () => {
+      let welcome = null;
+      let welcomeUnavailable = false;
+      try {
+        welcome = await claimWelcomeGoldBonus();
+      } catch {
+        welcomeUnavailable = true;
+      }
+
+      let usage = null;
+      let usageUnavailable = false;
+      try {
+        usage = await getBonusGoldUsageState();
+      } catch {
+        usageUnavailable = true;
+      }
+
+      try {
+        const quiz = await getGoldQuizBonusStatus(user.uid);
+        if (!cancelled) {
+          setGoldBonus({
+            loading: false,
+            welcomeClaimed: !!welcome?.claimed,
+            welcomeG: Number(welcome?.creditedG || 0),
+            welcomeUnavailable,
+            quizClaimed: !!quiz?.claimed,
+            quizG: Number(quiz?.creditedG || 0),
+            balanceG: Number(usage?.balanceG ?? Math.max(
+              Number(welcome?.balanceG || 0),
+              Number(quiz?.balanceG || 0)
+            )),
+            spendableG: Number(usage?.spendableG ?? usage?.balanceG ?? Math.max(
+              Number(welcome?.balanceG || 0),
+              Number(quiz?.balanceG || 0)
+            )),
+            usage: usage?.request || null,
+            eligibleGroups: Array.isArray(usage?.eligibleGroups) ? usage.eligibleGroups : [],
+            usageUnavailable,
+          });
+        }
+      } catch {
+        if (!cancelled) {
+          setGoldBonus((current) => ({
+            ...current,
+            loading: false,
+            welcomeClaimed: !!welcome?.claimed,
+            welcomeG: Number(welcome?.creditedG || 0),
+            welcomeUnavailable,
+            quizUnavailable: true,
+            balanceG: Number(usage?.balanceG ?? welcome?.balanceG ?? 0),
+            spendableG: Number(usage?.spendableG ?? usage?.balanceG ?? welcome?.balanceG ?? 0),
+            usage: usage?.request || null,
+            eligibleGroups: Array.isArray(usage?.eligibleGroups) ? usage.eligibleGroups : [],
+            usageUnavailable,
+          }));
+        }
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [user?.uid]);
+
+  useEffect(() => {
+    if (!selectedBonusGroupId && goldBonus.eligibleGroups.length > 0) {
+      setSelectedBonusGroupId(goldBonus.eligibleGroups[0].groupId);
+    }
+    if (goldBonus.usage?.status === "requested") setBonusUsageOpen(true);
+  }, [goldBonus.eligibleGroups, goldBonus.usage?.status, selectedBonusGroupId]);
+
+  const handleBonusUsageRequest = async () => {
+    if (!selectedBonusGroupId) {
+      setBonusActionError("적립 순금을 사용할 금교환 예약을 선택해 주세요.");
+      return;
+    }
+    setBonusActionBusy(true);
+    setBonusActionError("");
+    try {
+      const result = await requestBonusGoldUsage(selectedBonusGroupId);
+      setGoldBonus((current) => ({
+        ...current,
+        balanceG: Number(result?.balanceG ?? current.balanceG),
+        spendableG: Number(result?.spendableG ?? 0),
+        usage: result?.request || current.usage,
+      }));
+      setBonusUsageOpen(true);
+    } catch (requestError) {
+      setBonusActionError(requestError?.message || "사용 신청을 처리하지 못했습니다.");
+    } finally {
+      setBonusActionBusy(false);
+    }
+  };
+
+  const handleBonusUsageCancel = async () => {
+    if (!window.confirm("적립 순금 사용 신청을 취소할까요?")) return;
+    setBonusActionBusy(true);
+    setBonusActionError("");
+    try {
+      await cancelBonusGoldUsage();
+      const usage = await getBonusGoldUsageState();
+      setGoldBonus((current) => ({
+        ...current,
+        balanceG: Number(usage?.balanceG || 0),
+        spendableG: Number(usage?.spendableG ?? usage?.balanceG ?? 0),
+        usage: usage?.request || null,
+        eligibleGroups: Array.isArray(usage?.eligibleGroups) ? usage.eligibleGroups : [],
+      }));
+      setBonusUsageOpen(false);
+    } catch (cancelError) {
+      setBonusActionError(cancelError?.message || "사용 신청을 취소하지 못했습니다.");
+    } finally {
+      setBonusActionBusy(false);
+    }
+  };
+
+  const usageStatusLabel = {
+    requested: "매장 확인 대기",
+    used: "사용 완료",
+    canceled: "신청 취소",
+    restored: "잔액 복구 완료",
+  }[goldBonus.usage?.status] || "";
+  const canRequestBonus =
+    goldBonus.balanceG > 0 && goldBonus.usage?.status !== "requested";
 
   if (!user) {
     return (
@@ -466,13 +755,121 @@ export default function Profile() {
       <Section>
         <Title>내 프로필</Title>
 
-        {/* ▶ 가입 혜택 표기만 고정 노출 */}
-        <div style={{ margin: "0 0 12px" }}>
-          <RewardBadge aria-label="가입 혜택 적립">
-            <span role="img" aria-label="sparkles">✨</span>
-            가입 혜택: <b>0.01g 적립</b>
-          </RewardBadge>
-        </div>
+        <RewardPanel aria-label="순금 보너스 적립 내역">
+          <RewardTitle><span aria-hidden="true">✨</span> 순금 보너스</RewardTitle>
+          {goldBonus.loading ? (
+            <span>적립 내역을 확인하고 있습니다.</span>
+          ) : (
+            <>
+              <RewardRow>
+                <span>회원가입 웰컴 순금</span>
+                <b>
+                  {goldBonus.welcomeClaimed
+                    ? `${goldBonus.welcomeG.toFixed(2)}g 적립`
+                    : goldBonus.welcomeUnavailable
+                      ? "조회 필요"
+                      : "적립 확인 중"}
+                </b>
+              </RewardRow>
+              <RewardRow>
+                <span>퀵퀴즈 순금</span>
+                {goldBonus.quizClaimed ? (
+                  <b>{goldBonus.quizG.toFixed(2)}g 적립</b>
+                ) : goldBonus.quizUnavailable ? (
+                  <b>조회 필요</b>
+                ) : (
+                  <Link to="/quiz/gold-bonus">0.01g 받기</Link>
+                )}
+              </RewardRow>
+              <RewardTotal>
+                <span>지금 사용 가능한 적립 순금</span>
+                <b>{goldBonus.spendableG.toFixed(2)}g</b>
+              </RewardTotal>
+
+              {goldBonus.usage && (
+                <RewardUsagePanel aria-live="polite">
+                  <b>적립 순금 사용 상태 · {usageStatusLabel}</b>
+                  <span>
+                    신청 중량 {Number(goldBonus.usage.amountG || 0).toFixed(2)}g
+                    {goldBonus.usage.visitDate
+                      ? ` · ${goldBonus.usage.visitDate} ${goldBonus.usage.visitTime || ""}`
+                      : ""}
+                  </span>
+                  {goldBonus.usage.status === "requested" && (
+                    <>
+                      <span>매장에서 아래 6자리 코드를 관리자에게 보여주세요.</span>
+                      <RewardCode aria-label={`매장 확인 코드 ${goldBonus.usage.requestCode}`}>
+                        {goldBonus.usage.requestCode}
+                      </RewardCode>
+                      <RewardAction
+                        type="button"
+                        disabled={bonusActionBusy}
+                        onClick={handleBonusUsageCancel}
+                      >
+                        {bonusActionBusy ? "처리 중…" : "사용 신청 취소"}
+                      </RewardAction>
+                    </>
+                  )}
+                  {goldBonus.usage.status === "used" && (
+                    <span>
+                      현장 인정 {Number(goldBonus.usage.finalRecognizedG || 0).toFixed(3)}g
+                      {" + "}적립 {Number(goldBonus.usage.amountG || 0).toFixed(2)}g
+                      {" = "}최종 {Number(goldBonus.usage.finalAppliedG || 0).toFixed(3)}g
+                    </span>
+                  )}
+                </RewardUsagePanel>
+              )}
+
+              {canRequestBonus && goldBonus.eligibleGroups.length > 0 && (
+                <>
+                  <RewardAction
+                    type="button"
+                    onClick={() => setBonusUsageOpen((open) => !open)}
+                    aria-expanded={bonusUsageOpen}
+                  >
+                    적립 순금 사용 신청
+                  </RewardAction>
+                  {bonusUsageOpen && goldBonus.usage?.status !== "requested" && (
+                    <RewardUsagePanel>
+                      <label htmlFor="bonus-exchange-group"><b>사용할 금교환 예약</b></label>
+                      <RewardSelect
+                        id="bonus-exchange-group"
+                        value={selectedBonusGroupId}
+                        onChange={(event) => setSelectedBonusGroupId(event.target.value)}
+                      >
+                        {goldBonus.eligibleGroups.map((group) => (
+                          <option key={group.groupId} value={group.groupId}>
+                            {group.visitDate || "방문일 미정"} {group.visitTime || ""} · {
+                              group.status === "requested" ? "접수" :
+                              group.status === "scheduled" ? "예약 승인" : "진행 중"
+                            }
+                          </option>
+                        ))}
+                      </RewardSelect>
+                      <RewardNote>현재 보유한 적립 순금 전액을 선택한 교환 건에 신청합니다.</RewardNote>
+                      <RewardAction
+                        type="button"
+                        disabled={bonusActionBusy || !selectedBonusGroupId}
+                        onClick={handleBonusUsageRequest}
+                      >
+                        {bonusActionBusy ? "신청 중…" : `${goldBonus.balanceG.toFixed(2)}g 사용 신청`}
+                      </RewardAction>
+                    </RewardUsagePanel>
+                  )}
+                </>
+              )}
+
+              {canRequestBonus && goldBonus.eligibleGroups.length === 0 && !goldBonus.usageUnavailable && (
+                <RewardLink to="/gold-exchange">금교환 예약 후 사용 신청</RewardLink>
+              )}
+              {bonusActionError && <RewardError role="alert">{bonusActionError}</RewardError>}
+              <RewardNote>
+                웰컴 순금과 퀵퀴즈 적립 순금은 골드바 교환 시 중량으로 더해집니다.
+                현금 환급·양도는 불가하며, 매장에서 본인과 최종 인정 중량을 확인한 뒤 사용이 확정됩니다.
+              </RewardNote>
+            </>
+          )}
+        </RewardPanel>
 
         {error && <MessageText $error>{error}</MessageText>}
         {message && <MessageText>{message}</MessageText>}
@@ -652,9 +1049,9 @@ export default function Profile() {
         {deleteMsg && <MessageText>{deleteMsg}</MessageText>}
 
         <p style={{ lineHeight: 1.6, color: "#555" }}>
-          탈퇴 시 공개 프로필은 <strong>비식별 처리</strong>되며,
-          채팅 목록에서는 본인 상태가 <strong>숨김/나가기</strong>로 표시됩니다.
-          일부 거래/게시글 기록은 서비스 안전을 위해 보존될 수 있습니다.
+          탈퇴 시 계정과 공개 프로필은 <strong>비식별 처리</strong>됩니다.
+          완료된 교환 및 고객문의 기록은 관련 법령과 개인정보처리방침에 따라
+          필요한 기간 동안 보존될 수 있습니다.
         </p>
 
         <Form onSubmit={handleDeleteAccount} autoComplete="on">

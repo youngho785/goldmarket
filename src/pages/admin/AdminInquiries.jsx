@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import styled from "styled-components";
 import { fetchInquiriesByStatus } from "@/services/boardService";
 import { useNavigate } from "react-router-dom";
@@ -24,7 +24,7 @@ const Tab = styled.button`
 `;
 const Button = styled.button`
   padding: 8px 12px; border-radius: 6px; border: none; cursor: pointer;
-  background: ${({ theme }) => theme.colors?.primary || "#007bff"}; color: #fff;
+  background: ${({ theme }) => theme.gradients?.primary || theme.colors?.primary || "#1F3A5F"}; color: ${({ theme }) => theme.on?.primary || "#fff"};
 `;
 const Input = styled.input`
   padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; min-width: 220px;
@@ -61,7 +61,7 @@ export default function AdminInquiries() {
   const [q, setQ] = useState("");
   const [error, setError] = useState("");
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true); setError("");
     try {
       const list = await fetchInquiriesByStatus({ status: tab, pageSize: 200 });
@@ -72,9 +72,9 @@ export default function AdminInquiries() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [tab]);
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [tab]);
+  useEffect(() => { load(); }, [load]);
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();

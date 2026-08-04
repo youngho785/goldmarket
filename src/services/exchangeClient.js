@@ -15,8 +15,9 @@ const functions = getFunctions(app, "asia-northeast3");
  * @param {string} payload.visitTime   "HH:mm"
  * @param {string} payload.name
  * @param {string} payload.phone
- * @param {string} payload.address
  * @param {string|null=} payload.email
+ * @param {boolean} payload.privacyConsent
+ * @param {string} payload.privacyConsentVersion
  * @param {Array<{goldType:string; quantity:number; inputUnit:"g"; exchangeType:"999.9골드바">>=} payload.products
  * @param {Record<string,unknown>|null=} payload.barsPlan
  * @returns {Promise<{ok:boolean, groupId?:string}>}

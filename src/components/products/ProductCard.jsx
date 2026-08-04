@@ -27,15 +27,17 @@ const Card = styled.article`
   position: relative;
   display: flex;
   flex-direction: column;
-  background: #fff;
-  border-radius: 14px;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+  background: ${({ theme }) => theme.colors.surface};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.large};
+  box-shadow: ${({ theme }) => theme.shadows.card};
   overflow: hidden;
-  transition: transform .15s ease, box-shadow .15s ease;
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
 
   &:hover {
     transform: translateY(-3px);
-    box-shadow: 0 10px 26px rgba(0,0,0,0.12);
+    border-color: ${({ theme }) => theme.colors.borderStrong};
+    box-shadow: ${({ theme }) => theme.shadows.hover};
   }
 
   @media (max-width: 600px) {
@@ -60,7 +62,7 @@ const ThumbWrapper = styled.div`
   position: relative;
   width: 100%;
   padding-top: 70%;
-  background: linear-gradient(180deg, #f7f9fb 0%, #eef3f6 100%);
+  background: ${({ theme }) => `linear-gradient(180deg, ${theme.colors.surfaceAlt} 0%, ${theme.colors.background} 100%)`};
 
   @media (max-width: 600px) {
     width: 38%;
@@ -81,7 +83,7 @@ const ThumbImg = styled.img`
 const Shimmer = styled.div`
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, #f1f4f7 0%, #e7ecf1 40%, #f1f4f7 80%);
+  background: ${({ theme }) => `linear-gradient(90deg, ${theme.colors.surfaceAlt} 0%, ${theme.colors.border} 40%, ${theme.colors.surfaceAlt} 80%)`};
   background-size: 200% 100%;
   animation: shimmer 1.2s linear infinite;
   @keyframes shimmer {
@@ -103,7 +105,7 @@ const StatusRibbon = styled.div`
   right: -42px; bottom: 12px;
   width: 160px; text-align: center;
   transform: rotate(-45deg);
-  background: ${({ $variant }) => ($variant === "completed" ? "#f59e0b" : "#2b2f39")};
+  background: ${({ $variant, theme }) => ($variant === "completed" ? theme.colors.secondary : theme.colors.primary)};
   color: #fff; font-size: 0.8rem; font-weight: 700;
   padding: 6px 0;
   box-shadow: 0 4px 14px rgba(0,0,0,0.2);
@@ -157,6 +159,7 @@ const PillBtn = styled.button`
   align-items: center;
   gap: 6px;
   height: 28px;
+  min-height: 28px;
   padding: 0 10px;
   border-radius: 999px;
   font-size: 0.8rem;
@@ -171,7 +174,8 @@ const PillBtn = styled.button`
       $variant === "heart"
         ? ($active ? "#fde7ef" : "#fff5f8")
         : ($active ? "#fff7db" : "#fffbed")};
-  color: #2b2f39;
+  color: ${({ theme }) => theme.colors.text};
+  box-shadow: none;
   cursor: pointer;
   transition: transform .08s ease, background .12s ease, box-shadow .12s ease;
 
@@ -190,19 +194,19 @@ const SellerRow = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #4b5563;
+  color: ${({ theme }) => theme.colors.textSecondary};
   font-size: 0.88rem;
   font-weight: 700;
 `;
 
 const SellerLabel = styled.span`
-  color: #6b7280;
+  color: ${({ theme }) => theme.colors.textLight};
   font-weight: 700;
 `;
 
 const Desc = styled.p`
   margin: 0;
-  color: #5a5f66;
+  color: ${({ theme }) => theme.colors.textSecondary};
   font-size: 0.9rem;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -218,14 +222,14 @@ const Price = styled.p`
 `;
 
 const Muted = styled.span`
-  color: #8b9097;
+  color: ${({ theme }) => theme.colors.textLight};
   font-weight: 700;
 `;
 
 const Timestamp = styled.p`
   margin: 0;
   font-size: 0.78rem;
-  color: #9aa0a6;
+  color: ${({ theme }) => theme.colors.textLight};
 `;
 
 function ProductCard({ product }) {
@@ -277,13 +281,13 @@ function ProductCard({ product }) {
           setLiked(user ? lb.includes(user.uid) : false);
         },
         (err) => {
-          if (process.env.NODE_ENV === "development") {
+          if (import.meta.env.DEV) {
             console.warn("[products] listen error:", err);
           }
         }
       );
     } catch (e) {
-      if (process.env.NODE_ENV === "development") {
+      if (import.meta.env.DEV) {
         console.warn("[products] listen start failed:", e);
       }
     }
@@ -339,7 +343,7 @@ function ProductCard({ product }) {
         sellerNameCache.set(uid, finalName);
         if (mounted) setSellerName(finalName);
       } catch (e) {
-        if (process.env.NODE_ENV === "development") {
+        if (import.meta.env.DEV) {
           console.warn("[profiles] read seller name failed:", e);
         }
         sellerNameCache.set(uid, "");
@@ -372,7 +376,7 @@ function ProductCard({ product }) {
         if (favorited) await removeFromFavorites(product.id);
         else await addToFavorites(product.id);
       } catch (err) {
-        if (process.env.NODE_ENV === "development") {
+        if (import.meta.env.DEV) {
           console.warn("찜하기 실패:", err);
         }
         notify?.(
@@ -414,7 +418,7 @@ function ProductCard({ product }) {
           });
         }
       } catch (err) {
-        if (process.env.NODE_ENV === "development") {
+        if (import.meta.env.DEV) {
           console.warn("좋아요 실패:", err);
         }
         notify?.(

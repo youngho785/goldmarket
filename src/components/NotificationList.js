@@ -1,8 +1,9 @@
 // src/components/notificationsList.js
 import { 
-  collection, addDoc, query, where, orderBy, onSnapshot, updateDoc, doc 
+  collection, addDoc, query, where, orderBy, onSnapshot, updateDoc, doc,
+  getDocs, writeBatch, serverTimestamp,
 } from "firebase/firestore";
-import { db } from "./firebase";
+import { db } from "../firebase/firebase";
 
 // 실시간 구독 (알림함)
 export function subscribeNotifications(userId, callback) {

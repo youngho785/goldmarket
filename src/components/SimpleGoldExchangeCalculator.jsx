@@ -154,8 +154,6 @@ export default function SimpleGoldExchangeCalculator({
   purityTable = DEFAULT_PURITY,
   exchangeTable = DEFAULT_EXCHANGE,
   maxRows = 3,
-  unitHintPosition = "below",
-  showInstructionBanner = false,
   gateDetails = true,
   freeRows = 1,
   onRequireAuth,

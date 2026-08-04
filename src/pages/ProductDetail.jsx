@@ -11,25 +11,26 @@ import ProductReviewList from "../components/reviews/ProductReviewList";
 import { useAuthContext } from "../context/AuthContext";
 import { useNotificationContext } from "@/context/NotificationContext";
 import { createOrGetChatRoom } from "../services/chatService";
-import { checkPurchasePermission } from "../services/orderService";
+import { fetchReviewableOrder } from "../services/orderService";
 import { fetchUserProfile } from "../services/userService";
 import styled, { keyframes } from "styled-components";
 
 /* ─────────── Layout: vertical premium cards ─────────── */
 const Page = styled.div`
-  max-width: 920px;
-  margin: 28px auto 96px;
-  padding: 0 16px;
+  max-width: 980px;
+  margin: 8px auto 72px;
+  padding: 0;
 `;
 
 const TopBar = styled.div`
   position: sticky;
-  top: 0;
+  top: 68px;
   z-index: 10;
-  backdrop-filter: blur(8px);
-  background: ${({ theme }) => `${theme.colors.white}e6`};
-  border-bottom: 1px solid rgba(0,0,0,0.06);
-  padding: 10px 16px;
+  backdrop-filter: blur(14px);
+  background: ${({ theme }) => theme.colors.surface};
+  border: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
+  border-radius: 14px;
+  padding: 10px 12px;
   display: flex;
   gap: 10px;
   align-items: center;
@@ -38,8 +39,8 @@ const TopBar = styled.div`
 
 const TopBarTitle = styled.div`
   font-size: 1.05rem;
-  font-weight: 700;
-  color: ${({ theme }) => theme.colors.primary};
+  font-weight: 750;
+  color: ${({ theme }) => theme.colors.text};
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -53,10 +54,10 @@ const Stack = styled.div`
 `;
 
 const Card = styled.section`
-  background: ${({ theme }) => theme.colors.white};
-  border-radius: 14px;
-  box-shadow: 0 10px 28px rgba(0,0,0,0.08);
-  border: 1px solid rgba(0,0,0,0.06);
+  background: ${({ theme }) => theme.colors.surface};
+  border-radius: ${({ theme }) => theme.radii.large};
+  box-shadow: ${({ theme }) => theme.shadows.card};
+  border: 1px solid ${({ theme }) => theme.colors.border};
 `;
 
 const CardBody = styled.div`
@@ -66,14 +67,14 @@ const CardBody = styled.div`
 const Title = styled.h1`
   font-size: clamp(1.25rem, 2.6vw, 1.9rem);
   margin: 0;
-  color: #161616;
+  color: ${({ theme }) => theme.colors.text};
   line-height: 1.28;
   letter-spacing: -0.01em;
 `;
 
 const SellerLine = styled.p`
   margin: 10px 0 0;
-  color: #626262;
+  color: ${({ theme }) => theme.colors.textSecondary};
   font-size: 0.95rem;
 `;
 
@@ -93,15 +94,15 @@ const Badge = styled.span`
   font-weight: 700;
   padding: 6px 10px;
   border-radius: 999px;
-  border: 1px solid rgba(0,0,0,0.06);
-  background: ${({ tone }) =>
-    tone === "danger" ? "#fff1f0" :
-    tone === "warning" ? "#fff7e6" :
-    "#f5f7ff"};
-  color: ${({ tone }) =>
-    tone === "danger" ? "#d32029" :
-    tone === "warning" ? "#ad6800" :
-    "#3f51b5"};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ $tone, theme }) =>
+    $tone === "danger" ? theme.semantic.alertErrorBg :
+    $tone === "warning" ? theme.semantic.alertWarningBg :
+    theme.semantic.badgeInfoBg};
+  color: ${({ $tone, theme }) =>
+    $tone === "danger" ? theme.semantic.alertErrorText :
+    $tone === "warning" ? theme.semantic.alertWarningText :
+    theme.semantic.badgeInfoText};
 `;
 
 const PriceCard = styled.div`
@@ -110,33 +111,33 @@ const PriceCard = styled.div`
   align-items: end;
   gap: 12px;
   padding: 16px 18px;
-  background: linear-gradient(180deg, #ffffff, #fafafa);
-  border: 1px solid rgba(0,0,0,0.06);
-  border-radius: 12px;
+  background: ${({ theme }) => `linear-gradient(135deg, ${theme.semantic.badgeGoldBg}, ${theme.colors.surface})`};
+  border: 1px solid ${({ theme }) => theme.colors.secondary}55;
+  border-radius: 14px;
   margin-top: 12px;
 `;
 
 const PriceLabel = styled.div`
   font-size: 0.92rem;
-  color: #6b6b6b;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const PriceValue = styled.div`
   font-size: clamp(1.10rem, 2.0vw, 1.2rem);
   font-weight: 900;
-  color: #101010;
+  color: ${({ theme }) => theme.colors.primary};
   letter-spacing: -0.02em;
 `;
 
 const SectionTitle = styled.h3`
   font-size: 1.05rem;
   margin: 0 0 10px;
-  color: #151515;
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 const Divider = styled.hr`
   border: none;
-  border-top: 1px dashed rgba(0,0,0,0.08);
+  border-top: 1px dashed ${({ theme }) => theme.colors.border};
   margin: 16px 0;
 `;
 
@@ -151,19 +152,19 @@ const InfoGrid = styled.dl`
   }
 
   dt {
-    color: #6b6b6b;
+    color: ${({ theme }) => theme.colors.textSecondary};
     font-size: 0.92rem;
   }
   dd {
     margin: 0;
-    color: #1f1f1f;
+    color: ${({ theme }) => theme.colors.text};
     font-size: 0.98rem;
   }
 `;
 
 const Meta = styled.p`
   margin: 8px 0 0;
-  color: #7a7a7a;
+  color: ${({ theme }) => theme.colors.textLight};
   font-size: 0.86rem;
 `;
 
@@ -175,23 +176,24 @@ const Actions = styled.div`
 
 const Button = styled.button`
   padding: 12px 16px;
-  border-radius: 10px;
-  border: 1px solid rgba(0,0,0,0.08);
+  min-height: 46px;
+  border-radius: 12px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
   background: ${({ $variant, theme }) =>
-    $variant === "primary" ? theme.colors.primary : "#fff"};
-  color: ${({ $variant }) => ($variant === "primary" ? "#fff" : "#222")};
+    $variant === "primary" ? theme.gradients.primary : theme.colors.surface};
+  color: ${({ $variant, theme }) => ($variant === "primary" ? theme.on.primary : theme.colors.text)};
   cursor: pointer;
   font-weight: 700;
   transition: transform .06s ease, box-shadow .2s ease, background .2s ease;
-  box-shadow: ${({ $variant }) =>
-    $variant === "primary" ? "0 6px 16px rgba(38,94,233,0.24)" : "0 2px 8px rgba(0,0,0,0.06)"};
+  box-shadow: ${({ $variant, theme }) =>
+    $variant === "primary" ? theme.shadows.card : theme.shadows.xs};
 
   &:hover:enabled { transform: translateY(-1px); }
   &:disabled { opacity: .6; cursor: not-allowed; }
 `;
 
 const GhostButton = styled(Button)`
-  background: #fff;
+  background: ${({ theme }) => theme.colors.surface};
 `;
 
 /* Gallery: main + thumbnails (vertical flow) */
@@ -200,9 +202,9 @@ const GalleryWrap = styled.div`
 `;
 
 const MainImageBox = styled.div`
-  background: #fff;
-  border-radius: 12px;
-  border: 1px solid rgba(0,0,0,0.06);
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+  border-radius: 16px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -232,8 +234,8 @@ const Thumb = styled.img`
   height: 68px;
   object-fit: cover;
   border-radius: 10px;
-  border: 2px solid ${({ active, theme }) => (active ? theme.colors.primary : "transparent")};
-  background: #fff;
+  border: 2px solid ${({ $active, theme }) => ($active ? theme.colors.secondary : "transparent")};
+  background: ${({ theme }) => theme.colors.surface};
   cursor: pointer;
 `;
 
@@ -241,7 +243,8 @@ const Thumb = styled.img`
 const ModalOverlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.6);
+  background: ${({ theme }) => theme.semantic.overlay};
+  backdrop-filter: blur(6px);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -321,6 +324,7 @@ export default function ProductDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [canReview, setCanReview] = useState(false);
+  const [reviewOrderId, setReviewOrderId] = useState(null);
   const [form, setForm] = useState({ rating: 5, comment: "" });
   const [submitting, setSubmitting] = useState(false);
 
@@ -362,10 +366,21 @@ export default function ProductDetail() {
   }, [id]);
 
   useEffect(() => {
-    if (!user || !product) return;
-    checkPurchasePermission(user.uid, product.id)
-      .then(setCanReview)
-      .catch(console.error);
+    if (!user || !product || user.uid === product.sellerId) {
+      setCanReview(false);
+      setReviewOrderId(null);
+      return;
+    }
+    fetchReviewableOrder(user.uid, product.id)
+      .then((order) => {
+        setReviewOrderId(order?.id || null);
+        setCanReview(Boolean(order));
+      })
+      .catch((err) => {
+        console.error("[ProductDetail] 후기 가능 주문 확인 실패:", err);
+        setCanReview(false);
+        setReviewOrderId(null);
+      });
   }, [user, product]);
 
   // 문서 타이틀(UX)
@@ -569,7 +584,7 @@ export default function ProductDetail() {
                         key={url + i}
                         src={url}
                         alt={`썸네일 ${i + 1}`}
-                        active={i === activeIndex}
+                        $active={i === activeIndex}
                         onClick={() => setActiveIndex(i)}
                         loading="lazy"
                         decoding="async"
@@ -594,9 +609,9 @@ export default function ProductDetail() {
 
             <BadgeRow>
               {isCompleted ? (
-                <Badge tone="warning">거래완료</Badge>
+                <Badge $tone="warning">거래완료</Badge>
               ) : isBlocked ? (
-                <Badge tone="danger">거래불가</Badge>
+                <Badge $tone="danger">거래불가</Badge>
               ) : (
                 <Badge>판매중</Badge>
               )}
@@ -669,16 +684,16 @@ export default function ProductDetail() {
                       setSubmitting(true);
                       try {
                         await addTransactionReview({
-                          sellerId: product.sellerId,
-                          buyerId: user.uid,
+                          orderId: reviewOrderId,
                           rating: form.rating,
                           comment: form.comment,
-                          createdAt: new Date().toISOString(),
                         });
                         notifySafe("평가가 등록되었습니다.", "success");
                         const updated = await fetchReviews(id);
                         setReviews(updated);
                         setForm({ rating: 5, comment: "" });
+                        setCanReview(false);
+                        setReviewOrderId(null);
                       } catch (err) {
                         console.error(err);
                         notifySafe("평가 등록에 실패했습니다.", "error");

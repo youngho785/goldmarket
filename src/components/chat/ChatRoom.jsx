@@ -1,5 +1,5 @@
 // src/components/chat/ChatRoom.jsx
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import styled from "styled-components";
 import { useParams, Navigate, useNavigate } from "react-router-dom";
 import { useAuthContext } from "../../context/AuthContext";
@@ -35,7 +35,7 @@ const Page = styled.div`
   }
 
   width: 100%;
-  background: #fff;
+  background: ${({ theme }) => theme.colors.background};
 
   display: grid;
   grid-template-rows: auto auto auto 1fr auto; /* 헤더 / 타이핑 / 상품바 / 메시지 / 입력창 */
@@ -51,48 +51,54 @@ const HeaderBar = styled.div`
   z-index: 2;
   display: flex;
   align-items: center;
-  gap: 8px;
-  height: 48px;
-  padding: 0 12px;
-  border-bottom: 1px solid #e5e7eb;
-  background: #ffffff;
-  color: ${({ theme }) => theme.colors?.primary || "#111"};
-  font-weight: 600;
+  gap: 10px;
+  height: 56px;
+  padding: 0 14px;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
+  font-weight: 750;
+  box-shadow: 0 5px 18px rgba(18, 35, 58, .05);
 `;
 
 const BackBtn = styled.button`
-  border: 1px solid #e5e7eb;
-  background: #fff;
-  border-radius: 10px;
+  min-width: 40px;
+  min-height: 40px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+  color: ${({ theme }) => theme.colors.text};
+  border-radius: 11px;
   padding: 6px 10px;
+  box-shadow: none;
   cursor: pointer;
+  &:hover { background: ${({ theme }) => theme.semantic.badgeGoldBg}; transform: none; box-shadow: none; }
 `;
 
 const TypingHint = styled.div`
-  padding: 4px 12px;
+  padding: 6px 14px;
   font-size: 0.85rem;
-  color: #666;
-  border-bottom: 1px solid #f0f0f0;
-  background: #fff;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
+  background: ${({ theme }) => theme.colors.surface};
 `;
 
 const ProductBar = styled.div`
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px;
-  background: #fafafa;
-  border-bottom: 1px solid #eee;
+  padding: 10px 14px;
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
   cursor: pointer;
-  &:hover { background: #f5f5f5; }
+  &:hover { background: ${({ theme }) => theme.semantic.badgeGoldBg}; }
 `;
 
 const ProductImage = styled.img`
-  width: 60px; height: 60px; object-fit: cover; border-radius: 6px;
+  width: 60px; height: 60px; object-fit: cover; border-radius: 12px; border: 1px solid ${({ theme }) => theme.colors.border};
 `;
 const ProductMeta = styled.div` display: flex; flex-direction: column; `;
-const ProductTitle = styled.span` font-weight: 600; font-size: 0.95rem; `;
-const ProductPrice = styled.span` color: #666; font-size: 0.85rem; `;
+const ProductTitle = styled.span` font-weight: 750; font-size: 0.95rem; color: ${({ theme }) => theme.colors.text}; `;
+const ProductPrice = styled.span` color: ${({ theme }) => theme.colors.textSecondary}; font-size: 0.85rem; `;
 
 /* 메시지 영역 */
 const MessagesWrapper = styled.div`
@@ -113,7 +119,9 @@ const MessagesWrapper = styled.div`
     var(--composer-h, 72px) + var(--bottom-extra, 72px) + 12px
   );
 
-  background: #fafafa;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(178,138,59,.07), transparent 24rem),
+    ${({ theme }) => theme.colors.background};
 
   display: flex;
   flex-direction: column;
@@ -122,24 +130,25 @@ const MessagesWrapper = styled.div`
 
 const Bubble = styled.div`
   max-width: 75%;
-  padding: 10px 14px;
-  border-radius: 16px;
-  background: ${({ $own }) => ($own ? "#111" : "#fff")};
-  color: ${({ $own }) => ($own ? "#fff" : "#111")};
+  padding: 11px 14px;
+  border: 1px solid ${({ $own, theme }) => ($own ? "transparent" : theme.colors.border)};
+  border-radius: ${({ $own }) => ($own ? "18px 18px 5px 18px" : "18px 18px 18px 5px")};
+  background: ${({ $own, theme }) => ($own ? theme.gradients.primary : theme.colors.surface)};
+  color: ${({ $own, theme }) => ($own ? theme.on.primary : theme.colors.text)};
   align-self: ${({ $own }) => ($own ? "flex-end" : "flex-start")};
-  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  box-shadow: ${({ theme }) => theme.shadows.card};
 `;
 
 const Sender = styled.span`
   display: block;
   font-size: 0.8rem;
-  color: #666;
+  color: ${({ $own, theme }) => ($own ? "rgba(255,255,255,.76)" : theme.colors.textSecondary)};
   margin-bottom: 4px;
 `;
 
 const Time = styled.span`
   font-size: 0.72rem;
-  color: #999;
+  color: ${({ $own, theme }) => ($own ? "rgba(255,255,255,.62)" : theme.colors.textLight)};
   margin-left: 6px;
 `;
 
@@ -147,7 +156,7 @@ const ReadMark = styled.span`
   display: block;
   text-align: right;
   font-size: 0.72rem;
-  color: #999;
+  color: rgba(255,255,255,.66);
   margin-top: 4px;
 `;
 
@@ -156,9 +165,9 @@ const Composer = styled.form`
   position: sticky;
   bottom: 0;
   z-index: 3;
-  border-top: 1px solid #e5e7eb;
-  background: #fff;
-  padding: 8px 10px;
+  border-top: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
+  background: ${({ theme }) => theme.colors.surface};
+  padding: 10px 12px;
   padding-bottom: calc(env(safe-area-inset-bottom) + var(--bottom-extra, 72px));
 
   display: grid;
@@ -170,32 +179,36 @@ const Composer = styled.form`
 const PlusButton = styled.button`
   grid-column: 1 / span 1;
   align-self: start;
-  width: 40px; height: 40px;
+  width: 42px; height: 42px;
   border-radius: 12px;
-  background: #fff;
-  border: 1px solid #d1d5db;
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+  color: ${({ theme }) => theme.colors.text};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  box-shadow: none;
   font-weight: 700; line-height: 1;
   display: inline-flex; align-items: center; justify-content: center;
-  &:hover { background: #f8f9fa; }
+  &:hover { background: ${({ theme }) => theme.semantic.badgeGoldBg}; transform: none; box-shadow: none; }
 `;
 
 const Textarea = styled.textarea`
   grid-column: 2 / span 1;
   min-height: 40px; max-height: 140px; resize: none;
   padding: 10px 12px;
-  border: 1px solid #d1d5db; border-radius: 12px;
+  border: 1px solid ${({ theme }) => theme.colors.border}; border-radius: 12px;
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
   font-size: 0.95rem; outline: none;
-  &:focus { border-color: #111; }
+  &:focus { border-color: ${({ theme }) => theme.focus.outline}; box-shadow: ${({ theme }) => theme.focus.ring}; }
 `;
 
 const SendButton = styled.button`
   grid-column: 3 / span 1;
   padding: 10px 16px;
   border-radius: 12px;
-  border: 1px solid #111;
-  background: #111;
-  color: #fff;
-  font-weight: 600;
+  border: 1px solid transparent;
+  background: ${({ theme }) => theme.gradients.primary};
+  color: ${({ theme }) => theme.on.primary};
+  font-weight: 750;
   cursor: pointer;
   height: 40px;
   &:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -212,10 +225,10 @@ const PreviewGrid = styled.div`
 const PreviewItem = styled.div`
   position: relative;
   height: 88px;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 12px;
   overflow: hidden;
-  background: #fff;
+  background: ${({ theme }) => theme.colors.surface};
   display: grid;
   place-items: center;
 
@@ -226,12 +239,13 @@ const PreviewItem = styled.div`
   button.remove {
     position: absolute; top: 6px; right: 6px;
     width: 26px; height: 26px; border-radius: 50%;
+    min-height: 26px; padding: 0;
     background: rgba(255,255,255,0.95);
-    border: 1px solid #e5e7eb; cursor: pointer; font-weight: 700;
+    border: 1px solid ${({ theme }) => theme.colors.border}; cursor: pointer; font-weight: 700;
   }
 
   .filename {
-    font-size: 12px; padding: 4px 6px; text-align: center; color: #333;
+    font-size: 12px; padding: 4px 6px; text-align: center; color: ${({ theme }) => theme.colors.text};
   }
 `;
 
@@ -247,10 +261,10 @@ const AttachPopover = styled.div`
   bottom: calc(100% + 8px);
   left: 10px;
   z-index: 4;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0,0,0,.12);
+  background: ${({ theme }) => theme.colors.surface};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 14px;
+  box-shadow: ${({ theme }) => theme.shadows.lg};
   padding: 8px;
   display: grid;
   grid-template-columns: 1fr;
@@ -259,33 +273,35 @@ const AttachPopover = styled.div`
 `;
 const AttachItem = styled.button`
   display: flex; align-items: center; gap: 10px;
-  border: none; background: transparent; cursor: pointer;
+  min-height: 44px;
+  border: none; background: transparent; color: ${({ theme }) => theme.colors.text}; cursor: pointer; box-shadow: none;
   border-radius: 10px; padding: 10px; text-align: left;
-  &:hover { background: #f8f9fa; }
+  &:hover { background: ${({ theme }) => theme.colors.surfaceAlt}; transform: none; box-shadow: none; }
   & > span:first-child {
     width: 28px; height: 28px;
     display: inline-flex; align-items: center; justify-content: center;
-    border-radius: 8px; border: 1px solid #e5e7eb; font-weight: 700;
+    border-radius: 8px; border: 1px solid ${({ theme }) => theme.colors.border}; font-weight: 700;
   }
 `;
 
 const LoaderWrap = styled.div` padding: 32px; text-align: center; `;
-const EmptyText  = styled.p` color: #666; text-align: center; `;
-const ErrorText  = styled.p` color: red; text-align: center; margin: 8px 0; `;
+const EmptyText  = styled.p` color: ${({ theme }) => theme.colors.textSecondary}; text-align: center; `;
+const ErrorText  = styled.p` color: ${({ theme }) => theme.semantic.alertErrorText}; background: ${({ theme }) => theme.semantic.alertErrorBg}; text-align: center; margin: 8px 12px; padding: 10px 12px; border-radius: 10px; `;
 
 /* Modal */
 const ModalOverlay = styled.div`
-  position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+  position: fixed; inset: 0; background: ${({ theme }) => theme.semantic.overlay};
   display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 2000;
 `;
 const ModalContent = styled.div` position: relative; `;
 const ModalImg = styled.img`
   max-width: 92vw; max-height: 92vh; width: auto; height: auto;
-  object-fit: contain; border-radius: 8px; cursor: zoom-out;
+  object-fit: contain; border-radius: 14px; cursor: zoom-out; box-shadow: ${({ theme }) => theme.shadows.lg};
 `;
 const CloseButton = styled.button`
   position: absolute; top: -10px; right: -10px; width: 32px; height: 32px; border-radius: 50%;
-  border: none; background: #fff; cursor: pointer; font-weight: 700;
+  min-height: 34px; padding: 0;
+  border: 1px solid ${({ theme }) => theme.colors.border}; background: ${({ theme }) => theme.colors.surface}; color: ${({ theme }) => theme.colors.text}; cursor: pointer; font-weight: 700;
 `;
 
 /* util */
@@ -391,7 +407,7 @@ export default function ChatRoom() {
   }, [text, attachments.length, attachOpen]);
 
   /* 끝단 스크롤 */
-  const forceScrollBottom = (retries = 2) => {
+  const forceScrollBottom = useCallback((retries = 2) => {
     const list = listRef.current;
     const bottom = bottomRef.current;
     if (!list || !bottom) return;
@@ -404,7 +420,7 @@ export default function ChatRoom() {
         setTimeout(() => forceScrollBottom(retries - 1), 60);
       });
     }
-  };
+  }, []);
 
   /* ✅ 이 방을 보고 있다는 전역 플래그: FCM 토스트 억제용 */
   useEffect(() => {
@@ -424,7 +440,9 @@ export default function ChatRoom() {
       try {
         const token = await ensureFcmRegistration();
         if (token) await registerFcmToken(user.uid, token);
-      } catch {}
+      } catch {
+        // 푸시 등록 실패는 채팅 사용을 막지 않습니다.
+      }
     })();
   }, [user?.uid]);
 
@@ -448,7 +466,9 @@ export default function ChatRoom() {
             if (prodSnap.exists()) setProduct({ id: prodSnap.id, ...prodSnap.data() });
           }
         }
-      } catch {}
+      } catch {
+        // 상품 정보가 없어도 채팅은 계속 표시합니다.
+      }
     })();
   }, [chatId]);
 
@@ -488,10 +508,14 @@ export default function ChatRoom() {
       if (String(d.type) === "chat_message" && String(d.chatId) === String(chatId)) {
         callmarkChatAsRead(chatId)
           .then(() => {
-            try { if ("clearAppBadge" in navigator) navigator.clearAppBadge(); } catch {}
+            try { if ("clearAppBadge" in navigator) navigator.clearAppBadge(); } catch {
+              // 배지 API 미지원 환경은 무시합니다.
+            }
             window.dispatchEvent(new Event("APP_PUSH_MESSAGE"));
           })
-          .catch(() => {});
+          .catch(() => {
+            // 다음 포커스/가시성 변경 때 다시 동기화합니다.
+          });
       }
     };
     if (navigator.serviceWorker) {
@@ -523,7 +547,9 @@ export default function ChatRoom() {
             [`lastSeenAt.${user.uid}`]: serverTimestamp(),
           });
           await batch.commit();
-        } catch {}
+        } catch {
+          // callable과 폴백 모두 실패해도 메시지 열람은 유지합니다.
+        }
       }
     };
 
@@ -568,12 +594,18 @@ export default function ChatRoom() {
               [`lastSeenAt.${user.uid}`]: serverTimestamp(),
             });
             await batch.commit();
-          } catch {}
+          } catch {
+            // 다음 스냅샷에서 읽음 처리를 다시 시도합니다.
+          }
           try {
             await callmarkChatAsRead(chatId);
-            try { if ("clearAppBadge" in navigator) navigator.clearAppBadge(); } catch {}
+            try { if ("clearAppBadge" in navigator) navigator.clearAppBadge(); } catch {
+              // 배지 API 미지원 환경은 무시합니다.
+            }
             window.dispatchEvent(new Event("APP_PUSH_MESSAGE"));
-          } catch {}
+          } catch {
+            // 서버 읽음 동기화는 다음 진입 때 다시 시도합니다.
+          }
         }
       },
       () => {
@@ -582,10 +614,10 @@ export default function ChatRoom() {
       }
     );
     return () => unsub();
-  }, [chatId, user?.uid]);
+  }, [chatId, forceScrollBottom, user?.uid]);
 
   /* 프리뷰 변화 시에도 최신으로 */
-  useEffect(() => { forceScrollBottom(); }, [attachments.length]);
+  useEffect(() => { forceScrollBottom(); }, [attachments.length, forceScrollBottom]);
 
   /* 언마운트: 타이핑 false + 타이머/URL 해제 */
   useEffect(() => {
@@ -602,9 +634,6 @@ export default function ChatRoom() {
       });
     };
   }, [chatId, user?.uid]);
-
-  if (authLoading) return <Loader />;
-  if (!user) return <Navigate to="/login" replace />;
 
   /* 전송(하나의 버튼): 텍스트만 or 텍스트+첨부 */
   const onSubmit = async (e) => {
@@ -714,6 +743,9 @@ export default function ChatRoom() {
     return () => document.removeEventListener("mousedown", onClick);
   }, [attachOpen]);
 
+  if (authLoading) return <Loader />;
+  if (!user) return <Navigate to="/login" replace />;
+
   return (
     <Page>
       {/* 헤더 */}
@@ -757,9 +789,9 @@ export default function ChatRoom() {
 
             return (
               <Bubble key={msg.id} $own={own}>
-                <Sender>
+                <Sender $own={own}>
                   {own ? "나" : otherNickname}
-                  <Time>{ts && formatDistanceToNow(ts, { addSuffix: true, locale: ko })}</Time>
+                  <Time $own={own}>{ts && formatDistanceToNow(ts, { addSuffix: true, locale: ko })}</Time>
                 </Sender>
                 {msg.text && <div>{msg.text}</div>}
                 {msg.imageUrl && (

@@ -12,42 +12,73 @@ import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import ContentLoader from "react-content-loader";
 
-const Container = styled.div` padding: 20px; max-width: 800px; margin: 0 auto; `;
-const Heading = styled.h2` font-size: 1.8em; text-align: center; margin-bottom: 12px; `;
+const Container = styled.div`
+  padding: 8px 0 28px;
+  max-width: 860px;
+  margin: 0 auto;
+`;
+const Heading = styled.h2`
+  position: relative;
+  font-size: clamp(1.7rem, 4vw, 2rem);
+  margin: 0 0 20px;
+  padding-bottom: 13px;
+
+  &::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 48px;
+    height: 3px;
+    border-radius: 999px;
+    background: ${({ theme }) => theme.gradients.gold};
+  }
+`;
 
 /* ───── 필터 탭 UI ───── */
 const FilterBar = styled.div`
-  display: flex; gap: 8px; justify-content: center; align-items: center;
-  margin: 8px 0 18px;
+  display: flex; gap: 8px; justify-content: flex-start; align-items: center;
+  margin: 0 0 20px;
   flex-wrap: wrap;
 `;
 const FilterBtn = styled.button`
   position: relative;
   display: inline-flex; align-items: center; gap: 8px;
-  padding: 8px 12px; border-radius: 999px; cursor: pointer; font-weight: 700;
-  border: 1px solid ${({ $active }) => ($active ? "#2563eb" : "#e5e7eb")};
-  background: ${({ $active }) => ($active ? "#eff6ff" : "#fff")};
-  color: ${({ $active }) => ($active ? "#1d4ed8" : "#111827")};
+  min-height: 42px;
+  padding: 8px 12px; border-radius: 999px; cursor: pointer; font-weight: 750;
+  border: 1px solid ${({ $active, theme }) => ($active ? `${theme.colors.secondary}88` : theme.colors.border)};
+  background: ${({ $active, theme }) => ($active ? theme.semantic.badgeGoldBg : theme.colors.surface)};
+  color: ${({ $active, theme }) => ($active ? theme.semantic.badgeGoldText : theme.colors.textSecondary)};
+  box-shadow: ${({ theme }) => theme.shadows.xs};
   transition: background .15s, border-color .15s, color .15s;
-  &:hover { background: ${({ $active }) => ($active ? "#dbeafe" : "#f9fafb")}; }
+  &:hover { background: ${({ $active, theme }) => ($active ? theme.semantic.badgeGoldBg : theme.colors.surfaceAlt)}; }
 `;
 const CountPill = styled.span`
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 22px; height: 22px; padding: 0 8px;
   font-size: 12px; font-weight: 800; border-radius: 999px;
-  background: #111827; color: #fff;
+  background: ${({ theme }) => theme.colors.primary}; color: ${({ theme }) => theme.on.primary};
 `;
 
 const ChatItem = styled.div`
-  padding: 12px;
-  background: ${({ $highlight }) => ($highlight ? "#f0f8ff" : "#fff")};
-  border-bottom: 1px solid #eee;
+  padding: 15px 16px;
+  margin-bottom: 10px;
+  background: ${({ $highlight, theme }) => ($highlight ? theme.semantic.alertInfoBg : theme.colors.surface)};
+  border: 1px solid ${({ $highlight, theme }) => ($highlight ? `${theme.colors.info}55` : theme.colors.border)};
+  border-radius: ${({ theme }) => theme.radii.large};
+  box-shadow: ${({ theme }) => theme.shadows.card};
   display: flex; justify-content: space-between; align-items: center;
-  cursor: pointer; transition: background .2s;
-  &:hover { background: #f8f8f8; }
+  gap: 14px;
+  cursor: pointer; transition: background .2s, border-color .2s, transform .2s, box-shadow .2s;
+  &:hover { background: ${({ theme }) => theme.colors.surfaceAlt}; border-color: ${({ theme }) => theme.colors.borderStrong}; transform: translateY(-1px); box-shadow: ${({ theme }) => theme.shadows.hover}; }
 `;
 
-const ChatMain = styled.div` display: flex; flex-direction: column; gap: 4px; `;
+const ChatMain = styled.div`
+  min-width: 0;
+  display: flex; flex-direction: column; gap: 4px;
+  p { margin: 0; color: ${({ theme }) => theme.colors.textSecondary}; font-size: .88rem; overflow: hidden; text-overflow: ellipsis; }
+  p:first-child { color: ${({ theme }) => theme.colors.text}; font-weight: 750; font-size: .96rem; }
+`;
 
 const RightWrap = styled.div`
   display: flex; align-items: center; gap: 10px; position: relative;
@@ -65,14 +96,14 @@ const BigAvatarWrap = styled.div`
     content: "";
     position: absolute; inset: -2px;
     border-radius: inherit;
-    background: conic-gradient(from 180deg at 50% 50%, #60a5fa, #a78bfa, #f472b6, #60a5fa);
+    background: ${({ theme }) => `conic-gradient(from 180deg at 50% 50%, ${theme.colors.secondary}, ${theme.colors.primary}, ${theme.colors.goldLight}, ${theme.colors.secondary})`};
     z-index: 0;
   }
   &::after {
     content: "";
     position: absolute; inset: 2px;
     border-radius: inherit;
-    background: #fff;
+    background: ${({ theme }) => theme.colors.surface};
     z-index: 0;
   }
 
@@ -87,38 +118,39 @@ const BigAvatarImg = styled.img`
 const BigAvatarFallback = styled.div`
   position: relative; z-index: 1;
   width: 40px; height: 40px; border-radius: 9999px;
-  background: #e5e7eb; color: #374151; display: flex; align-items: center; justify-content: center;
+  background: ${({ theme }) => theme.colors.surfaceAlt}; color: ${({ theme }) => theme.colors.textSecondary}; display: flex; align-items: center; justify-content: center;
   font-weight: 800; font-size: 14px;
 `;
 
 const Chip = styled.span`
   padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 700;
-  background: ${({ $type }) => ($type === "blocked" ? "#fee2e2" : "#e5e7eb")};
-  color: ${({ $type }) => ($type === "blocked" ? "#b91c1c" : "#374151")};
+  background: ${({ $type, theme }) => ($type === "blocked" ? theme.semantic.alertErrorBg : theme.colors.surfaceAlt)};
+  color: ${({ $type, theme }) => ($type === "blocked" ? theme.semantic.alertErrorText : theme.colors.textSecondary)};
 `;
 
 const UnreadBadge = styled.div`
-  background: #e53935; color: #fff; padding: 4px 8px; border-radius: 12px;
+  background: ${({ theme }) => theme.colors.error}; color: ${({ theme }) => theme.on.error}; padding: 4px 8px; border-radius: 12px;
   font-size: .8em; font-weight: 700; min-width: 24px; text-align: center;
   visibility: ${({ $hidden }) => ($hidden ? "hidden" : "visible")};
 `;
 
 const MenuBtn = styled.button`
-  border: 1px solid #e5e7eb; background: #fff; padding: 6px 10px; border-radius: 10px; cursor: pointer; font-weight: 600;
-  &:hover { background: #f9fafb; }
+  min-width: 38px; min-height: 38px;
+  border: 1px solid ${({ theme }) => theme.colors.border}; background: ${({ theme }) => theme.colors.surface}; color: ${({ theme }) => theme.colors.text}; padding: 6px 10px; border-radius: 10px; cursor: pointer; font-weight: 700; box-shadow: none;
+  &:hover { background: ${({ theme }) => theme.colors.surfaceAlt}; transform: none; box-shadow: none; }
 `;
 const Popover = styled.div`
-  position: absolute; top: 42px; right: 0; z-index: 10; background: #fff; border: 1px solid #e5e7eb; border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0,0,0,.12); padding: 6px; min-width: 160px;
+  position: absolute; top: 42px; right: 0; z-index: 10; background: ${({ theme }) => theme.colors.surface}; border: 1px solid ${({ theme }) => theme.colors.border}; border-radius: 14px;
+  box-shadow: ${({ theme }) => theme.shadows.lg}; padding: 6px; min-width: 160px;
 `;
 const MenuItem = styled.button`
-  width: 100%; text-align: left; border: 0; background: transparent; padding: 10px 12px; border-radius: 8px; cursor: pointer; font-weight: 600;
-  color: ${({ $danger }) => ($danger ? "#e11d48" : "#111")};
-  &:hover { background: #f8f9fa; }
+  width: 100%; min-height: 40px; text-align: left; border: 0; background: transparent; padding: 9px 11px; border-radius: 9px; cursor: pointer; font-weight: 700; box-shadow: none;
+  color: ${({ $danger, theme }) => ($danger ? theme.colors.error : theme.colors.text)};
+  &:hover { background: ${({ theme }) => theme.colors.surfaceAlt}; transform: none; box-shadow: none; }
 `;
 
-const LoadingText = styled.p` text-align: center; `;
-const ErrorText = styled.p` text-align: center; color: red; `;
+const LoadingText = styled.p` text-align: center; padding: 28px; color: ${({ theme }) => theme.colors.textSecondary}; background: ${({ theme }) => theme.colors.surface}; border: 1px solid ${({ theme }) => theme.colors.border}; border-radius: ${({ theme }) => theme.radii.large}; `;
+const ErrorText = styled.p` text-align: center; color: ${({ theme }) => theme.semantic.alertErrorText}; background: ${({ theme }) => theme.semantic.alertErrorBg}; padding: 14px; border-radius: 12px; `;
 
 /* utils */
 function tsToDate(ts) {
@@ -362,23 +394,25 @@ export default function ChatList() {
   };
 
   /* ───── 필터 계산 ───── */
-  const isHiddenRoom  = (room) => !!room?.hidden?.[uid];
-  const isBlockedRoom = (room) => !!room?.__blocked || !!room?.blockedBy?.[uid];
-  const isLeftRoom    = (room) => !!room?.left?.[uid];
-
   // 전체 탭: 숨김+미읽음0은 제외, 그리고 "나간 방"은 무조건 제외
   const allRooms = useMemo(() => {
     return rooms.filter((room) => {
-      if (isLeftRoom(room)) return false;
+      if (room?.left?.[uid]) return false;
       const unread = Math.max(0, toSafeUnread(room?.unreadCount?.[uid]));
-      const hidden = isHiddenRoom(room);
+      const hidden = !!room?.hidden?.[uid];
       return !(hidden && unread === 0);
     });
   }, [rooms, uid]);
 
   // 숨김/차단 탭도 "나간 방"은 표시하지 않음
-  const hiddenRooms  = useMemo(() => rooms.filter((r) => isHiddenRoom(r) && !isLeftRoom(r)), [rooms, uid]);
-  const blockedRooms = useMemo(() => rooms.filter((r) => isBlockedRoom(r) && !isLeftRoom(r)), [rooms, uid]);
+  const hiddenRooms = useMemo(
+    () => rooms.filter((room) => !!room?.hidden?.[uid] && !room?.left?.[uid]),
+    [rooms, uid]
+  );
+  const blockedRooms = useMemo(
+    () => rooms.filter((room) => (!!room?.__blocked || !!room?.blockedBy?.[uid]) && !room?.left?.[uid]),
+    [rooms, uid]
+  );
 
   const listForView = filterMode === "hidden"
     ? hiddenRooms
@@ -424,8 +458,8 @@ export default function ChatList() {
           const time = lastDate ? formatDistanceToNow(lastDate, { addSuffix: true, locale: ko }) : "N/A";
           const names = (room.participantProfiles || []).map((p) => p.displayName || p.uid);
           const unreadLabel = unread > 99 ? "99+" : String(unread);
-          const hiddenMine = isHiddenRoom(room);
-          const blocked = isBlockedRoom(room);
+          const hiddenMine = !!room?.hidden?.[uid];
+          const blocked = !!room?.__blocked || !!room?.blockedBy?.[uid];
           const p = (room.participantProfiles || [])[0];
 
           return (

@@ -5,6 +5,7 @@ import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { format, isValid } from 'date-fns';
 import { db } from '../firebase/firebase';
 import { useAuthContext } from '../context/AuthContext';
+import GoldExchangeReviewForm from '@/components/reviews/GoldExchangeReviewForm';
 
 /* ── 상수/유틸 ─────────────────────────────────── */
 const DON_TO_GRAMS = 3.75;
@@ -91,15 +92,38 @@ const displayOriginalQty = (doc) => {
 
 /* ── 스타일 ───────────────────────────────────── */
 const Page = styled.div`
-  padding: 1.25rem 1rem 2.5rem;
-  max-width: 960px;
+  padding: 30px 0 4rem;
+  max-width: 1080px;
   margin: 0 auto;
 `;
 
+const PageHeader = styled.header`
+  margin-bottom: 18px;
+  padding: clamp(28px, 5vw, 50px);
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-top: 3px solid ${({ theme }) => theme.colors.secondary};
+  background: ${({ theme }) => theme.colors.surface};
+`;
+
+const Kicker = styled.p`
+  margin: 0 0 8px;
+  color: ${({ theme }) => theme.colors.secondaryDark};
+  font-family: ${({ theme }) => theme.fonts.numeric};
+  font-size: .69rem;
+  font-weight: 850;
+  letter-spacing: .15em;
+`;
+
+const HeaderLead = styled.p`
+  max-width: 680px;
+  margin: 12px 0 0;
+  color: ${({ theme }) => theme.colors.textSecondary};
+`;
+
 const SectionTitle = styled.h1`
-  margin: 0 0 .75rem;
-  font-size: 1.35rem;
-  letter-spacing: -0.01em;
+  margin: 0;
+  color: ${({ theme }) => theme.colors.primary};
+  font-size: clamp(2rem, 5vw, 3.35rem);
 `;
 
 const FilterBar = styled.div`
@@ -110,8 +134,8 @@ const FilterBar = styled.div`
 `;
 
 const FilterChip = styled.button`
-  padding: .35rem .7rem;
-  border-radius: 9999px;
+  padding: .48rem .8rem;
+  border-radius: 0;
   border: 1px solid ${({ theme }) => get(theme, 'colors.border', '#e5e7eb')};
   background: ${({ $active, theme }) => ($active ? get(theme,'colors.surfaceAlt', '#eef2ff') : get(theme,'colors.surface','#fff'))};
   font-weight: 800;
@@ -134,8 +158,8 @@ const CardGrid = styled.div`
 const Card = styled.div`
   background: ${({ theme }) => get(theme, 'colors.surface', '#ffffff')};
   border: 1px solid ${({ theme }) => get(theme, 'colors.border', '#e5e7eb')};
-  border-radius: 14px;
-  box-shadow: 0 2px 10px rgba(0,0,0,.06);
+  border-radius: 0;
+  box-shadow: ${({ theme }) => theme.shadows.card};
   overflow: hidden;
 `;
 
@@ -446,8 +470,7 @@ export default function MyExchanges() {
       // 이메일은 문서에 없을 수 있으므로, 회원가입 Auth 이메일로 폴백
       const requester = {
         name: latestByUpdate.name || latestByUpdate.requesterName || user?.displayName || '-',
-        phone: latestByUpdate.phone || '-',     // 전화/주소는 문서 값 우선
-        address: latestByUpdate.address || '-',
+        phone: latestByUpdate.phone || '-',
         email: latestByUpdate.email || user?.email || '-', // 폴백
       };
 
@@ -465,6 +488,12 @@ export default function MyExchanges() {
       });
 
       const totalG = enrichedItems.reduce((s, i) => s + (Number(i._finalWeight) || 0), 0);
+      const bonus = latestByUpdate.bonusGoldUsageStatus ? {
+        status: String(latestByUpdate.bonusGoldUsageStatus),
+        amountG: Number(latestByUpdate.bonusGoldUsedG || 0),
+        finalRecognizedG: Number(latestByUpdate.finalRecognizedG || 0),
+        finalAppliedG: Number(latestByUpdate.finalAppliedG || 0),
+      } : null;
 
       // 최신 barsPlan 보유 문서
       const planDoc = items
@@ -484,6 +513,7 @@ export default function MyExchanges() {
         scheduledAt,
         requester,
         totalG,
+        bonus,
         plan: planDoc ? planDoc.barsPlan : null,
       });
     }
@@ -533,7 +563,11 @@ export default function MyExchanges() {
   if (!user) return <Page><Empty>로그인이 필요합니다.</Empty></Page>;
   if (loading) return (
     <Page>
-      <SectionTitle>나의 금 교환 내역</SectionTitle>
+      <PageHeader>
+        <Kicker>MY EXCHANGE LEDGER</Kicker>
+        <SectionTitle>나의 금 교환 내역</SectionTitle>
+        <HeaderLead>접수한 교환 요청과 예약, 확정된 골드바 조합을 한곳에서 확인합니다.</HeaderLead>
+      </PageHeader>
       <FilterBar>
         {Object.entries(FILTER_LABEL).map(([key, label]) => (
           <FilterChip key={key} disabled>{label}</FilterChip>
@@ -550,7 +584,11 @@ export default function MyExchanges() {
 
   return (
     <Page>
-      <SectionTitle>나의 금 교환 내역</SectionTitle>
+      <PageHeader>
+        <Kicker>MY EXCHANGE LEDGER</Kicker>
+        <SectionTitle>나의 금 교환 내역</SectionTitle>
+        <HeaderLead>접수한 교환 요청과 예약, 확정된 골드바 조합을 한곳에서 확인합니다.</HeaderLead>
+      </PageHeader>
 
       <FilterBar role="tablist" aria-label="상태 필터">
         {Object.entries(FILTER_LABEL).map(([key, label]) => (
@@ -610,7 +648,6 @@ export default function MyExchanges() {
                     <Field><Label>요청 그룹</Label><Value>{g.groupId}</Value></Field>
                     <Field><Label>요청자</Label><Value>{g.requester.name}</Value></Field>
                     <Field><Label>전화</Label><Value>{g.requester.phone}</Value></Field>
-                    <Field><Label>주소</Label><Value>{g.requester.address}</Value></Field>
                     <Field><Label>이메일</Label><Value>{g.requester.email}</Value></Field>
                   </MetaGrid>
 
@@ -663,6 +700,30 @@ export default function MyExchanges() {
                     <Help>교환 중량 및 합계는 <strong>입력하신 값</strong>이 계산되어 저장된 값을 그대로 표시합니다.</Help>
                   </div>
 
+                  {g.bonus?.status === "used" && (
+                    <>
+                      <Divider />
+                      <PlanCard aria-label="적립 순금 적용 명세">
+                        <strong>적립 순금 적용 명세</strong>
+                        <PlanRow>
+                          <PlanLabel>현장 인정</PlanLabel>
+                          <PlanValue>{fmtG3(g.bonus.finalRecognizedG)} g</PlanValue>
+                        </PlanRow>
+                        <PlanRow>
+                          <PlanLabel>적립 순금</PlanLabel>
+                          <PlanValue>+ {Number(g.bonus.amountG || 0).toFixed(2)} g</PlanValue>
+                        </PlanRow>
+                        <PlanRow>
+                          <PlanLabel>최종 적용</PlanLabel>
+                          <PlanValue><strong>{fmtG3(g.bonus.finalAppliedG)} g</strong></PlanValue>
+                        </PlanRow>
+                        <Help>
+                          매장에서 본인 확인과 6자리 코드 확인 후 관리자가 확정한 사용 내역입니다.
+                        </Help>
+                      </PlanCard>
+                    </>
+                  )}
+
                   {/* 교환 계획 (barsPlan) */}
                   {g.plan && (
                     <>
@@ -701,6 +762,11 @@ export default function MyExchanges() {
                       </PlanCard>
                     </>
                   )}
+
+                  <GoldExchangeReviewForm
+                    exchangeId={g.groupId}
+                    status={statusKey}
+                  />
                 </CardBody>
               )}
             </Card>

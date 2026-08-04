@@ -1,6 +1,7 @@
 // src/components/admin/ExchangeList.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import styled from "styled-components";
+import { useSearchParams } from "react-router-dom";
 import { db, functions } from "../../firebase/firebase";
 import {
   collection,
@@ -11,6 +12,7 @@ import {
   limit as qLimit,
   startAfter,
   getDoc,
+  onSnapshot,
 } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 
@@ -125,12 +127,12 @@ const ListContainer = styled.div`
   display: flex;
   flex-direction: column;
   gap: 12px;
-  ${DEBUG ? "outline: 2px dashed #00A8E8;" : ""}
+  ${DEBUG ? "outline: 2px dashed #B28A3B;" : ""}
 `;
 
 const DebugBar = styled.div`
   display: ${DEBUG ? "block" : "none"};
-  background: #00a8e8;
+  background: ${({ theme }) => theme.colors.primary};
   color: #fff;
   font-weight: 800;
   font-size: 12px;
@@ -367,6 +369,85 @@ const ActionButton = styled.button`
   }
 `;
 
+const BonusCard = styled.section`
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid ${({ theme }) => theme.colors.secondary};
+  border-radius: 12px;
+  background: ${({ theme }) => theme.semantic.badgeGoldBg};
+  color: ${({ theme }) => theme.colors.text};
+`;
+
+const BonusHead = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+`;
+
+const BonusBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: ${({ $status, theme }) =>
+    $status === "requested" ? theme.colors.error : theme.colors.primary};
+  color: #fff;
+  font-size: .76rem;
+  font-weight: 850;
+`;
+
+const BonusGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+
+  @media (max-width: 720px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const BonusField = styled.label`
+  display: grid;
+  gap: 6px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: .85rem;
+  font-weight: 750;
+`;
+
+const BonusInput = styled.input`
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 10px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 9px;
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
+  font-size: 1rem;
+`;
+
+const BonusEquation = styled.div`
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border-radius: 9px;
+  background: ${({ theme }) => theme.colors.surface};
+  font-family: ${({ theme }) => theme.fonts.numeric};
+  font-weight: 800;
+`;
+
+const PhoneLink = styled.a`
+  color: ${({ theme }) => theme.colors.link};
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+`;
+
 const LoadMoreWrap = styled.div`
   display: flex;
   gap: 8px;
@@ -416,6 +497,11 @@ export default function ExchangeList() {
 
   // 그룹 단위 busy 상태 (중복 클릭 방지)
   const [busy, setBusy] = useState({}); // { [groupId]: boolean }
+  const [groupMeta, setGroupMeta] = useState({});
+  const [bonusForms, setBonusForms] = useState({});
+  const [searchParams] = useSearchParams();
+  const focusGroupId = (searchParams.get("groupId") || "").trim();
+  const statusFilter = (searchParams.get("status") || "").trim();
 
   // 최초 페이지 로드 (createdAt desc 정렬로만 페이징)
   useEffect(() => {
@@ -470,6 +556,28 @@ export default function ExchangeList() {
       setLoadingMore(false);
     }
   };
+
+  // 관리자에게 필요한 그룹 요약과 적립 순금 사용 상태를 실시간으로 반영합니다.
+  useEffect(() => {
+    const summariesQuery = query(
+      collection(db, "goldExchangeGroups"),
+      orderBy("updatedAt", "desc"),
+      qLimit(100)
+    );
+    return onSnapshot(
+      summariesQuery,
+      (snapshot) => {
+        const next = {};
+        snapshot.forEach((item) => {
+          next[item.id] = { id: item.id, ...item.data() };
+        });
+        setGroupMeta(next);
+      },
+      (error) => {
+        console.warn("[Admin ExchangeList] group summaries failed:", error?.code || error);
+      }
+    );
+  }, []);
 
   // docs -> 그룹화(+대표상태/합계/요청자/플랜)
   const groups = useMemo(() => {
@@ -593,6 +701,14 @@ export default function ExchangeList() {
     });
   }, [groups]);
 
+  useEffect(() => {
+    if (!focusGroupId || groups.length === 0) return;
+    if (groups.some((group) => group.groupId === focusGroupId)) {
+      setQText(focusGroupId);
+      setExpanded((current) => ({ ...current, [focusGroupId]: true }));
+    }
+  }, [focusGroupId, groups]);
+
   // 프로필 보강(이메일/전화) — 현재 페이지에 나타난 userId만
   useEffect(() => {
     const need = Array.from(
@@ -626,16 +742,21 @@ export default function ExchangeList() {
 
   // 검색 필터 (그룹 단위)
   const groupsFiltered = useMemo(() => {
+    const statusMatched = groups.filter((group) => {
+      const status = normalizeStatusKey(group.repStatus);
+      if (statusFilter === "requested") return status === "requested";
+      if (statusFilter === "active") return ["scheduled", "in_progress"].includes(status);
+      return true;
+    });
     const term = qText.trim().toLowerCase();
-    if (!term) return groups;
-    return groups.filter((g) => {
+    if (!term) return statusMatched;
+    return statusMatched.filter((g) => {
       const prof = g.requester.userId ? profiles[g.requester.userId] : null;
       const hay = [
         g.groupId,
         g.requester.userId,
         g.requester.name,
         g.requester.phone || prof?.phone,
-        g.requester.address,
         g.requester.email || prof?.email,
         g.visitDate,
         g.visitTime,
@@ -652,7 +773,7 @@ export default function ExchangeList() {
         .toLowerCase();
       return hay.includes(term);
     });
-  }, [groups, qText, profiles]);
+  }, [groups, qText, profiles, statusFilter]);
 
   // 그룹 상태 일괄 업데이트 → Functions 콜러블 사용
   const updateGroupStatus = async (groupId, status) => {
@@ -681,6 +802,79 @@ export default function ExchangeList() {
     }
   };
 
+  const updateBonusForm = (groupId, field, value) => {
+    setBonusForms((current) => ({
+      ...current,
+      [groupId]: { ...(current[groupId] || {}), [field]: value },
+    }));
+  };
+
+  const confirmBonusUsage = async (group) => {
+    const form = bonusForms[group.groupId] || {};
+    const requestCode = String(form.requestCode || "").replace(/\D/g, "").slice(0, 6);
+    const finalRecognizedG = Number(form.finalRecognizedG ?? group.totalG);
+    const meta = groupMeta[group.groupId] || {};
+    const amountG = Number(meta.bonusGoldRequestedG || 0);
+    if (requestCode.length !== 6) {
+      alert("고객 휴대폰에 표시된 6자리 확인 코드를 입력해 주세요.");
+      return;
+    }
+    if (!Number.isFinite(finalRecognizedG) || finalRecognizedG <= 0) {
+      alert("현장에서 확인한 인정 순금 중량을 입력해 주세요.");
+      return;
+    }
+    if (!window.confirm(
+      `현장 인정 ${finalRecognizedG.toFixed(3)}g에 적립 순금 ${amountG.toFixed(2)}g을 사용 확정할까요?`
+    )) return;
+
+    setBusy((current) => ({ ...current, [group.groupId]: true }));
+    try {
+      const call = httpsCallable(functions, "bonusAdminConfirmGoldUsage");
+      const response = await call({ groupId: group.groupId, requestCode, finalRecognizedG });
+      const data = response?.data || {};
+      if (!data.ok) throw new Error("적립 순금 사용 확정 실패");
+      setGroupMeta((current) => ({
+        ...current,
+        [group.groupId]: {
+          ...(current[group.groupId] || {}),
+          bonusGoldUsageStatus: "used",
+          bonusGoldUsedG: Number(data.amountG || amountG),
+          finalRecognizedG: Number(data.finalRecognizedG || finalRecognizedG),
+          finalAppliedG: Number(data.finalAppliedG || 0),
+        },
+      }));
+      setBonusForms((current) => ({
+        ...current,
+        [group.groupId]: { ...current[group.groupId], requestCode: "" },
+      }));
+      alert("적립 순금 사용이 확정되었습니다.");
+    } catch (error) {
+      console.error("적립 순금 사용 확정 실패:", error);
+      alert(error?.message || "적립 순금 사용을 확정하지 못했습니다.");
+    } finally {
+      setBusy((current) => ({ ...current, [group.groupId]: false }));
+    }
+  };
+
+  const cancelBonusUsage = async (groupId) => {
+    if (!window.confirm("이 교환 건의 적립 순금 사용 신청을 취소할까요?")) return;
+    setBusy((current) => ({ ...current, [groupId]: true }));
+    try {
+      const call = httpsCallable(functions, "bonusAdminCancelGoldUsage");
+      const response = await call({ groupId, reason: "매장 확인 중 신청 취소" });
+      if (!response?.data?.ok) throw new Error("사용 신청 취소 실패");
+      setGroupMeta((current) => ({
+        ...current,
+        [groupId]: { ...(current[groupId] || {}), bonusGoldUsageStatus: "canceled" },
+      }));
+    } catch (error) {
+      console.error("적립 순금 사용 신청 취소 실패:", error);
+      alert(error?.message || "적립 순금 사용 신청을 취소하지 못했습니다.");
+    } finally {
+      setBusy((current) => ({ ...current, [groupId]: false }));
+    }
+  };
+
   if (loadingFirst && docs.length === 0) {
     return <p>금 교환 요청을 불러오는 중…</p>;
   }
@@ -689,7 +883,7 @@ export default function ExchangeList() {
       <>
         <StickyToolbar>
           <Input
-            placeholder="그룹/사용자/연락처/주소/항목/일시 검색"
+            placeholder="그룹/사용자/연락처/항목/일시 검색"
             value={qText}
             onChange={(e) => setQText(e.target.value)}
           />
@@ -704,12 +898,12 @@ export default function ExchangeList() {
     <>
       <StickyToolbar>
         <Input
-          placeholder="그룹/사용자/연락처/주소/항목/일시 검색"
+          placeholder="그룹/사용자/연락처/항목/일시 검색"
           value={qText}
           onChange={(e) => setQText(e.target.value)}
         />
         <Summary>
-          그룹: {groupsFiltered.length}건 / 로드된 문서: {docs.length}건
+          {statusFilter ? `필터 ${statusFilter} · ` : ""}그룹: {groupsFiltered.length}건 / 로드된 문서: {docs.length}건
         </Summary>
       </StickyToolbar>
 
@@ -722,6 +916,9 @@ export default function ExchangeList() {
 
         {groupsFiltered.map((g) => {
           const statusKey = normalizeStatusKey(g.repStatus);
+          const meta = groupMeta[g.groupId] || {};
+          const bonusStatus = String(meta.bonusGoldUsageStatus || "");
+          const bonusForm = bonusForms[g.groupId] || {};
           const prof = g.requester.userId ? profiles[g.requester.userId] : null;
           const email = g.requester.email !== "-" ? g.requester.email : (prof?.email || "미등록");
           const phone = g.requester.phone !== "-" ? g.requester.phone : (prof?.phone || "미등록");
@@ -744,6 +941,9 @@ export default function ExchangeList() {
                   <HValue>{visitLine}</HValue>
                 </HLeft>
                 <HRight>
+                  {bonusStatus === "requested" && (
+                    <BonusBadge $status="requested">적립 사용 확인</BonusBadge>
+                  )}
                   <Chips>
                     <Chip $tone="grams">{fmtG3(g.totalG)} g</Chip>
                     <Chip $tone="don">{fmtD2((g.totalG || 0) / DON_TO_GRAMS)} 돈</Chip>
@@ -761,8 +961,12 @@ export default function ExchangeList() {
                   <MetaGrid>
                     <Field><Label>요청 그룹</Label><Value>{g.groupId}</Value></Field>
                     <Field><Label>요청자</Label><Value>{g.requester.name}</Value></Field>
-                    <Field><Label>전화</Label><Value>{phone}</Value></Field>
-                    <Field><Label>주소</Label><Value>{g.requester.address}</Value></Field>
+                    <Field>
+                      <Label>전화</Label>
+                      <Value>
+                        <PhoneLink href={`tel:${String(phone).replace(/\D/g, "")}`}>{phone}</PhoneLink>
+                      </Value>
+                    </Field>
                     <Field><Label>이메일</Label><Value>{email}</Value></Field>
                   </MetaGrid>
 
@@ -815,6 +1019,82 @@ export default function ExchangeList() {
                       </Chips>
                     </TotalRow>
                   </div>
+
+                  {bonusStatus && (
+                    <BonusCard aria-label="적립 순금 사용 처리">
+                      <BonusHead>
+                        <strong>적립 순금 사용</strong>
+                        <BonusBadge $status={bonusStatus}>
+                          {bonusStatus === "requested" ? "확인 대기" :
+                           bonusStatus === "used" ? "사용 완료" :
+                           bonusStatus === "restored" ? "잔액 복구" : "신청 취소"}
+                        </BonusBadge>
+                      </BonusHead>
+
+                      {bonusStatus === "requested" && (
+                        <>
+                          <BonusGrid>
+                            <BonusField>
+                              신청 중량
+                              <BonusInput
+                                value={`${Number(meta.bonusGoldRequestedG || 0).toFixed(2)}g`}
+                                readOnly
+                              />
+                            </BonusField>
+                            <BonusField>
+                              고객 6자리 코드
+                              <BonusInput
+                                inputMode="numeric"
+                                autoComplete="one-time-code"
+                                maxLength={6}
+                                placeholder="고객 코드 입력"
+                                value={bonusForm.requestCode || ""}
+                                onChange={(event) => updateBonusForm(
+                                  g.groupId,
+                                  "requestCode",
+                                  event.target.value.replace(/\D/g, "").slice(0, 6)
+                                )}
+                              />
+                            </BonusField>
+                            <BonusField>
+                              현장 인정 순금(g)
+                              <BonusInput
+                                inputMode="decimal"
+                                value={bonusForm.finalRecognizedG ?? fmtG3(g.totalG)}
+                                onChange={(event) => updateBonusForm(
+                                  g.groupId,
+                                  "finalRecognizedG",
+                                  event.target.value
+                                )}
+                              />
+                            </BonusField>
+                          </BonusGrid>
+                          <BonusEquation>
+                            현장 인정 중량 + 적립 {Number(meta.bonusGoldRequestedG || 0).toFixed(2)}g
+                            = 최종 교환 적용 중량
+                          </BonusEquation>
+                          <ButtonGroup>
+                            <ActionButton disabled={disabled} onClick={() => confirmBonusUsage(g)}>
+                              {disabled ? "처리 중…" : `${Number(meta.bonusGoldRequestedG || 0).toFixed(2)}g 사용 확정`}
+                            </ActionButton>
+                            <ActionButton disabled={disabled} onClick={() => cancelBonusUsage(g.groupId)}>
+                              사용 신청 취소
+                            </ActionButton>
+                          </ButtonGroup>
+                        </>
+                      )}
+
+                      {bonusStatus === "used" && (
+                        <BonusEquation>
+                          현장 인정 {Number(meta.finalRecognizedG || 0).toFixed(3)}g
+                          + 적립 {Number(meta.bonusGoldUsedG || 0).toFixed(2)}g
+                          = 최종 {Number(meta.finalAppliedG || 0).toFixed(3)}g
+                        </BonusEquation>
+                      )}
+                      {bonusStatus === "restored" && <span>교환 상태 변경으로 사용 중량을 고객 잔액에 복구했습니다.</span>}
+                      {bonusStatus === "canceled" && <span>차감 없이 사용 신청만 취소되었습니다.</span>}
+                    </BonusCard>
+                  )}
 
                   {/* 교환 계획 (barsPlan) */}
                   {g.plan && (

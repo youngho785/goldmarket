@@ -115,7 +115,7 @@ export function LoginGateMount() {
               display: "inline-block",
               textAlign: "center",
               padding: "12px 14px",
-              background: "#2563eb",
+              background: "#1F3A5F",
               color: "#fff",
               fontWeight: 800,
               borderRadius: 10,

@@ -40,7 +40,7 @@ const Title = styled.p`margin: 0 0 4px; font-weight: 700; font-size: .95em;`;
 const Body  = styled.p`margin: 0 0 4px; font-size: .9em; color: #333;`;
 const TimeText = styled.p`margin: 0; font-size: .8em; color: #999;`;
 const Button = styled.button`
-  background: none; border: none; color: #007bff; cursor: pointer; font-size: .85em;
+  background: none; border: none; color: ${({ theme }) => theme.colors.link}; cursor: pointer; font-size: .85em;
   &:hover { text-decoration: underline; }
 `;
 

@@ -1,241 +1,309 @@
-// src/components/common/Navbar.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import styled, { keyframes } from "styled-components";
-import { FiMenu, FiX } from "react-icons/fi";
-import { useAuthContext } from "@/context/AuthContext";
-import { useNotificationContext } from "@/context/NotificationContext";
+import styled from "styled-components";
+import { Menu, X } from "lucide-react";
 import { getAuth, signOut } from "firebase/auth";
-
-/* Firestore */
-import { db } from "@/firebase/firebase";
 import {
   collection,
-  query,
-  where,
-  onSnapshot,
   doc,
-  setDoc,
+  onSnapshot,
+  query,
   serverTimestamp,
+  setDoc,
+  where,
 } from "firebase/firestore";
+import { useAuthContext } from "@/context/AuthContext";
+import { db } from "@/firebase/firebase";
+import Notifications from "./Notifications";
 
-/* ───────────────────────────────── 공통 유틸 ───────────────────────────────── */
-function toInt(n) {
-  const v = Number(n);
-  return Number.isFinite(v) ? Math.max(0, Math.floor(v)) : 0;
-}
-function formatBadge(n, max = 99) {
-  const v = toInt(n);
-  if (v <= 0) return null; // 0 이하면 렌더링 X
-  return v > max ? `${max}+` : String(v);
-}
-
-/* 언더라인 애니메이션 */
-const slideIn = keyframes`
-  from { width: 0; opacity: 0; }
-  to   { width: 100%; opacity: 1; }
+const Header = styled.header`
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: color-mix(in srgb, ${({ theme }) => theme.colors.background} 94%, transparent);
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  backdrop-filter: blur(16px);
 `;
 
-/* 네비바(상단 밀착, 여백 없음) */
-const Nav = styled.nav`
-  background: linear-gradient(135deg, #fff, #f9f9f9);
-  /* 노치 대응: 외부 여백 없이 내부 패딩만 */
-  padding: calc(16px + env(safe-area-inset-top, 0px)) 24px 16px 24px;
+const Utility = styled.div`
+  background: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.goldLight};
+`;
+
+const UtilityInner = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 20px;
+  max-width: 1440px;
+  min-height: 34px;
+  margin: 0 auto;
+  padding: 6px clamp(16px, 4vw, 64px);
+  font-size: .72rem;
+  letter-spacing: .025em;
 
-  position: sticky;
-  top: 0;         /* 화면 최상단에 밀착 */
-  margin-top: 0;  /* 외부 여백 제거 */
+  span { display: inline-flex; align-items: center; gap: 8px; }
+  span:first-child::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: ${({ theme }) => theme.colors.secondary};
+    box-shadow: 0 0 0 3px rgba(175, 132, 52, .18);
+  }
 
-  z-index: 1000;
+  @media (max-width: 680px) {
+    justify-content: center;
+    span:last-child { display: none; }
+  }
 `;
 
-const NavLeft = styled.div`
-  display: flex;
+const Nav = styled.nav`
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) auto minmax(240px, 1fr);
   align-items: center;
+  gap: 26px;
+  max-width: 1440px;
+  min-height: 80px;
+  margin: 0 auto;
+  padding: 10px clamp(16px, 4vw, 64px);
+
+  @media (max-width: 980px) {
+    grid-template-columns: 1fr auto;
+  }
 `;
 
-const LogoLink = styled(NavLink)`
-  text-decoration: none;
-  display: flex;
+const Brand = styled(NavLink)`
+  display: inline-flex;
   align-items: center;
-  h2 {
-    margin: 0;
+  justify-self: start;
+  gap: 12px;
+  color: ${({ theme }) => theme.colors.primary};
+
+  &:hover { color: ${({ theme }) => theme.colors.primary}; }
+`;
+
+const BrandSeal = styled.span`
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  border: 1px solid ${({ theme }) => theme.colors.secondary};
+  border-radius: 50%;
+  color: ${({ theme }) => theme.colors.secondaryDark};
+  font-family: ${({ theme }) => theme.fonts.heading};
+  font-size: 1.08rem;
+  box-shadow: inset 0 0 0 4px ${({ theme }) => theme.colors.background},
+    inset 0 0 0 5px ${({ theme }) => theme.colors.secondary}55;
+`;
+
+const BrandCopy = styled.span`
+  display: grid;
+  gap: 1px;
+
+  strong {
     font-family: ${({ theme }) => theme.fonts.heading};
-    font-size: 1.8rem;
-    color: ${({ theme }) => theme.colors.primary};
-    letter-spacing: 1px;
+    font-size: clamp(1.2rem, 2vw, 1.48rem);
+    font-weight: 700;
+    letter-spacing: -.045em;
+    line-height: 1.1;
+  }
+  small {
+    color: ${({ theme }) => theme.colors.textLight};
+    font-family: ${({ theme }) => theme.fonts.numeric};
+    font-size: .56rem;
+    letter-spacing: .13em;
   }
 `;
 
-const AdminBadge = styled.span`
-  background: ${({ theme }) => theme.colors.secondary};
-  color: #fff;
-  border-radius: 4px;
-  padding: 2px 6px;
-  font-size: 0.75rem;
-  margin-left: 8px;
-`;
-
-const NavRight = styled.div`
+const DesktopLinks = styled.div`
   display: flex;
-  gap: ${({ theme }) => theme.spacing(3)};
   align-items: center;
+  justify-content: center;
+  gap: clamp(15px, 2vw, 30px);
 
-  @media (max-width: 768px) {
-    display: none;
-  }
+  @media (max-width: 980px) { display: none; }
 `;
 
-const StyledNavLink = styled(NavLink)`
+const MenuLink = styled(NavLink)`
   position: relative;
-  font-size: 1rem;
-  font-weight: 600;
+  padding: 27px 0 25px;
   color: ${({ theme }) => theme.colors.textSecondary};
-  text-decoration: none;
-  padding-bottom: 3px;
-  transition: color 0.2s ease;
-
-  &:hover,
-  &.active {
-    color: ${({ theme }) => theme.colors.primary};
-  }
+  font-size: .88rem;
+  font-weight: 780;
+  white-space: nowrap;
 
   &::after {
     content: "";
     position: absolute;
+    right: 0;
+    bottom: 10px;
     left: 0;
-    bottom: 0;
     height: 2px;
-    width: 0;
-    background-color: ${({ theme }) => theme.colors.primary};
-    opacity: 0;
-    transition: width 0.3s ease, opacity 0.3s ease;
+    background: ${({ theme }) => theme.colors.secondary};
+    transform: scaleX(0);
+    transition: transform ${({ theme }) => theme.transitions.base};
   }
+  &:hover, &.active { color: ${({ theme }) => theme.colors.primary}; }
+  &:hover::after, &.active::after { transform: scaleX(1); }
+`;
 
-  &:hover::after,
-  &.active::after {
-    width: 100%;
-    opacity: 1;
-    animation: ${slideIn} 0.3s forwards;
-  }
+const Account = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 14px;
 
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary};
-    outline-offset: 2px;
+  @media (max-width: 980px) { display: none; }
+`;
+
+const TextButton = styled.button`
+  min-height: 40px;
+  padding: 6px 2px;
+  border: 0;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  box-shadow: none;
+  font-size: .84rem;
+
+  &:hover:not(:disabled) {
+    transform: none;
+    box-shadow: none;
+    color: ${({ theme }) => theme.colors.primary};
   }
+`;
+
+const AccountLink = styled(NavLink)`
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 8px 13px;
+  border: 1px solid ${({ theme }) => theme.colors.borderStrong};
+  color: ${({ theme }) => theme.colors.primary};
+  font-size: .82rem;
+  font-weight: 800;
 `;
 
 const Badge = styled.span`
-  margin-left: 4px;
-  background: ${({ theme }) => theme.colors.secondary};
-  color: #fff;
-  border-radius: 12px;
-  padding: 2px 6px;
-  font-size: 0.75rem;
-  font-weight: bold;
-  line-height: 1;
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  margin-left: 5px;
+  padding: 0 4px;
+  border-radius: 99px;
+  background: ${({ theme }) => theme.colors.error};
+  color: white;
+  font-family: ${({ theme }) => theme.fonts.numeric};
+  font-size: .62rem;
 `;
 
-const LogoutButton = styled.button`
-  font-size: 1rem;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  position: relative;
-
-  &:hover,
-  &:focus-visible {
-    color: ${({ theme }) => theme.colors.primary};
-    outline: none;
-  }
-
-  &::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    bottom: -2px;
-    height: 2px;
-    width: 0;
-    background-color: ${({ theme }) => theme.colors.primary};
-    opacity: 0;
-    transition: width 0.3s ease, opacity 0.3s ease;
-  }
-
-  &:hover::after,
-  &:focus-visible::after {
-    width: 100%;
-    opacity: 1;
-    animation: ${slideIn} 0.3s forwards;
-  }
-`;
-
-/* 모바일에서만 표시, 로고 앞에 배치 */
-const HamburgerButton = styled.button`
+const MobileButton = styled.button`
   display: none;
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.primary};
+  box-shadow: none;
 
-  @media (max-width: 768px) {
-    display: block;
-    padding: 8px;      /* 터치 타겟 확대 */
-    margin-right: 8px; /* 로고와 간격 */
-  }
+  @media (max-width: 980px) { display: grid; place-items: center; }
 `;
 
-const Drawer = styled.div`
+const DrawerBackdrop = styled.button`
+  position: fixed;
+  inset: 0;
+  z-index: 1090;
+  display: ${({ $open }) => ($open ? "block" : "none")};
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: ${({ theme }) => theme.semantic.overlay};
+`;
+
+const Drawer = styled.aside`
   position: fixed;
   top: 0;
-  left: 0;
-  transform: ${({ $open }) => ($open ? "translateX(0)" : "translateX(-100%)")};
-  width: 80%;
-  max-width: 300px;
-  height: 100%;
-  background: ${({ theme }) => theme.colors.surface};
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
-  padding: ${({ theme }) => theme.spacing(4)};
-  transition: transform 0.3s ease;
+  right: 0;
   z-index: 1100;
-  display: flex;
+  display: ${({ $open }) => ($open ? "flex" : "none")};
   flex-direction: column;
+  width: min(88vw, 380px);
+  height: 100dvh;
+  padding: calc(18px + env(safe-area-inset-top, 0px)) 20px
+    calc(24px + env(safe-area-inset-bottom, 0px));
+  border-left: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.background};
+  box-shadow: -24px 0 70px rgba(7, 22, 37, .24);
 `;
 
-const DrawerClose = styled.button`
-  background: none;
-  border: none;
-  align-self: flex-end;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: ${({ theme }) => theme.colors.textSecondary};
+const DrawerHead = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+`;
+
+const DrawerClose = styled(MobileButton)`
+  display: grid;
+  place-items: center;
 `;
 
 const DrawerLink = styled(NavLink)`
-  margin: ${({ theme }) => theme.spacing(2)} 0;
-  font-size: 1rem;
-  color: ${({ theme }) => theme.colors.text};
-  text-decoration: none;
   display: flex;
   align-items: center;
+  min-height: 52px;
+  padding: 11px 8px;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
+  color: ${({ theme }) => theme.colors.text};
+  font-family: ${({ theme }) => theme.fonts.heading};
+  font-size: 1.15rem;
+  font-weight: 700;
 
-  &:hover,
-  &.active {
-    color: ${({ theme }) => theme.colors.primary};
-  }
+  &.active { color: ${({ theme }) => theme.colors.secondaryDark}; }
 `;
 
-/* 타임스탬프 to ms */
-function tsMs(ts) {
-  if (!ts) return 0;
+const DrawerAccount = styled.div`
+  display: grid;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 20px;
+`;
+
+const DrawerAction = styled(NavLink)`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 48px;
+  border: 1px solid ${({ theme }) => theme.colors.borderStrong};
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.primary};
+  font-weight: 800;
+`;
+
+function toInt(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.max(0, Math.floor(number)) : 0;
+}
+
+function formatBadge(value, max = 99) {
+  const number = toInt(value);
+  if (number <= 0) return null;
+  return number > max ? `${max}+` : String(number);
+}
+
+function tsMs(timestamp) {
+  if (!timestamp) return 0;
   try {
-    return typeof ts.toDate === "function" ? ts.toDate().getTime() : new Date(ts).getTime();
+    return typeof timestamp.toDate === "function"
+      ? timestamp.toDate().getTime()
+      : new Date(timestamp).getTime();
   } catch {
     return 0;
   }
@@ -243,237 +311,220 @@ function tsMs(ts) {
 
 export default function Navbar() {
   const { user, isAdmin = false, isEmailVerified } = useAuthContext() || {};
-  const { cleanup: cleanupNotifications = () => {}, unreadChats = 0 } = useNotificationContext() || {};
   const navigate = useNavigate();
   const location = useLocation();
   const auth = getAuth();
-
   const [drawerOpen, setDrawerOpen] = useState(false);
-
-  /* 배지 상태 */
-  const [exchangeCount, setExchangeCount] = useState(0); // "골드바 조회" 새 변화 수(그룹)
-  const [pendingCount, setPendingCount] = useState(0);   // 관리자 대기(그룹)
-
-  const [lastSeenMs, setLastSeenMs] = useState(0);       // users/{uid}.myExchangesLastSeenAt
+  const [exchangeCount, setExchangeCount] = useState(0);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [lastSeenMs, setLastSeenMs] = useState(0);
   const wroteSeenRef = useRef(0);
 
-  const toggleDrawer = () => setDrawerOpen((o) => !o);
+  useEffect(() => setDrawerOpen(false), [location.pathname]);
+
+  useEffect(() => {
+    if (!drawerOpen) return undefined;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previous; };
+  }, [drawerOpen]);
 
   const handleLogout = async () => {
     try {
-      cleanupNotifications?.();
       await signOut(auth);
       navigate("/login");
-    } catch (err) {
-      console.error("로그아웃 실패", err);
+    } catch (error) {
+      console.error("로그아웃 실패", error);
     } finally {
       setDrawerOpen(false);
     }
   };
 
-  // users/{uid}.myExchangesLastSeenAt 구독
   useEffect(() => {
     if (!user?.uid) {
       setLastSeenMs(0);
-      return;
+      return undefined;
     }
-    const uref = doc(db, "users", user.uid);
-    const unsub = onSnapshot(
-      uref,
-      (snap) => {
-        const v = snap.data()?.myExchangesLastSeenAt;
-        setLastSeenMs(tsMs(v));
-      },
+    return onSnapshot(
+      doc(db, "users", user.uid),
+      (snapshot) => setLastSeenMs(tsMs(snapshot.data()?.myExchangesLastSeenAt)),
       () => setLastSeenMs(0)
     );
-    return () => unsub();
   }, [user?.uid]);
 
-  // 내가 만든 goldExchanges → 그룹 기준 배지
   useEffect(() => {
     if (!user?.uid) {
       setExchangeCount(0);
-      return;
+      return undefined;
     }
-    const qEx = query(collection(db, "goldExchanges"), where("userId", "==", user.uid));
-    const unsub = onSnapshot(
-      qEx,
-      (snap) => {
+    const exchangeQuery = query(
+      collection(db, "goldExchanges"),
+      where("userId", "==", user.uid)
+    );
+    return onSnapshot(
+      exchangeQuery,
+      (snapshot) => {
         const byGroup = new Map();
-        snap.forEach((d) => {
-          const x = d.data() || {};
-          const gid = x.groupId || d.id; // 과거 단일 문서 호환
-          const u = tsMs(x.updatedAt) || tsMs(x.createdAt);
-          const prev = byGroup.get(gid) ?? 0;
-          if (u > prev) byGroup.set(gid, u);
+        snapshot.forEach((item) => {
+          const data = item.data() || {};
+          const groupId = data.groupId || item.id;
+          const updated = tsMs(data.updatedAt) || tsMs(data.createdAt);
+          byGroup.set(groupId, Math.max(updated, byGroup.get(groupId) || 0));
         });
-
-        const unseen = Array.from(byGroup.values()).filter((u) =>
-          lastSeenMs > 0 ? u > lastSeenMs : true
-        ).length;
-
-        setExchangeCount(unseen);
+        setExchangeCount(
+          Array.from(byGroup.values()).filter((updated) =>
+            lastSeenMs > 0 ? updated > lastSeenMs : true
+          ).length
+        );
       },
       () => setExchangeCount(0)
     );
+  }, [lastSeenMs, user?.uid]);
 
-    return () => unsub();
-  }, [user?.uid, lastSeenMs]);
-
-  // 어드민: 'requested' 상태 그룹 수
   useEffect(() => {
     if (!isAdmin) {
       setPendingCount(0);
-      return;
+      return undefined;
     }
-    const qReq = query(collection(db, "goldExchanges"), where("status", "==", "requested"));
-    const unsub = onSnapshot(
-      qReq,
-      (snap) => {
-        const groupIds = new Set();
-        snap.forEach((d) => {
-          const x = d.data() || {};
-          groupIds.add(x.groupId || d.id);
-        });
-        setPendingCount(groupIds.size);
+    const pendingQuery = query(
+      collection(db, "goldExchanges"),
+      where("status", "==", "requested")
+    );
+    return onSnapshot(
+      pendingQuery,
+      (snapshot) => {
+        const groups = new Set();
+        snapshot.forEach((item) => groups.add(item.data()?.groupId || item.id));
+        setPendingCount(groups.size);
       },
       () => setPendingCount(0)
     );
-    return () => unsub();
   }, [isAdmin]);
 
-  // /my-exchanges 진입 시 마지막 확인 시각 갱신
   useEffect(() => {
-    if (!user?.uid) return;
-    if (location.pathname !== "/my-exchanges") return;
-
+    if (!user?.uid || location.pathname !== "/my-exchanges") return;
     const now = Date.now();
     if (now - wroteSeenRef.current < 5000) return;
     wroteSeenRef.current = now;
-
-    const uref = doc(db, "users", user.uid);
-    setDoc(uref, { myExchangesLastSeenAt: serverTimestamp() }, { merge: true })
-      .catch((e) => console.warn("[Navbar] lastSeen write failed:", e?.message || e));
+    setDoc(
+      doc(db, "users", user.uid),
+      { myExchangesLastSeenAt: serverTimestamp() },
+      { merge: true }
+    ).catch((error) =>
+      console.warn("[Navbar] lastSeen write failed:", error?.message || error)
+    );
   }, [location.pathname, user?.uid]);
-
-  const chatBadgeRaw = toInt(unreadChats); // 컨텍스트에서 집계된 전역 배지
-  const exchangeBadgeRaw = toInt(exchangeCount);
-  const pendingBadgeRaw = toInt(pendingCount);
 
   const navItems = useMemo(
     () => [
-      { to: "/",               label: "홈" },
-      { to: "/trade",          label: "귀금속 프리마켓" },
-      { to: "/sell",           label: "내상품올리기" },
-      { to: "/chat",           label: "채팅",            badge: formatBadge(chatBadgeRaw) },
-      { to: "/board",          label: "게시판" },
-      { to: "/favorites",      label: "찜" },
-      { to: "/gold-exchange",  label: "골드바 신청" },
-      { to: "/my-exchanges",   label: "나의 골드바 조회",    badge: formatBadge(exchangeBadgeRaw) },
-      { to: "/my-products",    label: "내상품 조회" },
-      ...(isAdmin ? [{ to: "/admin", label: "어드민", badge: formatBadge(pendingBadgeRaw) }] : []),
+      { to: "/gold-exchange", label: "금교환" },
+      { to: "/goldbar-fee", label: "공임 안내" },
+      { to: "/stores", label: "교환 절차·매장" },
+      { to: "/quiz/gold-bonus", label: "퀵퀴즈" },
+      {
+        to: "/my-exchanges",
+        label: "교환내역",
+        badge: formatBadge(exchangeCount),
+      },
+      ...(isAdmin
+        ? [{ to: "/admin/gold-exchange?status=requested", label: "금교환 관리", badge: formatBadge(pendingCount) }]
+        : []),
     ],
-    [chatBadgeRaw, exchangeBadgeRaw, isAdmin, pendingBadgeRaw]
+    [exchangeCount, isAdmin, pendingCount]
   );
 
   return (
-    <>
-      <Nav>
-        <NavLeft>
-          {/* 모바일: 햄버거 버튼을 로고 앞(왼쪽)에 배치 */}
-          <HamburgerButton
-            onClick={toggleDrawer}
-            aria-label={drawerOpen ? "메뉴 닫기" : "메뉴 열기"}
-            aria-expanded={drawerOpen}
-            aria-controls="main-drawer"
-          >
-            {drawerOpen ? <FiX /> : <FiMenu />}
-          </HamburgerButton>
+    <Header role="banner">
+      <Utility>
+        <UtilityInner>
+          <span>원일귀금속 직접 운영 · 부산 범천동 골드테마거리</span>
+          <span>월–토 10:00–18:00 · 교환 상담 051-646-9700</span>
+        </UtilityInner>
+      </Utility>
 
-          <LogoLink to="/" end aria-label="한국골드마켓 홈으로 이동">
-            <h2>한국골드마켓</h2>
-          </LogoLink>
-          {isAdmin && <AdminBadge aria-label="관리자 뱃지">관리자</AdminBadge>}
-        </NavLeft>
+      <Nav aria-label="주요 메뉴">
+        <Brand to="/" end aria-label="한국골드마켓 홈">
+          <BrandSeal aria-hidden>금</BrandSeal>
+          <BrandCopy>
+            <strong>한국골드마켓</strong>
+            <small>KOREA GOLD MARKET</small>
+          </BrandCopy>
+        </Brand>
 
-        <NavRight>
+        <DesktopLinks>
           {navItems.map(({ to, label, badge }) => (
-            <StyledNavLink
-              key={to}
-              to={to}
-              end
-              aria-label={badge ? `${label} (미읽음 ${badge})` : label}
-              title={badge ? `${label} • ${badge}` : label}
-            >
+            <MenuLink key={to} to={to} end>
               {label}
-              {badge && <Badge role="status" aria-label={`미읽음 ${badge}`}>{badge}</Badge>}
-            </StyledNavLink>
+              {badge && <Badge aria-label={`새 내역 ${badge}건`}>{badge}</Badge>}
+            </MenuLink>
           ))}
+        </DesktopLinks>
 
+        <Account>
           {!user ? (
             <>
-              <StyledNavLink to="/login" end>로그인</StyledNavLink>
-              <StyledNavLink to="/register" end>회원가입</StyledNavLink>
+              <MenuLink to="/login" end>로그인</MenuLink>
+              <AccountLink to="/register">회원가입</AccountLink>
             </>
           ) : (
             <>
-              <LogoutButton onClick={handleLogout}>로그아웃</LogoutButton>
-              {!isEmailVerified && (
-                <StyledNavLink to="/verify-email" end>
-                  이메일 인증 필요
-                </StyledNavLink>
-              )}
+              <Notifications userId={user.uid} />
+              {!isEmailVerified && <MenuLink to="/verify-email">이메일 인증</MenuLink>}
+              <TextButton type="button" onClick={handleLogout}>로그아웃</TextButton>
+              <AccountLink to="/profile">내 정보</AccountLink>
             </>
           )}
-        </NavRight>
+        </Account>
+
+        <MobileButton
+          type="button"
+          aria-label="전체 메뉴 열기"
+          aria-expanded={drawerOpen}
+          aria-controls="mobile-menu"
+          onClick={() => setDrawerOpen(true)}
+        >
+          <Menu size={22} aria-hidden />
+        </MobileButton>
       </Nav>
 
-      <Drawer
-        id="main-drawer"
+      <DrawerBackdrop
+        type="button"
         $open={drawerOpen}
-        role="menu"
-        aria-hidden={!drawerOpen}
-      >
-        <DrawerClose onClick={() => setDrawerOpen(false)} aria-label="메뉴 닫기">
-          <FiX />
-        </DrawerClose>
-
+        aria-label="메뉴 닫기"
+        onClick={() => setDrawerOpen(false)}
+      />
+      <Drawer id="mobile-menu" $open={drawerOpen} aria-hidden={!drawerOpen}>
+        <DrawerHead>
+          <Brand to="/" end>
+            <BrandSeal aria-hidden>금</BrandSeal>
+            <BrandCopy><strong>한국골드마켓</strong><small>GOLD EXCHANGE</small></BrandCopy>
+          </Brand>
+          <DrawerClose type="button" aria-label="메뉴 닫기" onClick={() => setDrawerOpen(false)}>
+            <X size={22} aria-hidden />
+          </DrawerClose>
+        </DrawerHead>
         {navItems.map(({ to, label, badge }) => (
-          <DrawerLink
-            key={to}
-            to={to}
-            end
-            onClick={() => setDrawerOpen(false)}
-            aria-label={badge ? `${label} (미읽음 ${badge})` : label}
-            title={badge ? `${label} • ${badge}` : label}
-          >
+          <DrawerLink key={to} to={to} end tabIndex={drawerOpen ? 0 : -1}>
             {label}
-            {badge && <Badge role="status" aria-label={`미읽음 ${badge}`}>{badge}</Badge>}
+            {badge && <Badge aria-label={`새 내역 ${badge}건`}>{badge}</Badge>}
           </DrawerLink>
         ))}
-
-        {!user ? (
-          <>
-            <DrawerLink to="/login" onClick={() => setDrawerOpen(false)}>
-              로그인
-            </DrawerLink>
-            <DrawerLink to="/register" onClick={() => setDrawerOpen(false)}>
-              회원가입
-            </DrawerLink>
-          </>
-        ) : (
-          <>
-            <DrawerLink as="button" onClick={handleLogout}>
-              로그아웃
-            </DrawerLink>
-            {!isEmailVerified && (
-              <DrawerLink to="/verify-email" onClick={() => setDrawerOpen(false)}>
-                이메일 인증 필요
-              </DrawerLink>
-            )}
-          </>
-        )}
+        <DrawerAccount>
+          {!user ? (
+            <>
+              <DrawerAction to="/login" tabIndex={drawerOpen ? 0 : -1}>로그인</DrawerAction>
+              <DrawerAction to="/register" tabIndex={drawerOpen ? 0 : -1}>회원가입</DrawerAction>
+            </>
+          ) : (
+            <>
+              <DrawerAction to="/profile" tabIndex={drawerOpen ? 0 : -1}>내 정보</DrawerAction>
+              <TextButton type="button" onClick={handleLogout} tabIndex={drawerOpen ? 0 : -1}>
+                로그아웃
+              </TextButton>
+            </>
+          )}
+        </DrawerAccount>
       </Drawer>
-    </>
+    </Header>
   );
 }

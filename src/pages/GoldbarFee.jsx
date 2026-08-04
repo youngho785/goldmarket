@@ -73,16 +73,33 @@ const round3 = (n) => Math.round(n * 1000) / 1000;
    스타일
 ================================== */
 const Page = styled.main`
-  max-width: 980px;
+  max-width: 1100px;
   margin: 0 auto;
-  padding: 28px 16px 40px;
+  padding: 30px 0 64px;
+`;
+
+const Header = styled.header`
+  margin-bottom: 18px;
+  padding: clamp(28px, 5vw, 52px);
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-top: 3px solid ${({ theme }) => theme.colors.secondary};
+  background: ${({ theme }) => theme.colors.surface};
+`;
+
+const Kicker = styled.p`
+  margin: 0 0 9px;
+  color: ${({ theme }) => theme.colors.secondaryDark};
+  font-family: ${({ theme }) => theme.fonts.numeric};
+  font-size: .7rem;
+  font-weight: 850;
+  letter-spacing: .15em;
 `;
 
 const Title = styled.h1`
   margin: 0 0 10px;
-  font-size: clamp(22px, 4.8vw, 28px);
-  font-weight: 900;
-  color: ${({ theme }) => theme.colors.text};
+  font-size: clamp(2rem, 5vw, 3.45rem);
+  font-weight: 700;
+  color: ${({ theme }) => theme.colors.primary};
 `;
 
 const Lead = styled.p`
@@ -93,9 +110,9 @@ const Lead = styled.p`
 const CalcCard = styled.section`
   background: ${({ theme }) => theme.colors.surface};
   border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0,0,0,.06);
-  padding: 12px;
+  border-radius: 0;
+  box-shadow: ${({ theme }) => theme.shadows.card};
+  padding: 18px;
   margin-bottom: 16px;
 
   display: grid;
@@ -126,7 +143,7 @@ const Input = styled.input`
   min-width: 160px;
   padding: 10px 12px;
   border: 1px solid #e6e8eb;
-  border-radius: 10px;
+  border-radius: 0;
   font-size: 1rem;
   background: ${({ theme }) => theme.colors.surface};
   @media (max-width: 840px) { grid-column: span 1; }
@@ -136,7 +153,7 @@ const Select = styled.select`
   min-width: 120px;
   padding: 10px 12px;
   border: 1px solid #e6e8eb;
-  border-radius: 10px;
+  border-radius: 0;
   font-size: 1rem;
   background: ${({ theme }) => theme.colors.surface};
   @media (max-width: 840px) { grid-column: span 1; }
@@ -150,7 +167,7 @@ const popIn = keyframes`
 /* ★ 강조된 결과 박스 */
 const ResultBox = styled.div`
   justify-self: end;
-  border-radius: 14px;
+  border-radius: 0;
   padding: 10px 14px;
   background:
     linear-gradient(#fff, #fff) padding-box,
@@ -207,9 +224,9 @@ const ResultFallback = styled.div`
 const Card = styled.section`
   background: ${({ theme }) => theme.colors.surface};
   border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0,0,0,.06);
-  padding: 16px;
+  border-radius: 0;
+  box-shadow: ${({ theme }) => theme.shadows.card};
+  padding: clamp(18px, 4vw, 30px);
 `;
 
 const CardTitle = styled.h2`
@@ -222,7 +239,7 @@ const CardTitle = styled.h2`
 const TableWrap = styled.div`
   overflow: auto;
   border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 12px;
+  border-radius: 0;
 `;
 
 const Table = styled.table`
@@ -231,7 +248,7 @@ const Table = styled.table`
 
   th, td { padding: 10px 12px; text-align: left; }
   thead th {
-    background: #f6f7f9;
+    background: ${({ theme }) => theme.colors.surfaceAlt};
     font-weight: 900;
     border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   }
@@ -307,11 +324,14 @@ export default function GoldbarFee() {
 
   return (
     <Page>
-      <Title>골드바 공임 안내</Title>
-      <Lead>
-        나의 금을 <b>999.9 골드바</b>로 교환할 때 드는 <b>골드바 공임</b>입니다.
-        아래 대표 규격별 공임과 빠른 계산기를 참고해 주세요. 최종 금액은 매장 확인 후 확정됩니다.
-      </Lead>
+      <Header>
+        <Kicker>GOLDBAR MAKING FEE SCHEDULE</Kicker>
+        <Title>골드바 제작 공임 안내</Title>
+        <Lead>
+          나의 금을 <b>999.9 골드바</b>로 교환할 때 적용되는 제작 공임입니다.
+          대표 규격과 예상 공임을 먼저 확인하고, 최종 금액은 매장에서 교환 확정 전에 안내받으세요.
+        </Lead>
+      </Header>
 
       {/* ── 가로형 빠른 계산기 */}
       <CalcCard aria-label="빠른 계산기">

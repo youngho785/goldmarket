@@ -25,7 +25,6 @@ import AdminRoute from "@/components/common/AdminRoute.jsx";
 import Loader from "@/components/common/Loader.jsx";
 import NotFound from "@/pages/NotFound.jsx";
 import SwBridge from "@/components/common/SwBridge.jsx";
-import { onPushMessage } from "@/firebase/firebase";
 
 /* ───────────────────── 작은 에러 바운더리 ───────────────────── */
 function RouteError() {
@@ -55,32 +54,18 @@ const safeLazy = (importer, namedKey) =>
 
 /* Lazy Pages */
 const LandingPage                      = lazy(() => import("@/pages/LandingPage"));
-const TradeHome                        = lazy(() => import("@/pages/TradeHome"));
-const ProductDetail                    = lazy(() => import("@/pages/ProductDetail"));
-const Sell                             = lazy(() => import("@/pages/Sell"));
-const MyProducts                       = lazy(() => import("@/pages/MyProducts"));
-const Favorites                        = lazy(() => import("@/pages/Favorites"));
 const Profile                          = lazy(() => import("@/pages/Profile"));
-const ChatListPage                     = lazy(() => import("@/pages/ChatList"));
-const ChatRoomPage                     = lazy(() => import("@/pages/ChatRoom"));
-const NotificationsPage                = lazy(() => import("@/pages/NotificationsPage"));
 const GoldExchange                     = lazy(() => import("@/pages/GoldExchange"));
-const MyOrders                         = lazy(() => import("@/pages/MyOrders"));
 const MyExchanges                      = lazy(() => import("@/pages/MyExchanges"));
 const Login                            = lazy(() => import("@/pages/Login"));
 const Register                         = lazy(() => import("@/pages/Register"));
 const VerifyEmail                      = lazy(() => import("@/pages/VerifyEmail"));
 const ResetPassword                    = lazy(() => import("@/pages/ResetPassword"));
-const TransactionReview                = lazy(() => import("@/pages/TransactionReview"));
-const TransactionReviewsSummaryWrapper = lazy(() => import("@/pages/TransactionReviewsSummaryWrapper"));
-const BoardTabs                        = lazy(() => import("@/components/BoardTabs"));
-const CreateBoardPost                  = lazy(() => import("@/pages/CreateBoardPost"));
-const BoardDetail                      = lazy(() => import("@/pages/BoardDetail"));
-const EditBoardPost                    = lazy(() => import("@/pages/EditBoardPost"));
 const AdminDashboard                   = lazy(() => import("@/pages/AdminDashboard"));
 const StatisticsDashboard              = lazy(() => import("@/pages/admin/StatisticsDashboard"));
 const OverviewDashboard                = lazy(() => import("@/pages/admin/OverviewDashboard"));
 const AdminGoldExchange                = lazy(() => import("@/pages/admin/AdminGoldExchange"));
+const NotificationsPage                = lazy(() => import("@/pages/NotificationsPage"));
 const GoldbarFee                       = lazy(() => import("@/pages/GoldbarFee"));
 const Stores                           = lazy(() => import("@/pages/Stores"));
 /* ▶ 이벤트 퀴즈 페이지 */
@@ -89,8 +74,6 @@ const QuizGoldBonus                    = lazy(() => import("@/pages/QuizGoldBonu
 /* ▶ 정책/약관 페이지 */
 const Terms         = safeLazy(() => import("@/pages/terms/Terms"), "Terms");
 const Privacy       = safeLazy(() => import("@/pages/terms/Privacy"), "Privacy");
-const Lspa          = safeLazy(() => import("@/pages/terms/Lspa"), "Lspa");
-const MarketPolicy  = safeLazy(() => import("@/pages/terms/MarketPolicy"), "MarketPolicy");
 
 /* ▶ 내 문의 페이지 */
 const MyInquiries   = lazy(() => import("@/pages/MyInquiries"));
@@ -139,8 +122,6 @@ const router = createBrowserRouter([
     children: [
       // Public
       { path: "/",               element: <LandingPage /> },
-      { path: "/trade",          element: <TradeHome /> },
-      { path: "/product/:id",    element: <ProductDetail /> },
       { path: "/goldbar-fee",    element: <GoldbarFee /> },
       { path: "/stores",         element: <Stores /> },
       { path: "/gold-exchange",  element: <GoldExchange /> },
@@ -150,21 +131,30 @@ const router = createBrowserRouter([
       // ▶ 정책/약관 화면
       { path: "/terms",          element: <Terms /> },
       { path: "/privacy",        element: <Privacy /> },
-      { path: "/lspa",           element: <Lspa /> },
-      { path: "/policy",         element: <MarketPolicy /> },
+
+      // 금교환 전문 서비스 개편 전 주소는 별도 종료 안내 없이 핵심 화면으로 연결
+      { path: "/trade",                         element: <Navigate to="/gold-exchange" replace /> },
+      { path: "/product/:id",                   element: <Navigate to="/gold-exchange" replace /> },
+      { path: "/sell",                          element: <Navigate to="/gold-exchange" replace /> },
+      { path: "/my-products",                   element: <Navigate to="/gold-exchange" replace /> },
+      { path: "/favorites",                     element: <Navigate to="/gold-exchange" replace /> },
+      { path: "/chat",                          element: <Navigate to="/gold-exchange" replace /> },
+      { path: "/chat/:chatId",                  element: <Navigate to="/gold-exchange" replace /> },
+      { path: "/notifications",                 element: <Navigate to="/my-exchanges" replace /> },
+      { path: "/my-orders",                     element: <Navigate to="/my-exchanges" replace /> },
+      { path: "/transactionReviews/:sellerId", element: <Navigate to="/gold-exchange" replace /> },
+      { path: "/board",                         element: <Navigate to="/gold-exchange" replace /> },
+      { path: "/board/new",                     element: <Navigate to="/gold-exchange" replace /> },
+      { path: "/board/:postId",                 element: <Navigate to="/gold-exchange" replace /> },
+      { path: "/board/:postId/edit",            element: <Navigate to="/gold-exchange" replace /> },
+      { path: "/lspa",                          element: <Navigate to="/privacy" replace /> },
+      { path: "/policy",                        element: <Navigate to="/terms" replace /> },
 
       // Protected
       {
         element: <ProtectedRoute />,
         children: [
-          { path: "/sell",                    element: <Sell /> },
-          { path: "/my-products",             element: <MyProducts /> },
-          { path: "/favorites",               element: <Favorites /> },
           { path: "/profile",                 element: <Profile /> },
-          { path: "/chat",                    element: <ChatListPage /> },
-          { path: "/chat/:chatId",            element: <ChatRoomPage /> },
-          { path: "/notifications",           element: <NotificationsPage /> },
-          { path: "/my-orders",               element: <MyOrders /> },
           { path: "/my-exchanges",            element: <MyExchanges /> },
 
           /* ▶ 내 문의 (로그인 필요) */
@@ -181,16 +171,6 @@ const router = createBrowserRouter([
       // Firebase email action
       { path: "/__/auth/action",  element: <AuthActionBridge /> },
 
-      // Reviews
-      { path: "/transactionReview",            element: <TransactionReview targetUserId="defaultUser" /> },
-      { path: "/transactionReviews/:sellerId", element: <TransactionReviewsSummaryWrapper /> },
-
-      // Board (공개)
-      { path: "/board",              element: <BoardTabs /> },
-      { path: "/board/new",          element: <CreateBoardPost /> },
-      { path: "/board/:postId",      element: <BoardDetail /> },
-      { path: "/board/:postId/edit", element: <EditBoardPost /> },
-
       // Admin
       {
         path: "/admin",
@@ -201,6 +181,7 @@ const router = createBrowserRouter([
             children: [
               { index: true,            element: <OverviewDashboard /> },
               { path: "gold-exchange",  element: <AdminGoldExchange /> },
+              { path: "notifications",  element: <NotificationsPage /> },
               { path: "statistics",     element: <StatisticsDashboard /> },
               { path: "board/inquiries", element: <AdminInquiries /> },
             ],
@@ -257,34 +238,6 @@ export default function App() {
   );
 
   const activeTheme = isDark ? darkTheme : lightTheme;
-
-  useEffect(() => {
-    const handler = (e) => {
-      const msg = e?.data;
-      if (!msg || typeof msg !== "object") return;
-      if (msg.type === "PUSH_MESSAGE") {
-        window.dispatchEvent(new CustomEvent("APP_PUSH_MESSAGE", { detail: msg.data || {} }));
-      }
-      if (msg.type === "OPEN_URL" && msg.data?.url) {
-        // 필요 시 라우팅 처리 가능
-      }
-    };
-    if (navigator?.serviceWorker) {
-      navigator.serviceWorker.addEventListener("message", handler);
-    }
-    return () => {
-      if (navigator?.serviceWorker) {
-        navigator.serviceWorker.removeEventListener("message", handler);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    const off = onPushMessage?.(() => {
-      window.dispatchEvent(new CustomEvent("APP_PUSH_MESSAGE", { detail: { source: "foreground" } }));
-    });
-    return () => off && off();
-  }, []);
 
   return (
     <ColorSchemeContext.Provider value={ctxValue}>

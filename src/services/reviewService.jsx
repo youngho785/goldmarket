@@ -4,6 +4,7 @@ import {
   addDoc,
   getDocs,
   query,
+  where,
   orderBy,
   serverTimestamp,
 } from "firebase/firestore";
@@ -24,8 +25,12 @@ export const addReview = async (productId, review) => {
 /** 상품 리뷰 가져오기 (최신순) */
 export const fetchReviews = async (productId) => {
   try {
-    const reviewsRef = collection(db, "products", productId, "reviews");
-    const q = query(reviewsRef, orderBy("createdAt", "desc"));
+    const reviewsRef = collection(db, "transactionReviews");
+    const q = query(
+      reviewsRef,
+      where("productId", "==", productId),
+      orderBy("createdAt", "desc")
+    );
     const snapshot = await getDocs(q);
     return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
   } catch (error) {

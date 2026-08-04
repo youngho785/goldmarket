@@ -7,31 +7,31 @@ const InputArea = styled.div`
   display: flex;
   align-items: center;
   padding: 10px 16px;
-  background: #fffbe8;
-  border-top: 1px solid #f3e8ff;
+  background: ${({ theme }) => theme.colors.surface};
+  border-top: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
 `;
 
 const TextInput = styled.input`
   flex: 1;
   padding: 10px 12px;
   font-size: 1rem;
-  border-radius: 20px;
-  border: 1px solid #ffe082;
+  border-radius: 14px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
   margin-right: 10px;
 `;
 
 const Button = styled.button`
   padding: 8px 14px;
   border: none;
-  background: #ffcd38;
-  color: #3d2601;
-  border-radius: 16px;
-  font-weight: 700;
+  background: ${({ theme }) => theme.gradients.primary};
+  color: ${({ theme }) => theme.on.primary};
+  border-radius: 12px;
+  font-weight: 750;
   margin-left: 8px;
   cursor: pointer;
   &:disabled {
-    background: #e6e6e6;
-    color: #bbb;
+    background: ${({ theme }) => theme.colors.surfaceAlt};
+    color: ${({ theme }) => theme.colors.textLight};
     cursor: not-allowed;
   }
 `;
@@ -47,15 +47,18 @@ const ImagePreview = styled.div`
     width: 40px;
     height: 40px;
     object-fit: cover;
-    border-radius: 8px;
-    border: 1.5px solid #ffd400;
+    border-radius: 10px;
+    border: 1px solid ${({ theme }) => theme.colors.secondary};
   }
   button {
     position: absolute;
     top: -8px;
     right: -8px;
-    background: #ffd400;
-    border: none;
+    min-height: 20px;
+    padding: 0;
+    background: ${({ theme }) => theme.colors.secondary};
+    color: #fff;
+    border: 1px solid ${({ theme }) => theme.colors.surface};
     border-radius: 50%;
     width: 20px;
     height: 20px;
@@ -78,7 +81,7 @@ export default function MessageInput({ onSend }) {
     if (imageFile) {
       try {
         imageUrl = await uploadImage(imageFile);
-      } catch (err) {
+      } catch {
         alert("이미지 업로드 실패! 다시 시도해주세요.");
         setSending(false);
         return;

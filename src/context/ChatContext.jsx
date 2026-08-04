@@ -1,5 +1,5 @@
 // src/context/ChatContext.js
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useAuthContext } from "./AuthContext";
 import { createOrGetChatRoom } from "../services/chatService";
 import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore";
@@ -60,12 +60,12 @@ export function ChatProvider({ children }) {
   /**
    * productId와 (나, 상대)로 채팅방 생성/조회
    */
-  const startChat = async (otherId, productId) => {
+  const startChat = useCallback(async (otherId, productId) => {
     if (!user?.uid) throw new Error("로그인이 필요합니다.");
     const chatId = await createOrGetChatRoom(productId, user.uid, otherId);
     // 실시간 구독이 있으니 별도 재조회 불필요
     return chatId;
-  };
+  }, [user?.uid]);
 
   const value = useMemo(
     () => ({
@@ -74,7 +74,7 @@ export function ChatProvider({ children }) {
       roomsError,
       startChat,
     }),
-    [rooms, loadingRooms, roomsError]
+    [rooms, loadingRooms, roomsError, startChat]
   );
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;

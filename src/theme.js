@@ -1,220 +1,208 @@
-// src/theme.js
-//
-// Calm Neo — White / Azure Blue primary / Mint accent
-// - 배경: 완전 화이트(집중 ↑)
-// - 주색: 애저 블루 (신뢰·또렷함) / 다크는 톤다운 블루
-// - 보조: 민트·시안(상쾌) 과유불급 방지로 포인트만
-// - 퍼플은 ‘틴트/배지’ 정도에만 아주 미세 사용
+// 한국골드마켓 디자인 시스템
+// 검증 문서에서 가져온 아이보리·네이비·브라운 골드 조합을 사용합니다.
+
+const headingFont =
+  "'Noto Serif KR', 'Nanum Myeongjo', Batang, Georgia, 'Times New Roman', serif";
+const bodyFont =
+  "'Pretendard', 'Noto Sans KR', system-ui, -apple-system, 'Segoe UI', sans-serif";
 
 const base = {
   fonts: {
-    heading:
-      "'Inter', system-ui, -apple-system, Segoe UI, Roboto, 'Noto Sans KR', sans-serif",
-    body:
-      "'Noto Sans KR', system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+    heading: headingFont,
+    body: bodyFont,
+    numeric: "'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace",
   },
-
   spacing: (factor) => `${8 * factor}px`,
-
-  radii: { small: "8px", default: "14px", large: "22px", pill: "999px" },
-
+  radii: {
+    small: "4px",
+    default: "6px",
+    large: "10px",
+    xlarge: "14px",
+    pill: "999px",
+  },
   shadows: {
-    card: "0 4px 14px rgba(17, 25, 40, 0.06)",
-    hover: "0 10px 24px rgba(17, 25, 40, 0.10)",
-    lg: "0 18px 40px rgba(17, 25, 40, 0.14)",
+    xs: "0 1px 2px rgba(13, 32, 52, 0.06)",
+    card: "0 14px 36px rgba(13, 32, 52, 0.08)",
+    hover: "0 20px 48px rgba(13, 32, 52, 0.13)",
+    lg: "0 30px 80px rgba(13, 32, 52, 0.18)",
   },
-
   focus: {
-    outline: "#1E40AF",
-    ring: "0 0 0 3px rgba(30,64,175,0.28)", // 블루 포커스링
+    outline: "#AF8434",
+    ring: "0 0 0 4px rgba(175, 132, 52, 0.22)",
   },
-
-  opacity: { disabled: 0.55, overlay: 0.42 },
-
+  opacity: { disabled: 0.52, overlay: 0.54 },
   typography: {
-    h1: "32px",
-    h2: "24px",
-    h3: "18px",
+    h1: "clamp(2.35rem, 5.5vw, 4.85rem)",
+    h2: "clamp(1.75rem, 3.4vw, 2.75rem)",
+    h3: "clamp(1.15rem, 2vw, 1.4rem)",
     body: "16px",
     small: "14px",
   },
+  transitions: {
+    fast: "140ms cubic-bezier(.2,.8,.2,1)",
+    base: "220ms cubic-bezier(.2,.8,.2,1)",
+    slow: "360ms cubic-bezier(.2,.8,.2,1)",
+  },
 };
 
-/* ───────────── LIGHT: Calm Neo ───────────── */
 export const theme = {
   ...base,
-
   colors: {
-    // Brand (메인: 애저 블루)
-    primary: "#2D6AE3",      // Azure Blue
-    primaryDark: "#1E40AF",  // Deep Azure for hover/active
+    primary: "#0D2034",
+    primaryDark: "#071625",
+    primaryLight: "#E8EDF1",
+    secondary: "#AF8434",
+    secondaryDark: "#7D5A1E",
 
-    // Secondary (살짝의 민트/티얼)
-    secondary: "#0EA5A4",    // Teal-500 (딥 민트)
+    info: "#3D617F",
+    success: "#2D6A57",
+    warning: "#9A6717",
+    error: "#A73D45",
+    danger: "#A73D45",
 
-    // Status (톤 차분)
-    info: "#64748B",         // Slate
-    success: "#16A34A",
-    warning: "#F59E0B",
-    error: "#EF4444",
+    background: "#F5F1E8",
+    surface: "#FFFDFA",
+    surfaceAlt: "#EFEAE0",
+    elevated: "#FFFFFF",
+    white: "#FFFFFF",
 
-    // Neutrals
-    background: "#FFFFFF",   // ← 기본 바탕 화이트
-    surface: "#F8FAFC",      // 아주 옅은 쿨그레이/블루
-    surfaceAlt: "#F5F7FB",
+    text: "#10243A",
+    textSecondary: "#5F625F",
+    textLight: "#8B8A83",
+    mutedText: "#686A66",
+    gray: "#686A66",
 
-    // Text
-    text: "#111827",         // Gray-900 (순블랙보다 눈에 덜 피곤)
-    textSecondary: "#6B7280",
-    textLight: "#9AA4B2",
+    border: "#D9D1C1",
+    borderStrong: "#BDB29E",
+    dividerSubtle: "#E7E0D4",
 
-    // Lines
-    border: "#E5EAF1",
-    dividerSubtle: "#EEF2F8",
+    link: "#173A5D",
+    linkHover: "#071625",
 
-    // Links (메인 블루와 통일)
-    link: "#2563EB",
-    linkHover: "#1D4ED8",
+    accentMint: "#477768",
+    accentCoral: "#A75B58",
+    gold: "#AF8434",
+    goldLight: "#F2E7CD",
 
-    // Accents (포인트만 소량 사용)
-    accentMint: "#06B6D4",   // Cyan-500
-    accentCoral: "#FB7185",  // Soft Coral
-
-    // Alerts (기본)
-    alertBg: "#EF4444",
+    alertBg: "#A73D45",
     alertText: "#FFFFFF",
-
-    // Buttons
-    buttonText: "#070707ff",
+    buttonText: "#FFFFFF",
+    onPrimary: "#FFFFFF",
   },
-
-  // 그라디언트는 블루→시안으로 은은하게
   gradients: {
-    primary: "linear-gradient(135deg, #2D6AE3 0%, #06B6D4 100%)",
-    success: "linear-gradient(135deg, #0EA5A4, #16A34A)",
-    mintGlow: "linear-gradient(135deg, #CFFAFE, #E0EAFF)", // 아주 연한 글로우
+    primary: "linear-gradient(135deg, #0D2034 0%, #173A5D 100%)",
+    primaryHover: "linear-gradient(135deg, #071625 0%, #102C47 100%)",
+    gold: "linear-gradient(135deg, #C8A55A 0%, #8B6322 100%)",
+    success: "linear-gradient(135deg, #2D6A57, #477768)",
+    mintGlow: "linear-gradient(135deg, #EDF2EE, #F4F0E7)",
+    page: "linear-gradient(180deg, #FAF8F2 0%, #F5F1E8 100%)",
   },
-
-  // 배경 위 텍스트 대비
   on: {
     primary: "#FFFFFF",
     primaryDark: "#FFFFFF",
+    secondary: "#FFFFFF",
     success: "#FFFFFF",
-    warning: "#111827",
+    warning: "#10243A",
     error: "#FFFFFF",
-    surface: "#111827",
-    background: "#111827",
+    surface: "#10243A",
+    background: "#10243A",
   },
-
-  // Semantic tokens
   semantic: {
-    // Buttons
-    buttonBg: "#2D6AE3",
-    buttonHoverBg: "#1E40AF",
-    buttonAltBg: "#EDF2FF",  // 틴트 버튼(약한 강조)
-    buttonAltText: "#111827",
-
-    // Links
-    linkColor: "#2563EB",
-    linkHoverColor: "#1D4ED8",
-
-    // Chips / Badges (퍼플은 아주 옅은 틴트로만)
-    badgeInfoBg: "#EEF2FF",   // Pale Blue/Lilac tint
-    badgeInfoText: "#1E40AF",
-
-    // Alerts (배경형)
-    alertErrorBg: "#FEE2E2",
-    alertErrorText: "#7F1D1D",
-    alertWarningBg: "#FEF3C7",
-    alertWarningText: "#78350F",
-    alertSuccessBg: "#DCFCE7",
-    alertSuccessText: "#14532D",
-
-    subtleLine: "#EEF2F8",
-    subtleTint: "#F8FAFC",
+    buttonBg: "#0D2034",
+    buttonHoverBg: "#071625",
+    buttonAltBg: "#F2E7CD",
+    buttonAltText: "#5D4116",
+    linkColor: "#173A5D",
+    linkHoverColor: "#071625",
+    badgeInfoBg: "#E8EDF1",
+    badgeInfoText: "#0D2034",
+    badgeGoldBg: "#F2E7CD",
+    badgeGoldText: "#6A4A17",
+    alertErrorBg: "#F8E8E8",
+    alertErrorText: "#7B272F",
+    alertWarningBg: "#F8EED9",
+    alertWarningText: "#6B4710",
+    alertSuccessBg: "#E6F0EB",
+    alertSuccessText: "#245646",
+    alertInfoBg: "#E8EDF1",
+    alertInfoText: "#173A5D",
+    subtleLine: "#E7E0D4",
+    subtleTint: "#FAF8F2",
+    overlay: "rgba(7, 22, 37, 0.54)",
   },
-
-  transitions: { fast: "120ms ease", base: "200ms ease", slow: "320ms ease" },
 };
 
-/* ───────────── DARK: Calm Neo Night ─────────────
-   다크도 ‘차분한 블루’ 톤으로 눈부심 최소화 */
 export const darkTheme = {
   ...base,
-
   colors: {
-    primary: "#79A8FF",       // 톤다운 애저
-    primaryDark: "#5D85E6",
-
-    secondary: "#34D399",     // 민트 톤다운
-
-    info: "#94A3B8",
-    success: "#34D399",
-    warning: "#FBBF24",
-    error: "#F87171",
-
-    background: "#0B1220",
-    surface: "#0F172A",
-    surfaceAlt: "#0B1526",
-
-    text: "#E5E7EB",
-    textSecondary: "#A1A7B3",
-    textLight: "#8A94A6",
-
-    border: "#1E2633",
-    dividerSubtle: "#16202C",
-
-    link: "#93C5FD",
-    linkHover: "#BFDBFE",
-
-    accentMint: "#67E8F9",
-    accentCoral: "#FDA4AF",
-
-    alertBg: "#F87171",
-    alertText: "#0B1220",
-    buttonText: "#0B1220",
+    ...theme.colors,
+    primary: "#D3B16C",
+    primaryDark: "#B88D3D",
+    primaryLight: "#26394C",
+    secondary: "#D3B16C",
+    secondaryDark: "#B88D3D",
+    background: "#0B1724",
+    surface: "#122235",
+    surfaceAlt: "#192B3F",
+    elevated: "#17283B",
+    white: "#122235",
+    text: "#F5F1E8",
+    textSecondary: "#C5C0B5",
+    textLight: "#99958D",
+    mutedText: "#C5C0B5",
+    gray: "#C5C0B5",
+    border: "#314255",
+    borderStrong: "#4A5A6D",
+    dividerSubtle: "#293A4D",
+    link: "#E2C98D",
+    linkHover: "#F7E6BA",
+    gold: "#D3B16C",
+    goldLight: "#3B3223",
+    buttonText: "#0B1724",
+    onPrimary: "#0B1724",
   },
-
   gradients: {
-    primary: "linear-gradient(135deg, #5D85E6, #67E8F9)",
-    success: "linear-gradient(135deg, #34D399, #22C55E)",
-    mintGlow: "linear-gradient(135deg, #0F172A, #111827)", // 어두운 글로우
+    primary: "linear-gradient(135deg, #D3B16C 0%, #A8792E 100%)",
+    primaryHover: "linear-gradient(135deg, #E3C57F 0%, #B88D3D 100%)",
+    gold: "linear-gradient(135deg, #D3B16C 0%, #A8792E 100%)",
+    success: "linear-gradient(135deg, #4C9077, #68A28E)",
+    mintGlow: "linear-gradient(135deg, #17283B, #192B3F)",
+    page: "linear-gradient(180deg, #0E1C2B 0%, #0B1724 100%)",
   },
-
   on: {
-    primary: "#0B1220",
-    primaryDark: "#0B1220",
-    success: "#0B1220",
-    warning: "#0B1220",
-    error: "#0B1220",
-    surface: "#E5E7EB",
-    background: "#E5E7EB",
+    primary: "#0B1724",
+    primaryDark: "#0B1724",
+    secondary: "#0B1724",
+    success: "#0B1724",
+    warning: "#0B1724",
+    error: "#0B1724",
+    surface: "#F5F1E8",
+    background: "#F5F1E8",
   },
-
   semantic: {
-    buttonBg: "#5D85E6",
-    buttonHoverBg: "#79A8FF",
-    buttonAltBg: "#111827",
-    buttonAltText: "#E5E7EB",
-
-    linkColor: "#93C5FD",
-    linkHoverColor: "#BFDBFE",
-
-    badgeInfoBg: "#152034",
-    badgeInfoText: "#BFD4FF",
-
-    alertErrorBg: "#2A1717",
-    alertErrorText: "#F1D0D0",
-    alertWarningBg: "#2B2213",
-    alertWarningText: "#F6E7C9",
-    alertSuccessBg: "#0E1F18",
-    alertSuccessText: "#CFF8E4",
-
-    subtleLine: "#16202C",
-    subtleTint: "#0F172A",
+    ...theme.semantic,
+    buttonBg: "#D3B16C",
+    buttonHoverBg: "#E3C57F",
+    buttonAltBg: "#26394C",
+    buttonAltText: "#F5F1E8",
+    linkColor: "#E2C98D",
+    linkHoverColor: "#F7E6BA",
+    badgeInfoBg: "#26394C",
+    badgeInfoText: "#DDE7F0",
+    badgeGoldBg: "#3B3223",
+    badgeGoldText: "#F0D79E",
+    alertErrorBg: "#40242B",
+    alertErrorText: "#F7C8CD",
+    alertWarningBg: "#3E3321",
+    alertWarningText: "#F2DAA5",
+    alertSuccessBg: "#1A392F",
+    alertSuccessText: "#BFE7D8",
+    alertInfoBg: "#21364C",
+    alertInfoText: "#D4E4F0",
+    subtleLine: "#293A4D",
+    subtleTint: "#122235",
+    overlay: "rgba(0, 0, 0, 0.68)",
   },
-
-  transitions: { fast: "120ms ease", base: "200ms ease", slow: "320ms ease" },
 };
 
 export default theme;

@@ -28,6 +28,7 @@ const AuthContext = createContext({
   user: null,
   loading: true,
   isAdmin: false,
+  isSuperAdmin: false,
   isEmailVerified: false,
   login: async () => {},
   signUp: async () => {},
@@ -42,6 +43,7 @@ const AuthContext = createContext({
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -51,9 +53,6 @@ export const AuthProvider = ({ children }) => {
   // Firebase Auth 토큰/유저 변화 감지
   useEffect(() => {
     const unsubscribe = onIdTokenChanged(auth, async (currentUser) => {
-      // 토큰 갱신 타이밍에서의 깜빡임 방지
-      setLoading((prev) => (prev ? prev : true));
-
       // 이전 대기 타이머 클리어
       if (nullTimerRef.current) {
         clearTimeout(nullTimerRef.current);
@@ -66,9 +65,12 @@ export const AuthProvider = ({ children }) => {
 
         try {
           const tokenResult = await getIdTokenResult(currentUser);
-          setIsAdmin(!!tokenResult.claims.admin);
+          const superAdmin = tokenResult.claims.superAdmin === true;
+          setIsSuperAdmin(superAdmin);
+          setIsAdmin(tokenResult.claims.admin === true || superAdmin);
         } catch {
           setIsAdmin(false);
+          setIsSuperAdmin(false);
         }
 
         // ⬇️ 이메일 인증 완료된 사용자의 프로필 문서를 자동 생성(없을 때만)
@@ -93,7 +95,6 @@ export const AuthProvider = ({ children }) => {
               localStorage.removeItem(`pending_phone_${currentUser.uid}`);
             }
           } catch (e) {
-            // eslint-disable-next-line no-console
             console.warn("프로필 자동 생성 실패:", e);
           }
         }
@@ -108,8 +109,9 @@ export const AuthProvider = ({ children }) => {
             setUser(u);
             setIsEmailVerified(u.emailVerified);
           } else {
-            setUser(null);
-            setIsAdmin(false);
+        setUser(null);
+        setIsAdmin(false);
+        setIsSuperAdmin(false);
             setIsEmailVerified(false);
           }
           setLoading(false);
@@ -157,7 +159,9 @@ export const AuthProvider = ({ children }) => {
       if (!auth.currentUser) return false;
       await auth.currentUser.getIdToken(true);
       const res = await getIdTokenResult(auth.currentUser);
-      setIsAdmin(!!res.claims.admin);
+      const superAdmin = res.claims.superAdmin === true;
+      setIsSuperAdmin(superAdmin);
+      setIsAdmin(res.claims.admin === true || superAdmin);
       return true;
     };
 
@@ -165,6 +169,7 @@ export const AuthProvider = ({ children }) => {
       user,
       loading,
       isAdmin,
+      isSuperAdmin,
       isEmailVerified,
       login,
       signUp,
@@ -175,7 +180,7 @@ export const AuthProvider = ({ children }) => {
       sendEmailVerification: sendEmailVerificationLink,
       refreshClaims,
     };
-  }, [user, loading, isAdmin, isEmailVerified]);
+  }, [user, loading, isAdmin, isSuperAdmin, isEmailVerified]);
 
   // ✅ 로딩 구간: 스플래시 표시
   if (loading) {

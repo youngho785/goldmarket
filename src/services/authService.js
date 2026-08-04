@@ -89,7 +89,6 @@ export async function signUp({
       email: emailTrim,
     });
   } catch (e) {
-    // eslint-disable-next-line no-console
     console.warn("ensureUserProfileOnSignup 실패(가입은 계속):", e);
   }
 

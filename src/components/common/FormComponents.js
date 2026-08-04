@@ -2,34 +2,43 @@
 import styled from "styled-components";
 
 export const Label = styled.label`
-  font-size: 1rem;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 5px;
+  font-size: .94rem;
+  font-weight: 750;
+  color: ${({ theme }) => theme.colors.text};
+  margin-bottom: 7px;
   display: block;
 `;
 
 export const Select = styled.select`
-  padding: 8px;
+  min-height: 46px;
+  padding: 10px 13px;
   font-size: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.small};
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
   width: 100%;
 `;
 
 export const Input = styled.input`
-  padding: 8px;
+  min-height: 46px;
+  padding: 10px 13px;
   font-size: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.small};
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
   width: 100%;
 `;
 
 export const TextArea = styled.textarea`
-  padding: 8px;
+  min-height: 128px;
+  padding: 12px 13px;
   font-size: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.small};
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
   width: 100%;
   resize: vertical;
 `;

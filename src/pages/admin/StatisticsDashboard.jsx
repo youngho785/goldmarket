@@ -1,6 +1,37 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { db } from "../../firebase/firebase";
 import { collection, getDocs } from "firebase/firestore";
+import styled from "styled-components";
+
+const Page = styled.div`
+  padding: 0 0 28px;
+`;
+const StatsGrid = styled.div`
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  @media (max-width: 640px) { grid-template-columns: 1fr; }
+`;
+const StatCard = styled.div`
+  padding: 20px;
+  background: ${({ theme }) => theme.colors.surface};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.large};
+  box-shadow: ${({ theme }) => theme.shadows.card};
+  h3 { margin-bottom: 8px; }
+  p { margin: 0; color: ${({ theme }) => theme.colors.textSecondary}; font-weight: 750; }
+`;
+const ChartCard = styled.div`
+  margin: 18px auto 0;
+  height: 400px;
+  max-width: 760px;
+  padding: 18px;
+  background: ${({ theme }) => theme.colors.surface};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.large};
+  box-shadow: ${({ theme }) => theme.shadows.card};
+`;
 
 /**
  * 변경 요약
@@ -102,33 +133,23 @@ export default function StatisticsDashboard() {
   );
 
   return (
-    <div style={{ padding: 20 }}>
+    <Page>
       <h2>플랫폼 통계</h2>
 
       {/* 숫자 통계는 먼저 보여줌 */}
-      <div style={{ marginTop: 20, display: "grid", gap: 12 }}>
-        <div>
+      <StatsGrid>
+        <StatCard>
           <h3>총 거래 건수</h3>
           <p>{statsLoading || transactionCount == null ? "불러오는 중…" : `${transactionCount} 건`}</p>
-        </div>
-        <div>
+        </StatCard>
+        <StatCard>
           <h3>총 사용자 수</h3>
           <p>{statsLoading || userCount == null ? "불러오는 중…" : `${userCount} 명`}</p>
-        </div>
-      </div>
+        </StatCard>
+      </StatsGrid>
 
       {/* 카테고리별 상품 막대차트 */}
-      <div
-        style={{
-          marginTop: 24,
-          height: 400,
-          maxWidth: 640,
-          marginInline: "auto",
-          border: "1px solid #eee",
-          borderRadius: 8,
-          padding: 12,
-        }}
-      >
+      <ChartCard>
         {statsLoading ? (
           <p>통계 데이터를 불러오는 중...</p>
         ) : !productChartData ? (
@@ -138,7 +159,7 @@ export default function StatisticsDashboard() {
         ) : (
           <BarComp data={productChartData} options={chartOptions} />
         )}
-      </div>
-    </div>
+      </ChartCard>
+    </Page>
   );
 }

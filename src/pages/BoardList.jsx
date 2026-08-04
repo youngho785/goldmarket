@@ -24,7 +24,7 @@ const ButtonsRow = styled.div`
 `;
 const NewButton = styled.button`
   padding: 8px 12px;
-  background: ${({ theme }) => theme.colors?.primary || "#007bff"};
+  background: ${({ theme }) => theme.gradients?.primary || theme.colors?.primary || "#1F3A5F"};
   color: #fff;
   border: none;
   border-radius: 4px;

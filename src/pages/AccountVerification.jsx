@@ -2,21 +2,21 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import { storage, db } from '../firebase/firebase';
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { setDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { useAuthContext } from '../context/AuthContext';
 
 const PageContainer = styled.div`
-  max-width: 450px; margin: 40px auto; padding: 24px; background: #fff;
-  border-radius: 10px; box-shadow: 0 2px 10px #eee;
+  max-width: 500px; margin: 8px auto 32px; padding: clamp(24px, 5vw, 36px); background: ${({ theme }) => theme.colors.surface};
+  border: 1px solid ${({ theme }) => theme.colors.border}; border-radius: ${({ theme }) => theme.radii.large}; box-shadow: ${({ theme }) => theme.shadows.card};
 `;
 const Field = styled.div` margin-bottom: 18px; `;
-const Label = styled.label` font-weight: bold; `;
+const Label = styled.label` font-weight: 750; color: ${({ theme }) => theme.colors.text}; `;
 const Input = styled.input` display: block; width: 100%; margin-top: 5px; `;
 const Button = styled.button`
-  padding: 10px 0; width: 100%; background: #007bff; color: #fff;
-  border: none; border-radius: 5px; font-size: 1.1rem;
-  &:disabled { background: #aaa; }
+  padding: 11px 16px; width: 100%; background: ${({ theme }) => theme.gradients.primary}; color: ${({ theme }) => theme.on.primary};
+  border: 1px solid transparent; border-radius: ${({ theme }) => theme.radii.small}; font-size: 1.05rem; font-weight: 800;
+  &:disabled { opacity: .55; }
 `;
 
 export default function AccountVerification() {
@@ -40,8 +40,8 @@ export default function AccountVerification() {
     setLoading(true);
     try {
       // 1) Storage 업로드
-      const idRef = ref(storage, `accountVerifications/${user.uid}_id.jpg`);
-      const bankRef = ref(storage, `accountVerifications/${user.uid}_bank.jpg`);
+      const idRef = ref(storage, `accountVerifications/${user.uid}/id.jpg`);
+      const bankRef = ref(storage, `accountVerifications/${user.uid}/bank.jpg`);
       await uploadBytes(idRef, idFile);
       await uploadBytes(bankRef, bankFile);
 

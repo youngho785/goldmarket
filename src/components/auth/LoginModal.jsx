@@ -10,38 +10,43 @@ import { Link, useLocation } from "react-router-dom";
 
 /* ====== 스타일 (심플 모달) ====== */
 const Backdrop = styled.div`
-  position: fixed; inset: 0; background: rgba(0,0,0,.38);
-  display: ${({open}) => (open ? "flex" : "none")};
+  position: fixed; inset: 0; background: ${({ theme }) => theme.semantic.overlay};
+  display: ${({ $open }) => ($open ? "flex" : "none")};
   align-items: center; justify-content: center; z-index: 9999;
+  padding: 18px;
+  backdrop-filter: blur(5px);
 `;
 const Modal = styled.div`
-  width: min(92vw, 440px); background: #fff; border-radius: 14px;
-  box-shadow: 0 20px 60px rgba(0,0,0,.25);
+  position: relative;
+  width: min(92vw, 460px); background: ${({ theme }) => theme.colors.surface}; border-radius: ${({ theme }) => theme.radii.large};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  box-shadow: ${({ theme }) => theme.shadows.lg};
   overflow: hidden;
+  &::before { content: ""; display: block; height: 4px; background: ${({ theme }) => theme.gradients.gold}; }
 `;
 const Header = styled.div`
-  padding: 16px 18px; border-bottom: 1px solid #eee; font-weight: 900;
+  padding: 19px 20px; border-bottom: 1px solid ${({ theme }) => theme.colors.dividerSubtle}; color: ${({ theme }) => theme.colors.text}; font-weight: 850; font-size: 1.08rem;
 `;
 const Body = styled.div`
-  padding: 16px 18px; display: grid; gap: 12px;
+  padding: 20px; display: grid; gap: 15px;
 `;
 const Row = styled.div` display: grid; gap: 6px; `;
-const Label = styled.label` font-weight: 700; font-size: .95rem; `;
+const Label = styled.label` font-weight: 750; font-size: .95rem; color: ${({ theme }) => theme.colors.text}; `;
 const Input = styled.input`
-  border: 1px solid #d1d5db; border-radius: 8px; padding: 10px 12px; font-size: 1rem;
+  min-height: 48px; border: 1px solid ${({ theme }) => theme.colors.border}; border-radius: ${({ theme }) => theme.radii.small}; padding: 11px 13px; font-size: 1rem;
 `;
-const Error = styled.p` color: #dc2626; font-size: .9rem; margin: 2px 0 0; `;
+const Error = styled.p` color: ${({ theme }) => theme.semantic.alertErrorText}; background: ${({ theme }) => theme.semantic.alertErrorBg}; border-radius: 10px; padding: 10px 12px; font-size: .9rem; margin: 2px 0 0; `;
 const Actions = styled.div`
-  display: flex; gap: 8px; padding: 14px 18px; border-top: 1px solid #eee; justify-content: flex-end;
+  display: flex; gap: 8px; padding: 15px 20px 20px; border-top: 1px solid ${({ theme }) => theme.colors.dividerSubtle}; justify-content: flex-end;
 `;
 const Btn = styled.button`
-  padding: 10px 14px; border-radius: 10px; border: none; cursor: pointer; font-weight: 800;
-  background: ${({variant}) => (variant === "primary" ? "linear-gradient(180deg,#1e3a8a,#2563eb)" : "#f3f4f6")};
-  color: ${({variant}) => (variant === "primary" ? "#eef2ff" : "#111827")};
+  min-height: 44px; padding: 10px 15px; border-radius: 11px; border: 1px solid ${({ $variant, theme }) => ($variant === "primary" ? "transparent" : theme.colors.border)}; cursor: pointer; font-weight: 800;
+  background: ${({ $variant, theme }) => ($variant === "primary" ? theme.gradients.primary : theme.colors.surfaceAlt)};
+  color: ${({ $variant, theme }) => ($variant === "primary" ? theme.on.primary : theme.colors.text)};
   &:disabled { opacity: .6; cursor: not-allowed; }
 `;
-const Aux = styled.div` font-size: .86rem; color: #6b7280; `;
-const InlineLink = styled(Link)` color: #2563eb; text-decoration: none; font-weight: 800; `;
+const Aux = styled.div` font-size: .86rem; color: ${({ theme }) => theme.colors.textSecondary}; `;
+const InlineLink = styled(Link)` color: ${({ theme }) => theme.colors.link}; text-decoration: none; font-weight: 800; `;
 
 export default function LoginModal({ open, onClose, onSuccess }) {
   const { login, sendEmailVerification } = useAuthContext();
@@ -119,7 +124,7 @@ export default function LoginModal({ open, onClose, onSuccess }) {
   };
 
   return createPortal(
-    <Backdrop open={open} onClick={onClose} role="dialog" aria-modal="true">
+    <Backdrop $open={open} onClick={onClose} role="dialog" aria-modal="true">
       <Modal onClick={(e) => e.stopPropagation()}>
         <Header>계속하려면 로그인이 필요해요</Header>
         <form onSubmit={handleLogin} autoComplete="on" noValidate={false}>
@@ -162,7 +167,7 @@ export default function LoginModal({ open, onClose, onSuccess }) {
           </Body>
           <Actions>
             <Btn type="button" onClick={onClose}>닫기</Btn>
-            <Btn type="submit" variant="primary" disabled={loading || !email || !pw}>
+            <Btn type="submit" $variant="primary" disabled={loading || !email || !pw}>
               {loading ? "확인 중..." : "로그인"}
             </Btn>
           </Actions>

@@ -8,9 +8,9 @@ import MobileCardGrid from "../components/common/MobileCardGrid";
 
 // ===== Styled Components =====
 const Wrapper = styled.div`
-  max-width: 1200px;
+  max-width: 1180px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 8px 0 24px;
   position: relative;
   ${({ "aria-busy": busy }) => busy && `opacity: 0.6;`}
 `;
@@ -24,25 +24,39 @@ const LoadingContainer = styled(Wrapper)`
 
 const SoftNote = styled.div`
   text-align: center;
-  color: #444;
-  background: #f6f7fb;
-  border: 1px solid #e6e8ee;
-  padding: 10px 12px;
-  border-radius: 8px;
-  margin: 12px 0;
+  color: ${({ theme }) => theme.semantic.alertInfoText};
+  background: ${({ theme }) => theme.semantic.alertInfoBg};
+  border: 1px solid ${({ theme }) => theme.colors.info}33;
+  padding: 12px 14px;
+  border-radius: 12px;
+  margin: 14px 0;
   font-size: .95rem;
 `;
 
 const Header = styled.h1`
-  text-align: center;
-  margin-bottom: 24px;
-  color: ${({ theme }) => theme.colors.primary};
+  position: relative;
+  margin: 0 0 26px;
+  padding-bottom: 14px;
+  color: ${({ theme }) => theme.colors.text};
+
+  &::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 52px;
+    height: 3px;
+    border-radius: 999px;
+    background: ${({ theme }) => theme.gradients.gold};
+  }
 `;
 
 const ResultCount = styled.p`
   text-align: right;
-  margin-bottom: 8px;
-  color: #666;
+  margin: 0 0 10px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: .9rem;
+  font-weight: 700;
 `;
 
 const SortBar = styled.div`
@@ -50,7 +64,7 @@ const SortBar = styled.div`
   justify-content: space-between;
   align-items: end;
   gap: 10px;
-  margin-bottom: 12px;
+  margin-bottom: 0;
   flex-wrap: wrap;
 `;
 
@@ -58,8 +72,18 @@ const FilterBar = styled.div`
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  justify-content: center;
-  margin-bottom: 20px;
+  align-items: end;
+  justify-content: flex-start;
+  margin-top: 14px;
+`;
+
+const FilterPanel = styled.div`
+  margin-bottom: 24px;
+  padding: clamp(16px, 3vw, 22px);
+  background: ${({ theme }) => theme.colors.surface};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.large};
+  box-shadow: ${({ theme }) => theme.shadows.card};
 `;
 
 const Label = styled.label`
@@ -67,42 +91,51 @@ const Label = styled.label`
   color: ${({ theme }) => theme.colors.text};
   display: flex;
   flex-direction: column;
-  font-weight: 500;
+  min-width: 156px;
+  font-weight: 750;
+  gap: 7px;
 `;
 
 const Input = styled.input`
-  padding: 8px 12px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  margin-top: 4px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.small};
+  margin-top: 0;
 `;
 
 const Select = styled.select`
-  padding: 8px 12px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  margin-top: 4px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.small};
+  margin-top: 0;
 `;
 
 const Button = styled.button`
-  background: ${({ theme }) => theme.colors.primary};
-  color: #fff;
-  border-radius: 4px;
-  padding: 8px 16px;
-  font-weight: bold;
-  border: none;
+  min-height: 44px;
+  background: ${({ theme }) => theme.gradients.primary};
+  color: ${({ theme }) => theme.on.primary};
+  border-radius: ${({ theme }) => theme.radii.small};
+  padding: 10px 16px;
+  font-weight: 750;
+  border: 1px solid transparent;
   cursor: pointer;
   transition: background 0.15s;
-  &:hover { background: ${({ theme }) => theme.colors.secondary}; }
+  &:hover { filter: brightness(.97); }
   &:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
 
 const GhostBtn = styled(Button)`
-  background: #6c757d;
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+  border-color: ${({ theme }) => theme.colors.border};
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 const ResetButton = styled(Button)`
-  background: #6c757d;
+  background: ${({ theme }) => theme.semantic.buttonAltBg};
+  border-color: ${({ theme }) => theme.colors.secondary}55;
+  color: ${({ theme }) => theme.semantic.buttonAltText};
 `;
 
 // 모바일 전용 필터 토글 버튼
@@ -110,12 +143,13 @@ const ToggleButton = styled.button`
   display: none;
   @media (max-width: 768px) {
     display: block;
-    margin: 0 auto 12px;
-    background: ${({ theme }) => theme.colors.primary};
-    color: #fff;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 4px;
+    width: 100%;
+    margin: 0 0 12px;
+    background: ${({ theme }) => theme.gradients.primary};
+    color: ${({ theme }) => theme.on.primary};
+    border: 1px solid transparent;
+    padding: 10px 16px;
+    border-radius: ${({ theme }) => theme.radii.small};
     cursor: pointer;
   }
 `;
@@ -126,18 +160,20 @@ const Pagination = styled.nav`
   justify-content: center;
   align-items: center;
   gap: 8px;
-  margin: 24px 0;
+  margin: 30px 0 10px;
   flex-wrap: wrap;
 `;
 
 const PageButton = styled.button`
-  padding: 6px 10px;
-  border: none;
-  background: ${({ $active, theme }) => ($active ? theme.colors.primary : "#eee")};
-  color: ${({ $active }) => ($active ? "#fff" : "#333")};
-  border-radius: 4px;
+  min-width: 42px;
+  min-height: 42px;
+  padding: 8px 11px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ $active, theme }) => ($active ? theme.gradients.primary : theme.colors.surface)};
+  color: ${({ $active, theme }) => ($active ? theme.on.primary : theme.colors.text)};
+  border-radius: ${({ theme }) => theme.radii.small};
   cursor: pointer;
-  &:hover { ${({ $active }) => !$active && "background: #ddd;"} }
+  &:hover { ${({ $active, theme }) => !$active && `background: ${theme.colors.surfaceAlt};`} }
 `;
 
 // ===== 상수 =====
@@ -418,7 +454,7 @@ export default function TradeHome() {
       </ToggleButton>
 
       {(showFilters || isDesktop) && (
-        <div id="filters">
+        <FilterPanel id="filters">
           <SortBar>
             <Label htmlFor="sortSelect">
               정렬
@@ -501,7 +537,7 @@ export default function TradeHome() {
               전체 초기화
             </ResetButton>
           </FilterBar>
-        </div>
+        </FilterPanel>
       )}
 
       {fetchError && (

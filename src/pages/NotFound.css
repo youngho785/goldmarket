@@ -1,30 +1,29 @@
 .not-found {
-    text-align: center;
-    padding: 50px;
-  }
-  
-  .not-found h1 {
-    font-size: 80px;
-    color: #ff5e57;
-  }
-  
-  .not-found p {
-    font-size: 18px;
-    color: #555;
-  }
-  
-  .home-link {
-    display: inline-block;
-    margin-top: 20px;
-    padding: 10px 20px;
-    font-size: 16px;
-    color: white;
-    background-color: #007bff;
-    text-decoration: none;
-    border-radius: 5px;
-  }
-  
-  .home-link:hover {
-    background-color: #0056b3;
-  }
-  
+  padding: 50px;
+  text-align: center;
+}
+
+.not-found h1 {
+  color: #ff5e57;
+  font-size: 80px;
+}
+
+.not-found p {
+  color: #555;
+  font-size: 18px;
+}
+
+.home-link {
+  display: inline-block;
+  margin-top: 20px;
+  padding: 10px 20px;
+  color: white;
+  font-size: 16px;
+  text-decoration: none;
+  background-color: #1f3a5f;
+  border-radius: 5px;
+}
+
+.home-link:hover {
+  background-color: #142840;
+}

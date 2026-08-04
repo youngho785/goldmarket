@@ -10,7 +10,7 @@ import { FiEye, FiEyeOff } from "react-icons/fi";
 import { db, auth } from "../firebase/firebase";
 import { signUp } from "../services/authService";
 import { AgreementsSection } from "../components/AgreementsSection";
-import { claimGoldQuizBonus } from "@/services/quizClient"; // ✅ 추가
+import { claimGoldQuizBonus, claimWelcomeGoldBonus } from "@/services/quizClient";
 
 // Register 폼 복구용 세션 키 (보조 용도)
 const REGISTER_FORM_KEY = "registerFormData";
@@ -20,34 +20,50 @@ const CURRENT_TERMS_VERSION = "v1.1";
 // ✅ 퀴즈 세션 키 (Quiz 페이지와 동일하게 유지)
 const PASS_KEY = "quiz_gold_bonus_passed";
 const PASS_SCORE_KEY = "quiz_gold_bonus_score";
+const PASS_ANSWERS_KEY = "quiz_gold_bonus_answers";
 
 /* ───────────── Styled ───────────── */
 const Container = styled.div`
   display: flex;
   justify-content: center;
-  padding: 40px 20px;
-  background: ${({ theme }) => theme.colors.background || "#f0f2f5"};
-  min-height: 100vh;
+  align-items: flex-start;
+  padding: clamp(28px, 6vw, 64px) 18px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(178,138,59,.11), transparent 28rem),
+    ${({ theme }) => theme.colors.background || "#F4F6F9"};
+  min-height: calc(100svh - 180px);
 `;
 const Card = styled.div`
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-  padding: 32px;
+  position: relative;
+  overflow: hidden;
+  background: ${({ theme }) => theme.colors.surface};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.large};
+  box-shadow: ${({ theme }) => theme.shadows.lg};
+  padding: clamp(26px, 5vw, 42px);
   width: 100%;
-  max-width: 480px;
+  max-width: 520px;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto;
+    height: 4px;
+    background: ${({ theme }) => theme.gradients.gold};
+  }
 `;
 const Title = styled.h1`
   text-align: center;
-  margin-bottom: 16px;
-  color: ${({ theme }) => theme.colors.primary || "#333"};
+  margin-bottom: 20px;
+  font-size: clamp(26px, 5vw, 34px);
+  color: ${({ theme }) => theme.colors.text};
 `;
 const NoticeBox = styled.div`
-  background: #fffbeb;
-  border: 1px solid #fde68a;
-  color: #92400e;
-  border-radius: 8px;
-  padding: 12px 14px;
+  background: ${({ theme }) => theme.semantic.alertWarningBg};
+  border: 1px solid ${({ theme }) => theme.colors.secondary}55;
+  color: ${({ theme }) => theme.semantic.alertWarningText};
+  border-radius: 12px;
+  padding: 13px 14px;
   font-size: 0.95rem;
   line-height: 1.55;
   margin-bottom: 16px;
@@ -55,7 +71,7 @@ const NoticeBox = styled.div`
 const Form = styled.form`
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
 `;
 const FormGroup = styled.div`
   display: flex;
@@ -63,49 +79,75 @@ const FormGroup = styled.div`
   position: relative;
 `;
 const Label = styled.label`
-  margin-bottom: 8px;
-  font-weight: 600;
-  color: #555;
+  margin-bottom: 7px;
+  font-weight: 750;
+  color: ${({ theme }) => theme.colors.text};
 `;
 const Input = styled.input`
-  padding: 10px 40px 10px 12px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  min-height: 48px;
+  padding: 11px 40px 11px 13px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.small};
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
   font-size: 1rem;
-  &:disabled { background: #f5f5f5; }
+
+  &::-ms-reveal,
+  &::-ms-clear {
+    display: none;
+  }
+
+  &::-webkit-credentials-auto-fill-button,
+  &::-webkit-contacts-auto-fill-button {
+    visibility: hidden;
+    display: none !important;
+    pointer-events: none;
+  }
+
+  &:disabled { background: ${({ theme }) => theme.colors.surfaceAlt}; }
 `;
 const ToggleButton = styled.button`
   position: absolute;
   right: 12px;
   top: 50%;
   transform: translateY(-50%);
-  background: none;
+  width: 36px;
+  min-height: 36px;
+  background: transparent;
   border: none;
   padding: 0;
+  border-radius: 9px;
+  box-shadow: none;
   cursor: pointer;
-  color: #888;
+  color: ${({ theme }) => theme.colors.textSecondary};
   font-size: 1.2rem;
+  &:hover { background: ${({ theme }) => theme.colors.surfaceAlt}; transform: translateY(-50%); box-shadow: none; }
 `;
 const ErrorText = styled.p`
-  color: red;
+  color: ${({ theme }) => theme.semantic.alertErrorText};
+  background: ${({ theme }) => theme.semantic.alertErrorBg};
+  border-radius: 10px;
+  padding: 10px 12px;
   font-size: 0.9rem;
-  margin: -8px 0 8px;
+  margin: 0 0 8px;
 `;
 const Button = styled.button`
-  padding: 12px;
+  min-height: 48px;
+  padding: 12px 16px;
   font-size: 1rem;
-  background: ${({ theme }) => theme.colors.primary || "#007bff"};
-  color: #fff;
-  border: none;
-  border-radius: 4px;
+  background: ${({ theme }) => theme.gradients.primary};
+  color: ${({ theme }) => theme.on.primary};
+  border: 1px solid transparent;
+  border-radius: ${({ theme }) => theme.radii.small};
+  font-weight: 800;
   cursor: pointer;
   transition: background 0.2s;
-  &:disabled { background: #aaa; cursor: not-allowed; }
-  &:hover:enabled { background: ${({ theme }) => theme.colors.primaryDark || "#0056b3"}; }
+  &:disabled { opacity: .55; cursor: not-allowed; }
+  &:hover:enabled { filter: brightness(.96); }
 `;
 const SmallText = styled.span`
   font-size: 0.85rem;
-  color: #888;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin-top: -8px;
 `;
 /* 🔒 시각적으로 숨기는 인풋: 접근성/자동완성용 */
@@ -168,7 +210,9 @@ async function isNicknameDuplicated(nick, nickLower) {
       const qLower = query(collection(db, "profiles"), where("nicknameLower", "==", nickLower));
       const snapLower = await getDocs(qLower);
       if (!snapLower.empty) return true;
-    } catch {}
+    } catch {
+      // 레거시 문서에 nicknameLower가 없으면 원본 닉네임으로 다시 조회합니다.
+    }
     const qy = query(collection(db, "profiles"), where("nickname", "==", nick));
     const snap = await getDocs(qy);
     return !snap.empty;
@@ -215,7 +259,9 @@ export default function Register() {
         setEmail(saved.email || "");
         setNickname(saved.nickname || "");
         setPhone(saved.phone || "");
-      } catch {}
+      } catch {
+        sessionStorage.removeItem(REGISTER_FORM_KEY);
+      }
     }
   }, []);
   useEffect(() => {
@@ -236,11 +282,6 @@ export default function Register() {
     setIsNickDuplicate(dup);
     if (dup) setError("이미 사용 중인 닉네임입니다.");
     setCheckingNick(false);
-  };
-
-  const handlePhoneChange = e => {
-    setPhone(formatPhone(e.target.value));
-    setError(null);
   };
 
   const handleSubmit = async e => {
@@ -271,6 +312,10 @@ export default function Register() {
 
     setLoading(true);
     try {
+      let quizBonusResult = null;
+      let quizBonusError = "";
+      let welcomeBonusResult = null;
+      let welcomeBonusError = "";
       const user = await signUp({
         email: normalizedEmail,
         password,
@@ -298,22 +343,37 @@ export default function Register() {
         );
       }
 
+      try {
+        welcomeBonusResult = await claimWelcomeGoldBonus();
+      } catch (bonusError) {
+        welcomeBonusError =
+          bonusError?.message || "웰컴 순금 적립을 내 프로필에서 다시 확인해 주세요.";
+      }
+
       // ✅ 퀴즈 통과 플래그가 있으면 즉시 보너스 적립 호출
       try {
         const passed = sessionStorage.getItem(PASS_KEY) === "1";
-        const score = Number(sessionStorage.getItem(PASS_SCORE_KEY) || "0");
+        const answers = JSON.parse(sessionStorage.getItem(PASS_ANSWERS_KEY) || "null");
         if (passed) {
-          await claimGoldQuizBonus({ score: Number.isFinite(score) ? score : 0 });
+          quizBonusResult = await claimGoldQuizBonus({ answers });
           sessionStorage.removeItem(PASS_KEY);
           sessionStorage.removeItem(PASS_SCORE_KEY);
+          sessionStorage.removeItem(PASS_ANSWERS_KEY);
         }
-      } catch (e) {
-        // 적립 실패해도 가입 플로우는 계속
-        // console.warn("quiz bonus claim after signup failed:", e);
+      } catch (bonusError) {
+        // 가입은 유지하되 퀴즈 플래그를 남겨 다음 방문에서 다시 적립할 수 있게 합니다.
+        quizBonusError = bonusError?.message || "퀵퀴즈 보너스 적립을 다시 확인해 주세요.";
       }
 
       // 이메일 인증 안내로 진행
-      navigate("/verify-email");
+      navigate("/verify-email", {
+        state: {
+          quizBonusResult,
+          quizBonusError,
+          welcomeBonusResult,
+          welcomeBonusError,
+        },
+      });
     } catch (err) {
       console.error("회원가입 에러:", err);
       setError(toKoreanError(err?.message));
@@ -331,6 +391,9 @@ export default function Register() {
 
         <NoticeBox role="note" aria-live="polite">
           <ul style={{ margin: "0 0 0 16px", padding: 0 }}>
+            <li>
+              <strong>회원가입 즉시 웰컴 순금 0.01g이 적립되며, 골드바 교환 시 사용할 수 있습니다.</strong>
+            </li>
             <li><strong>인증메일이 스팸함/프로모션함으로 분류될 수 있습니다. 메일함 전체를 확인해 주세요.</strong></li>
             <li style={{ marginTop: 6 }}>
               모바일 메일앱에서 링크가 잘 열리지 않으면, 링크를 복사해 브라우저(크롬/사파리)로 열어주세요.

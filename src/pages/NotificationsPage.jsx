@@ -10,22 +10,25 @@ import {
   markAllNotificationsAsRead,
 } from "../services/notificationService";
 
-const Wrap = styled.div` padding:20px; `;
-const H1 = styled.h1` color: ${({ theme }) => theme.colors.primary}; margin-bottom: 12px; `;
+const Wrap = styled.div` max-width: 860px; margin: 0 auto; padding: 8px 0 30px; `;
+const H1 = styled.h1` color: ${({ theme }) => theme.colors.text}; margin-bottom: 18px; `;
 const Toolbar = styled.div` display:flex; gap:8px; align-items:center; margin-bottom:12px; flex-wrap:wrap; `;
 const Button = styled.button`
-  padding:8px 12px; border:1px solid ${({ theme }) => theme.colors.border};
-  background:${({ theme }) => theme.colors.surface}; border-radius:6px; cursor:pointer;
+  min-height:42px; padding:8px 12px; border:1px solid ${({ theme }) => theme.colors.border};
+  background:${({ theme }) => theme.colors.surface}; color: ${({ theme }) => theme.colors.text}; border-radius:10px; cursor:pointer;
 `;
 const List = styled.ul` list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px; `;
 const Item = styled.li`
   border:1px solid ${({ theme }) => theme.colors.border};
-  background: ${({ $unread, theme }) => ($unread ? theme.colors.background : "#fff")};
-  border-radius:8px; padding:12px; cursor:pointer;
+  background: ${({ $unread, theme }) => ($unread ? theme.semantic.alertInfoBg : theme.colors.surface)};
+  border-radius:14px; padding:14px 16px; cursor:pointer;
+  box-shadow: ${({ theme }) => theme.shadows.card};
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+  &:hover { transform: translateY(-1px); box-shadow: ${({ theme }) => theme.shadows.hover}; border-color: ${({ theme }) => theme.colors.borderStrong}; }
 `;
 const Title = styled.div` font-weight:700; `;
 const Body  = styled.div` color:${({ theme }) => theme.colors.textSecondary}; margin-top:4px; `;
-const Time  = styled.div` font-size:.85rem; color:#888; margin-top:6px; `;
+const Time  = styled.div` font-size:.85rem; color:${({ theme }) => theme.colors.textLight}; margin-top:6px; `;
 
 function fmt(ts) {
   try {

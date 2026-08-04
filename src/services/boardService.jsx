@@ -105,7 +105,7 @@ export const createPost = async ({ title, content, category, authorId }) => {
           authorNickname = (userSnap.data()?.nickname || "").trim();
         }
       }
-    } catch (_) {
+    } catch {
       // 닉네임 조회 실패해도 글 생성은 계속
     }
 

@@ -4,8 +4,8 @@ import React from "react";
 import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
 
-const PRIVACY_VERSION = "v1.0";
-const PRIVACY_EFFECTIVE_DATE = "2025-08-16";
+const PRIVACY_VERSION = "v2.1";
+const PRIVACY_EFFECTIVE_DATE = "2026-07-28";
 
 const P_OPERATOR = {
   brand: "한국골드마켓",
@@ -20,42 +20,42 @@ const P_OPERATOR = {
 };
 
 const P_Container = styled.div`
-  max-width: 900px; margin: auto; padding: 40px 20px; line-height: 1.65;
-  color: ${({ theme }) => theme?.colors?.text || "#333"};
+  max-width: 960px; margin: 16px auto 36px; padding: clamp(24px, 5vw, 46px); line-height: 1.7;
+  color: ${({ theme }) => theme.colors.text}; background: ${({ theme }) => theme.colors.surface}; border: 1px solid ${({ theme }) => theme.colors.border}; border-radius: ${({ theme }) => theme.radii.large}; box-shadow: ${({ theme }) => theme.shadows.card};
 `;
 const P_Title = styled.h1`
-  text-align: center; margin: 24px 0 8px; color: ${({ theme }) => theme?.colors?.primary || "#0f172a"};
+  text-align: center; margin: 8px 0 8px; color: ${({ theme }) => theme.colors.text};
 `;
 const P_Meta = styled.p`
-  text-align: center; color: #6b7280; margin: 0 0 28px; font-size: 0.9rem;
+  text-align: center; color: ${({ theme }) => theme.colors.textSecondary}; margin: 0 0 28px; font-size: 0.9rem;
 `;
 const P_Section = styled.section`
   margin-bottom: 24px;
-  h2 { margin-bottom: 8px; font-size: 1.15rem; color: ${({ theme }) => theme?.colors?.primary || "#0f172a"}; }
+  h2 { margin-bottom: 8px; font-size: 1.15rem; color: ${({ theme }) => theme.colors.primary}; }
   p { margin-bottom: 10px; }
   ul { margin: 8px 0 12px 18px; }
 `;
 const TopBar = styled.div`
-  position: sticky; top: 0; z-index: 1000;
-  background: ${({ theme }) => theme?.colors?.surface || "rgba(255,255,255,0.92)"};
-  border-bottom: 1px solid #eee; backdrop-filter: saturate(180%) blur(8px);
+  position: sticky; top: 68px; z-index: 900;
+  background: ${({ theme }) => theme.colors.surface};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.dividerSubtle}; backdrop-filter: saturate(180%) blur(8px);
   -webkit-backdrop-filter: saturate(180%) blur(8px);
 `;
 const TopInner = styled.div`
   max-width: 900px; margin: 0 auto; padding: 10px 20px;
-  display: flex; align-items: center; justify-content: space-between; font-size: 0.9rem; color: #555;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 0.85rem; color: ${({ theme }) => theme.colors.textSecondary};
 `;
 const BackBtn2 = styled.button`
-  padding: 8px 14px; border-radius: 9999px; border: 1px solid #ddd; background: #fff; cursor: pointer;
-  &:hover { background: #fafafa; }
+  padding: 8px 14px; border-radius: 9999px; border: 1px solid ${({ theme }) => theme.colors.border}; background: ${({ theme }) => theme.colors.surfaceAlt}; color: ${({ theme }) => theme.colors.text}; cursor: pointer;
+  &:hover { background: ${({ theme }) => theme.semantic.badgeGoldBg}; }
 `;
 const TableWrap = styled.div`
-  overflow-x: auto; border: 1px solid #eee; border-radius: 8px; background: #fff;
+  overflow-x: auto; border: 1px solid ${({ theme }) => theme.colors.border}; border-radius: 12px; background: ${({ theme }) => theme.colors.surface};
 `;
 const Table = styled.table`
   width: 100%; border-collapse: collapse; font-size: 0.95rem;
-  th, td { padding: 10px 12px; border-bottom: 1px solid #eee; vertical-align: top; }
-  th { background: #fafafa; text-align: left; white-space: nowrap; }
+  th, td { padding: 10px 12px; border-bottom: 1px solid ${({ theme }) => theme.colors.dividerSubtle}; vertical-align: top; }
+  th { background: ${({ theme }) => theme.colors.surfaceAlt}; text-align: left; white-space: nowrap; }
 `;
 
 export function Privacy() {
@@ -82,8 +82,11 @@ export function Privacy() {
           <h2>2. 처리하는 개인정보 항목</h2>
           <ul>
             <li><strong>회원가입/인증</strong>: 이메일, 비밀번호(해시), 이름/닉네임, 휴대전화</li>
-            <li><strong>서비스 이용</strong>: 게시/채팅 내역, 교환 예약/감정/정산 정보, 접속기록(IP·기기정보·로그)</li>
-            <li><strong>선택</strong>: 위치정보(동의 시), 마케팅 수신 동의(채널별), 프로필 이미지 등</li>
+            <li><strong>방문 예약</strong>: 성명, 휴대전화번호, 방문 날짜·시간, 회원 이메일</li>
+            <li><strong>골드바 교환</strong>: 입력한 제품 종류·무게, 현장 계측, 공임, 교환 진행 및 확정 내역</li>
+            <li><strong>교환 후기</strong>: 별점, 후기 내용(공개 화면에는 회원 식별정보를 표시하지 않음)</li>
+            <li><strong>서비스 이용</strong>: 고객문의 내역, 접속기록(IP·기기정보·로그)</li>
+            <li><strong>선택</strong>: 마케팅 수신 동의(채널별), 프로필 이미지 등</li>
           </ul>
         </P_Section>
 
@@ -91,7 +94,7 @@ export function Privacy() {
           <h2>3. 이용 목적</h2>
           <ul>
             <li>회원관리, 본인확인, 부정이용 방지</li>
-            <li>프리마켓 중개, 골드바 교환 예약/감정/정산 제공</li>
+            <li>예상 순금 중량 계산, 골드바 교환 방문예약·현장 계측·공임 확인·진행내역 및 검증 후기 제공</li>
             <li>고객문의/분쟁 대응, 서비스 개선 및 안정화</li>
             <li>선택 동의 시 광고/이벤트 안내 및 분석</li>
           </ul>
@@ -103,7 +106,7 @@ export function Privacy() {
         </P_Section>
 
         <P_Section>
-          <h2>4-1. 보유기간·법적근거(예시)</h2>
+          <h2>4-1. 보유기간·법적근거</h2>
           <TableWrap>
             <Table>
               <thead>
@@ -135,7 +138,7 @@ export function Privacy() {
               </tbody>
             </Table>
           </TableWrap>
-          <p style={{marginTop:8}}>※ 서비스 유형에 따른 일반 예시입니다. 실제 적용은 귀사 정책/법률 자문을 통해 확정하십시오.</p>
+          <p style={{marginTop:8}}>※ 관련 법령 개정 또는 서비스 내용 변경 시 보유기간과 처리 항목은 변경될 수 있으며, 변경 사항은 본 방침을 통해 안내합니다.</p>
         </P_Section>
 
         <P_Section id="transfer">
@@ -154,7 +157,7 @@ export function Privacy() {
                 <tr>
                   <td>Google Cloud / Firebase (Google LLC)</td>
                   <td>인증, 데이터베이스/스토리지, 호스팅, 서버리스 함수 운영</td>
-                  <td>계정 식별자, 프로필/연락처, 로그/메타데이터, 게시/채팅 등 최소 정보</td>
+                  <td>계정 식별자, 프로필/연락처, 교환·문의 정보, 로그/메타데이터 등 최소 정보</td>
                   <td>위탁 계약 종료 또는 목적 달성 시까지(법정 보존 예외 별도)</td>
                   <td>support.google.com</td>
                 </tr>
@@ -175,7 +178,7 @@ export function Privacy() {
                   <td>Google LLC (Firebase)</td>
                   <td>미국(및 필요한 글로벌 리전)</td>
                   <td>계정 생성·로그인·데이터 처리 시점마다 네트워크를 통한 안전한 전송(전 구간 암호화)</td>
-                  <td>계정/프로필 식별자, 이메일, 해시된 비밀번호, 로그/메타, 게시/채팅 등 최소 정보</td>
+                  <td>계정/프로필 식별자, 이메일, 해시된 비밀번호, 교환·문의 정보, 로그/메타데이터 등 최소 정보</td>
                   <td>인증·데이터 저장·호스팅·서버리스 처리 및 보안</td>
                   <td>서비스 제공 목적 달성 또는 탈퇴/삭제 요청 시까지(법정 보존 예외 별도)</td>
                   <td>support.google.com</td>
@@ -190,7 +193,7 @@ export function Privacy() {
         <P_Section>
           <h2>6. 이용자의 권리</h2>
           <p>이용자는 자신의 개인정보에 대한 열람·정정·삭제·처리정지를 요구할 수 있습니다(문의: {P_OPERATOR.email} / {P_OPERATOR.phone}).</p>
-          <p>마케팅 수신 및 위치기반서비스 동의는 마이페이지의 동의관리에서 철회/변경할 수 있습니다.</p>
+          <p>마케팅 수신 동의는 마이페이지의 동의관리 또는 안내된 수신거부 방법을 통해 철회·변경할 수 있습니다.</p>
         </P_Section>
 
         <P_Section>

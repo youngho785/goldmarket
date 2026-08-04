@@ -7,6 +7,36 @@ import {
   confirmPasswordReset
 } from 'firebase/auth';
 import { auth } from '../firebase/firebase';
+import styled from 'styled-components';
+
+const Page = styled.div`
+  max-width: 460px;
+  margin: 8px auto 32px;
+  padding: clamp(24px, 5vw, 38px);
+  background: ${({ theme }) => theme.colors.surface};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.large};
+  box-shadow: ${({ theme }) => theme.shadows.card};
+
+  form { display: grid; gap: 14px; }
+  label { display: block; margin-bottom: 7px; font-weight: 750; color: ${({ theme }) => theme.colors.text}; }
+  button[type='submit'] { width: 100%; }
+`;
+
+const SuccessTitle = styled.h2`
+  color: ${({ theme }) => theme.semantic.alertSuccessText};
+  background: ${({ theme }) => theme.semantic.alertSuccessBg};
+  padding: 12px 14px;
+  border-radius: 12px;
+`;
+
+const Feedback = styled.p`
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: ${({ $error, theme }) => ($error ? theme.semantic.alertErrorText : theme.semantic.alertInfoText)};
+  background: ${({ $error, theme }) => ($error ? theme.semantic.alertErrorBg : theme.semantic.alertInfoBg)};
+`;
 
 export default function ResetPassword() {
   try { auth.languageCode = 'ko'; } catch {}
@@ -112,7 +142,7 @@ export default function ResetPassword() {
   };
 
   return (
-    <div style={{ padding: 20, maxWidth: 400, margin: 'auto' }}>
+    <Page>
       {step === 'email' && (
         <>
           <h1>비밀번호 재설정</h1>
@@ -180,17 +210,17 @@ export default function ResetPassword() {
 
       {step === 'success' && (
         <div>
-          <h2 style={{ color: 'green' }}>{msg}</h2>
+          <SuccessTitle>{msg}</SuccessTitle>
           <Link to="/login">로그인 페이지로 이동</Link>
         </div>
       )}
 
       {(msg && step !== 'success') && (
-        <p style={{ color: 'blue', marginTop: 14 }}>{msg}</p>
+        <Feedback>{msg}</Feedback>
       )}
       {error && (
-        <p style={{ color: 'red', marginTop: 14 }}>{error}</p>
+        <Feedback $error>{error}</Feedback>
       )}
-    </div>
+    </Page>
   );
 }

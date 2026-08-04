@@ -6,37 +6,41 @@ import { fetchPostById, updatePost } from "../services/boardService";
 import { useAuthContext } from "../context/AuthContext";
 
 const Container = styled.div`
-  padding: 20px;
-  max-width: 600px;
-  margin: auto;
+  padding: clamp(22px, 4vw, 34px);
+  max-width: 680px;
+  margin: 8px auto 28px;
+  background: ${({ theme }) => theme.colors.surface};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.large};
+  box-shadow: ${({ theme }) => theme.shadows.card};
 `;
 const Header = styled.h1`
-  text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 `;
 const Label = styled.label`
   display: block;
-  margin: 12px 0 4px;
-  font-weight: bold;
+  margin: 16px 0 7px;
+  font-weight: 750;
+  color: ${({ theme }) => theme.colors.text};
 `;
 const Input = styled.input`
   width: 100%;
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  padding: 10px 12px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.small};
 `;
 const TextArea = styled.textarea`
   width: 100%;
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  padding: 11px 12px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.small};
   resize: vertical;
 `;
 const Select = styled.select`
   width: 100%;
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  padding: 10px 12px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.small};
 `;
 const ButtonGroup = styled.div`
   margin-top: 24px;
@@ -46,22 +50,27 @@ const ButtonGroup = styled.div`
 
 /* NOTE: DOM으로 흘러가지 않도록 transient prop `$variant` 사용 */
 const Button = styled.button`
-  padding: 8px 12px;
-  border: none;
-  border-radius: 4px;
-  background: ${({ $variant }) =>
+  min-height: 44px;
+  padding: 9px 14px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.small};
+  background: ${({ $variant, theme }) =>
     $variant === "cancel"
-      ? "#95a5a6"
+      ? theme.colors.surfaceAlt
       : $variant === "delete"
-      ? "#e74c3c"
-      : "#007bff"};
-  color: #fff;
+      ? theme.colors.error
+      : theme.gradients.primary};
+  color: ${({ $variant, theme }) => ($variant === "cancel" ? theme.colors.text : theme.on.primary)};
+  font-weight: 750;
   cursor: pointer;
   &:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
 
 const ErrorText = styled.p`
-  color: red;
+  color: ${({ theme }) => theme.semantic.alertErrorText};
+  background: ${({ theme }) => theme.semantic.alertErrorBg};
+  padding: 10px 12px;
+  border-radius: 10px;
   margin-top: 12px;
   text-align: center;
 `;

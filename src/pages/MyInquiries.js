@@ -21,8 +21,8 @@ const Header = styled.div`
 const Title = styled.h1` margin: 0; `;
 const NewBtn = styled.button`
   padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer;
-  background: ${({ theme }) => theme.colors?.primary || "#007bff"};
-  color: #fff;
+  background: ${({ theme }) => theme.gradients?.primary || theme.colors?.primary || "#1F3A5F"};
+  color: ${({ theme }) => theme.on?.primary || "#fff"};
 `;
 const Tabs = styled.div`
   display: flex; gap: 8px; margin: 8px 0 16px;

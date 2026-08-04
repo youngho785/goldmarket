@@ -7,63 +7,70 @@ import { useNotificationContext } from "@/context/NotificationContext";
 import styled from "styled-components";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import { compressImage } from "../utils/imageCompression";
+import { CATEGORY_OPTIONS } from "../constants/categories";
 
 const PageContainer = styled.div`
   max-width: 800px;
-  margin: 40px auto;
-  padding: 20px;
-  background: ${({ theme }) => theme.colors.white};
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  border-radius: 8px;
+  margin: 8px auto 32px;
+  padding: clamp(22px, 4vw, 36px);
+  background: ${({ theme }) => theme.colors.surface};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  box-shadow: ${({ theme }) => theme.shadows.card};
+  border-radius: ${({ theme }) => theme.radii.large};
   position: relative;
 `;
 
 const Title = styled.h1`
-  text-align: center;
-  color: ${({ theme }) => theme.colors.primary};
-  margin-bottom: 20px;
+  position: relative;
+  color: ${({ theme }) => theme.colors.text};
+  margin-bottom: 26px;
+  padding-bottom: 14px;
+  &::after { content: ""; position: absolute; left: 0; bottom: 0; width: 50px; height: 3px; border-radius: 999px; background: ${({ theme }) => theme.gradients.gold}; }
 `;
 
 const Form = styled.form`
   display: flex;
   flex-direction: column;
-  opacity: ${({ disabled }) => (disabled ? 0.6 : 1)};
+  opacity: ${({ $disabled }) => ($disabled ? 0.6 : 1)};
 `;
 
 const FormGroup = styled.div`
-  margin-bottom: 15px;
+  margin-bottom: 18px;
   position: relative;
 `;
 
 const Label = styled.label`
-  font-weight: bold;
-  margin-bottom: 5px;
+  font-weight: 750;
+  margin-bottom: 7px;
+  color: ${({ theme }) => theme.colors.text};
   display: block;
 `;
 
 const Select = styled.select`
   width: 100%;
-  padding: 8px;
+  min-height: 46px;
+  padding: 10px 12px;
   font-size: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.small};
 `;
 
 const Input = styled.input`
   width: 100%;
-  padding: 8px;
+  min-height: 46px;
+  padding: 10px 12px;
   font-size: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.small};
 `;
 
 /* 입력 길이에 따라 자동으로 높이 증가 */
 const TextArea = styled.textarea`
   width: 100%;
-  padding: 8px;
+  padding: 11px 12px;
   font-size: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.small};
   line-height: 1.5;
   min-height: 96px;
   overflow: hidden;
@@ -72,16 +79,18 @@ const TextArea = styled.textarea`
 `;
 
 const Button = styled.button`
-  padding: 12px;
+  min-height: 48px;
+  padding: 12px 16px;
   font-size: 1rem;
-  background: ${({ theme }) => theme.colors.primary};
-  color: #fff;
-  border: none;
-  border-radius: 4px;
+  background: ${({ theme }) => theme.gradients.primary};
+  color: ${({ theme }) => theme.on.primary};
+  border: 1px solid transparent;
+  border-radius: ${({ theme }) => theme.radii.small};
+  font-weight: 800;
   cursor: pointer;
   transition: background 0.2s;
-  &:hover:enabled { background: ${({ theme }) => theme.colors.secondary}; }
-  &:disabled { background: #aaa; cursor: not-allowed; }
+  &:hover:enabled { filter: brightness(.96); }
+  &:disabled { opacity: .55; cursor: not-allowed; }
 `;
 
 const ImagePreviewContainer = styled.div`
@@ -99,16 +108,17 @@ const PreviewImage = styled.img`
   width: 100px;
   height: 100px;
   object-fit: cover;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 12px;
 `;
 
 const RemoveBtn = styled.button`
   position: absolute;
   top: -6px;
   right: -6px;
-  background: #e74c3c;
-  color: #fff;
+  min-height: 22px;
+  background: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.on.error};
   border: none;
   border-radius: 50%;
   width: 20px;
@@ -121,7 +131,10 @@ const RemoveBtn = styled.button`
 `;
 
 const ErrorText = styled.p`
-  color: red;
+  color: ${({ theme }) => theme.semantic.alertErrorText};
+  background: ${({ theme }) => theme.semantic.alertErrorBg};
+  padding: 10px 12px;
+  border-radius: 10px;
   margin-bottom: 10px;
   text-align: center;
 `;
@@ -129,7 +142,7 @@ const ErrorText = styled.p`
 const InlineHelp = styled.small`
   display: block;
   margin-top: 6px;
-  color: #666;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 export default function Sell() {
@@ -172,6 +185,7 @@ export default function Sell() {
   const descRef = useRef(null);
   const urlsRef = useRef(new Set());
   const rafIdRef = useRef(null);
+  const DON_TO_GRAMS = 3.75;
 
   // ===== 가격 콤마 유틸 =====
   const uncomma = (v) => String(v ?? "").replace(/[^\d]/g, "");
@@ -190,13 +204,14 @@ export default function Sell() {
 
   // 언마운트 시 미리보기 URL 정리 + rAF 취소
   useEffect(() => {
+    const previewUrls = urlsRef.current;
     return () => {
       if (rafIdRef.current) {
         cancelAnimationFrame(rafIdRef.current);
         rafIdRef.current = null;
       }
-      urlsRef.current.forEach((u) => URL.revokeObjectURL(u));
-      urlsRef.current.clear();
+      previewUrls.forEach((u) => URL.revokeObjectURL(u));
+      previewUrls.clear();
     };
   }, []);
 
@@ -210,28 +225,20 @@ export default function Sell() {
     if (descRef.current) autosize(descRef.current);
   }, [description]);
 
-  if (!user) return null;
+  const conversionText = useMemo(() => {
+    const n = parseFloat(String(weight));
+    if (!Number.isFinite(n) || n <= 0) return "";
+    if (weightUnit === "g") return `≈ ${(n / DON_TO_GRAMS).toFixed(2)} 돈`;
+    return `≈ ${(n * DON_TO_GRAMS).toFixed(3)} g`;
+  }, [weight, weightUnit]);
 
-  const categoryOptions = [
-    "14k(585) 제품(목걸이,팔찌,반지,귀걸이,발찌 등)",
-    "18k(750) 제품(목걸이,팔찌,반지,귀걸이,발찌 등)",
-    "순금 99.5제품(목걸이,팔찌,반지,귀걸이)",
-    "순금 99.9 제품(목걸이,반지,팔찌,귀걸이)",
-    "999 순금덩어리",
-    "999.9 순금덩어리",
-    "999.9 골드바",
-    "순금열쇠",
-    "순금동물모양(거북이,두꺼비 등)",
-    "순금 마고자단추/색상이 들어간 제품",
-    "기타 상품",
-  ];
+  if (!user) return null;
 
   const MAX_IMAGES = 4;
   const MAX_SIZE_MB = 15;
   const MAX_SIZE = MAX_SIZE_MB * 1024 * 1024;
   const ALLOWED_TYPES = ["image/jpeg", "image/png"];
   const MAX_DESC_LEN = 500;
-  const DON_TO_GRAMS = 3.75;
 
   const id = {
     category: "sell-category",
@@ -242,20 +249,6 @@ export default function Sell() {
     weightUnit: "sell-weight-unit",
     images: "sell-images",
   };
-
-  // --- 실시간 단위 환산 표시 ---
-  // g ↔ 돈 환산 (표시는 g: 소수점 3자리, 돈: 소수점 2자리)
-  const conversionText = useMemo(() => {
-    const n = parseFloat(String(weight));
-    if (!Number.isFinite(n) || n <= 0) return "";
-    if (weightUnit === "g") {
-      const don = n / DON_TO_GRAMS;
-      return `≈ ${don.toFixed(2)} 돈`;
-    } else {
-      const g = n * DON_TO_GRAMS;
-      return `≈ ${g.toFixed(3)} g`;
-    }
-  }, [weight, weightUnit]);
 
   // 이미지 선택 + 클라이언트 압축(가벼운 1차)
   const handleImageChange = async (e) => {
@@ -380,13 +373,14 @@ export default function Sell() {
         weight: weightNum,
         weightUnit,
         weightGrams,
-        approved: false,
+        approved: true,
         completed: false,
+        moderationStatus: "approved",
       };
 
-      await addProduct(product);
-      notifyUser("상품이 성공적으로 등록되었습니다.");
-      navigate("/trade");
+      const productRef = await addProduct(product);
+      notifyUser("상품이 등록되어 프리마켓에 바로 공개되었습니다.");
+      navigate(`/product/${productRef.id}`);
     } catch (err) {
       console.error(err);
       const msg = (err && (err.message || err.code)) || "알 수 없는 오류";
@@ -427,7 +421,7 @@ export default function Sell() {
       <Title>상품 등록</Title>
       {error && <ErrorText role="alert">{error}</ErrorText>}
 
-      <Form onSubmit={handleSubmit} disabled={submitting} aria-disabled={submitting}>
+      <Form onSubmit={handleSubmit} $disabled={submitting} aria-disabled={submitting}>
         <FormGroup>
           <Label htmlFor={id.category}>카테고리</Label>
           <Select
@@ -438,7 +432,7 @@ export default function Sell() {
             disabled={submitting}
           >
             <option value="">선택하세요</option>
-            {categoryOptions.map((opt) => (
+            {CATEGORY_OPTIONS.map((opt) => (
               <option key={opt} value={opt}>
                 {opt}
               </option>

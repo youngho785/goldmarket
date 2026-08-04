@@ -3,10 +3,18 @@ import React from "react";
 import styled from "styled-components";
 
 const Wrapper = styled.div`
-  padding: 100px 20px;
+  max-width: 640px;
+  margin: 36px auto;
+  padding: clamp(54px, 10vw, 96px) 24px;
   text-align: center;
-  background: #eceff1;
-  min-height: 100vh;
+  background: ${({ theme }) => theme.colors.surface};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.xlarge};
+  box-shadow: ${({ theme }) => theme.shadows.card};
+  min-height: 420px;
+
+  h2 { color: ${({ theme }) => theme.colors.secondary}; font-size: clamp(3.5rem, 12vw, 7rem); margin-bottom: 6px; }
+  p { color: ${({ theme }) => theme.colors.textSecondary}; }
 `;
 
 export default function NotFound() {

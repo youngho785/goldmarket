@@ -1,5 +1,6 @@
 // src/components/common/PushPermissionPrompt.jsx
 import React, { useEffect, useMemo, useState } from "react";
+import { useAuthContext } from "@/context/AuthContext";
 
 const KEY = "push_prompt_snooze_until";      // ms timestamp
 const SESSION_KEY = "push_prompt_shown_session";
@@ -34,6 +35,8 @@ export default function PushPermissionPrompt({
   snoozeDays = 1,         // 다음 날까진 다시 안 뜨게(기본 1일)
   oncePerSession = true,  // 같은 세션에서는 1회만 노출
 }) {
+  const { user, isAdmin } = useAuthContext();
+
   // 🔒 싱글톤 가드
   const [singletonOk, setSingletonOk] = useState(false);
   useEffect(() => {
@@ -76,6 +79,7 @@ export default function PushPermissionPrompt({
 
   useEffect(() => {
     if (!singletonOk) return;
+    if (!user?.uid) return;
 
     // iOS는 홈화면 추가(standalone) 상태에서만 웹푸시 가능 → 설치 전에는 숨김
     if (isIOS && !isStandalone) return;
@@ -98,9 +102,18 @@ export default function PushPermissionPrompt({
       }
     }, delayMs);
     return () => clearTimeout(t);
-  }, [singletonOk, delayMs, snoozedUntil, installOpen, oncePerSession, isIOS, isStandalone]);
+  }, [
+    singletonOk,
+    user?.uid,
+    delayMs,
+    snoozedUntil,
+    installOpen,
+    oncePerSession,
+    isIOS,
+    isStandalone,
+  ]);
 
-  if (!singletonOk || !show) return null;
+  if (!user?.uid || !singletonOk || !show) return null;
 
   const snooze = () => {
     try {
@@ -112,9 +125,12 @@ export default function PushPermissionPrompt({
 
   const request = async () => {
     try {
-      await window.Notification.requestPermission();
+      const permission = await window.Notification.requestPermission();
+      if (permission === "granted") {
+        window.dispatchEvent(new Event("PUSH_PERMISSION_GRANTED"));
+      }
     } finally {
-      // 허용/거부와 무관하게 당장은 닫고, FCM 초기화는 별도 컴포넌트가 처리
+      // 허용/거부와 무관하게 당장은 닫기
       snooze();
     }
   };
@@ -127,11 +143,14 @@ export default function PushPermissionPrompt({
         position: "fixed",
         left: 12,
         right: 12,
-        bottom: `calc(12px + env(safe-area-inset-bottom))`,
+        bottom: `calc(88px + env(safe-area-inset-bottom, 0px))`,
         zIndex: 9000, // 설치 배너보다 낮게
         display: "flex",
         alignItems: "center",
+        flexWrap: "wrap",
         gap: 10,
+        maxWidth: 720,
+        margin: "0 auto",
         padding: "10px 12px",
         borderRadius: 12,
         background: "#0b141a",
@@ -139,10 +158,16 @@ export default function PushPermissionPrompt({
         boxShadow: "0 10px 30px rgba(0,0,0,.2)",
       }}
     >
-      <span style={{ fontWeight: 800 }}>알림을 허용하시겠어요?</span>
-      <span style={{ opacity: 0.9, fontSize: 13 }}>
-        교환 진행·메시지·예약 상태를 바로 받아볼 수 있어요.
-      </span>
+      <div style={{ display: "grid", gap: 2, flex: "1 1 210px" }}>
+        <span style={{ fontWeight: 800 }}>
+          {isAdmin ? "새 금교환 요청 알림을 받아보시겠어요?" : "예약 알림을 받아보시겠어요?"}
+        </span>
+        <span style={{ opacity: 0.9, fontSize: 13 }}>
+          {isAdmin
+            ? "고객의 새 예약 요청을 휴대폰으로 바로 받아보세요."
+            : "예약 접수·승인과 교환 완료 알림을 휴대폰으로 받아보세요."}
+        </span>
+      </div>
       <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
         <button
           onClick={snooze}

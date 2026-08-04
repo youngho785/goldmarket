@@ -24,7 +24,6 @@ export default class ErrorBoundary extends React.Component {
   componentDidCatch(error, info) {
     // 개발 중 콘솔 출력
     if (import.meta.env.DEV) {
-      // eslint-disable-next-line no-console
       console.error("[ErrorBoundary]", error, info);
     }
 

@@ -8,7 +8,6 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { addDays, format } from "date-fns";
 import GoldExchangeTracker from "../components/GoldExchangeTracker";
-import ReviewList from "../components/reviews/GoldExchangeReviewList";
 import shopLogo from "@/assets/logo.webp";
 import useGuardAction from "@/hooks/useGuardAction";
 import useReservedSlots from "@/hooks/useReservedSlots"; // ✅ 예약 슬롯 훅
@@ -30,7 +29,7 @@ import { submitGoldExchangeGroup } from "@/services/exchangeClient";
 /* ── 매장 정보 ─────────────────────────────────── */
 const STORE_INFO = {
   name: "원일귀금속",
-  address: "부산광역시 진구 골드테마길 21",
+  address: "부산광역시 부산진구 골드테마길 21",
   phone: "051-646-9700",
   mobile: "010-7713-3739",
 };
@@ -40,33 +39,109 @@ const PageContainer = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 40px 20px;
-  background-color: ${({ theme }) => theme.colors.background};
-  min-height: 100vh;
+  width: 100%;
+  padding: 28px 0 64px;
+  background: transparent;
+  min-height: calc(100svh - 180px);
+`;
+
+const FlowHeader = styled.header`
+  width: 100%;
+  max-width: 960px;
+  margin-bottom: 24px;
+  padding: clamp(24px, 4vw, 42px);
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-top: 3px solid ${({ theme }) => theme.colors.secondary};
+  background: ${({ theme }) => theme.colors.surface};
+`;
+
+const PageEyebrow = styled.p`
+  margin: 0 0 9px;
+  color: ${({ theme }) => theme.colors.secondaryDark};
+  font-family: ${({ theme }) => theme.fonts.numeric};
+  font-size: .7rem;
+  font-weight: 850;
+  letter-spacing: .15em;
+`;
+
+const PageTitle = styled.h1`
+  margin: 0;
+  color: ${({ theme }) => theme.colors.primary};
+  font-size: clamp(2rem, 5vw, 3.45rem);
+`;
+
+const PageLead = styled.p`
+  max-width: 700px;
+  margin: 13px 0 0;
+  color: ${({ theme }) => theme.colors.textSecondary};
+`;
+
+const FlowTrack = styled.ol`
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  margin-top: 26px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+
+  @media (max-width: 620px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+`;
+
+const FlowItem = styled.li`
+  padding: 12px 13px;
+  border-left: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ $active, $done, theme }) =>
+    $active
+      ? theme.colors.primary
+      : $done
+      ? theme.colors.goldLight
+      : theme.colors.surfaceAlt};
+  color: ${({ $active, theme }) =>
+    $active ? theme.colors.white : theme.colors.textSecondary};
+  font-family: ${({ theme }) => theme.fonts.numeric};
+  font-size: .69rem;
+  font-weight: 800;
+  text-align: center;
+
+  &:first-child { border-left: 0; }
 `;
 
 const InfoCard = styled.div`
-  padding: 14px;
-  border: 1px solid #e6e8eb;
-  border-radius: 12px;
-  background: linear-gradient(180deg, #fcfdff, #f7f9fc);
+  padding: 15px 16px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 0;
+  background: ${({ theme }) => theme.colors.surfaceAlt};
   line-height: 1.5;
 `;
 
 const Card = styled.div`
+  position: relative;
   background-color: ${({ theme }) => theme.colors.surface};
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0,0,0,.06);
-  padding: 26px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 0;
+  box-shadow: ${({ theme }) => theme.shadows.card};
+  padding: clamp(20px, 4vw, 30px);
   width: 100%;
-  max-width: 860px;
+  max-width: 960px;
   margin-bottom: 18px;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 13px;
+    left: 13px;
+    width: 34px;
+    height: 34px;
+    border-top: 1px solid ${({ theme }) => theme.colors.secondary};
+    border-left: 1px solid ${({ theme }) => theme.colors.secondary};
+    pointer-events: none;
+  }
 `;
 
 const Title = styled.h2`
   margin: 0 0 14px;
   text-align: left;
-  color: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.text};
   font-size: 1.4rem;
 `;
 
@@ -94,18 +169,56 @@ const HelpText = styled.small`
   font-size: .9rem;
 `;
 
+const ConsentBox = styled.div`
+  margin: 18px 0;
+  padding: 15px 16px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+`;
+
+const ConsentRow = styled.label`
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 10px;
+  align-items: start;
+  color: ${({ theme }) => theme.colors.text};
+  font-weight: 750;
+  line-height: 1.5;
+  cursor: pointer;
+
+  input {
+    width: 18px;
+    height: 18px;
+    margin: 2px 0 0;
+    accent-color: ${({ theme }) => theme.colors.primary};
+  }
+`;
+
+const ConsentDetails = styled.p`
+  margin: 10px 0 0 30px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: .82rem;
+  line-height: 1.55;
+`;
+
+const ConsentLink = styled.a`
+  color: ${({ theme }) => theme.colors.primary};
+  text-decoration: underline;
+  text-underline-offset: 2px;
+`;
+
 const Input = styled.input`
   padding: 11px 12px;
-  border: 1px solid #e6e8eb;
-  border-radius: 10px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 0;
   font-size: 1rem;
   background: ${({ theme }) => theme.colors.surface};
 `;
 
 const Select = styled.select`
   padding: 11px 12px;
-  border: 1px solid #e6e8eb;
-  border-radius: 10px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 0;
   font-size: 1rem;
   background: ${({ theme }) => theme.colors.surface};
 `;
@@ -114,9 +227,9 @@ const Button = styled.button`
   width: 100%;
   padding: 12px 14px;
   border: none;
-  border-radius: 12px;
-  background: ${({ theme }) => theme.colors.primary};
-  color: ${({ theme }) => theme.colors.buttonText};
+  border-radius: 0;
+  background: ${({ theme }) => theme.gradients.primary};
+  color: ${({ theme }) => theme.on.primary};
   font-size: 1.05rem;
   font-weight: 900;
   cursor: pointer;
@@ -134,13 +247,13 @@ const OutlineButton = styled(Button)`
 const GhostButton = styled(Button)`
   background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.text};
-  border: 1px dashed #d8dbe0;
+  border: 1px dashed ${({ theme }) => theme.colors.borderStrong};
 `;
 
 const SmallButton = styled(Button)`
   width: auto;
   padding: 8px 12px;
-  border-radius: 10px;
+  border-radius: 0;
   font-size: .95rem;
 `;
 
@@ -155,7 +268,7 @@ const Inline = styled.div`
 `;
 
 const SectionSeparator = styled.div`
-  height: 1px; background: #eceff3; margin: 18px 0;
+  height: 1px; background: ${({ theme }) => theme.colors.dividerSubtle}; margin: 18px 0;
 `;
 
 const ErrorText = styled.p`
@@ -167,8 +280,8 @@ const ErrorText = styled.p`
 
 const TableWrap = styled.div`
   overflow: auto;
-  border: 1px solid #e6e8eb;
-  border-radius: 12px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 0;
 `;
 
 const Table = styled.table`
@@ -176,9 +289,9 @@ const Table = styled.table`
   border-collapse: collapse;
   th, td { padding: 12px 14px; text-align: left; }
   thead th {
-    background: #f6f7f9;
+    background: ${({ theme }) => theme.colors.surfaceAlt};
     font-weight: 900;
-    border-bottom: 1px solid #e6e8eb;
+    border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   }
   tbody td { border-top: 1px solid #f0f2f5; }
   tbody tr:first-child td { border-top: none; }
@@ -190,16 +303,17 @@ const Seg = styled.div`
   display: inline-grid;
   grid-template-columns: 1fr 1fr;
   gap: 6px;
-  background: #f4f6fa;
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+  border: 1px solid ${({ theme }) => theme.colors.border};
   padding: 6px;
-  border-radius: 12px;
+  border-radius: 0;
   width: 100%;
   max-width: 320px;
 `;
 const SegBtn = styled.button`
   border: 0;
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: 0;
   font-weight: 900;
   cursor: pointer;
   background: ${({ $active, theme }) => ($active ? theme.colors.surface : "transparent")};
@@ -211,27 +325,27 @@ const SegBtn = styled.button`
 const GOLD_BORDER = "#d4af37";
 const GOLD_BG_TINT = "rgba(212,175,55,.08)";
 const aiPulse = keyframes`
-  0%   { box-shadow: 0 0 0 0 rgba(124,58,237,0.36); }
-  60%  { box-shadow: 0 0 0 12px rgba(124,58,237,0); }
-  100% { box-shadow: 0 0 0 0 rgba(124,58,237,0); }
+  0%   { box-shadow: 0 0 0 0 rgba(178,138,59,0.30); }
+  60%  { box-shadow: 0 0 0 12px rgba(178,138,59,0); }
+  100% { box-shadow: 0 0 0 0 rgba(178,138,59,0); }
 `;
 const AIBanner = styled.div`
   display: flex; align-items: center; gap: 8px;
   padding: 10px 12px;
   margin: 6px 0 10px;
-  border-radius: 12px;
+  border-radius: 0;
   font-weight: 800;
-  background: linear-gradient(135deg, rgba(124,58,237,.12), rgba(212,175,55,.14));
-  border: 1px solid rgba(124,58,237,.28);
-  color: #4c1d95;
+  background: ${({ theme }) => theme.semantic.badgeGoldBg};
+  border: 1px solid ${({ theme }) => theme.colors.secondary}66;
+  color: ${({ theme }) => theme.semantic.badgeGoldText};
 `;
 const AIBadge = styled.span`
   display: inline-flex; align-items: center; gap: 6px;
   font-size: .75rem; font-weight: 900;
   padding: 4px 8px; border-radius: 9999px;
-  color: #3b0764;
-  background: linear-gradient(135deg, rgba(124,58,237,.18), rgba(212,175,55,.20));
-  border: 1px solid rgba(124,58,237,.35);
+  color: ${({ theme }) => theme.on.primary};
+  background: ${({ theme }) => theme.gradients.primary};
+  border: 1px solid ${({ theme }) => theme.colors.secondary}66;
   animation: ${aiPulse} 2.8s ease-in-out infinite;
 `;
 
@@ -245,17 +359,17 @@ const DenomGrid = styled.div`
 `;
 const DenomTile = styled.button`
   position: relative;
-  border: 2px solid ${({ $active, $recommended }) =>
-    $active ? GOLD_BORDER : $recommended ? "rgba(124,58,237,.55)" : "#e6e8eb"};
+  border: 2px solid ${({ $active, $recommended, theme }) =>
+    $active ? GOLD_BORDER : $recommended ? theme.colors.primary : theme.colors.border};
   background:
     ${({ $active, $recommended }) =>
       $active
         ? GOLD_BG_TINT
         : $recommended
-        ? "linear-gradient(135deg, rgba(124,58,237,.10), rgba(212,175,55,.10))"
-        : "#fff"};
-  color: ${({ $active }) => ($active ? "#5b21b6" : "inherit")}; /* 대비 살짝 강화 */
-  border-radius: 12px;
+        ? "linear-gradient(135deg, rgba(31,58,95,.10), rgba(178,138,59,.12))"
+        : "transparent"};
+  color: ${({ $active, theme }) => ($active ? theme.colors.primary : theme.colors.text)};
+  border-radius: 0;
   padding: 10px 12px;
   text-align: left;
   cursor: pointer;
@@ -264,7 +378,7 @@ const DenomTile = styled.button`
   transition: border-color .15s ease, box-shadow .15s ease, background .15s ease, transform .06s ease;
   &:hover {
     border-color: ${({ $active, $recommended }) =>
-      $active ? GOLD_BORDER : $recommended ? "rgba(124,58,237,.75)" : GOLD_BORDER};
+      $active ? GOLD_BORDER : $recommended ? "rgba(31,58,95,.72)" : GOLD_BORDER};
     box-shadow: 0 0 0 2px rgba(212,175,55,0.15);
     transform: translateY(-1px);
   }
@@ -275,8 +389,8 @@ const DenomTile = styled.button`
         content: "";
         position: absolute;
         inset: -2px;
-        border-radius: 14px;
-        background: linear-gradient(135deg, rgba(124,58,237,.18), rgba(212,175,55,.18));
+        border-radius: 0;
+        background: linear-gradient(135deg, rgba(31,58,95,.16), rgba(178,138,59,.20));
         z-index: -1;
         filter: blur(8px);
       }
@@ -293,7 +407,7 @@ const StepMark = styled.div`
   background: ${GOLD_BG_TINT};
   color: ${GOLD_BORDER};
   font-weight: 900;
-  border-radius: 9999px;
+  border-radius: 0;
   text-align: center;
   letter-spacing: .4px;
 `;
@@ -348,15 +462,15 @@ const displayOriginal = (qty, unit) => {
   const n = parseFloat(qty);
   if (isNaN(n) || n <= 0) return "0";
   return unit === "g"
-    ? `${toFixed3CustomStr(n)} g (${(roundTo3Custom(n / DON_TO_GRAMS_CONST)).toFixed(2)} 돈)`
-    : `${toFixed3CustomStr(n * DON_TO_GRAMS_CONST)} g (${(roundTo3Custom(n)).toFixed(2)} 돈)`;
+    ? `${Number(n).toFixed(2)} g (${(roundTo3Custom(n / DON_TO_GRAMS_CONST)).toFixed(2)} 돈)`
+    : `${Number(n * DON_TO_GRAMS_CONST).toFixed(2)} g (${(roundTo3Custom(n)).toFixed(2)} 돈)`;
 };
 const qtyHelperText = (qty, unit) => {
   const n = parseFloat(qty);
   if (isNaN(n) || n <= 0) return "그램(g) 또는 돈 단위를 선택하고 값을 입력하면 자동 환산됩니다.";
   return unit === "g"
-    ? `${toFixed3CustomStr(n)} g ≈ ${(roundTo3Custom(n / DON_TO_GRAMS_CONST)).toFixed(2)} 돈`
-    : `${(roundTo3Custom(n)).toFixed(2)} 돈 ≈ ${toFixed3CustomStr(n * DON_TO_GRAMS_CONST)} g`;
+    ? `${Number(n).toFixed(2)} g ≈ ${(roundTo3Custom(n / DON_TO_GRAMS_CONST)).toFixed(2)} 돈`
+    : `${(roundTo3Custom(n)).toFixed(2)} 돈 ≈ ${Number(n * DON_TO_GRAMS_CONST).toFixed(2)} g`;
 };
 
 /** 잔여 조합(그리디) — 부동소수 보정 강화 */
@@ -416,7 +530,7 @@ const QuantityField = React.memo(function QuantityField({
   const handleBlur = () => {
     const str = (local || "").replace(",", ".");
     const v = parseFloat(str);
-    const next = isNaN(v) ? "" : roundTo3Custom(v).toFixed(3);
+    const next = isNaN(v) ? "" : roundTo3Custom(v).toFixed(2);
     setLocal(next);
     onCommit(next);
   };
@@ -460,7 +574,7 @@ function CalcStep({
     <>
       <Card>
         <StepCenter><StepMark>스텝 1</StepMark></StepCenter>
-        <Title>스텝 1. 골드바 교환을 위한 나의 금 입력하기</Title>
+        <Title>스텝 1. 내 금 종류와 무게 입력</Title>
         {error && <ErrorText role="alert">{error}</ErrorText>}
 
         {/* onCalculate는 guard로 감싼 핸들러 */}
@@ -480,7 +594,7 @@ function CalcStep({
               {p.goldType === '기타(문의)' && (
                 <HelpText>
                   정확한 환산률 안내가 어려운 품목입니다. <b>010-7713-3739</b>로 문의하시거나
-                  아래 <b>“나의 금 현장에서 확인하기”</b>로 진행해 주세요.
+                  아래 <b>“순도·무게를 몰라도 방문예약”</b>으로 진행해 주세요.
                 </HelpText>
               )}
 
@@ -490,7 +604,7 @@ function CalcStep({
                   name={`quantity-${idx}`}
                   value={p.quantity}
                   unit={p.inputUnit}
-                  placeholder="예: 37.500"
+                  placeholder="예: 37.50"
                   onCommit={(next) => handleProductChange(idx, "quantity", next)}
                   inlineHelper={false}
                 />
@@ -525,15 +639,16 @@ function CalcStep({
           </SmallButton>
 
           <SectionSeparator />
-          <Button type="submit">나의 골드바 보고 AI 추천받기</Button>
+          <Button type="submit">예상 순금 중량과 골드바 조합 확인</Button>
         </form>
       </Card>
 
       <Card>
-        <StepCenter><StepMark>스텝 1</StepMark></StepCenter>
-        <Title>스텝 1. 나의 금 골드바로 업그레이드 예약</Title>
+        <StepCenter><StepMark>바로 예약</StepMark></StepCenter>
+        <Title>순도와 무게를 몰라도 방문예약</Title>
         <HelpText>
-          금의 순도 및 무게를 몰라도 괜찮아요. 매장에서 확인 후 골드바 교환을 진행을 할수 있어요.
+          금의 순도와 무게를 몰라도 괜찮습니다. 매장에서 고객과 함께 확인하고,
+          최종 중량과 공임에 동의한 뒤 골드바 교환을 진행합니다.
         </HelpText>
         {/* guard 적용 */}
         <OutlineButton
@@ -541,7 +656,7 @@ function CalcStep({
           onClick={onGoReserveDirect}
           style={{ marginTop: 12 }}
         >
-          나의 금 현장에서 확인하기
+          현장 확인 방문예약
         </OutlineButton>
       </Card>
     </>
@@ -561,17 +676,7 @@ function BarStep({
 
   const safeIdx = Math.min(barChoice.idx, current.length - 1);
   const selectedBar = current[safeIdx];
-  const maxSelectableQty = Math.floor(totalGrams / selectedBar.grams) || 1;
   const safeQty = Math.max(1, barChoice.qty || 1);
-
-  const usedByChoiceExact = selectedBar.grams * safeQty;
-  const usedByChoice = roundTo3Custom(usedByChoiceExact);
-
-  const shortfallGramsRaw = Math.max(0, usedByChoiceExact - totalGrams);
-  const leftoverGramsRaw = Math.max(0, totalGrams - usedByChoiceExact);
-
-  const groupMin = BAR_GROUPS[barGroup][0];
-  const extraCombo = breakdownByDenoms(leftoverGramsRaw);
 
   const isTileRecommended = (i) => i === recIdx;
 
@@ -607,7 +712,7 @@ function BarStep({
           </tbody>
           <tfoot>
             <tr>
-              <td colSpan={2}>합계(환산 순금)</td>
+              <td colSpan={2}>합계(예상 순금)</td>
               <td>{fmtG(totalGrams)} g</td>
               <td>{fmtD(totalDon)} 돈</td>
             </tr>
@@ -616,8 +721,8 @@ function BarStep({
       </TableWrap>
 
       <AIBanner aria-live="polite">
-        <span role="img" aria-label="ai">🧠</span>
-        <span>AI가 남는 무게를 줄이고 조합이 유리한 규격을 추천했어요.</span>
+        <span aria-hidden="true">✓</span>
+        <span>입력한 예상 중량을 기준으로 선택 가능한 골드바 규격을 계산했습니다.</span>
       </AIBanner>
 
       <SubTitle>골드바 규격 선택</SubTitle>
@@ -664,7 +769,7 @@ function BarStep({
               $recommended={recommended}
               role="radio"
               aria-checked={active}
-              aria-label={`${d.label}${recommended ? " — AI 추천" : ""}`}
+              aria-label={`${d.label}${recommended ? " — 예상 중량 기준 추천 조합" : ""}`}
               tabIndex={0}
               onClick={() => {
                 setBarChoice({ idx: i, qty: Math.max(1, safeQty) });
@@ -678,7 +783,7 @@ function BarStep({
             >
               <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "space-between" }}>
                 <div style={{ fontWeight: 900 }}>{d.label}</div>
-                {recommended && <AIBadge><span role="img" aria-label="ai">🤖</span>AI 추천</AIBadge>}
+                {recommended && <AIBadge>추천 조합</AIBadge>}
               </div>
               <div style={{ fontSize: ".9rem", color: "#6b7280" }}>
                 ≈ {fmtD(d.don)} 돈 / {toFixed3CustomStr(d.grams)} g
@@ -805,7 +910,7 @@ function ReserveStep({
   visitTime, setVisitTime,
   name, setName,
   phone, setPhone,
-  address, setAddress,
+  privacyAccepted, setPrivacyAccepted,
   onSubmitReservation,
   loading,
   calculated, setStep,
@@ -894,18 +999,31 @@ function ReserveStep({
             autoComplete="tel"
           />
         </FormGroup>
-        <FormGroup>
-          <Label>주소</Label>
-          <Input
-            placeholder="예: 부산광역시 진구 골드테마길 21 1층"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            required
-            autoComplete="street-address"
-          />
-        </FormGroup>
-
         <SectionSeparator />
+        <ConsentBox>
+          <ConsentRow>
+            <input
+              type="checkbox"
+              checked={privacyAccepted}
+              onChange={(e) => {
+                setError("");
+                setPrivacyAccepted(e.target.checked);
+              }}
+              required
+              aria-describedby="reservation-privacy-details"
+            />
+            <span>
+              [필수] 방문 예약을 위한 개인정보 수집·이용에 동의합니다.{" "}
+              <ConsentLink href="/privacy" target="_blank" rel="noopener noreferrer">
+                개인정보처리방침
+              </ConsentLink>
+            </span>
+          </ConsentRow>
+          <ConsentDetails id="reservation-privacy-details">
+            수집 항목: 성명, 전화번호, 방문 날짜·시간 · 이용 목적: 방문 예약 접수와
+            연락 · 보유 기간: 목적 달성 후 파기(관계 법령에 따른 보관 기간은 예외)
+          </ConsentDetails>
+        </ConsentBox>
         <div style={{ display: "grid", gap: 10 }}>
           <Button type="submit" disabled={loading} aria-busy={loading}>
             {loading ? "제출 중..." : "예약요청 하기"}
@@ -923,7 +1041,7 @@ function ReserveStep({
 }
 
 /* ── Step 4: 완료 ─────────────────────────────── */
-function DoneStep({ status, exchangeId }) {
+function DoneStep({ status }) {
   const gmapUrl = `https://maps.google.com/?q=${encodeURIComponent(STORE_INFO.address)}`;
   const naverUrl = `https://map.naver.com/v5/search/${encodeURIComponent(`${STORE_INFO.address} ${STORE_INFO.name}`)}`;
 
@@ -966,14 +1084,37 @@ function DoneStep({ status, exchangeId }) {
         </Inline>
       </Card>
 
-      <SectionSeparator />
-      <Title style={{ fontSize: "1.2rem" }}>고객 리뷰</Title>
-      {exchangeId && <ReviewList exchangeId={exchangeId} />}
     </>
   );
 }
 
 /* ── Main Component ───────────────────────────── */
+function getInitialProductsFromQuery() {
+  const emptyProduct = {
+    goldType: "",
+    quantity: "",
+    inputUnit: "g",
+    exchangeType: "999.9골드바",
+    finalWeight: 0,
+  };
+  if (typeof window === "undefined") return [emptyProduct];
+
+  const params = new URLSearchParams(window.location.search);
+  const goldType = String(params.get("type") || "").trim();
+  const rawWeight = Number(params.get("w"));
+  const inputUnit = params.get("unit") === "don" ? "돈" : "g";
+  if (!goldType || !Number.isFinite(rawWeight) || rawWeight <= 0) {
+    return [emptyProduct];
+  }
+
+  return [{
+    ...emptyProduct,
+    goldType,
+    quantity: String(rawWeight),
+    inputUnit,
+  }];
+}
+
 export default function GoldExchange() {
   const { user } = useAuthContext();
   const guard = useGuardAction();
@@ -982,9 +1123,7 @@ export default function GoldExchange() {
   const [step, setStep] = useState(STEP.CALC);
 
   /* 계산 상태 */
-  const [products, setProducts] = useState([
-    { goldType: "", quantity: "", inputUnit: "g", exchangeType: "999.9골드바", finalWeight: 0 },
-  ]);
+  const [products, setProducts] = useState(getInitialProductsFromQuery);
   const [calculated, setCalculated] = useState(false);
 
   /* 골드바 선택 상태 */
@@ -997,7 +1136,7 @@ export default function GoldExchange() {
   const [visitTime, setVisitTime] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
 
   /* 제출/결과 */
   const [error, setError] = useState("");
@@ -1089,10 +1228,8 @@ export default function GoldExchange() {
     setStep(STEP.BARS);
   };
 
-  const onCalculate = guard(onCalculateCore, {
-    intent: "exchange-calc",
-    requireVerified: false,
-  });
+  // 예상 중량 계산은 로그인 없이 이용할 수 있습니다.
+  const onCalculate = onCalculateCore;
 
   const onGoReserveDirect = guard(() => {
     setCalculated(false);
@@ -1102,13 +1239,16 @@ export default function GoldExchange() {
     requireVerified: false,
   });
 
-  const onGoReserve = () => setStep(STEP.RESERVE);
+  const onGoReserve = guard(() => setStep(STEP.RESERVE), {
+    intent: "exchange-reserve",
+    requireVerified: false,
+  });
 
   /* 합계/포맷 */
   const totalGramsRaw = products.reduce((sum, p) => sum + (p.finalWeight || 0), 0);
   const totalGrams = roundTo3Custom(totalGramsRaw);
   const totalDon = totalGrams / DON_TO_GRAMS;
-  const fmtG = (n) => toFixed3CustomStr(n);
+  const fmtG = (n) => Number(n || 0).toFixed(2);
   const fmtD = (n) => Number(n).toFixed(2);
 
   /* 계산 후 골드바 기본 선택 */
@@ -1169,8 +1309,8 @@ export default function GoldExchange() {
     }
     const phoneTrim = (phone || "").trim();
     const phoneDigits = phoneTrim.replace(/[^\d+]/g, "");
-    if (!name || !address || !phoneTrim) {
-      setError("성명, 전화번호, 주소는 필수입니다.");
+    if (!name || !phoneTrim) {
+      setError("성명과 전화번호는 필수입니다.");
       return;
     }
     if (phoneDigits.length < 9) {
@@ -1185,6 +1325,10 @@ export default function GoldExchange() {
       setError("방문 시간을 선택해주세요.");
       return;
     }
+    if (!privacyAccepted) {
+      setError("방문 예약을 위한 개인정보 수집·이용에 동의해 주세요.");
+      return;
+    }
 
     const visitDateStr = format(visitDate, "yyyy-MM-dd");
     const barsPlan = makeBarsPlan();
@@ -1197,8 +1341,9 @@ export default function GoldExchange() {
       visitTime,
       name,
       phone: phoneTrim, // 서버 스키마 유지 (표시는 사용자가 입력한 형태)
-      address,
       email: user.email || null,
+      privacyConsent: true,
+      privacyConsentVersion: "reservation-v1.0",
       products: hasValidProducts
         ? products.map((p) => {
             const n = Number(p.quantity || 0);
@@ -1242,6 +1387,28 @@ export default function GoldExchange() {
 
   return (
     <PageContainer>
+      <FlowHeader>
+        <PageEyebrow>GOLD EXCHANGE APPLICATION</PageEyebrow>
+        <PageTitle>내 금을 999.9 골드바로 교환</PageTitle>
+        <PageLead>
+          예상 중량 계산은 로그인 없이 이용할 수 있습니다. 매장 방문 예약은
+          계산 결과와 골드바 조합을 확인한 뒤 진행하세요.
+        </PageLead>
+        <FlowTrack aria-label="금교환 진행 단계">
+          {["01 예상계산", "02 조합선택", "03 방문예약", "04 접수완료"].map(
+            (label, index) => (
+              <FlowItem
+                key={label}
+                $active={step === index}
+                $done={step > index}
+                aria-current={step === index ? "step" : undefined}
+              >
+                {label}
+              </FlowItem>
+            )
+          )}
+        </FlowTrack>
+      </FlowHeader>
       {step === STEP.CALC && (
         <CalcStep
           products={products}
@@ -1282,8 +1449,8 @@ export default function GoldExchange() {
           setName={setName}
           phone={phone}
           setPhone={setPhone}
-          address={address}
-          setAddress={setAddress}
+          privacyAccepted={privacyAccepted}
+          setPrivacyAccepted={setPrivacyAccepted}
           onSubmitReservation={onSubmitReservation}
           loading={loading}
           calculated={calculated}
@@ -1292,7 +1459,7 @@ export default function GoldExchange() {
       )}
 
       {step === STEP.DONE && submitted && (
-        <DoneStep status={status} exchangeId={exchangeId} />
+        <DoneStep status={status} />
       )}
     </PageContainer>
   );

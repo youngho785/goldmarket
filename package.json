@@ -17,6 +17,8 @@
     
     "gen:sitemap": "node scripts/generate-sitemap.mjs",
 
+    "migrate:products": "node scripts/migrate-products-visibility.mjs",
+
     
     "deploy": "npm run build && firebase deploy --only hosting"
   },

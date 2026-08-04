@@ -36,7 +36,13 @@ export default function usePendingGoldExchangeCount() {
 
     const unsub = onSnapshot(
       q,
-      (snap) => setCount(snap.size),
+      (snap) => {
+        const groups = new Set();
+        snap.forEach((item) => {
+          groups.add(item.data()?.groupId || item.id);
+        });
+        setCount(groups.size);
+      },
       (err) => {
         console.warn("[usePendingGoldExchangeCount] snapshot error:", err?.code || err);
         setCount(0);

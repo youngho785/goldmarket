@@ -7,6 +7,7 @@ import {
   getDoc,
   doc,
   query,
+  where,
   orderBy,
   serverTimestamp,
   updateDoc,
@@ -127,7 +128,9 @@ export async function uploadProductImages(
     tasks.forEach((t) => {
       try {
         t.cancel();
-      } catch {}
+      } catch {
+        // 이미 완료되거나 취소된 업로드 작업은 무시합니다.
+      }
     });
     throw e;
   }
@@ -160,7 +163,12 @@ export const fetchProductById = async (id) => {
 export const fetchProducts = async () => {
   try {
     const colRef = collection(db, "products");
-    const q = query(colRef, orderBy("createdAt", "desc"));
+    const q = query(
+      colRef,
+      where("approved", "==", true),
+      where("completed", "==", false),
+      orderBy("createdAt", "desc")
+    );
     const snapshot = await getDocs(q);
     if (snapshot.empty) return [];
     return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));

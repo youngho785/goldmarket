@@ -13,32 +13,37 @@ import { auth } from "../firebase/firebase";
 /* ───────── Styled ───────── */
 const Container = styled.div`
   max-width: 480px;
-  margin: auto;
-  padding: 40px 20px;
+  margin: 8px auto 32px;
+  padding: clamp(24px, 5vw, 38px);
   text-align: center;
-  color: #333;
+  color: ${({ theme }) => theme.colors.text};
+  background: ${({ theme }) => theme.colors.surface};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.large};
+  box-shadow: ${({ theme }) => theme.shadows.card};
 `;
 const Title = styled.h2`
   margin-bottom: 24px;
-  color: ${({ theme }) => theme.colors?.primary || "#007bff"};
+  color: ${({ theme }) => theme.colors.text};
 `;
 const Message = styled.p`
   margin-top: 16px;
   font-size: 1rem;
-  color: ${({ $color }) => $color || "#555"};
+  color: ${({ $color, theme }) => $color || theme.colors.textSecondary};
 `;
 const Button = styled.button`
   margin-top: 20px;
   padding: 10px 16px;
   font-size: 1rem;
-  background: ${({ theme }) => theme.colors?.primary || "#007bff"};
-  color: #fff;
-  border: none;
-  border-radius: 4px;
+  background: ${({ theme }) => theme.gradients.primary};
+  color: ${({ theme }) => theme.on.primary};
+  border: 1px solid transparent;
+  border-radius: ${({ theme }) => theme.radii.small};
+  font-weight: 750;
   cursor: pointer;
   transition: background 0.2s;
-  &:disabled { background: #aaa; cursor: not-allowed; }
-  &:hover:enabled { background: ${({ theme }) => theme.colors?.primaryDark || "#0056b3"}; }
+  &:disabled { opacity: .55; cursor: not-allowed; }
+  &:hover:enabled { filter: brightness(.96); }
 `;
 
 /* 세션 키 (Register와 동일) */
@@ -58,6 +63,8 @@ export default function VerifyEmail() {
   const [checking, setChecking] = useState(false);
   const [processingLink, setProcessingLink] = useState(true);
   const [resending, setResending] = useState(false);
+  const quizBonusResult = location.state?.quizBonusResult || null;
+  const quizBonusError = location.state?.quizBonusError || "";
 
   const params = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const oobCode = params.get("oobCode");
@@ -237,6 +244,19 @@ export default function VerifyEmail() {
   return (
     <Container>
       <Title>이메일 인증</Title>
+
+      {quizBonusResult && (
+        <Message $color="green">
+          {quizBonusResult.alreadyClaimed
+            ? "퀵퀴즈 보너스는 이미 지급된 계정입니다."
+            : `퀵퀴즈 보너스 ${Number(quizBonusResult.creditedG || 0.01).toFixed(2)}g 적립이 완료되었습니다.`}
+        </Message>
+      )}
+      {quizBonusError && (
+        <Message $color="#92400e">
+          회원가입은 완료됐지만 퀵퀴즈 보너스 확인이 필요합니다. 이메일 인증 후 퀵퀴즈 페이지에서 다시 확인해 주세요.
+        </Message>
+      )}
 
       {processingLink ? (
         <Message>처리 중…</Message>

@@ -6,8 +6,8 @@ import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 
 const TabsContainer = styled.div`
-  padding: 20px;
-  max-width: 800px;
+  padding: 8px 0 28px;
+  max-width: 900px;
   margin: auto;
 `;
 
@@ -15,11 +15,16 @@ const Header = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 22px;
+  gap: 14px;
+  flex-wrap: wrap;
 `;
 
 const Title = styled.h1`
   margin: 0;
+  position: relative;
+  padding-bottom: 13px;
+  &::after { content: ""; position: absolute; left: 0; bottom: 0; width: 48px; height: 3px; border-radius: 999px; background: ${({ theme }) => theme.gradients.gold}; }
 `;
 
 const ButtonsRow = styled.div`
@@ -28,38 +33,43 @@ const ButtonsRow = styled.div`
 `;
 
 const Button = styled.button`
-  padding: 8px 16px;
-  background: ${({ theme }) => theme.colors?.primary || "#007bff"};
-  color: #fff;
-  border: none;
-  border-radius: 4px;
+  min-height: 44px;
+  padding: 9px 15px;
+  background: ${({ theme }) => theme.gradients.primary};
+  color: ${({ theme }) => theme.on.primary};
+  border: 1px solid transparent;
+  border-radius: ${({ theme }) => theme.radii.small};
+  font-weight: 750;
   cursor: pointer;
   &:hover {
-    background: ${({ theme }) => theme.colors?.secondary || "#0056b3"};
+    filter: brightness(.96);
   }
 `;
 
 const TabButtons = styled.div`
   display: flex;
-  border-bottom: 2px solid #ddd;
-  margin-bottom: 16px;
+  gap: 6px;
+  padding: 5px;
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 14px;
+  margin-bottom: 18px;
 `;
 
 const TabButton = styled.button`
   flex: 1;
-  padding: 12px;
-  background: ${({ $active }) => ($active ? "#fff" : "#f7f7f7")};
-  color: ${({ theme }) => theme.colors.text};
-  border: none;
-  border-bottom: ${({ $active, theme }) =>
-    $active ? `3px solid ${theme.colors.primary}` : "none"};
-  border-bottom-left-radius: ${({ $active }) => ($active ? "4px" : "0")};
-  border-bottom-right-radius: ${({ $active }) => ($active ? "4px" : "0")};
-  font-weight: ${({ $active }) => ($active ? "bold" : "normal")};
+  min-height: 44px;
+  padding: 10px 12px;
+  background: ${({ $active, theme }) => ($active ? theme.colors.surface : "transparent")};
+  color: ${({ $active, theme }) => ($active ? theme.colors.primary : theme.colors.textSecondary)};
+  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.border : "transparent")};
+  border-radius: 10px;
+  box-shadow: ${({ $active, theme }) => ($active ? theme.shadows.xs : "none")};
+  font-weight: ${({ $active }) => ($active ? "800" : "650")};
   cursor: pointer;
   transition: background 0.2s;
   &:hover {
-    background: #fff;
+    background: ${({ theme }) => theme.colors.surface};
   }
 `;
 
@@ -68,21 +78,29 @@ const PostList = styled.div`
 `;
 
 const PostItem = styled.div`
-  padding: 12px;
-  border-bottom: 1px solid #eee;
+  padding: 16px 18px;
+  margin-bottom: 10px;
+  background: ${({ theme }) => theme.colors.surface};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 14px;
+  box-shadow: ${({ theme }) => theme.shadows.card};
   cursor: pointer;
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
   &:hover {
-    background: #fafafa;
+    border-color: ${({ theme }) => theme.colors.borderStrong};
+    transform: translateY(-1px);
+    box-shadow: ${({ theme }) => theme.shadows.hover};
   }
 `;
 
 const PostTitle = styled.h3`
   margin: 0;
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 const Meta = styled.div`
   font-size: 0.85em;
-  color: #666;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin-top: 4px;
 `;
 

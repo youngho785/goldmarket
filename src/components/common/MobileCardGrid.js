@@ -7,7 +7,7 @@ import styled from 'styled-components';
  */
 const MobileCardGrid = styled.div`
   display: grid;
-  gap: 8px;
+  gap: clamp(14px, 2vw, 22px);
 
   /* 모바일(테블릿까지 포함) 한 줄에 하나씩 */
   @media (max-width: 768px) {
@@ -18,7 +18,7 @@ const MobileCardGrid = styled.div`
   @media (min-width: 769px) {
     grid-template-columns: repeat(
       auto-fill,
-      minmax(240px, 1fr)
+      minmax(260px, 1fr)
     );
   }
 `;

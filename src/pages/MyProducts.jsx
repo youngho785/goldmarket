@@ -27,53 +27,53 @@ import { uploadProductImages } from "../services/productService";
 
 /* ── 스타일 ─────────────────────────────────── */
 const Container = styled.div`
-  padding: 24px 16px;
-  background: #f7f9fa;
+  padding: 8px 0 32px;
   max-width: 980px;
   margin: 0 auto;
 `;
 
 const ProductItem = styled.div`
-  border: 1px solid #e6e8ee;
-  padding: 18px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  padding: clamp(18px, 3vw, 24px);
   margin-bottom: 18px;
-  border-radius: 12px;
-  background: #ffffff;
-  box-shadow: 0 4px 12px rgba(20, 30, 70, 0.05);
-  transition: transform 0.1s;
-  &:hover { transform: translateY(-1px); }
+  border-radius: ${({ theme }) => theme.radii.large};
+  background: ${({ theme }) => theme.colors.surface};
+  box-shadow: ${({ theme }) => theme.shadows.card};
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+  &:hover { transform: translateY(-1px); box-shadow: ${({ theme }) => theme.shadows.hover}; border-color: ${({ theme }) => theme.colors.borderStrong}; }
 `;
 
 const Section = styled.section`
-  & + & { margin-top: 14px; padding-top: 14px; border-top: 1px dashed #e5e7eb; }
+  & + & { margin-top: 14px; padding-top: 14px; border-top: 1px dashed ${({ theme }) => theme.colors.border}; }
 `;
 const SectionTitle = styled.h3`
-  margin: 0 0 8px; font-size: 0.95rem; color: #374151; font-weight: 800; letter-spacing: -0.01em;
+  margin: 0 0 8px; font-size: 0.95rem; color: ${({ theme }) => theme.colors.text}; font-weight: 800; letter-spacing: -0.01em;
 `;
 const InfoGrid = styled.dl`
   display: grid; grid-template-columns: 110px 1fr; row-gap: 8px; column-gap: 12px; margin: 0;
 `;
-const DT = styled.dt` color: #4b5563; font-weight: 700; `;
-const DD = styled.dd` margin: 0; color: #111827; `;
+const DT = styled.dt` color: ${({ theme }) => theme.colors.textSecondary}; font-weight: 700; `;
+const DD = styled.dd` margin: 0; color: ${({ theme }) => theme.colors.text}; `;
 
 const ButtonGroup = styled.div` margin-top: 15px; display: flex; gap: 10px; `;
 const Button = styled.button`
-  padding: 10px 16px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; color: #fff;
+  min-height: 44px; padding: 10px 16px; border: 1px solid ${p => p.theme.colors.border}; border-radius: ${p => p.theme.radii.small}; font-weight: 750; cursor: pointer;
+  color: ${p => p.$variant === "cancel" ? p.theme.colors.text : p.theme.on.primary};
   background: ${p =>
-    p.$variant === "delete" ? "#ef4444" :
-    p.$variant === "cancel" ? "#6b7280" : "#2563eb"};
+    p.$variant === "delete" ? p.theme.colors.error :
+    p.$variant === "cancel" ? p.theme.colors.surfaceAlt : p.theme.gradients.primary};
   &:hover { opacity: .95; }
 `;
 
 const Input = styled.input`
-  padding: 8px; margin: 8px 0; width: 100%; box-sizing: border-box; border: 1px solid #d1d5db; border-radius: 6px;
+  padding: 10px 12px; margin: 8px 0; width: 100%; box-sizing: border-box; border: 1px solid ${({ theme }) => theme.colors.border}; border-radius: ${({ theme }) => theme.radii.small};
 `;
 const Textarea = styled.textarea`
   padding: 10px; margin: 8px 0; width: 100%; min-height: 96px; box-sizing: border-box;
-  border: 1px solid #d1d5db; border-radius: 6px; line-height: 1.5; white-space: pre-wrap; overflow: hidden; resize: none;
+  border: 1px solid ${({ theme }) => theme.colors.border}; border-radius: ${({ theme }) => theme.radii.small}; line-height: 1.5; white-space: pre-wrap; overflow: hidden; resize: none;
 `;
 const Select = styled.select`
-  padding: 8px; margin: 8px 0; width: 100%; box-sizing: border-box; border: 1px solid #d1d5db; border-radius: 6px;
+  padding: 10px 12px; margin: 8px 0; width: 100%; box-sizing: border-box; border: 1px solid ${({ theme }) => theme.colors.border}; border-radius: ${({ theme }) => theme.radii.small};
 `;
 
 const ImageContainer = styled.div`
@@ -81,13 +81,13 @@ const ImageContainer = styled.div`
   gap: 10px; margin-top: 10px; max-width: 420px;
 `;
 const ImageWrap = styled.div`
-  position: relative; width: 100%; aspect-ratio: 1/1; border-radius: 8px; overflow: hidden; border: 1px solid #eee;
+  position: relative; width: 100%; aspect-ratio: 1/1; border-radius: 12px; overflow: hidden; border: 1px solid ${({ theme }) => theme.colors.border};
 `;
 const ProductImage = styled.img`
   width: 100%; height: 100%; object-fit: cover;
 `;
 const RoundXButton = styled.button`
-  position: absolute; top: 4px; right: 4px; width: 26px; height: 26px; border-radius: 9999px;
+  position: absolute; top: 4px; right: 4px; width: 26px; height: 26px; min-height: 26px; border-radius: 9999px;
   border: 1px solid rgba(255,255,255,.9); background: rgba(0,0,0,.55); cursor: pointer; padding: 0;
   &::before, &::after { content: ""; position: absolute; width: 12px; height: 2px; background: #fff; border-radius: 2px; left: 50%; top: 50%; transform-origin: center; }
   &::before { transform: translate(-50%, -50%) rotate(45deg); }
@@ -96,15 +96,35 @@ const RoundXButton = styled.button`
 `;
 
 const DescBox = styled.div`
-  background: #fcfcff; border: 1px solid #e8eaf6; border-radius: 8px; padding: 10px 12px;
+  background: ${({ theme }) => theme.colors.surfaceAlt}; border: 1px solid ${({ theme }) => theme.colors.border}; border-radius: 12px; padding: 11px 13px;
 `;
-const DescView = styled.p` white-space: pre-wrap; line-height: 1.7; margin: 0; color: #1f2937; `;
+const DescView = styled.p` white-space: pre-wrap; line-height: 1.7; margin: 0; color: ${({ theme }) => theme.colors.text}; `;
 const DescPreview = styled(DescView)`
   display: -webkit-box; -webkit-line-clamp: ${p => p.$lines || 2}; -webkit-box-orient: vertical;
   overflow: hidden; word-break: break-word;
 `;
 const MoreLess = styled.button`
-  margin-top: 6px; background: none; border: 0; color: #2563eb; font-weight: 700; cursor: pointer; padding: 0;
+  min-height: auto; margin-top: 6px; background: none; border: 0; color: ${({ theme }) => theme.colors.link}; font-weight: 700; cursor: pointer; padding: 0; box-shadow: none;
+  &:hover { background: transparent; transform: none; box-shadow: none; text-decoration: underline; }
+`;
+
+const StatusBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  background: ${({ $tone, theme }) =>
+    $tone === "success" ? theme.semantic.alertSuccessBg :
+    $tone === "error" ? theme.semantic.alertErrorBg :
+    $tone === "warning" ? theme.semantic.alertWarningBg :
+    theme.semantic.alertInfoBg};
+  color: ${({ $tone, theme }) =>
+    $tone === "success" ? theme.semantic.alertSuccessText :
+    $tone === "error" ? theme.semantic.alertErrorText :
+    $tone === "warning" ? theme.semantic.alertWarningText :
+    theme.semantic.alertInfoText};
 `;
 
 /* ── 유틸 ─────────────────────────────────── */
@@ -118,11 +138,18 @@ const toJSDate = (v) => {
 const toMillis = (ts) =>
   ts?.toDate ? ts.toDate().getTime() : ts?.seconds ? ts.seconds * 1000 : 0;
 
+const getProductStatus = (product) => {
+  if (product.completed) return { label: "거래 완료", tone: "info" };
+  if (product.approved === true) return { label: "판매 중", tone: "success" };
+  return { label: "관리자 공개 중지", tone: "error" };
+};
+
 /* 제한/압축 설정 */
 const MAX_IMAGES = 20;
 const MAX_SIZE_MB = 15;
 const MAX_SIZE = MAX_SIZE_MB * 1024 * 1024;
 const ALLOWED_TYPES = ["image/jpeg", "image/png"];
+const DON_TO_GRAMS = 3.75;
 
 /* ── 컴포넌트 ─────────────────────────────── */
 export default function MyProducts() {
@@ -142,7 +169,7 @@ export default function MyProducts() {
   const prevUrlsRef = useRef([]);
   const revokeLocalPreviews = () => {
     prevUrlsRef.current.forEach((u) => {
-      try { URL.revokeObjectURL(u); } catch (e) { /* noop */ }
+      try { URL.revokeObjectURL(u); } catch { /* noop */ }
     });
     prevUrlsRef.current = [];
   };
@@ -267,7 +294,7 @@ export default function MyProducts() {
 
   const handleRemoveLocalPreview = (idx) => {
     const url = localPreviews[idx];
-    try { URL.revokeObjectURL(url); } catch (e) { /* noop */ }
+    try { URL.revokeObjectURL(url); } catch { /* noop */ }
     setLocalPreviews((prev) => prev.filter((_, i) => i !== idx));
     setImageFiles((prev) => prev.filter((_, i) => i !== idx));
   };
@@ -284,8 +311,42 @@ export default function MyProducts() {
       const updates = { ...editValues };
       delete updates.id;
       delete updates.createdAt;
-      if (updates.price != null) updates.price = Number(updates.price) || 0;
-      if (updates.weight != null) updates.weight = Number(updates.weight) || 0;
+      updates.title = String(updates.title || "").trim();
+      updates.description = String(updates.description || "").trim();
+      updates.price = Number(updates.price);
+      updates.weight = Number(updates.weight);
+      updates.weightUnit = updates.weightUnit === "돈" ? "돈" : "g";
+
+      if (!updates.title || updates.title.length > 100) {
+        alert("상품명은 1자 이상 100자 이하로 입력해 주세요.");
+        setLoading(false);
+        return;
+      }
+      if (!updates.description || updates.description.length > 500) {
+        alert("상품 설명은 1자 이상 500자 이하로 입력해 주세요.");
+        setLoading(false);
+        return;
+      }
+      if (!Number.isFinite(updates.price) || updates.price < 0) {
+        alert("가격은 0 이상의 숫자로 입력해 주세요.");
+        setLoading(false);
+        return;
+      }
+      if (!Number.isFinite(updates.weight) || updates.weight <= 0) {
+        alert("무게는 0보다 큰 숫자로 입력해 주세요.");
+        setLoading(false);
+        return;
+      }
+      if ((updates.imageUrls || []).length + imageFiles.length === 0) {
+        alert("상품 이미지를 최소 1장 남겨 주세요.");
+        setLoading(false);
+        return;
+      }
+
+      const weightGramsRaw = updates.weightUnit === "돈"
+        ? updates.weight * DON_TO_GRAMS
+        : updates.weight;
+      updates.weightGrams = Number(weightGramsRaw.toFixed(3));
 
       // ▶ 업로드는 공통 서비스 사용(압축+레주머블+롤백)
       let newUrls = [];
@@ -315,7 +376,9 @@ export default function MyProducts() {
         })
       );
 
-      alert("수정되었습니다.");
+      alert(updates.approved === false
+        ? "수정되었습니다. 관리자에 의해 공개 중지된 상태는 유지됩니다."
+        : "수정되었습니다.");
       handleCancelEdit();
     } catch (err) {
       console.error(err);
@@ -342,6 +405,7 @@ export default function MyProducts() {
               : "";
 
           const isEditing = editingId === prod.id;
+          const status = getProductStatus(prod);
 
           return (
             <ProductItem key={prod.id}>
@@ -353,6 +417,7 @@ export default function MyProducts() {
                     <Input
                       type="text"
                       value={editValues.title || ""}
+                      maxLength={100}
                       onChange={(e) => handleChange("title", e.target.value)}
                     />
 
@@ -360,6 +425,7 @@ export default function MyProducts() {
                     <Textarea
                       ref={descRef}
                       value={editValues.description || ""}
+                      maxLength={500}
                       onChange={(e) => {
                         handleChange("description", e.target.value);
                         if (descRef.current) autosize(descRef.current);
@@ -373,6 +439,7 @@ export default function MyProducts() {
                         <Input
                           type="number"
                           inputMode="numeric"
+                          min="0"
                           value={editValues.price ?? ""}
                           onChange={(e) => handleChange("price", e.target.value)}
                         />
@@ -397,6 +464,7 @@ export default function MyProducts() {
                           <Input
                             type="number"
                             inputMode="numeric"
+                            min="0.01"
                             step="0.01"
                             value={editValues.weight ?? ""}
                             onChange={(e) => handleChange("weight", e.target.value)}
@@ -468,9 +536,10 @@ export default function MyProducts() {
                     <SectionTitle>요약</SectionTitle>
                     <InfoGrid>
                       <DT>상품명</DT><DD>{prod.title}</DD>
-                      <DT>가격</DT><DD>{Number(prod.price || 0).toLocaleString()} 원</DD>
+                      <DT>가격</DT><DD>{Number((prod.completed ? prod.archivedPrice : prod.price) || 0).toLocaleString()} 원</DD>
                       <DT>카테고리</DT><DD>{prod.category}</DD>
                       <DT>무게</DT><DD>{prod.weight} {prod.weightUnit}</DD>
+                      <DT>상태</DT><DD><StatusBadge $tone={status.tone}>{status.label}</StatusBadge></DD>
                       <DT>등록일</DT><DD>{createdLabel}</DD>
                     </InfoGrid>
                   </Section>
@@ -511,7 +580,9 @@ export default function MyProducts() {
 
                   <Section>
                     <ButtonGroup>
-                      <Button $variant="save" onClick={() => handleEditClick(prod)}>수정</Button>
+                      {!prod.completed && (
+                        <Button $variant="save" onClick={() => handleEditClick(prod)}>수정</Button>
+                      )}
                       <Button $variant="delete" onClick={() => handleDelete(prod.id)}>삭제</Button>
                     </ButtonGroup>
                   </Section>

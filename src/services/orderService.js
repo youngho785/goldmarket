@@ -52,7 +52,7 @@ export async function fetchOrderByProductId(productId) {
 // 주문 상태 변경(거래수락, 거래완료 등)
 export async function updateOrderStatus(orderId, newStatus) {
   const orderRef = doc(db, "orders", orderId);
-  await updateDoc(orderRef, { status: newStatus });
+  await updateDoc(orderRef, { status: newStatus, updatedAt: serverTimestamp() });
 }
 
 // 주문 상세조회
@@ -68,7 +68,7 @@ export async function fetchOrderById(orderId) {
  * - 주문 기록이 '없어야' true를 반환 (== 구매요청 버튼 노출 가능)
  * - 주문 기록이 이미 있으면 false
  */
-export async function checkPurchasePermission(buyerId, productId) {
+export async function fetchReviewableOrder(buyerId, productId) {
   const colRef = collection(db, "orders");
   const q = query(
     colRef,
@@ -76,5 +76,14 @@ export async function checkPurchasePermission(buyerId, productId) {
     where("productId", "==", productId)
   );
   const snap = await getDocs(q);
-  return snap.empty; // true면 주문 기록 없음 → 구매 가능!
+  const completed = snap.docs.find((orderDoc) => {
+    const data = orderDoc.data();
+    return (data.status === "completed" || data.completed === true) && data.reviewed !== true;
+  });
+  return completed ? { id: completed.id, ...completed.data() } : null;
+}
+
+/** 완료된 구매 주문이 있고 아직 후기를 작성하지 않았는지 확인 */
+export async function checkPurchasePermission(buyerId, productId) {
+  return Boolean(await fetchReviewableOrder(buyerId, productId));
 }

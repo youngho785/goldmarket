@@ -18,6 +18,13 @@ service firebase.storage {
              && request.resource.contentType.matches('image/.*');
     }
 
+    function isValidPrivateUpload() {
+      return request.resource != null
+             && request.resource.size <= 10 * 1024 * 1024
+             && (request.resource.contentType.matches('image/.*')
+                 || request.resource.contentType == 'application/pdf');
+    }
+
     /* ───────── 상품 이미지 ─────────
        - 공개 읽기
        - 업로드/갱신: 업로더 본인(경로 uid) 또는 관리자만 + 이미지 제약
@@ -64,11 +71,39 @@ service firebase.storage {
     }
 
     /* ───────── 개인 전용 영역 ─────────
-       - 본인/관리자만 읽기/쓰기/삭제 (파일 형식 제한 없음)
+       - 본인/관리자만 읽기/쓰기/삭제
+       - 이미지 또는 PDF, 파일당 10MB 이하
        - 영수증/임시 업로드 등 비공개 용도
     */
     match /users/{uid}/{allPaths=**} {
-      allow read, write, delete: if isOwner(uid) || isAdmin();
+      allow read: if isOwner(uid) || isAdmin();
+      allow create, update: if (isOwner(uid) || isAdmin()) && isValidPrivateUpload();
+      allow delete: if isOwner(uid) || isAdmin();
+    }
+
+    /* ───────── 본인확인 서류(비공개) ───────── */
+    match /accountVerifications/{uid}/{allPaths=**} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow create, update: if isOwner(uid) && isValidImageUpload();
+      allow delete: if isOwner(uid) || isAdmin();
+    }
+
+    /* ───────── 채팅 이미지 ───────── */
+    match /chatImages/{chatId}/{allPaths=**} {
+      function chatData() {
+        return firestore.get(/databases/(default)/documents/chats/$(chatId)).data;
+      }
+      function isChatParticipant() {
+        let chat = chatData();
+        return signedIn() && (
+          (chat.participants is list && request.auth.uid in chat.participants) ||
+          (chat.participantsMap is map && chat.participantsMap[request.auth.uid] == true)
+        );
+      }
+
+      allow read: if isAdmin() || isChatParticipant();
+      allow create, update: if isChatParticipant() && isValidImageUpload();
+      allow delete: if isAdmin() || isChatParticipant();
     }
 
     /* ───────── 기본 거부 ───────── */

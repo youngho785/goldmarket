@@ -15,34 +15,34 @@ const L_OPERATOR = {
 };
 
 const L_Container = styled.div`
-  max-width: 900px; margin: auto; padding: 40px 20px; line-height: 1.65;
-  color: ${({ theme }) => theme?.colors?.text || "#333"};
+  max-width: 960px; margin: 16px auto 36px; padding: clamp(24px, 5vw, 46px); line-height: 1.7;
+  color: ${({ theme }) => theme.colors.text}; background: ${({ theme }) => theme.colors.surface}; border: 1px solid ${({ theme }) => theme.colors.border}; border-radius: ${({ theme }) => theme.radii.large}; box-shadow: ${({ theme }) => theme.shadows.card};
 `;
 const L_Title = styled.h1`
-  text-align: center; margin: 24px 0 8px; color: ${({ theme }) => theme?.colors?.primary || "#0f172a"};
+  text-align: center; margin: 8px 0 8px; color: ${({ theme }) => theme.colors.text};
 `;
 const L_Meta = styled.p`
-  text-align: center; color: #6b7280; margin: 0 0 28px; font-size: .9rem;
+  text-align: center; color: ${({ theme }) => theme.colors.textSecondary}; margin: 0 0 28px; font-size: .9rem;
 `;
 const L_Section = styled.section`
   margin-bottom: 24px;
-  h2 { margin-bottom: 8px; font-size: 1.15rem; color: ${({ theme }) => theme?.colors?.primary || "#0f172a"}; }
+  h2 { margin-bottom: 8px; font-size: 1.15rem; color: ${({ theme }) => theme.colors.primary}; }
   p { margin-bottom: 10px; }
   ul { margin: 8px 0 12px 18px; }
 `;
 const L_TopBar = styled.div`
-  position: sticky; top: 0; z-index: 1000;
-  background: ${({ theme }) => theme?.colors?.surface || "rgba(255,255,255,0.92)"};
-  border-bottom: 1px solid #eee; backdrop-filter: saturate(180%) blur(8px);
+  position: sticky; top: 68px; z-index: 900;
+  background: ${({ theme }) => theme.colors.surface};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.dividerSubtle}; backdrop-filter: saturate(180%) blur(8px);
   -webkit-backdrop-filter: saturate(180%) blur(8px);
 `;
 const L_TopInner = styled.div`
   max-width: 900px; margin: 0 auto; padding: 10px 20px;
-  display: flex; align-items: center; justify-content: space-between; font-size: .9rem; color: #555;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: .85rem; color: ${({ theme }) => theme.colors.textSecondary};
 `;
 const L_BackBtn = styled.button`
-  padding: 8px 14px; border-radius: 9999px; border: 1px solid #ddd; background: #fff; cursor: pointer;
-  &:hover { background: #fafafa; }
+  padding: 8px 14px; border-radius: 9999px; border: 1px solid ${({ theme }) => theme.colors.border}; background: ${({ theme }) => theme.colors.surfaceAlt}; color: ${({ theme }) => theme.colors.text}; cursor: pointer;
+  &:hover { background: ${({ theme }) => theme.semantic.badgeGoldBg}; }
 `;
 
 export default function Lspa() {

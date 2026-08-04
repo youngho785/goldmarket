@@ -5,23 +5,23 @@ import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
 
 const Container = styled.div`
-  padding: 20px;
+  padding: 8px 0 32px;
   max-width: 900px;
-  margin: 40px auto;
+  margin: 0 auto;
 `;
 
 const Title = styled.h1`
-  text-align: center;
-  color: ${({ theme }) => theme.colors.primary || "#007bff"};
+  color: ${({ theme }) => theme.colors.text};
   margin-bottom: 32px;
 `;
 
 const OrderItem = styled.div`
-  border: 1px solid #eee;
-  background: #fff;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.surface};
   padding: 18px;
   margin-bottom: 16px;
-  border-radius: 8px;
+  border-radius: ${({ theme }) => theme.radii.large};
+  box-shadow: ${({ theme }) => theme.shadows.card};
   display: flex;
   gap: 18px;
   align-items: center;
@@ -30,10 +30,10 @@ const OrderItem = styled.div`
 const Thumbnail = styled.img`
   width: 80px;
   height: 80px;
-  border-radius: 6px;
+  border-radius: 12px;
   object-fit: cover;
-  background: #f8f9fa;
-  border: 1px solid #ddd;
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+  border: 1px solid ${({ theme }) => theme.colors.border};
 `;
 
 const Info = styled.div`
@@ -41,16 +41,17 @@ const Info = styled.div`
 `;
 
 const Status = styled.span`
-  color: ${({ $completed }) => ($completed ? "#43aa8b" : "#e67e22")};
+  color: ${({ $completed, theme }) => ($completed ? theme.colors.success : theme.colors.warning)};
   font-weight: bold;
 `;
 
 const Button = styled.button`
-  background: ${({ theme }) => theme.colors.primary || "#007bff"};
-  color: #fff;
-  border: none;
+  background: ${({ theme }) => theme.gradients.primary};
+  color: ${({ theme }) => theme.on.primary};
+  border: 1px solid transparent;
   padding: 10px 14px;
-  border-radius: 4px;
+  border-radius: ${({ theme }) => theme.radii.small};
+  font-weight: 750;
   margin-top: 6px;
   cursor: pointer;
 `;
@@ -67,7 +68,10 @@ export default function MyOrders({ role = "buyer" }) {
     setLoading(true);
     fetchOrdersByUser(user.uid, role)
       .then(setOrders)
-      .catch(() => setError("거래 내역을 불러오는 데 실패했습니다."))
+      .catch((err) => {
+        console.error("[MyOrders] 거래 내역 조회 실패:", err?.code || err?.message || err);
+        setError("거래 내역을 불러오는 데 실패했습니다.");
+      })
       .finally(() => setLoading(false));
   }, [user, role]);
 

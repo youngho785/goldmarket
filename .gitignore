@@ -12,6 +12,31 @@ dist
 dist-ssr
 *.local
 
+# Environment files (commit only documented examples)
+.env
+.env.*
+!.env.example
+
+# Firebase local state and emulator data
+.firebase/
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
+*-emulator-data/
+
+# Archives, generated repository snapshots and local backups
+*.zip
+*.7z
+*.rar
+*.bak
+*.backup
+*.ago
+repomix-output.*
+backup/
+backups/
+desktop.ini
+Thumbs.db
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

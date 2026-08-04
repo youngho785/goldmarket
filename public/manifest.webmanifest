@@ -1,13 +1,13 @@
 {
   "id": "/",
-  "name": "Korea GoldMarket",
-  "short_name": "GoldMarket",
+  "name": "한국골드마켓",
+  "short_name": "한국골드마켓",
   "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#111827",
-  "description": "korea GoldMarket - 귀금속 리사이클 플랫폼",
+  "background_color": "#F5F1E8",
+  "theme_color": "#0D2034",
+  "description": "보유한 금의 예상 순금 중량을 확인하고 원일귀금속 매장에서 999.9 골드바로 교환하는 서비스",
   "icons": [
     {
       "src": "/icons/icon-192.png",

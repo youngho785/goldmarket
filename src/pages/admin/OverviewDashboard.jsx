@@ -1,24 +1,26 @@
 // src/pages/admin/OverviewDashboard.jsx
 import React, { useEffect, useState, useRef } from "react";
-import { db } from "../../firebase/firebase";
-import { collection, updateDoc, doc, onSnapshot, where, query } from "firebase/firestore";
+import { db, callSetUserRole } from "../../firebase/firebase";
+import { collection, updateDoc, doc, onSnapshot, serverTimestamp } from "firebase/firestore";
+import { useAuthContext } from "../../context/AuthContext";
 import styled from "styled-components";
 
 const Container = styled.div`
-  padding: 2rem;
+  padding: 0;
   display: flex;
   flex-direction: column;
   gap: 2rem;
 `;
 const Section = styled.section`
-  background: ${({ theme }) => theme.colors.white};
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  padding: 1.5rem;
+  background: ${({ theme }) => theme.colors.surface};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.large};
+  box-shadow: ${({ theme }) => theme.shadows.card};
+  padding: clamp(18px, 3vw, 26px);
 `;
 const SectionTitle = styled.h2`
   margin-bottom: 1rem;
-  color: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.text};
   font-size: 1.25rem;
 `;
 const List = styled.ul`
@@ -34,8 +36,9 @@ const ListItem = styled.li`
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem;
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 6px;
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+  border: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
+  border-radius: 12px;
 `;
 const Info = styled.div`
   display: flex;
@@ -49,7 +52,7 @@ const Buttons = styled.div`
 const Button = styled.button`
   padding: 0.5rem 1rem;
   border: none;
-  border-radius: 4px;
+  border-radius: 10px;
   font-size: 0.9rem;
   cursor: pointer;
   transition: background 0.2s;
@@ -59,15 +62,15 @@ const Button = styled.button`
       : $variant === "reject"
       ? theme.colors.error
       : theme.colors.primary};
-  color: #fff;
+  color: ${({ theme }) => theme.on.primary};
   &:hover {
     opacity: 0.9;
   }
 `;
 const Select = styled.select`
   padding: 0.4rem 0.8rem;
-  border-radius: 4px;
-  border: 1px solid #ddd;
+  border-radius: 10px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
 `;
 const StatusCard = styled.div`
   display: flex;
@@ -76,13 +79,14 @@ const StatusCard = styled.div`
 `;
 const Stat = styled.div`
   flex: 1 1 200px;
-  background: ${({ theme }) => theme.colors.background};
-  border-radius: 6px;
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 14px;
   padding: 1rem;
   text-align: center;
   cursor: pointer;
   &:hover {
-    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+    box-shadow: ${({ theme }) => theme.shadows.hover};
   }
 `;
 const StatNumber = styled.div`
@@ -97,18 +101,24 @@ const BackButton = styled.button`
   color: ${({ theme }) => theme.colors.primary};
   font-weight: bold;
   cursor: pointer;
+  box-shadow: none;
+  min-height: auto;
   &:hover {
     text-decoration: underline;
+    background: transparent;
+    transform: none;
+    box-shadow: none;
   }
 `;
 
 export default function OverviewDashboard() {
-  console.log("▶️ Rendering OverviewDashboard");
-  const [pendingProducts, setPendingProducts] = useState([]);
+  const { user, isSuperAdmin } = useAuthContext();
+  const [products, setProducts] = useState([]);
   const [reports, setReports] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [updatingProductId, setUpdatingProductId] = useState(null);
   const topRef = useRef(null);
   const productsRef = useRef(null);
   const reportsRef = useRef(null);
@@ -116,12 +126,17 @@ export default function OverviewDashboard() {
   const usersRef = useRef(null);
 
   useEffect(() => {
-    // 승인 대기 상품만 실시간 구독
+    // 모든 상품을 구독해 공개/비공개 상태를 관리합니다.
     const unsubProducts = onSnapshot(
-      query(collection(db, "products"), where("approved", "==", false)),
+      collection(db, "products"),
       snapshot => {
         const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        setPendingProducts(list);
+        list.sort((a, b) => {
+          const aTime = a.createdAt?.toMillis?.() ?? (a.createdAt?.seconds || 0) * 1000;
+          const bTime = b.createdAt?.toMillis?.() ?? (b.createdAt?.seconds || 0) * 1000;
+          return bTime - aTime;
+        });
+        setProducts(list);
       }
     );
 
@@ -143,14 +158,43 @@ export default function OverviewDashboard() {
   }, []);
 
   const updateApprovalStatus = async (productId, approved) => {
-    await updateDoc(doc(db, "products", productId), { approved });
+    if (!approved && !window.confirm("이 상품의 공개를 취소하시겠습니까?")) return;
+    setUpdatingProductId(productId);
+    try {
+      await updateDoc(doc(db, "products", productId), {
+        approved,
+        moderationStatus: approved ? "approved" : "rejected",
+        moderatedAt: serverTimestamp(),
+        moderatedBy: user?.uid || null,
+      });
+    } catch (error) {
+      console.error("상품 공개 상태 변경 실패:", error);
+      window.alert("상품 공개 상태를 변경하지 못했습니다.");
+    } finally {
+      setUpdatingProductId(null);
+    }
   };
 
   const handleUserRoleChange = async (userId, newRole) => {
-    await updateDoc(doc(db, "users", userId), { role: newRole });
+    if (!isSuperAdmin) {
+      window.alert("최고 관리자만 역할을 변경할 수 있습니다.");
+      return;
+    }
+    if (userId === user?.uid) {
+      window.alert("현재 로그인한 계정의 역할은 변경할 수 없습니다.");
+      return;
+    }
+    try {
+      await callSetUserRole(userId, newRole);
+    } catch (error) {
+      console.error("사용자 역할 변경 실패:", error);
+      window.alert(error?.message || "사용자 역할을 변경하지 못했습니다.");
+    }
   };
 
   if (loading) return <p>로딩 중…</p>;
+
+  const publicProductCount = products.filter(product => product.approved === true).length;
 
   return (
     <Container ref={topRef}>
@@ -158,8 +202,8 @@ export default function OverviewDashboard() {
         <SectionTitle>개요 통계</SectionTitle>
         <StatusCard>
           <Stat onClick={() => productsRef.current?.scrollIntoView({ behavior: 'smooth' })}>
-            <StatNumber>{pendingProducts.length}</StatNumber>
-            승인 대기 상품
+            <StatNumber>{publicProductCount} / {products.length}</StatNumber>
+            공개 상품 / 전체 상품
           </Stat>
           <Stat onClick={() => reportsRef.current?.scrollIntoView({ behavior: 'smooth' })}>
             <StatNumber>{reports.length}</StatNumber>
@@ -177,21 +221,32 @@ export default function OverviewDashboard() {
       </Section>
 
       <Section ref={productsRef}>
-        <SectionTitle>승인 대기 상품 목록</SectionTitle>
+        <SectionTitle>상품 공개 관리</SectionTitle>
         <List>
-          {pendingProducts.length === 0 ? (<p>승인 대기 상품이 없습니다.</p>) : (
-            pendingProducts.map(p => (
+          {products.length === 0 ? (<p>등록된 상품이 없습니다.</p>) : (
+            products.map(p => {
+              const isPublic = p.approved === true;
+              return (
               <ListItem key={p.id}>
                 <Info>
                   <div><strong>{p.title}</strong></div>
                   <div>{p.category || "카테고리 없음"}</div>
+                  <div>상태: {isPublic ? "공개 중" : "공개 중지"}</div>
                 </Info>
                 <Buttons>
-                  <Button $variant="approve" onClick={() => updateApprovalStatus(p.id, true)}>승인</Button>
-                  <Button $variant="reject" onClick={() => updateApprovalStatus(p.id, false)}>거절</Button>
+                  <Button
+                    $variant={isPublic ? "reject" : "approve"}
+                    onClick={() => updateApprovalStatus(p.id, !isPublic)}
+                    disabled={updatingProductId === p.id}
+                  >
+                    {updatingProductId === p.id
+                      ? "변경 중…"
+                      : isPublic ? "공개 취소" : "다시 공개"}
+                  </Button>
                 </Buttons>
               </ListItem>
-            ))
+              );
+            })
           )}
         </List>
         <BackButton onClick={() => topRef.current?.scrollIntoView({ behavior: 'smooth' })}>개요로 돌아가기</BackButton>
@@ -208,6 +263,15 @@ export default function OverviewDashboard() {
                   <div>이유: {r.reason}</div>
                   <div>신고자: {r.reportedBy}</div>
                 </Info>
+                <Buttons>
+                  <Button
+                    $variant="reject"
+                    onClick={() => updateApprovalStatus(r.productId, false)}
+                    disabled={!r.productId || updatingProductId === r.productId}
+                  >
+                    {updatingProductId === r.productId ? "변경 중…" : "상품 공개 취소"}
+                  </Button>
+                </Buttons>
               </ListItem>
             ))
           )}
@@ -243,7 +307,12 @@ export default function OverviewDashboard() {
                   <div>{u.name || "이름 없음"}</div>
                   <div>{u.email}</div>
                 </Info>
-                <Select defaultValue={u.role || "user"} onChange={e => handleUserRoleChange(u.id, e.target.value)}>
+                <Select
+                  defaultValue={u.role || "user"}
+                  onChange={e => handleUserRoleChange(u.id, e.target.value)}
+                  disabled={!isSuperAdmin || u.id === user?.uid}
+                  title={isSuperAdmin ? "사용자 역할 변경" : "최고 관리자만 역할을 변경할 수 있습니다."}
+                >
                   <option value="user">User</option>
                   <option value="admin">Admin</option>
                 </Select>

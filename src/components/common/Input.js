@@ -2,9 +2,12 @@
 import styled from "styled-components";
 
 export const Input = styled.input`
-  padding: ${({ theme }) => theme.spacing(1)};
+  min-height: 46px;
+  padding: 10px 13px;
   font-size: ${({ theme }) => theme.typography.body};
-  border: 1px solid #ccc;
+  border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: ${({ theme }) => theme.radii.small};
-  &:focus { border-color: ${({ theme }) => theme.colors.primary}; }
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
+  &:focus { border-color: ${({ theme }) => theme.focus.outline}; box-shadow: ${({ theme }) => theme.focus.ring}; outline: none; }
 `;

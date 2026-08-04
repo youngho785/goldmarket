@@ -9,13 +9,18 @@ export declare const releaseReservedSlot: import("firebase-functions/v2/https").
     dateKey: string;
     time: string;
 }, any, unknown>;
+export declare const setUserRole: import("firebase-functions/v2/https").CallableFunction<{
+    uid: string;
+    role: "user" | "admin";
+}, any, unknown>;
 export declare const requestGoldExchangeGroup: import("firebase-functions/v2/https").CallableFunction<{
     visitDate: string;
     visitTime: string;
     name: string;
     phone: string;
-    address: string;
     email?: string | null;
+    privacyConsent: boolean;
+    privacyConsentVersion: string;
     products?: Array<{
         goldType?: string;
         quantity?: number;
@@ -45,7 +50,80 @@ export declare const changeNickname: import("firebase-functions/v2/https").Calla
     newNickname: string;
 }, any, unknown>;
 export declare const deleteMyAccount: import("firebase-functions/v2/https").CallableFunction<unknown, any, unknown>;
+export declare const submitTransactionReview: import("firebase-functions/v2/https").CallableFunction<{
+    orderId: string;
+    rating: number;
+    comment: string;
+}, any, unknown>;
+export declare const submitGoldExchangeReview: import("firebase-functions/v2/https").CallableFunction<{
+    exchangeId: string;
+    rating: number;
+    comment: string;
+}, any, unknown>;
+type QuizBonusState = {
+    ok: true;
+    claimed: boolean;
+    alreadyClaimed: boolean;
+    claimedNow: boolean;
+    creditedG: number;
+    balanceG: number;
+};
+type WelcomeBonusState = {
+    ok: true;
+    claimed: true;
+    alreadyClaimed: boolean;
+    claimedNow: boolean;
+    creditedG: number;
+    balanceG: number;
+};
+export declare const welcomeClaimGoldBonus: import("firebase-functions/v2/https").CallableFunction<any, Promise<WelcomeBonusState>, unknown>;
+export declare const quizGetGoldBonusStatus: import("firebase-functions/v2/https").CallableFunction<any, Promise<QuizBonusState>, unknown>;
 export declare const quizClaimGoldBonus: import("firebase-functions/v2/https").CallableFunction<{
-    score: number;
+    answers: Record<string, number>;
     attemptId?: string;
 }, any, unknown>;
+type BonusUsageStatus = "requested" | "used" | "canceled" | "restored";
+export declare const bonusGetGoldUsageState: import("firebase-functions/v2/https").CallableFunction<any, Promise<{
+    ok: boolean;
+    balanceG: number;
+    spendableG: number;
+    request: {
+        status: BonusUsageStatus;
+        amountG: number;
+        groupId: string;
+        requestCode: string;
+        visitDate: string;
+        visitTime: string;
+        finalRecognizedG: number;
+        finalAppliedG: number;
+        createdAtMillis: number | null;
+        usedAtMillis: number | null;
+        canceledAtMillis: number | null;
+        restoredAtMillis: number | null;
+    } | null;
+    eligibleGroups: {
+        groupId: string;
+        status: string;
+        visitDate: string;
+        visitTime: string;
+        totalG: number;
+    }[];
+}>, unknown>;
+export declare const bonusRequestGoldUsage: import("firebase-functions/v2/https").CallableFunction<{
+    groupId: string;
+}, any, unknown>;
+export declare const bonusCancelGoldUsage: import("firebase-functions/v2/https").CallableFunction<any, Promise<{
+    groupId: string;
+    amountG: number;
+    ok: boolean;
+}>, unknown>;
+export declare const bonusAdminConfirmGoldUsage: import("firebase-functions/v2/https").CallableFunction<{
+    groupId: string;
+    requestCode: string;
+    finalRecognizedG: number;
+}, any, unknown>;
+export declare const bonusAdminCancelGoldUsage: import("firebase-functions/v2/https").CallableFunction<{
+    groupId: string;
+    reason?: string;
+}, any, unknown>;
+export {};

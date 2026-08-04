@@ -6,11 +6,9 @@ export default function ScrollRestoration() {
   const location = useLocation();
   const navType = useNavigationType(); // 'POP' | 'PUSH' | 'REPLACE'
 
-  // SSR/빌드 환경 안전장치
-  if (typeof window === "undefined") return null;
-
   // 브라우저 기본 복원 기능 끄기 (충돌 방지)
   useEffect(() => {
+    if (typeof window === "undefined") return undefined;
     if ("scrollRestoration" in window.history) {
       const prev = window.history.scrollRestoration;
       window.history.scrollRestoration = "manual";
@@ -22,6 +20,7 @@ export default function ScrollRestoration() {
 
   // 이동할 때 스크롤 복원/초기화
   useEffect(() => {
+    if (typeof window === "undefined") return undefined;
     // layout이 그려진 뒤 복원되도록 rAF로 한 틱 미루기
     const restore = () => {
       if (navType === "POP") {
@@ -38,17 +37,20 @@ export default function ScrollRestoration() {
     };
 
     // 두 번의 rAF로 레이아웃/이미지 로딩 등과의 타이밍 이슈 완화
+    let id2;
     const id1 = requestAnimationFrame(() => {
-      const id2 = requestAnimationFrame(restore);
-      // cleanup
-      return () => cancelAnimationFrame(id2);
+      id2 = requestAnimationFrame(restore);
     });
 
-    return () => cancelAnimationFrame(id1);
+    return () => {
+      cancelAnimationFrame(id1);
+      if (id2) cancelAnimationFrame(id2);
+    };
   }, [location, navType]);
 
   // 스크롤할 때 현재 위치 저장
   useEffect(() => {
+    if (typeof window === "undefined") return undefined;
     const onScroll = () => {
       sessionStorage.setItem(`scroll:${location.key}`, String(window.scrollY));
     };

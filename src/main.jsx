@@ -17,27 +17,6 @@ if ("serviceWorker" in navigator) {
       return null;
     });
 
-  // ✅ SW → 페이지 메시지 폴백 처리 (알림 클릭 등)
-  //    SW가 OPEN_URL 메시지를 보낼 때 내부 경로는 SPA로, 외부는 전체 이동
-  navigator.serviceWorker.addEventListener("message", (e) => {
-    const msg = e?.data || {};
-    if (msg.type === "OPEN_URL") {
-      const url = msg?.data?.url;
-      if (typeof url === "string" && url) {
-        try {
-          if (url.startsWith("http")) {
-            window.location.href = url; // 외부 링크
-          } else {
-            // 내부 라우팅: 히스토리 푸시 + popstate (라우터가 감지)
-            window.history.pushState({}, "", url);
-            window.dispatchEvent(new PopStateEvent("popstate"));
-          }
-        } catch {
-          window.location.href = url;
-        }
-      }
-    }
-  });
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(
@@ -60,7 +39,9 @@ const idleId1 = requestIdle(async () => {
       import("firebase/firestore"),
       import("firebase/storage"),
     ]);
-  } catch {}
+  } catch {
+    // 실제 화면 진입 시 다시 로드되므로 유휴 프리로드 실패는 무시합니다.
+  }
 });
 
 const idleId2 = requestIdle(async () => {
@@ -70,12 +51,13 @@ const idleId2 = requestIdle(async () => {
         "./pages/GoldExchange.jsx",
         "./pages/admin/StatisticsDashboard.jsx",
         "./pages/admin/AdminGoldExchange.jsx",
-        "./pages/ChatRoom.jsx",
       ],
       { eager: false }
     );
     await Promise.all(Object.values(preloadPages).map((loader) => loader()));
-  } catch {}
+  } catch {
+    // 실제 라우트 진입 시 다시 로드됩니다.
+  }
 });
 
 export function cancelWarmups() {

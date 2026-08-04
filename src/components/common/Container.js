@@ -6,12 +6,13 @@ export const Container = styled.div.withConfig({
   shouldForwardProp: (prop) => prop !== "noBottomPadding"
 })`
   width: 100%;
-  max-width: 1200px;
+  max-width: 1440px;
   margin: 0 auto;
-  padding: 1rem;
+  padding: 20px clamp(16px, 4vw, 64px);
 
   @media (min-width: 767px) {
-    padding: 2rem;
+    padding-top: 32px;
+    padding-bottom: 40px;
   }
 
   /* noBottomPadding=true 이면 아래 padding 생략 */
@@ -22,7 +23,7 @@ export const Container = styled.div.withConfig({
         `
       : css`
           @media (max-width: 767px) {
-            padding-bottom: calc(56px + env(safe-area-inset-bottom));
+            padding-bottom: calc(72px + env(safe-area-inset-bottom));
           }
         `}
 `;

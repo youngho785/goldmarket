@@ -67,8 +67,7 @@ export async function compressImage(
   try {
     bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
   } catch (err) {
-    if (process.env.NODE_ENV === "development") {
-      // eslint-disable-next-line no-console
+    if (import.meta.env.DEV) {
       console.debug("createImageBitmap failed; fallback to Image()", err);
     }
   }

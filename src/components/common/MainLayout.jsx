@@ -2,22 +2,30 @@
 // =====================================
 import React, { useEffect, Suspense } from "react";
 import { Outlet, useLocation } from "react-router-dom";
+import styled from "styled-components";
 
 import Navbar from "./Navbar";
 import ScrollRestoration from "./ScrollRestoration";
 import FCMNotifications from "./FCMNotifications";
+import PushPermissionPrompt from "./PushPermissionPrompt";
 import BottomNav from "./BottomNav";
+import AdminBottomNav from "./AdminBottomNav";
 import Footer from "./Footer";
 import { Container } from "./Container";
 
 // 로그인 게이트 모달을 Router 안쪽에서 마운트
 import { LoginGateMount } from "@/context/LoginGateContext";
+import { useAuthContext } from "@/context/AuthContext";
 
-// ✅ 푸시 권한 안내 바
-import PushPermissionPrompt from "@/components/common/PushPermissionPrompt";
+const MainContent = styled.main`
+  width: 100%;
+  flex: 1 0 auto;
+  padding-bottom: ${({ $hideBottomNav }) => ($hideBottomNav ? "72px" : "132px")};
 
-// ✅ 앱 설치 배너
-import InstallBanner from "../InstallBanner";
+  @media (max-width: 768px) {
+    padding-bottom: ${({ $hideBottomNav }) => ($hideBottomNav ? "56px" : "116px")};
+  }
+`;
 
 /* ──────────────────────────────────────────────
  * 국소 에러바운더리: 특정 UI가 터져도 앱 전체가 죽지 않도록
@@ -116,32 +124,28 @@ function RouteSkeleton() {
 
 export default function MainLayout() {
   const { pathname } = useLocation();
+  const { isAdmin = false } = useAuthContext() || {};
 
   // 랜딩은 하단 패딩 제거
   const noBottomPadding = pathname === "/";
+  const isAdminPath = pathname.startsWith("/admin");
+  const showAdminBottomNav = isAdminPath && isAdmin;
 
   // 하단 네비 숨길 경로
   const hideBottomNav =
-    pathname.startsWith("/admin") ||
+    (isAdminPath && !showAdminBottomNav) ||
     pathname.startsWith("/login") ||
     pathname.startsWith("/register") ||
     pathname.startsWith("/verify-email") ||
     pathname.startsWith("/reset-password");
 
-  // 채팅 화면 여부 (body.chat-mode 토글)
-  const isChat = pathname === "/chat" || pathname.startsWith("/chat/");
-
   // ── GlobalStyle의 헬퍼들과 연동 ───────────────────────────
   useEffect(() => {
     if (typeof document === "undefined") return; // 클라이언트에서만
-    // 채팅 페이지일 때 바디 패딩 제거
-    document.body.classList.toggle("chat-mode", isChat);
+    document.body.classList.remove("chat-mode");
     // 하단 네비 숨김 플래그 (GlobalStyle의 선택자와 일치)
     document.body.dataset.hideBottomNav = hideBottomNav ? "1" : "0";
-  }, [isChat, hideBottomNav]);
-
-  // 하단 버튼 네비 높이 (요청값 56px)
-  const BOTTOM_NAV_HEIGHT = 56;
+  }, [hideBottomNav]);
 
   return (
     <>
@@ -158,24 +162,21 @@ export default function MainLayout() {
 
       {/* FCM 초기화/포그라운드 알림/토스트 (브라우저에서만) */}
       {typeof window !== "undefined" && (
-        <MiniBoundary name="FCMNotifications">
-          <FCMNotifications />
-        </MiniBoundary>
+        <>
+          <MiniBoundary name="FCMNotifications">
+            <FCMNotifications />
+          </MiniBoundary>
+          <MiniBoundary name="PushPermissionPrompt">
+            <PushPermissionPrompt />
+          </MiniBoundary>
+        </>
       )}
 
-      {/* ✅ 푸시 권한 안내 바 (브라우저에서만) */}
-      {typeof window !== "undefined" && (
-        <MiniBoundary name="PushPermissionPrompt">
-          <PushPermissionPrompt />
-        </MiniBoundary>
-      )}
-
-      <main
+      <MainContent
         id="main-content"
         role="main"
         aria-label="메인 콘텐츠"
-        // Footer가 먼저 보이지 않도록 초기 하단 여유를 예약
-        style={{ paddingBottom: !hideBottomNav ? "120px" : "80px" }}
+        $hideBottomNav={hideBottomNav}
       >
         <Container noBottomPadding={noBottomPadding}>
           {/* Lazy route 대비: 깜빡임 없이 폴백 처리 */}
@@ -186,24 +187,18 @@ export default function MainLayout() {
 
         {/* 전역 로그인 모달 마운트 지점 */}
         <LoginGateMount />
-      </main>
+      </MainContent>
 
       {/* 하단 네비 (앵커 id 유지) */}
-      {!hideBottomNav && (
+      {showAdminBottomNav ? (
+        <div id="adminBottomNav">
+          <AdminBottomNav />
+        </div>
+      ) : !hideBottomNav ? (
         <div id="bottomNav">
           <BottomNav />
         </div>
-      )}
-
-      {/* ✅ 앱 설치 배너: 하단 버튼바(56px)만큼 오프셋을 추가해 겹침 방지 */}
-      {typeof window !== "undefined" && !hideBottomNav && (
-        <MiniBoundary name="InstallBanner">
-          <InstallBanner
-            anchorSelector="#bottomNav"
-            bottomOffset={BOTTOM_NAV_HEIGHT}
-          />
-        </MiniBoundary>
-      )}
+      ) : null}
 
       <Footer />
     </>

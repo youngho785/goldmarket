@@ -44,7 +44,9 @@ export const auth = initializeAuth(app, {
 });
 try {
   auth.languageCode = "ko";
-} catch {}
+} catch {
+  // 비브라우저 환경에서는 언어 설정을 지원하지 않을 수 있습니다.
+}
 
 /* ────────────────────────────────────────────────────────────
  * Firestore
@@ -73,7 +75,9 @@ const DEV = !!import.meta.env.DEV;
 let messaging = null;
 try {
   messaging = getMessaging(app);
-} catch {}
+} catch {
+  // 메시징 미지원 브라우저에서는 푸시 기능만 비활성화합니다.
+}
 export { messaging };
 
 const VAPID_KEY = import.meta.env.VITE_VAPID_KEY;
@@ -88,7 +92,9 @@ async function ensureFcmServiceWorker() {
   try {
     const reg = await navigator.serviceWorker.getRegistration("/sw.js");
     if (reg) return reg;
-  } catch {}
+  } catch {
+    // 기존 등록 조회에 실패하면 아래에서 새로 등록을 시도합니다.
+  }
 
   try {
     const reg = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
@@ -205,6 +211,16 @@ export async function callReleaseReservedSlot(dateKey, time) {
   return res?.data ?? null;
 }
 
+/** 최고 관리자: Firebase Auth 관리자 역할 부여/해제 */
+export async function callSetUserRole(uid, role) {
+  if (!uid || !["user", "admin"].includes(role)) {
+    throw new Error("사용자와 역할을 확인해 주세요.");
+  }
+  const fn = httpsCallable(functions, "setUserRole");
+  const res = await fn({ uid, role });
+  return res?.data ?? null;
+}
+
 /** ✅ 채팅 읽음 처리 — Functions 이름과 동일하게 호출 */
 async function _callMarkChatAsReadImpl(chatId) {
   if (!chatId) return null;
@@ -251,7 +267,9 @@ export async function startPresenceHeartbeat(uid) {
         { active: true, updatedAt: new Date() },
         { merge: true }
       );
-    } catch {}
+    } catch {
+      // 연결 종료 중 상태 기록 실패는 다음 접속에서 복구됩니다.
+    }
   };
   await tick();
   presenceTimer = setInterval(tick, 45_000);
@@ -286,16 +304,24 @@ if (AUTO_SIGNOUT_ON_REFRESH_FAIL && typeof window !== "undefined") {
       console.warn("[Firebase] Token refresh failed. Clearing local state…", e);
       try {
         await signOut(auth);
-      } catch {}
+      } catch {
+        // 로그아웃 실패와 관계없이 로컬 인증 상태 정리를 계속합니다.
+      }
       try {
         indexedDB && indexedDB.deleteDatabase("firebaseLocalStorageDb");
-      } catch {}
+      } catch {
+        // IndexedDB 미지원 또는 잠금 상태는 무시합니다.
+      }
       try {
         localStorage.removeItem("firebase:previous_websocket_failure");
-      } catch {}
+      } catch {
+        // 로컬 스토리지 접근이 제한된 환경은 무시합니다.
+      }
       try {
         sessionStorage.removeItem("firebase:previous_websocket_failure");
-      } catch {}
+      } catch {
+        // 세션 스토리지 접근이 제한된 환경은 무시합니다.
+      }
     }
   });
 }

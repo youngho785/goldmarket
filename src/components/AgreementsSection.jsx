@@ -35,7 +35,7 @@ const IconBtn = styled(Link)`
   text-decoration: none;
   outline-offset: 2px;
   &:hover { background:#f9fafb; border-style: solid; }
-  &:focus-visible { outline: 2px solid #3b82f6; }
+  &:focus-visible { outline: 2px solid ${({ theme }) => theme.focus.outline}; }
 `;
 const Placeholder = styled.span`
   width: 36px; height: 36px; display:inline-block;

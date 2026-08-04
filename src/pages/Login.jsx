@@ -1,45 +1,50 @@
 // src/pages/Login.jsx
 import React, { useState } from "react";
-import styled, { keyframes } from "styled-components";
+import styled from "styled-components";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthContext } from "../context/AuthContext";
-
-/* Animations */
-const floaty = keyframes`
-  0% { transform: translateY(0px); }
-  50% { transform: translateY(-2px); }
-  100% { transform: translateY(0px); }
-`;
-const shineSweep = keyframes`
-  0% { transform: translateX(-120%); }
-  100% { transform: translateX(120%); }
-`;
 
 /* Layout */
 const Container = styled.div`
   display: flex;
   justify-content: center;
-  padding: 40px 20px;
-  background: ${({ theme }) => theme.colors.background || "#f0f2f5"};
-  min-height: 100vh;
+  align-items: flex-start;
+  padding: clamp(28px, 6vw, 64px) 18px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(178,138,59,.11), transparent 28rem),
+    ${({ theme }) => theme.colors.background || "#F4F6F9"};
+  min-height: calc(100svh - 180px);
 `;
 const Card = styled.div`
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-  padding: 32px;
+  position: relative;
+  overflow: hidden;
+  background: ${({ theme }) => theme.colors.surface};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.large};
+  box-shadow: ${({ theme }) => theme.shadows.lg};
+  padding: clamp(26px, 5vw, 42px);
   width: 100%;
-  max-width: 420px;
+  max-width: 460px;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto;
+    height: 4px;
+    background: ${({ theme }) => theme.gradients.gold};
+  }
 `;
 const Title = styled.h1`
   text-align: center;
-  margin-bottom: 8px;
-  color: ${({ theme }) => theme.colors.primary || "#333"};
+  margin: 0 auto 10px;
+  font-size: clamp(25px, 5vw, 32px);
+  color: ${({ theme }) => theme.colors.text};
+  word-break: keep-all;
 `;
 const SubTitle = styled.p`
   text-align: center;
-  margin: 0 0 12px;
-  color: #666;
+  margin: 0 0 18px;
+  color: ${({ theme }) => theme.colors.textSecondary};
   font-size: 0.95rem;
 `;
 
@@ -47,58 +52,36 @@ const SubTitle = styled.p`
 const TopCtaWrap = styled.div`
   display: flex;
   justify-content: center;
-  margin-bottom: 20px;
+  margin-bottom: 22px;
 `;
 const LuxuryCta = styled(Link)`
   position: relative;
-  display: inline-flex;
+  width: 100%;
+  display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  padding: 14px 22px;
-  border-radius: 9999px;
+  padding: 15px 20px;
+  border-radius: 14px;
   font-weight: 800;
   text-decoration: none;
 
-  color: #eef2ff;
-  border: 2px solid #93c5fd; /* blue-300 */
-  background: linear-gradient(180deg, #1e3a8a 0%, #2563eb 100%); /* indigo→blue */
-  box-shadow:
-    0 6px 18px rgba(59,130,246,0.18),
-    inset 0 0 0 1px rgba(255,255,255,0.06);
+  color: ${({ theme }) => theme.on.primary};
+  border: 1px solid rgba(200,168,90,.55);
+  background: ${({ theme }) => theme.gradients.primary};
+  box-shadow: ${({ theme }) => theme.shadows.card};
   transition: transform 0.06s ease, box-shadow 0.15s ease, background 0.2s ease, filter 0.2s ease;
 
-  animation: ${floaty} 6s ease-in-out infinite;
-
   &:hover {
-    background: linear-gradient(180deg, #1d4ed8 0%, #3b82f6 100%);
-    box-shadow:
-      0 10px 24px rgba(59,130,246,0.26),
-      inset 0 0 0 1px rgba(255,255,255,0.08);
-    filter: saturate(1.05);
+    color: ${({ theme }) => theme.on.primary};
+    box-shadow: ${({ theme }) => theme.shadows.hover};
+    transform: translateY(-1px);
   }
-  &:active { transform: translateY(1px); }
+  &:active { transform: translateY(0); }
   &:focus { outline: none; }
   &:focus-visible {
     box-shadow:
-      0 0 0 4px rgba(59,130,246,0.30),
-      0 6px 18px rgba(59,130,246,0.20);
-  }
-
-  &::after {
-    content: "";
-    position: absolute;
-    inset: -2px;
-    background: linear-gradient(120deg, transparent 35%, rgba(255,255,255,0.22) 50%, transparent 65%);
-    mix-blend-mode: overlay;
-    transform: translateX(-120%);
-    animation: ${shineSweep} 2.4s ease-in-out infinite;
-    pointer-events: none;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    animation: none;
-    &::after { animation: none; }
+      ${({ theme }) => theme.focus.ring};
   }
 `;
 const CtaLineMain = styled.span`
@@ -108,68 +91,78 @@ const CtaLineMain = styled.span`
 const CtaLineSub = styled.span`
   font-size: 0.9rem;
   font-weight: 700;
-  color: #dbeafe; /* blue-100 */
+  color: rgba(255,255,255,.78);
   letter-spacing: 0.1px;
   opacity: 0.95;
 `;
 
 const Divider = styled.div`
-  height: 1px; background: #eee; margin: 16px 0;
+  height: 1px; background: ${({ theme }) => theme.colors.dividerSubtle}; margin: 20px 0;
 `;
 const FormTitle = styled.h2`
-  font-size: 1.1rem;
-  margin: 0 0 12px;
-  color: #111827;
+  font-size: 1.18rem;
+  margin: 0 0 16px;
+  color: ${({ theme }) => theme.colors.text};
   text-align: left;
 `;
 const Form = styled.form`
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
 `;
 const FormGroup = styled.div`
   display: flex;
   flex-direction: column;
 `;
 const Label = styled.label`
-  margin-bottom: 8px;
-  font-weight: 600;
-  color: #555;
+  margin-bottom: 7px;
+  font-weight: 750;
+  color: ${({ theme }) => theme.colors.text};
 `;
 const Input = styled.input`
-  padding: 10px 12px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  min-height: 48px;
+  padding: 11px 13px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.small};
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
   font-size: 1rem;
-  &:disabled { background: #f5f5f5; }
+  &:disabled { background: ${({ theme }) => theme.colors.surfaceAlt}; }
 `;
 const ErrorText = styled.p`
-  color: red;
+  color: ${({ theme }) => theme.semantic.alertErrorText};
+  background: ${({ theme }) => theme.semantic.alertErrorBg};
+  border: 1px solid ${({ theme }) => theme.colors.error}33;
+  border-radius: 10px;
+  padding: 10px 12px;
   font-size: 0.9rem;
-  margin: -4px 0 8px;
+  margin: 0 0 12px;
 `;
 const Button = styled.button`
-  padding: 12px;
+  min-height: 48px;
+  padding: 12px 16px;
   font-size: 1rem;
-  background: ${({ theme }) => theme.colors.primary || "#007bff"};
-  color: #fff;
-  border: none;
-  border-radius: 4px;
+  background: ${({ theme }) => theme.gradients.primary};
+  color: ${({ theme }) => theme.on.primary};
+  border: 1px solid transparent;
+  border-radius: ${({ theme }) => theme.radii.small};
+  font-weight: 800;
   cursor: pointer;
   transition: background 0.2s;
-  &:disabled { background: #aaa; cursor: not-allowed; }
-  &:hover:enabled { background: ${({ theme }) => theme.colors.primaryDark || "#0056b3"}; }
+  &:disabled { opacity: .55; cursor: not-allowed; }
+  &:hover:enabled { filter: brightness(.96); }
 `;
 const SmallText = styled.span`
   font-size: 0.85rem;
-  color: #888;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin-top: -8px;
 `;
 const LinkText = styled.p`
   font-size: 0.9rem;
   text-align: center;
   margin-top: 12px;
-  & > a { color: ${({ theme }) => theme.colors.primary || "#007bff"}; text-decoration: none; }
+  color: ${({ theme }) => theme.colors.textSecondary};
+  & > a { color: ${({ theme }) => theme.colors.link}; text-decoration: none; font-weight: 750; }
 `;
 
 export default function Login() {
@@ -260,7 +253,7 @@ export default function Login() {
             aria-label="회원가입하러 가기 - 회원가입 즉시 웰컴 순금 0.01g 적립"
           >
             <CtaLineMain>회원가입하러가기</CtaLineMain>
-            <CtaLineSub>회원가입 즉시 웰컴 순금 0.01g 적립</CtaLineSub>
+            <CtaLineSub>회원가입 즉시 웰컴 순금 0.01g 적립 · 골드바 교환 시 사용 가능</CtaLineSub>
           </LuxuryCta>
         </TopCtaWrap>
 

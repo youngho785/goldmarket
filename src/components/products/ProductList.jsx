@@ -7,8 +7,11 @@ import LoadingSpinner from "../common/LoadingSpinner";
 
 const EmptyText = styled.p`
   text-align: center;
-  color: #888;
-  padding: 40px 0 60px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  padding: 34px 20px;
+  background: ${({ theme }) => theme.colors.surface};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.large};
   font-size: 1.1rem;
 `;
 

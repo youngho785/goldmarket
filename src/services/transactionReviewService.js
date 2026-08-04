@@ -1,8 +1,13 @@
 // src/services/transactionReviewService.js
-import { collection, addDoc } from "firebase/firestore";
-import { db } from "../firebase/firebase";
+import { httpsCallable } from "firebase/functions";
+import { functions } from "../firebase/firebase";
 
 export async function addTransactionReview(reviewData) {
-  const reviewRef = await addDoc(collection(db, "transactionReviews"), reviewData);
-  return reviewRef.id;
+  const fn = httpsCallable(functions, "submitTransactionReview");
+  const { data } = await fn({
+    orderId: reviewData.orderId,
+    rating: reviewData.rating,
+    comment: reviewData.comment,
+  });
+  return data?.reviewId || reviewData.orderId;
 }

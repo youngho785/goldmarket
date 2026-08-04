@@ -17,9 +17,12 @@ service cloud.firestore {
                  && request.resource.data[field] == resource.data[field]);
     }
 
-    /* 사용자가 users/{uid} 문서에서 bonus 전체를 바꾸지 못하게 차단 */
-    function noClientBonusMutation() {
-      return !request.resource.data.diff(resource.data).changedKeys().hasAny(['bonus']);
+    /* 역할·보너스·평점 집계는 Cloud Functions에서만 변경 */
+    function noProtectedUserMutation() {
+      return !request.resource.data.diff(resource.data).changedKeys().hasAny([
+        'role','admin','superAdmin','bonus','bonusGoldMilliGrams','bonusGoldG',
+        'bonusGoldUpdatedAt','sellerRatingAvg','sellerRatingCount','roleUpdatedAt','roleUpdatedBy'
+      ]);
     }
 
     /* ───────── appConfig ───────── */
@@ -28,23 +31,69 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    /* 예약 슬롯(사용자는 삭제 없는 업데이트만) */
+    /* 예약 슬롯 선점/해제는 Cloud Functions 또는 관리자만 */
     match /appConfig/reservedSlots {
       allow read: if true;
-      allow create, delete: if isAdmin();
-      allow update: if signedIn() &&
-        request.resource.data.diff(resource.data).removedKeys().size() == 0;
+      allow write: if isAdmin();
     }
 
     /* ───────── products ───────── */
     match /products/{id} {
-      allow read: if true;
+      function isProductOwner() {
+        return signedIn() && resource.data.sellerId == request.auth.uid;
+      }
+      function isPublicProduct() {
+        // 거래완료 상품도 구매 내역/후기 화면에서 다시 열 수 있어야 합니다.
+        // 공개 목록과 사이트맵에서는 쿼리 단계에서 completed == false만 노출합니다.
+        return resource.data.approved == true;
+      }
+      function hasValidProductContent(data) {
+        return data.title is string && data.title.size() > 0 && data.title.size() <= 100 &&
+               data.description is string && data.description.size() > 0 && data.description.size() <= 500 &&
+               data.price is number && data.price >= 0 && data.price <= 1000000000000 &&
+               data.category is string && data.category.size() > 0 && data.category.size() <= 120 &&
+               data.weight is number && data.weight > 0 && data.weight <= 1000000 &&
+               data.weightUnit in ['g', '돈'] &&
+               data.weightGrams is number && data.weightGrams > 0 && data.weightGrams <= 1000000 &&
+               data.imageUrls is list && data.imageUrls.size() > 0 && data.imageUrls.size() <= 20;
+      }
+
+      allow read: if isAdmin() || isProductOwner() || isPublicProduct();
 
       allow create: if signedIn() &&
-        request.resource.data.sellerId == request.auth.uid;
+        request.resource.data.keys().hasOnly([
+          'title','description','price','category','weight','weightUnit','weightGrams',
+          'imageUrls','sellerId','approved','completed','moderationStatus','createdAt','updatedAt'
+        ]) &&
+        hasValidProductContent(request.resource.data) &&
+        request.resource.data.sellerId == request.auth.uid &&
+        request.resource.data.approved == true &&
+        request.resource.data.completed == false &&
+        request.resource.data.moderationStatus == 'approved' &&
+        request.resource.data.createdAt == request.time &&
+        request.resource.data.updatedAt == request.time;
 
-      allow update, delete: if isAdmin() ||
-        (signedIn() && resource.data.sellerId == request.auth.uid);
+      allow update: if isAdmin();
+      // 판매자는 내용을 수정할 수 있지만 공개 상태는 바꿀 수 없습니다.
+      // 관리자가 공개를 취소한 상품은 판매자가 수정해도 비공개 상태를 유지합니다.
+      allow update: if isProductOwner() &&
+        resource.data.completed == false &&
+        request.resource.data.completed == false &&
+        request.resource.data.approved == resource.data.approved &&
+        request.resource.data.moderationStatus == resource.data.moderationStatus &&
+        hasValidProductContent(request.resource.data) &&
+        request.resource.data.diff(resource.data).changedKeys().hasOnly([
+          'title','description','price','category','weight','weightUnit',
+          'weightGrams','imageUrls','updatedAt'
+        ]);
+      allow update: if isProductOwner() &&
+        resource.data.completed == false &&
+        request.resource.data.completed == true &&
+        request.resource.data.price == null &&
+        request.resource.data.diff(resource.data).changedKeys().hasOnly([
+          'completed','completedAt','archivedPrice','price'
+        ]);
+      allow delete: if isAdmin() || isProductOwner();
 
       // 좋아요 토글만 별도 허용
       allow update: if signedIn() && isLikeToggle();
@@ -61,22 +110,24 @@ service cloud.firestore {
         let like =
           !(request.auth.uid in beforeLiked) &&
            (request.auth.uid in afterLiked)  &&
+           afterLiked.hasAll(beforeLiked) &&
            (afterLiked.size() == beforeLiked.size() + 1) &&
            (afterCount == beforeCount + 1);
 
         let unlike =
            (request.auth.uid in beforeLiked) &&
           !(request.auth.uid in afterLiked)  &&
+           beforeLiked.hasAll(afterLiked) &&
            (afterLiked.size() == beforeLiked.size() - 1) &&
-           (afterCount == beforeCount - 1);
+           (afterCount == beforeCount - 1) &&
+           afterCount >= 0;
 
         return keysOk && (like || unlike);
       }
 
       match /reviews/{reviewId} {
         allow read: if true;
-        allow create: if signedIn();
-        allow update, delete: if isAdmin();
+        allow write: if isAdmin();
       }
     }
 
@@ -123,10 +174,13 @@ service cloud.firestore {
     /* ───────── users (fcmTokens 포함) ───────── */
     match /users/{uid} {
       allow read:   if isOwner(uid) || isAdmin();
-      allow create: if isOwner(uid);
+      allow create: if isOwner(uid) &&
+        !request.resource.data.keys().hasAny([
+          'role','admin','superAdmin','bonus','bonusGoldMilliGrams','bonusGoldG',
+          'bonusGoldUpdatedAt','sellerRatingAvg','sellerRatingCount','roleUpdatedAt','roleUpdatedBy'
+        ]);
 
-      // ⚠️ 클라이언트는 bonus 수정 금지 (관리자만 가능)
-      allow update: if isAdmin() || (isOwner(uid) && noClientBonusMutation());
+      allow update: if (isAdmin() || isOwner(uid)) && noProtectedUserMutation();
       allow delete: if isAdmin();
 
       /* users/{uid}/ledger — 서버(Admin)만 기록 */
@@ -155,18 +209,18 @@ service cloud.firestore {
     /* ───────── profiles ───────── */
     match /profiles/{uid} {
       allow read: if true;
-      allow create: if isOwner(uid) || isAdmin();
+      allow create: if (isOwner(uid) || isAdmin())
+        && (!('sellerRatingAvg' in request.resource.data)
+            || request.resource.data.sellerRatingAvg == 0)
+        && (!('sellerRatingCount' in request.resource.data)
+            || request.resource.data.sellerRatingCount == 0);
       allow update: if (isOwner(uid) || isAdmin())
         && request.resource.data.keys().hasOnly([
           'displayName','nickname','photoURL','sellerRatingAvg','sellerRatingCount','nicknameLower'
         ])
-        && (!('sellerRatingAvg' in request.resource.data)
-            || (request.resource.data.sellerRatingAvg is number
-                && request.resource.data.sellerRatingAvg >= 0
-                && request.resource.data.sellerRatingAvg <= 5))
-        && (!('sellerRatingCount' in request.resource.data)
-            || (request.resource.data.sellerRatingCount is number
-                && request.resource.data.sellerRatingCount >= 0))
+        && !request.resource.data.diff(resource.data).changedKeys().hasAny([
+          'sellerRatingAvg','sellerRatingCount'
+        ])
         // 닉네임/닉네임 소문자 불변 (관리자는 예외)
         && (isAdmin() || fieldUnchanged('nickname'))
         && (isAdmin() || fieldUnchanged('nicknameLower'));
@@ -186,29 +240,78 @@ service cloud.firestore {
         );
       }
       function isNewChatParticipant() {
-        return (
-          (request.resource.data.participants is list && request.auth.uid in request.resource.data.participants) ||
-          (request.resource.data.participantsMap is map && request.auth.uid in request.resource.data.participantsMap)
-        );
+        return request.resource.data.participants is list &&
+               request.auth.uid in request.resource.data.participants;
+      }
+      function isParticipantFlagSet(data, field, uid) {
+        return field in data && data[field] is map &&
+               uid in data[field] && data[field][uid] == true;
+      }
+      function isConversationOpen(chatId) {
+        let c = chatData(chatId);
+        return c.participants is list && c.participants.size() == 2 &&
+               !isParticipantFlagSet(c, 'blockedBy', c.participants[0]) &&
+               !isParticipantFlagSet(c, 'blockedBy', c.participants[1]) &&
+               !isParticipantFlagSet(c, 'left', c.participants[0]) &&
+               !isParticipantFlagSet(c, 'left', c.participants[1]);
+      }
+      function isValidNewChat() {
+        let data = request.resource.data;
+        let productPath = /databases/$(database)/documents/products/$(data.productId);
+        return data.keys().hasOnly([
+                 'productId','participants','participantsMap','unreadCount',
+                 'lastMessage','lastMessageAt','lastUpdated','updatedAt','createdAt'
+               ]) &&
+               data.productId is string &&
+               data.participants is list && data.participants.size() == 2 &&
+               data.participants[0] != data.participants[1] &&
+               data.participantsMap is map &&
+               data.participantsMap.keys().hasOnly(data.participants) &&
+               data.participantsMap.keys().hasAll(data.participants) &&
+               data.participantsMap[data.participants[0]] == true &&
+               data.participantsMap[data.participants[1]] == true &&
+               data.unreadCount is map &&
+               data.unreadCount.keys().hasOnly(data.participants) &&
+               data.unreadCount.keys().hasAll(data.participants) &&
+               data.unreadCount[data.participants[0]] == 0 &&
+               data.unreadCount[data.participants[1]] == 0 &&
+               data.lastMessage == '' && data.lastMessageAt == null &&
+               data.createdAt == request.time && data.updatedAt == request.time &&
+               data.lastUpdated == request.time &&
+               exists(productPath) &&
+               get(productPath).data.sellerId in data.participants &&
+               request.auth.uid in data.participants &&
+               request.auth.uid != get(productPath).data.sellerId;
+      }
+      function isValidNewMessage(chatId) {
+        let data = request.resource.data;
+        let hasText = data.text is string && data.text.size() > 0 && data.text.size() <= 2000;
+        let hasImage = data.imageUrl is string && data.imageUrl.size() > 0 && data.imageUrl.size() <= 2048;
+        return isConversationOpen(chatId) &&
+               data.keys().hasOnly(['sender','text','imageUrl','timestamp','readBy']) &&
+               data.sender == request.auth.uid &&
+               data.text is string && data.text.size() <= 2000 &&
+               ((hasText && data.imageUrl == null) || (data.text == '' && hasImage)) &&
+               data.timestamp == request.time &&
+               data.readBy is list && data.readBy.size() == 1 &&
+               data.readBy[0] == request.auth.uid;
       }
 
       allow read:   if isAdmin() || (signedIn() && isChatParticipant(chatId));
-      allow create: if isAdmin() || (signedIn() && isNewChatParticipant());
+      allow create: if isAdmin() || (signedIn() && isNewChatParticipant() && isValidNewChat());
 
-      // 업데이트: 허용 키만 변경 + participants/participantsMap 절대 수정 금지
+      // 메시지 메타는 Functions가 기록하고, 클라이언트는 자신의 상태만 변경합니다.
       allow update: if isAdmin() || (
         signedIn() &&
         isChatParticipant(chatId) &&
         request.resource.data.diff(resource.data).changedKeys().hasOnly([
-          'lastMessage','lastMessageAt','lastUpdated','updatedAt',
-          'unreadCount','lastSeenAt','lastMessageId','lastMessageType','lastSender',
-          'hidden','hiddenAt','blockedBy','left','leftAt','status'
+          'unreadCount','lastSeenAt','hidden','hiddenAt','blockedBy','left','leftAt'
         ]) &&
         !request.resource.data.diff(resource.data).changedKeys().hasAny(['participants','participantsMap']) &&
         onlySelfMapMutations()
       );
 
-      allow delete: if isAdmin() || (signedIn() && isChatParticipant(chatId));
+      allow delete: if isAdmin();
 
       // ── 맵 필드 보조 함수: 내 uid 서브키만 변경 가능
       function mapBefore(field) {
@@ -240,11 +343,16 @@ service cloud.firestore {
         allow read: if isAdmin() || (signedIn() && isChatParticipant(chatId));
         allow create: if isAdmin() || (
           signedIn() && isChatParticipant(chatId) &&
-          request.resource.data.sender == request.auth.uid
+          isValidNewMessage(chatId)
         );
         allow update: if isAdmin() || (
           signedIn() && isChatParticipant(chatId) &&
-          request.resource.data.diff(resource.data).changedKeys().hasOnly(['readBy'])
+          request.resource.data.diff(resource.data).changedKeys().hasOnly(['readBy']) &&
+          resource.data.readBy is list && request.resource.data.readBy is list &&
+          request.resource.data.readBy.size() == resource.data.readBy.size() + 1 &&
+          request.resource.data.readBy.hasAll(resource.data.readBy) &&
+          request.auth.uid in request.resource.data.readBy &&
+          !(request.auth.uid in resource.data.readBy)
         );
         allow delete: if isAdmin() || (
           signedIn() && isChatParticipant(chatId) && resource.data.sender == request.auth.uid
@@ -297,66 +405,111 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    /* 본인확인 신청 */
+    match /accountVerifications/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow create: if isOwner(uid) &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.status == 'pending';
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    /* 금 교환 그룹 요약(Functions가 Admin SDK로 기록) */
+    match /goldExchangeGroups/{id} {
+      allow read: if isAdmin() || (
+        signedIn() && resource.data.ownerUid == request.auth.uid
+      );
+      allow write: if isAdmin();
+    }
+
+    /* 신고 관리 */
+    match /reports/{id} {
+      allow read, update, delete: if isAdmin();
+      allow create: if signedIn() &&
+        request.resource.data.reportedBy == request.auth.uid;
+    }
+
     /* ───────── goldExchanges ───────── */
     match /goldExchanges/{id} {
       allow read:   if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
-      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
-      allow update: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
-      allow delete: if isAdmin();
+      allow create, update, delete: if isAdmin();
     }
 
     match /goldExchangeReviews/{id} {
       allow read: if signedIn();
-      allow create: if signedIn();
-      allow update, delete: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    /* 완료 거래 검증 후 서버가 발행하는 공개 교환 후기 */
+    match /verifiedGoldExchangeReviews/{id} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    /* 거래번호와 공개 후기의 연결 정보는 해당 고객과 관리자만 조회 */
+    match /goldExchangeReviewClaims/{id} {
+      allow read: if isAdmin() || (
+        signedIn() &&
+        get(/databases/$(database)/documents/goldExchanges/$(id)).data.userId == request.auth.uid
+      );
+      allow write: if false;
     }
 
     /* ───────── transactionReviews ───────── */
     match /transactionReviews/{id} {
       allow read: if true;
-      allow create: if signedIn();
-      allow update, delete: if isAdmin();
+      allow write: if isAdmin();
     }
 
     /* ───────── orders / transactions ───────── */
-    function isMineCreate() {
-      return request.resource.data.userId == request.auth.uid ||
-             request.resource.data.buyerId == request.auth.uid ||
-             request.resource.data.sellerId == request.auth.uid;
-    }
     function isMineExisting() {
       return resource.data.userId == request.auth.uid ||
              resource.data.buyerId == request.auth.uid ||
              resource.data.sellerId == request.auth.uid;
     }
     match /orders/{id} {
-      allow read, write: if isAdmin() ||
-        (signedIn() &&
-          ((request.method == 'create' && isMineCreate()) ||
-           (request.method != 'create' && isMineExisting())));
+      allow read: if isAdmin() || (signedIn() && isMineExisting());
+      allow create: if signedIn() &&
+        request.resource.data.keys().hasOnly([
+          'productId','buyerId','sellerId','status','createdAt'
+        ]) &&
+        request.resource.data.buyerId == request.auth.uid &&
+        request.resource.data.sellerId != request.auth.uid &&
+        request.resource.data.status == 'requested' &&
+        request.resource.data.createdAt == request.time &&
+        exists(/databases/$(database)/documents/products/$(request.resource.data.productId)) &&
+        get(/databases/$(database)/documents/products/$(request.resource.data.productId)).data.sellerId
+          == request.resource.data.sellerId;
+      allow update: if signedIn() && isMineExisting() &&
+        request.resource.data.diff(resource.data).changedKeys().hasOnly(['status','updatedAt']) &&
+        (
+          (resource.data.status == 'requested' &&
+            request.resource.data.status == 'canceled' &&
+            request.auth.uid == resource.data.buyerId) ||
+          (resource.data.status == 'requested' &&
+            request.resource.data.status in ['accepted','canceled'] &&
+            request.auth.uid == resource.data.sellerId) ||
+          (resource.data.status == 'accepted' &&
+            request.resource.data.status == 'completed' &&
+            request.auth.uid in [resource.data.buyerId, resource.data.sellerId])
+        );
+      allow delete: if isAdmin();
     }
     match /transactions/{id} {
-      allow read, write: if isAdmin() ||
-        (signedIn() &&
-          ((request.method == 'create' && isMineCreate()) ||
-           (request.method != 'create' && isMineExisting())));
+      allow read: if isAdmin() || (signedIn() && isMineExisting());
+      allow write: if isAdmin();
     }
     match /{path=**}/orders/{id} {
-      allow read, write: if isAdmin() ||
-        (signedIn() &&
-          ((request.method == 'create' && isMineCreate()) ||
-           (request.method != 'create' && isMineExisting())));
+      allow read, write: if false;
     }
     match /{path=**}/transactions/{id} {
-      allow read, write: if isAdmin() ||
-        (signedIn() &&
-          ((request.method == 'create' && isMineCreate()) ||
-           (request.method != 'create' && isMineExisting())));
+      allow read, write: if false;
     }
 
-    /* 기본: 나머지 읽기는 로그인 필요 */
+    /* 기본: 정의하지 않은 모든 경로 거부 */
     match /{document=**} {
-      allow read: if signedIn();
+      allow read, write: if false;
     }
   }
 }

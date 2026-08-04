@@ -1,153 +1,90 @@
-// src/components/common/BottomNav.jsx
-import React, { useMemo } from "react";
+import React from "react";
 import { createPortal } from "react-dom";
 import { NavLink, useLocation } from "react-router-dom";
-import styled, { css } from "styled-components";
-import {
-  Home,
-  MessageSquare,
-  PlusCircle,
-  Bell,
-  CreditCard,
-  User
-} from "lucide-react";
-import { useNotificationContext } from "../../context/NotificationContext";
-import usePendingGoldExchangeCount from "../../hooks/usePendingGoldExchangeCount";
-import useGoldExchangeCount from "../../hooks/useGoldExchangeCount";
-import { useAuthContext } from "../../context/AuthContext";
+import styled from "styled-components";
+import { Calculator, ClipboardList, Home, Sparkles, User } from "lucide-react";
 
 const Nav = styled.nav.attrs({
   role: "navigation",
-  "aria-label": "하단 네비게이션"
+  "aria-label": "하단 네비게이션",
 })`
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  width: 100vw;
-  height: 56px;
-  padding-bottom: env(safe-area-inset-bottom);
-  background: #fff;
-  border-top: 1px solid ${({ theme }) => theme.colors.border};
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
+  right: 10px;
+  bottom: max(10px, env(safe-area-inset-bottom, 0px));
+  left: 10px;
   z-index: 1000;
-  transition: transform .2s ease;
-  will-change: transform;
+  display: none;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  min-height: 66px;
+  padding: 5px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: color-mix(in srgb, ${({ theme }) => theme.colors.surface} 95%, transparent);
+  box-shadow: 0 16px 44px rgba(7, 22, 37, .18);
+  backdrop-filter: blur(18px);
+  transition: transform ${({ theme }) => theme.transitions.base};
 
-  ${({ $hidden }) =>
-    $hidden &&
-    css`
-      transform: translateY(100%);
-      pointer-events: none;
-    `}
+  @media (max-width: 768px) { display: grid; }
 `;
 
-const NavItem = styled(NavLink)`
-  flex: 1;
-  text-align: center;
+const Item = styled(NavLink)`
   position: relative;
-  font-size: 0.75rem;
-  color: ${({ $active, theme }) =>
-    $active ? theme.colors.primary : theme.colors.textSecondary};
-  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+  min-height: 54px;
+  padding: 5px 2px;
+  color: ${({ theme }) => theme.colors.textLight};
+  font-size: .67rem;
+  font-weight: 780;
+  text-align: center;
 
   svg {
-    display: block;
-    margin: 0 auto 4px;
-    font-size: 1.4rem;
+    width: 20px;
+    height: 20px;
+    stroke-width: 1.8;
   }
 
   &.active {
-    color: ${({ theme }) => theme.colors.primary};
+    background: ${({ theme }) => theme.colors.primary};
+    color: ${({ theme }) => theme.colors.white};
   }
+
+  &:focus-visible { outline-offset: -2px; }
 `;
 
-const Badge = styled.span`
-  position: absolute;
-  top: 4px;
-  right: 16px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  background: ${({ theme }) => theme.colors.secondary};
-  color: #fff;
-  font-size: 0.625rem;
-  font-weight: bold;
-  border-radius: 8px;
-  line-height: 16px;
-`;
+const ITEMS = [
+  { to: "/", icon: Home, label: "홈" },
+  { to: "/gold-exchange", icon: Calculator, label: "금 계산" },
+  { to: "/quiz/gold-bonus", icon: Sparkles, label: "퀵퀴즈" },
+  { to: "/my-exchanges", icon: ClipboardList, label: "교환내역" },
+  { to: "/profile", icon: User, label: "내정보" },
+];
 
-function BottomNavContent() {
+export default function BottomNav() {
   const { pathname } = useLocation();
-  const {
-    unreadChats = 0,
-    unreadNotifications = 0,
-  } = useNotificationContext() || {};
-  const pendingCount = usePendingGoldExchangeCount() || 0;
-  const myExchangeCount = useGoldExchangeCount() || 0;
-  const { isAdmin } = useAuthContext() || {};
+  if (typeof document === "undefined") return null;
 
-  // ✅ 훅은 항상 실행하고, 채팅 화면에서만 시각적으로 숨김
-  const shouldHide = pathname === "/chat" || pathname.startsWith("/chat/");
-
-  const isActiveTab = (to) =>
-    pathname === to || pathname.startsWith(`${to}/`);
-
-  const tabs = useMemo(
-    () => [
-      { to: "/",               icon: <Home aria-hidden />,           label: "홈" },
-      {
-        to: "/chat",
-        icon: <MessageSquare aria-hidden />,
-        label: "채팅",
-        badge: unreadChats > 0 ? unreadChats : null
-      },
-      { to: "/sell",           icon: <PlusCircle aria-hidden />,     label: "등록" },
-      {
-        to: "/notifications",
-        icon: <Bell aria-hidden />,
-        label: "알림",
-        badge: unreadNotifications > 0 ? unreadNotifications : null
-      },
-      {
-        to: "/gold-exchange",
-        icon: <CreditCard aria-hidden />,
-        label: "금교환",
-        badge:
-          isAdmin && pendingCount > 0
-            ? pendingCount
-            : !isAdmin && myExchangeCount > 0
-            ? myExchangeCount
-            : null
-      },
-      { to: "/profile",        icon: <User aria-hidden />,           label: "내정보" }
-    ],
-    [unreadChats, unreadNotifications, pendingCount, myExchangeCount, isAdmin]
-  );
-
-  return (
-    <Nav $hidden={shouldHide}>
-      {tabs.map(({ to, icon, label, badge }) => (
-        <NavItem
+  return createPortal(
+    <Nav>
+      {ITEMS.map(({ to, icon, label }) => (
+        <Item
           key={to}
           to={to}
           end={to === "/"}
-          $active={isActiveTab(to) ? 1 : 0}
-          aria-label={badge ? `${label} (새 알림 ${badge}개)` : label}
-          title={badge ? `${label} • ${badge}` : label}
+          aria-current={
+            (to === "/" ? pathname === "/" : pathname.startsWith(to))
+              ? "page"
+              : undefined
+          }
         >
-          {icon}
-          {badge ? <Badge aria-label={`새 알림 ${badge}개`}>{badge}</Badge> : null}
-          {label}
-        </NavItem>
+          {React.createElement(icon, { "aria-hidden": true })}
+          <span>{label}</span>
+        </Item>
       ))}
-    </Nav>
+    </Nav>,
+    document.body
   );
-}
-
-export default function BottomNav() {
-  // SPA 환경 가정: SSR 대응 불필요. (document.body 존재)
-  return createPortal(<BottomNavContent />, document.body);
 }

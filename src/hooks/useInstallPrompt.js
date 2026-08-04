@@ -112,7 +112,7 @@ export default function useInstallPrompt({ snoozeDays = 30 } = {}) {
       window.removeEventListener("appinstalled", onInstalled);
       window.removeEventListener("PWA_INSTALL_SHOW_AGAIN", onShowAgain);
     };
-  }, [recompute, snooze]);
+  }, [isIOS, recompute, snooze]);
 
   const promptInstall = useCallback(async () => {
     const ev = deferredRef.current;

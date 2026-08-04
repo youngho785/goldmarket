@@ -1,11 +1,13 @@
 // functions/src/index.ts
 // Cloud Functions (ESM + TypeScript)
 import { initializeApp, getApps } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { getFirestore, FieldValue, type Firestore } from "firebase-admin/firestore";
 import { getMessaging, type BatchResponse, type SendResponse } from "firebase-admin/messaging";
 import { onDocumentCreated, onDocumentWritten } from "firebase-functions/v2/firestore";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
+import { randomInt } from "node:crypto";
 
 /* ── App init (중복 방지) */
 if (!getApps().length) initializeApp();
@@ -14,6 +16,22 @@ if (!getApps().length) initializeApp();
 const db = (): Firestore => getFirestore();
 const msg = () => getMessaging();
 const IN_EMULATOR = process.env.FUNCTIONS_EMULATOR === "true";
+
+function hasAdminClaim(token: Record<string, unknown> | undefined): boolean {
+  return token?.admin === true || token?.superAdmin === true;
+}
+
+function requireAdmin(token: Record<string, unknown> | undefined): void {
+  if (!hasAdminClaim(token)) {
+    throw new HttpsError("permission-denied", "관리자 권한이 필요합니다.");
+  }
+}
+
+function requireSuperAdmin(token: Record<string, unknown> | undefined): void {
+  if (token?.superAdmin !== true) {
+    throw new HttpsError("permission-denied", "최고 관리자 권한이 필요합니다.");
+  }
+}
 
 /* ── 공통 상수/유틸 */
 const DON_TO_GRAMS = 3.75 as const;
@@ -76,6 +94,41 @@ async function addNotificationForUser(
     createdAt: FieldValue.serverTimestamp(),
     read: false,
   });
+}
+
+async function addNotificationForAdmins(payload: {
+  type: string;
+  title: string;
+  body: string;
+  link?: string;
+  meta?: Record<string, unknown>;
+}): Promise<number> {
+  const users = db().collection("users");
+  const snapshots = await Promise.all([
+    users.where("role", "in", ["admin", "superAdmin"]).get(),
+    users.where("admin", "==", true).get(),
+    users.where("superAdmin", "==", true).get(),
+  ]);
+  const adminUids = new Set<string>();
+  snapshots.forEach((snapshot) => {
+    snapshot.docs.forEach((document) => adminUids.add(document.id));
+  });
+  if (adminUids.size === 0) {
+    console.warn("[addNotificationForAdmins] 알림을 받을 관리자 계정을 찾지 못했습니다.");
+    return 0;
+  }
+
+  const batch = db().batch();
+  adminUids.forEach((uid) => {
+    const ref = db().collection("notifications").doc(uid).collection("items").doc();
+    batch.set(ref, {
+      ...payload,
+      createdAt: FieldValue.serverTimestamp(),
+      read: false,
+    });
+  });
+  await batch.commit();
+  return adminUids.size;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -248,7 +301,23 @@ export const markChatAsRead = onCall<{ chatId: string }>(
 
     await db().runTransaction(async (tx) => {
       // ---- 모든 READ를 먼저 수행 ----
-      const [tSnap, mSnap] = await Promise.all([tx.get(threadRef), tx.get(metaRef)]);
+      const [chatSnap, tSnap, mSnap] = await Promise.all([
+        tx.get(chatRef),
+        tx.get(threadRef),
+        tx.get(metaRef),
+      ]);
+      if (!chatSnap.exists) {
+        throw new HttpsError("not-found", "채팅방을 찾을 수 없습니다.");
+      }
+      const chatData = chatSnap.data() || {};
+      const participants = Array.isArray(chatData.participants) ? chatData.participants : [];
+      const participantsMap =
+        chatData.participantsMap && typeof chatData.participantsMap === "object"
+          ? (chatData.participantsMap as Record<string, unknown>)
+          : {};
+      if (!participants.includes(uid) && participantsMap[uid] !== true) {
+        throw new HttpsError("permission-denied", "채팅 참여자만 읽음 처리할 수 있습니다.");
+      }
       const prevUnread = (tSnap.exists ? Number(tSnap.get("unread") || 0) : 0) || 0;
       const curTotal = (mSnap.exists ? Number(mSnap.get("unreadTotal") || 0) : 0) || 0;
       cleared = prevUnread;
@@ -307,9 +376,15 @@ export const markChatAsRead = onCall<{ chatId: string }>(
 export const releaseReservedSlot = onCall<{ dateKey: string; time: string }>(
   { region: "asia-northeast3" },
   async (req) => {
+    requireAdmin((req.auth?.token || {}) as Record<string, unknown>);
     const { dateKey, time } = (req.data || {}) as Partial<{ dateKey: string; time: string }>;
-    if (!dateKey || !time) {
-      throw new HttpsError("invalid-argument", "dateKey와 time이 필요합니다.");
+    if (
+      !dateKey ||
+      !time ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(dateKey) ||
+      !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)
+    ) {
+      throw new HttpsError("invalid-argument", "날짜와 시간을 올바른 형식으로 입력해 주세요.");
     }
     const ref = db().doc("appConfig/reservedSlots");
 
@@ -335,6 +410,43 @@ export const releaseReservedSlot = onCall<{ dateKey: string; time: string }>(
 );
 
 /* ─────────────────────────────────────────────────────────────
+ * 관리자 역할 변경 (최고 관리자 전용)
+ * ───────────────────────────────────────────────────────────── */
+export const setUserRole = onCall<{ uid: string; role: "user" | "admin" }>(
+  { region: "asia-northeast3" },
+  async (req) => {
+    const callerUid = req.auth?.uid;
+    if (!callerUid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+    requireSuperAdmin((req.auth?.token || {}) as Record<string, unknown>);
+
+    const uid = String(req.data?.uid || "").trim();
+    const role = req.data?.role;
+    if (!uid || !["user", "admin"].includes(String(role))) {
+      throw new HttpsError("invalid-argument", "사용자와 역할을 확인해 주세요.");
+    }
+    if (uid === callerUid) {
+      throw new HttpsError("failed-precondition", "현재 계정의 역할은 직접 변경할 수 없습니다.");
+    }
+
+    const target = await getAuth().getUser(uid);
+    if (target.customClaims?.superAdmin === true) {
+      throw new HttpsError("failed-precondition", "최고 관리자 역할은 이 기능으로 변경할 수 없습니다.");
+    }
+
+    const nextClaims: Record<string, unknown> = { ...(target.customClaims || {}) };
+    if (role === "admin") nextClaims.admin = true;
+    else delete nextClaims.admin;
+
+    await getAuth().setCustomUserClaims(uid, nextClaims);
+    await db().doc(`users/${uid}`).set(
+      { role, roleUpdatedAt: FieldValue.serverTimestamp(), roleUpdatedBy: callerUid },
+      { merge: true }
+    );
+    return { ok: true, uid, role };
+  }
+);
+
+/* ─────────────────────────────────────────────────────────────
  * 3) 그룹 생성 + 슬롯 선점 (사용자 제출)
  * ───────────────────────────────────────────────────────────── */
 export const requestGoldExchangeGroup = onCall<{
@@ -342,8 +454,9 @@ export const requestGoldExchangeGroup = onCall<{
   visitTime: string;
   name: string;
   phone: string;
-  address: string;
   email?: string | null;
+  privacyConsent: boolean;
+  privacyConsentVersion: string;
   products?: Array<{
     goldType?: string;
     quantity?: number;
@@ -360,8 +473,9 @@ export const requestGoldExchangeGroup = onCall<{
     visitTime,
     name,
     phone,
-    address,
     email = null,
+    privacyConsent,
+    privacyConsentVersion,
     products = [],
     barsPlan = null,
   } = (req.data || {}) as {
@@ -369,8 +483,9 @@ export const requestGoldExchangeGroup = onCall<{
     visitTime?: string;
     name?: string;
     phone?: string;
-    address?: string;
     email?: string | null;
+    privacyConsent?: boolean;
+    privacyConsentVersion?: string;
     products?: Array<{
       goldType?: string;
       quantity?: number;
@@ -380,8 +495,11 @@ export const requestGoldExchangeGroup = onCall<{
     barsPlan?: Record<string, unknown> | null;
   };
 
-  if (!visitDate || !visitTime || !name || !phone || !address) {
-    throw new HttpsError("invalid-argument", "방문일/시간, 성명/전화/주소는 필수입니다.");
+  if (!visitDate || !visitTime || !name || !phone) {
+    throw new HttpsError("invalid-argument", "방문일/시간, 성명/전화번호는 필수입니다.");
+  }
+  if (privacyConsent !== true || !privacyConsentVersion) {
+    throw new HttpsError("invalid-argument", "개인정보 수집·이용 동의가 필요합니다.");
   }
 
   const ratesSnap = await db().doc("appConfig/goldRates").get();
@@ -446,10 +564,12 @@ export const requestGoldExchangeGroup = onCall<{
             // 예약자
             name,
             phone,
-            address,
             email,
             visitDate,
             visitTime,
+            privacyConsent: true,
+            privacyConsentVersion,
+            privacyConsentAt: now,
             // 입력/환산 저장
             originalQuantity: qty,
             inputUnit: unit,
@@ -478,10 +598,12 @@ export const requestGoldExchangeGroup = onCall<{
           unknown: true,
           name,
           phone,
-          address,
           email,
           visitDate,
           visitTime,
+          privacyConsent: true,
+          privacyConsentVersion,
+          privacyConsentAt: now,
           goldType: "미확인",
           exchangeType: "999.9골드바",
           originalQuantity: 0,
@@ -496,13 +618,27 @@ export const requestGoldExchangeGroup = onCall<{
     }
   });
 
-  // 접수 알림 기록
-  await addNotificationForUser(uid, {
-    type: "exchange_requested",
-    title: "금 교환 요청 접수",
-    body: `방문 예약이 접수되었습니다. (${visitDate} ${visitTime})`,
-    link: "/my-exchanges",
-    meta: { groupId },
+  // 사용자와 관리자 알림은 예약 저장 성공 여부에 영향을 주지 않도록 분리합니다.
+  const notificationResults = await Promise.allSettled([
+    addNotificationForUser(uid, {
+      type: "exchange_requested",
+      title: "금 교환 요청 접수",
+      body: `방문 예약이 접수되었습니다. (${visitDate} ${visitTime})`,
+      link: "/my-exchanges",
+      meta: { groupId },
+    }),
+    addNotificationForAdmins({
+      type: "admin_exchange_requested",
+      title: "새 금교환 예약이 접수되었습니다",
+      body: `${name}님 · ${visitDate} ${visitTime} 방문 요청`,
+      link: `/admin/gold-exchange?groupId=${encodeURIComponent(groupId)}`,
+      meta: { groupId, visitDate, visitTime, customerUid: uid },
+    }),
+  ]);
+  notificationResults.forEach((result) => {
+    if (result.status === "rejected") {
+      console.error("[requestGoldExchangeGroup] 알림 생성 실패", result.reason);
+    }
   });
 
   return { ok: true, groupId };
@@ -548,20 +684,86 @@ export const setExchangeGroupStatus = onCall<{
       qs = { empty: false, docs: [single] } as unknown as typeof qs;
     }
 
+    const groupMetaSnap = await db().doc(`goldExchangeGroups/${groupId}`).get();
+    const bonusUsageStatus = String(groupMetaSnap.get("bonusGoldUsageStatus") || "");
+    if (status === "completed" && bonusUsageStatus === "requested") {
+      throw new HttpsError(
+        "failed-precondition",
+        "적립 순금 사용 신청을 먼저 확정하거나 취소해 주세요."
+      );
+    }
+
     const batch = db().batch();
     let targetUid: string | null = null;
+    let targetVisitDate = "";
+    let targetVisitTime = "";
     qs.docs.forEach((d) => {
-      const data = (d.data() || {}) as { userId?: string };
+      const data = (d.data() || {}) as {
+        userId?: string;
+        visitDate?: string;
+        visitTime?: string;
+      };
       targetUid = targetUid || data.userId || null;
+      targetVisitDate = targetVisitDate || data.visitDate || "";
+      targetVisitTime = targetVisitTime || data.visitTime || "";
       batch.update(d.ref, { status, updatedAt: now, ...extra } as FirebaseFirestore.DocumentData);
     });
     await batch.commit();
 
+    if (
+      status === "canceled" ||
+      status === "rejected" ||
+      (status === "requested" && bonusUsageStatus === "used")
+    ) {
+      await reconcileBonusUsageForGroup({
+        groupId,
+        targetStatus: status,
+        adminUid: req.auth?.uid || "system",
+      });
+    }
+
     if (targetUid) {
+      const visitSchedule = [targetVisitDate, targetVisitTime].filter(Boolean).join(" ");
+      const notifications = {
+        requested: {
+          type: "exchange_requested",
+          title: "금 교환 예약이 접수되었습니다",
+          body: visitSchedule
+            ? `${visitSchedule} 방문 요청을 확인하고 있습니다.`
+            : "방문 요청을 확인하고 있습니다.",
+        },
+        scheduled: {
+          type: "exchange_scheduled",
+          title: "방문 예약이 확정되었습니다",
+          body: visitSchedule
+            ? `${visitSchedule} 원일귀금속 방문 예약이 확정되었습니다.`
+            : "원일귀금속 방문 예약이 확정되었습니다.",
+        },
+        in_progress: {
+          type: "exchange_in_progress",
+          title: "금 교환을 확인하고 있습니다",
+          body: "순도·중량과 골드바 교환 내용을 확인하고 있습니다.",
+        },
+        completed: {
+          type: "exchange_completed",
+          title: "금 교환이 완료되었습니다",
+          body: "교환 내역을 확인하고 후기를 남길 수 있습니다.",
+        },
+        canceled: {
+          type: "exchange_canceled",
+          title: "방문 예약이 취소되었습니다",
+          body: "취소된 예약은 교환내역에서 확인할 수 있습니다.",
+        },
+        rejected: {
+          type: "exchange_rejected",
+          title: "금 교환 요청 확인이 필요합니다",
+          body: "교환내역을 확인하거나 원일귀금속으로 문의해 주세요.",
+        },
+      } as const;
+      const notification = notifications[status];
+
       await addNotificationForUser(targetUid, {
-        type: "exchange_status",
-        title: "금 교환 요청 상태 변경",
-        body: `요청(${groupId}) 상태가 '${status}'로 변경되었습니다.`,
+        ...notification,
         link: "/my-exchanges",
         meta: { groupId, newStatus: status },
       });
@@ -1066,61 +1268,1052 @@ export const deleteMyAccount = onCall<unknown>(
 );
 
 /* ─────────────────────────────────────────────────────────────
- * NEW) 퀵퀴즈 0.01g 보너스 지급 (1인 1회, 아이덤포턴트)
- * 클라이언트: quizClient.js → callable("quizClaimGoldBonus")
- * 요구 파라미터: { score: number, attemptId?: string }
- * 조건: score >= 3
- * 저장: users/{uid}/promotions/gold_bonus_v1
- * 부가: 알림 생성
+ * 완료된 주문의 거래 후기 등록 (구매자 1회)
  * ───────────────────────────────────────────────────────────── */
-export const quizClaimGoldBonus = onCall<{ score: number; attemptId?: string }>(
+export const submitTransactionReview = onCall<{
+  orderId: string;
+  rating: number;
+  comment: string;
+}>(
   { region: "asia-northeast3" },
   async (req) => {
     const uid = req.auth?.uid;
     if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
 
-    const scoreRaw = Number(req.data?.score ?? 0);
+    const orderId = String(req.data?.orderId || "").trim();
+    const rating = Number(req.data?.rating);
+    const comment = String(req.data?.comment || "").trim();
+    if (!orderId || !Number.isInteger(rating) || rating < 1 || rating > 5) {
+      throw new HttpsError("invalid-argument", "주문과 평점을 확인해 주세요.");
+    }
+    if (!comment || comment.length > 1000) {
+      throw new HttpsError("invalid-argument", "후기는 1자 이상 1,000자 이하로 입력해 주세요.");
+    }
+
+    const orderRef = db().doc(`orders/${orderId}`);
+    const reviewRef = db().doc(`transactionReviews/${orderId}`);
+    let sellerId = "";
+
+    await db().runTransaction(async (tx) => {
+      const [orderSnap, reviewSnap] = await Promise.all([
+        tx.get(orderRef),
+        tx.get(reviewRef),
+      ]);
+      if (!orderSnap.exists) throw new HttpsError("not-found", "주문을 찾을 수 없습니다.");
+      if (reviewSnap.exists) throw new HttpsError("already-exists", "이미 후기를 작성했습니다.");
+
+      const order = orderSnap.data() || {};
+      sellerId = String(order.sellerId || "");
+      const productId = String(order.productId || "");
+      const completed = order.status === "completed" || order.completed === true;
+      if (order.buyerId !== uid || !sellerId || !productId || !completed) {
+        throw new HttpsError("failed-precondition", "완료된 구매 주문만 평가할 수 있습니다.");
+      }
+
+      const profileRef = db().doc(`profiles/${sellerId}`);
+      const userRef = db().doc(`users/${sellerId}`);
+      const [profileSnap, userSnap] = await Promise.all([
+        tx.get(profileRef),
+        tx.get(userRef),
+      ]);
+      const profile = profileSnap.data() || {};
+      const privateUser = userSnap.data() || {};
+      const previousCount = Number(profile.sellerRatingCount ?? privateUser.sellerRatingCount ?? 0);
+      const previousAverage = Number(profile.sellerRatingAvg ?? privateUser.sellerRatingAvg ?? 0);
+      const nextCount = previousCount + 1;
+      const nextAverage = Math.round(((previousAverage * previousCount + rating) / nextCount) * 100) / 100;
+      const now = FieldValue.serverTimestamp();
+
+      tx.create(reviewRef, {
+        orderId,
+        productId,
+        sellerId,
+        buyerId: uid,
+        reviewerId: uid,
+        userName: String(req.auth?.token?.name || "구매자").slice(0, 40),
+        rating,
+        comment,
+        createdAt: now,
+      });
+      tx.set(profileRef, { sellerRatingAvg: nextAverage, sellerRatingCount: nextCount }, { merge: true });
+      tx.set(userRef, { sellerRatingAvg: nextAverage, sellerRatingCount: nextCount }, { merge: true });
+      tx.set(orderRef, { reviewed: true, reviewedAt: now }, { merge: true });
+    });
+
+    await addNotificationForUser(sellerId, {
+      type: "transaction_review",
+      title: "새 거래 후기가 등록되었습니다.",
+      body: `구매자가 ${rating}점 후기를 남겼습니다.`,
+      link: `/transactionReviews/${sellerId}`,
+      meta: { orderId, rating },
+    });
+    return { ok: true, reviewId: orderId };
+  }
+);
+
+/* ─────────────────────────────────────────────────────────────
+ * 완료된 금교환 후기 등록
+ * - 교환 완료·본인 소유 여부를 서버에서 확인
+ * - 거래당 1회, 공개 문서에는 회원 식별자를 저장하지 않음
+ * ───────────────────────────────────────────────────────────── */
+export const submitGoldExchangeReview = onCall<{
+  exchangeId: string;
+  rating: number;
+  comment: string;
+}>(
+  { region: "asia-northeast3" },
+  async (req) => {
+    const uid = req.auth?.uid;
+    if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+
+    const exchangeId = String(req.data?.exchangeId || "").trim();
+    const rating = Number(req.data?.rating);
+    const comment = String(req.data?.comment || "").trim();
+
+    if (!/^[A-Za-z0-9_-]{6,128}$/.test(exchangeId)) {
+      throw new HttpsError("invalid-argument", "교환 번호를 확인해 주세요.");
+    }
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+      throw new HttpsError("invalid-argument", "평점은 1점부터 5점까지 선택해 주세요.");
+    }
+    if (comment.length < 10 || comment.length > 500) {
+      throw new HttpsError("invalid-argument", "후기는 10자 이상 500자 이하로 입력해 주세요.");
+    }
+
+    const exchanges = db().collection("goldExchanges");
+    const groupedSnap = await exchanges.where("groupId", "==", exchangeId).limit(50).get();
+    const exchangeDocs: FirebaseFirestore.DocumentSnapshot[] = [...groupedSnap.docs];
+
+    if (exchangeDocs.length === 0) {
+      const directSnap = await exchanges.doc(exchangeId).get();
+      if (directSnap.exists) exchangeDocs.push(directSnap);
+    }
+    if (exchangeDocs.length === 0) {
+      throw new HttpsError("not-found", "교환 내역을 찾을 수 없습니다.");
+    }
+
+    const ownedDocs = exchangeDocs.filter((item) => item.data()?.userId === uid);
+    if (ownedDocs.length === 0) {
+      throw new HttpsError("permission-denied", "본인의 교환 내역만 평가할 수 있습니다.");
+    }
+
+    const completedDoc = ownedDocs.find((item) => item.data()?.status === "completed");
+    if (!completedDoc) {
+      throw new HttpsError("failed-precondition", "교환 완료 처리된 건만 후기를 작성할 수 있습니다.");
+    }
+
+    const claimRef = db().doc(`goldExchangeReviewClaims/${exchangeId}`);
+    const publicReviewRef = db().collection("verifiedGoldExchangeReviews").doc();
+
+    await db().runTransaction(async (tx) => {
+      const [claimSnap, completedSnap] = await Promise.all([
+        tx.get(claimRef),
+        tx.get(completedDoc.ref),
+      ]);
+
+      if (claimSnap.exists) {
+        throw new HttpsError("already-exists", "이미 후기를 작성했습니다.");
+      }
+
+      const completedExchange = completedSnap.data() || {};
+      if (
+        completedExchange.userId !== uid ||
+        completedExchange.status !== "completed"
+      ) {
+        throw new HttpsError("failed-precondition", "교환 완료 상태를 다시 확인해 주세요.");
+      }
+
+      const now = FieldValue.serverTimestamp();
+      tx.create(publicReviewRef, {
+        rating,
+        comment,
+        reviewerLabel: "교환 완료 고객",
+        serviceType: "골드바 교환",
+        verified: true,
+        createdAt: now,
+      });
+      tx.create(claimRef, {
+        ownerUid: uid,
+        reviewId: publicReviewRef.id,
+        createdAt: now,
+      });
+
+      for (const exchangeDoc of ownedDocs) {
+        tx.set(
+          exchangeDoc.ref,
+          { reviewed: true, reviewedAt: now },
+          { merge: true }
+        );
+      }
+    });
+
+    return { ok: true, reviewId: publicReviewRef.id };
+  }
+);
+
+/* ─────────────────────────────────────────────────────────────
+ * 퀵퀴즈 0.01g 보너스 지급 (1인 1회)
+ * 서버가 답안을 직접 채점하고, 수령 기록·잔액·원장을 한 트랜잭션으로 반영합니다.
+ * ───────────────────────────────────────────────────────────── */
+const QUIZ_BONUS_PROMO_ID = "gold_bonus_v1";
+const QUIZ_BONUS_CREDIT_MG = 10;
+const QUIZ_BONUS_CREDIT_G = QUIZ_BONUS_CREDIT_MG / 1000;
+const WELCOME_BONUS_PROMO_ID = "welcome_gold_v1";
+const WELCOME_BONUS_CREDIT_MG = 10;
+const WELCOME_BONUS_CREDIT_G = WELCOME_BONUS_CREDIT_MG / 1000;
+
+type QuizBonusState = {
+  ok: true;
+  claimed: boolean;
+  alreadyClaimed: boolean;
+  claimedNow: boolean;
+  creditedG: number;
+  balanceG: number;
+};
+
+function toNonNegativeInteger(value: unknown, fallback = 0): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? Math.round(parsed) : fallback;
+}
+
+function bonusBalanceMilliGrams(data: FirebaseFirestore.DocumentData | undefined): number {
+  if (Number.isFinite(Number(data?.bonusGoldMilliGrams))) {
+    return toNonNegativeInteger(data?.bonusGoldMilliGrams);
+  }
+  const legacyG = Number(data?.bonusGoldG || 0);
+  return Number.isFinite(legacyG) && legacyG > 0 ? Math.round(legacyG * 1000) : 0;
+}
+
+type WelcomeBonusState = {
+  ok: true;
+  claimed: true;
+  alreadyClaimed: boolean;
+  claimedNow: boolean;
+  creditedG: number;
+  balanceG: number;
+};
+
+async function resolveWelcomeBonusState(uid: string): Promise<WelcomeBonusState> {
+  const userRef = db().doc(`users/${uid}`);
+  const promoRef = userRef.collection("promotions").doc(WELCOME_BONUS_PROMO_ID);
+  const ledgerRef = userRef.collection("ledger").doc(`welcome_${WELCOME_BONUS_PROMO_ID}`);
+
+  return db().runTransaction(async (tx) => {
+    const [userSnap, promoSnap, ledgerSnap] = await Promise.all([
+      tx.get(userRef),
+      tx.get(promoRef),
+      tx.get(ledgerRef),
+    ]);
+
+    let balanceMg = bonusBalanceMilliGrams(userSnap.data());
+
+    if (promoSnap.exists) {
+      const promo = promoSnap.data() || {};
+      const creditedMg = toNonNegativeInteger(
+        promo.creditedMilliGrams,
+        Math.round(Number(promo.creditedG || WELCOME_BONUS_CREDIT_G) * 1000)
+      );
+
+      if (!ledgerSnap.exists) {
+        balanceMg += creditedMg;
+        tx.set(userRef, {
+          bonusGoldMilliGrams: balanceMg,
+          bonusGoldG: balanceMg / 1000,
+          bonusGoldUpdatedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+        tx.set(ledgerRef, {
+          direction: "credit",
+          amountMilliGrams: creditedMg,
+          amountG: creditedMg / 1000,
+          source: WELCOME_BONUS_PROMO_ID,
+          createdAt: FieldValue.serverTimestamp(),
+          migratedFromLegacyClaim: true,
+        });
+      }
+
+      return {
+        ok: true,
+        claimed: true,
+        alreadyClaimed: true,
+        claimedNow: false,
+        creditedG: creditedMg / 1000,
+        balanceG: balanceMg / 1000,
+      };
+    }
+
+    balanceMg += WELCOME_BONUS_CREDIT_MG;
+    const now = FieldValue.serverTimestamp();
+    tx.set(userRef, {
+      bonusGoldMilliGrams: balanceMg,
+      bonusGoldG: balanceMg / 1000,
+      bonusGoldUpdatedAt: now,
+    }, { merge: true });
+    tx.create(promoRef, {
+      creditedMilliGrams: WELCOME_BONUS_CREDIT_MG,
+      creditedG: WELCOME_BONUS_CREDIT_G,
+      claimedAt: now,
+      source: WELCOME_BONUS_PROMO_ID,
+      balanceApplied: true,
+      balanceAppliedAt: now,
+    });
+    tx.create(ledgerRef, {
+      direction: "credit",
+      amountMilliGrams: WELCOME_BONUS_CREDIT_MG,
+      amountG: WELCOME_BONUS_CREDIT_G,
+      source: WELCOME_BONUS_PROMO_ID,
+      createdAt: now,
+    });
+
+    return {
+      ok: true,
+      claimed: true,
+      alreadyClaimed: false,
+      claimedNow: true,
+      creditedG: WELCOME_BONUS_CREDIT_G,
+      balanceG: balanceMg / 1000,
+    };
+  });
+}
+
+async function resolveQuizBonusState(
+  uid: string,
+  claim?: { score: number; attemptId: string }
+): Promise<QuizBonusState> {
+  const userRef = db().doc(`users/${uid}`);
+  const promoRef = userRef.collection("promotions").doc(QUIZ_BONUS_PROMO_ID);
+  const ledgerRef = userRef.collection("ledger").doc(`quiz_${QUIZ_BONUS_PROMO_ID}`);
+
+  return db().runTransaction(async (tx) => {
+    const [userSnap, promoSnap, ledgerSnap] = await Promise.all([
+      tx.get(userRef),
+      tx.get(promoRef),
+      tx.get(ledgerRef),
+    ]);
+
+    let balanceMg = bonusBalanceMilliGrams(userSnap.data());
+
+    if (promoSnap.exists) {
+      const promo = promoSnap.data() || {};
+      const creditedMg = toNonNegativeInteger(
+        promo.creditedMilliGrams,
+        Math.round(Number(promo.creditedG || QUIZ_BONUS_CREDIT_G) * 1000)
+      );
+
+      // 예전 구현은 수령 문서만 만들었으므로, 원장이 없는 경우 한 번만 잔액을 보정합니다.
+      if (!ledgerSnap.exists) {
+        balanceMg += creditedMg;
+        tx.set(userRef, {
+          bonusGoldMilliGrams: balanceMg,
+          bonusGoldG: balanceMg / 1000,
+          bonusGoldUpdatedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+        tx.set(ledgerRef, {
+          direction: "credit",
+          amountMilliGrams: creditedMg,
+          amountG: creditedMg / 1000,
+          source: QUIZ_BONUS_PROMO_ID,
+          createdAt: FieldValue.serverTimestamp(),
+          migratedFromLegacyClaim: true,
+        });
+      }
+
+      if (
+        promo.balanceApplied !== true ||
+        promo.creditedMilliGrams !== creditedMg ||
+        promo.creditedG !== creditedMg / 1000
+      ) {
+        tx.set(promoRef, {
+          creditedMilliGrams: creditedMg,
+          creditedG: creditedMg / 1000,
+          balanceApplied: true,
+          balanceAppliedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+      }
+
+      return {
+        ok: true,
+        claimed: true,
+        alreadyClaimed: true,
+        claimedNow: false,
+        creditedG: creditedMg / 1000,
+        balanceG: balanceMg / 1000,
+      };
+    }
+
+    if (!claim) {
+      return {
+        ok: true,
+        claimed: false,
+        alreadyClaimed: false,
+        claimedNow: false,
+        creditedG: 0,
+        balanceG: balanceMg / 1000,
+      };
+    }
+
+    balanceMg += QUIZ_BONUS_CREDIT_MG;
+    const now = FieldValue.serverTimestamp();
+    tx.set(userRef, {
+      bonusGoldMilliGrams: balanceMg,
+      bonusGoldG: balanceMg / 1000,
+      bonusGoldUpdatedAt: now,
+    }, { merge: true });
+    tx.create(promoRef, {
+      creditedMilliGrams: QUIZ_BONUS_CREDIT_MG,
+      creditedG: QUIZ_BONUS_CREDIT_G,
+      score: claim.score,
+      attemptId: claim.attemptId || null,
+      claimedAt: now,
+      source: QUIZ_BONUS_PROMO_ID,
+      balanceApplied: true,
+      balanceAppliedAt: now,
+    });
+    tx.create(ledgerRef, {
+      direction: "credit",
+      amountMilliGrams: QUIZ_BONUS_CREDIT_MG,
+      amountG: QUIZ_BONUS_CREDIT_G,
+      source: QUIZ_BONUS_PROMO_ID,
+      createdAt: now,
+    });
+
+    return {
+      ok: true,
+      claimed: true,
+      alreadyClaimed: false,
+      claimedNow: true,
+      creditedG: QUIZ_BONUS_CREDIT_G,
+      balanceG: balanceMg / 1000,
+    };
+  });
+}
+
+export const welcomeClaimGoldBonus = onCall(
+  { region: "asia-northeast3" },
+  async (req) => {
+    const uid = req.auth?.uid;
+    if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+
+    const res = await resolveWelcomeBonusState(uid);
+    if (res.claimedNow) {
+      try {
+        await addNotificationForUser(uid, {
+          type: "welcome_bonus",
+          title: "웰컴 순금 적립 완료",
+          body: `회원가입 웰컴 순금 ${res.creditedG.toFixed(2)}g이 적립되었습니다. 골드바 교환 시 사용할 수 있습니다.`,
+          link: "/profile",
+          meta: { event: WELCOME_BONUS_PROMO_ID, creditedG: res.creditedG },
+        });
+      } catch (error) {
+        console.error("[welcomeClaimGoldBonus] 지급 알림 생성 실패", error);
+      }
+    }
+    return res;
+  }
+);
+
+export const quizGetGoldBonusStatus = onCall(
+  { region: "asia-northeast3" },
+  async (req) => {
+    const uid = req.auth?.uid;
+    if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+    return resolveQuizBonusState(uid);
+  }
+);
+
+export const quizClaimGoldBonus = onCall<{
+  answers: Record<string, number>;
+  attemptId?: string;
+}>(
+  { region: "asia-northeast3" },
+  async (req) => {
+    const uid = req.auth?.uid;
+    if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+
+    const answerKey: Record<string, number> = { q1: 0, q2: 0, q3: 1, q4: 0, q5: 0 };
+    const answers = req.data?.answers;
+    if (!answers || typeof answers !== "object" || Array.isArray(answers)) {
+      throw new HttpsError("invalid-argument", "퀴즈 답안이 필요합니다.");
+    }
+    const answerIds = Object.keys(answerKey);
+    if (
+      Object.keys(answers).length !== answerIds.length ||
+      !answerIds.every((id) => Number.isInteger(Number(answers[id])))
+    ) {
+      throw new HttpsError("invalid-argument", "모든 퀴즈 답안을 제출해 주세요.");
+    }
+    const score = answerIds.reduce(
+      (total, id) => total + (Number(answers[id]) === answerKey[id] ? 1 : 0),
+      0
+    );
     const attemptId =
       req.data?.attemptId ? String(req.data.attemptId).slice(0, 64) : "";
 
-    if (!Number.isFinite(scoreRaw) || scoreRaw < 0) {
-      throw new HttpsError("invalid-argument", "유효한 점수가 필요합니다.");
-    }
-
-    const PASSING_SCORE = 3;
-    if (scoreRaw < PASSING_SCORE) {
+    if (score !== answerIds.length) {
       throw new HttpsError("failed-precondition", "아쉽지만 기준 점수 미달입니다.");
     }
 
-    const promoRef = db().doc(`users/${uid}/promotions/gold_bonus_v1`);
-    const CREDIT_G = 0.01;
+    const res = await resolveQuizBonusState(uid, { score, attemptId });
 
-    const res = await db().runTransaction(async (tx) => {
-      const snap = await tx.get(promoRef);
-      if (snap.exists) {
-        const already = (snap.data() || {}) as { creditedG?: number };
-        return { ok: true, alreadyClaimed: true, creditedG: Number(already.creditedG || 0) };
+    // 이미 수령한 계정에는 중복 알림을 만들지 않습니다.
+    if (res.claimedNow) {
+      try {
+        await addNotificationForUser(uid, {
+          type: "promo_bonus",
+          title: "퀵퀴즈 보너스 지급",
+          body: `축하합니다! ${res.creditedG.toFixed(2)}g 보너스가 적립되었습니다.`,
+          link: "/profile",
+          meta: { event: QUIZ_BONUS_PROMO_ID, creditedG: res.creditedG, score },
+        });
+      } catch (error) {
+        console.error("[quizClaimGoldBonus] 보너스 지급 알림 생성 실패", error);
       }
-
-      tx.set(promoRef, {
-        creditedG: CREDIT_G,
-        score: scoreRaw,
-        attemptId: attemptId || null,
-        claimedAt: FieldValue.serverTimestamp(),
-        source: "quiz_gold_bonus_v1",
-      });
-
-      return { ok: true, alreadyClaimed: false, creditedG: CREDIT_G };
-    });
-
-    await addNotificationForUser(uid, {
-      type: "promo_bonus",
-      title: "퀵퀴즈 보너스 지급",
-      body: `축하합니다! 0.01g 보너스가 적립되었습니다.`,
-      link: "/profile",
-      meta: { event: "gold_bonus_v1", creditedG: res.creditedG, score: scoreRaw },
-    });
+    }
 
     return res;
   }
 );
+
+/* ─────────────────────────────────────────────────────────────
+ * 적립 순금 사용 신청·매장 확정·복구
+ * 잔액은 mg 정수로 보관하며, 모든 차감과 복구를 서버 트랜잭션으로 처리합니다.
+ * ───────────────────────────────────────────────────────────── */
+type BonusUsageStatus = "requested" | "used" | "canceled" | "restored";
+
+function cleanGroupId(value: unknown): string {
+  return String(value || "").trim().slice(0, 128);
+}
+
+function cleanUsageCode(value: unknown): string {
+  return String(value || "").replace(/\D/g, "").slice(0, 6);
+}
+
+function requestCreatedMillis(value: unknown): number | null {
+  if (value && typeof (value as FirebaseFirestore.Timestamp).toMillis === "function") {
+    return (value as FirebaseFirestore.Timestamp).toMillis();
+  }
+  const parsed = new Date(String(value || "")).getTime();
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function publicBonusUsageRequest(data: FirebaseFirestore.DocumentData | undefined) {
+  if (!data?.status) return null;
+  const amountMg = toNonNegativeInteger(data.amountMilliGrams);
+  return {
+    status: String(data.status) as BonusUsageStatus,
+    amountG: amountMg / 1000,
+    groupId: String(data.groupId || ""),
+    requestCode: data.status === "requested" ? String(data.requestCode || "") : "",
+    visitDate: String(data.visitDate || ""),
+    visitTime: String(data.visitTime || ""),
+    finalRecognizedG: Number(data.finalRecognizedG || 0),
+    finalAppliedG: Number(data.finalAppliedG || 0),
+    createdAtMillis: requestCreatedMillis(data.createdAt),
+    usedAtMillis: requestCreatedMillis(data.usedAt),
+    canceledAtMillis: requestCreatedMillis(data.canceledAt),
+    restoredAtMillis: requestCreatedMillis(data.restoredAt),
+  };
+}
+
+export const bonusGetGoldUsageState = onCall(
+  { region: "asia-northeast3" },
+  async (req) => {
+    const uid = req.auth?.uid;
+    if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+
+    const userRef = db().doc(`users/${uid}`);
+    const requestRef = db().doc(`bonusGoldRedemptionRequests/${uid}`);
+    const groupsQuery = db().collection("goldExchangeGroups").where("ownerUid", "==", uid);
+    const [userSnap, requestSnap, groupsSnap] = await Promise.all([
+      userRef.get(),
+      requestRef.get(),
+      groupsQuery.get(),
+    ]);
+
+    const balanceMg = bonusBalanceMilliGrams(userSnap.data());
+    const requestData = requestSnap.exists ? requestSnap.data() : undefined;
+    const requestStatus = String(requestData?.status || "");
+    const requestedMg = requestStatus === "requested"
+      ? toNonNegativeInteger(requestData?.amountMilliGrams)
+      : 0;
+
+    const eligibleGroups = groupsSnap.docs
+      .map((document) => {
+        const data = document.data() || {};
+        return {
+          groupId: document.id,
+          status: String(data.repStatus || "requested"),
+          visitDate: String(data.visitDate || ""),
+          visitTime: String(data.visitTime || ""),
+          totalG: Number(data.totalG || 0),
+        };
+      })
+      .filter((group) => !["completed", "canceled", "rejected"].includes(group.status))
+      .sort((a, b) => `${a.visitDate} ${a.visitTime}`.localeCompare(`${b.visitDate} ${b.visitTime}`));
+
+    return {
+      ok: true,
+      balanceG: balanceMg / 1000,
+      spendableG: Math.max(0, balanceMg - requestedMg) / 1000,
+      request: publicBonusUsageRequest(requestData),
+      eligibleGroups,
+    };
+  }
+);
+
+export const bonusRequestGoldUsage = onCall<{ groupId: string }>(
+  { region: "asia-northeast3" },
+  async (req) => {
+    const uid = req.auth?.uid;
+    if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+
+    const groupId = cleanGroupId(req.data?.groupId);
+    if (!groupId) {
+      throw new HttpsError("invalid-argument", "적립 순금을 사용할 금교환 예약을 선택해 주세요.");
+    }
+
+    const userRef = db().doc(`users/${uid}`);
+    const requestRef = db().doc(`bonusGoldRedemptionRequests/${uid}`);
+    const groupRef = db().doc(`goldExchangeGroups/${groupId}`);
+
+    const result = await db().runTransaction(async (tx) => {
+      const [userSnap, requestSnap, groupSnap] = await Promise.all([
+        tx.get(userRef),
+        tx.get(requestRef),
+        tx.get(groupRef),
+      ]);
+
+      if (!groupSnap.exists || String(groupSnap.get("ownerUid") || "") !== uid) {
+        throw new HttpsError("not-found", "본인의 금교환 예약을 찾을 수 없습니다.");
+      }
+      const groupStatus = String(groupSnap.get("repStatus") || "requested");
+      if (["completed", "canceled", "rejected"].includes(groupStatus)) {
+        throw new HttpsError("failed-precondition", "종료된 금교환 예약에는 사용할 수 없습니다.");
+      }
+
+      const existing = requestSnap.exists ? requestSnap.data() : undefined;
+      if (existing?.status === "requested") {
+        if (String(existing.groupId || "") !== groupId) {
+          throw new HttpsError("failed-precondition", "이미 다른 예약에 사용 신청 중입니다.");
+        }
+        return {
+          createdNow: false,
+          balanceMg: bonusBalanceMilliGrams(userSnap.data()),
+          request: publicBonusUsageRequest(existing),
+        };
+      }
+
+      const balanceMg = bonusBalanceMilliGrams(userSnap.data());
+      if (balanceMg <= 0) {
+        throw new HttpsError("failed-precondition", "사용 가능한 적립 순금이 없습니다.");
+      }
+
+      const now = FieldValue.serverTimestamp();
+      const requestCode = String(randomInt(100000, 1000000));
+      const visitDate = String(groupSnap.get("visitDate") || "");
+      const visitTime = String(groupSnap.get("visitTime") || "");
+      const requestData = {
+        uid,
+        groupId,
+        status: "requested" as BonusUsageStatus,
+        amountMilliGrams: balanceMg,
+        amountG: balanceMg / 1000,
+        requestCode,
+        visitDate,
+        visitTime,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      tx.set(requestRef, requestData);
+      tx.set(groupRef, {
+        bonusGoldUsageStatus: "requested",
+        bonusGoldRequestUid: uid,
+        bonusGoldRequestedMilliGrams: balanceMg,
+        bonusGoldRequestedG: balanceMg / 1000,
+        bonusGoldRequestedAt: now,
+        updatedAt: now,
+      }, { merge: true });
+
+      return {
+        createdNow: true,
+        balanceMg,
+        request: {
+          status: "requested" as BonusUsageStatus,
+          amountG: balanceMg / 1000,
+          groupId,
+          requestCode,
+          visitDate,
+          visitTime,
+        },
+      };
+    });
+
+    if (result.createdNow) {
+      const amountG = result.balanceMg / 1000;
+      await Promise.allSettled([
+        addNotificationForUser(uid, {
+          type: "bonus_gold_usage_requested",
+          title: "적립 순금 사용 신청 완료",
+          body: `${amountG.toFixed(2)}g 사용 신청을 매장에서 확인합니다. 6자리 확인 코드를 준비해 주세요.`,
+          link: "/profile",
+          meta: { groupId, amountG },
+        }),
+        addNotificationForAdmins({
+          type: "admin_bonus_gold_usage_requested",
+          title: "적립 순금 사용 신청",
+          body: `${amountG.toFixed(2)}g 사용 확인이 필요한 금교환 예약입니다.`,
+          link: `/admin/gold-exchange?groupId=${encodeURIComponent(groupId)}`,
+          meta: { groupId, customerUid: uid, amountG },
+        }),
+      ]);
+    }
+
+    return {
+      ok: true,
+      balanceG: result.balanceMg / 1000,
+      spendableG: 0,
+      request: result.request,
+    };
+  }
+);
+
+export const bonusCancelGoldUsage = onCall(
+  { region: "asia-northeast3" },
+  async (req) => {
+    const uid = req.auth?.uid;
+    if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+
+    const requestRef = db().doc(`bonusGoldRedemptionRequests/${uid}`);
+    const result = await db().runTransaction(async (tx) => {
+      const requestSnap = await tx.get(requestRef);
+      if (!requestSnap.exists) {
+        throw new HttpsError("not-found", "적립 순금 사용 신청을 찾을 수 없습니다.");
+      }
+      const data = requestSnap.data() || {};
+      if (data.status !== "requested") {
+        throw new HttpsError("failed-precondition", "매장 확정 전 신청만 취소할 수 있습니다.");
+      }
+
+      const groupId = cleanGroupId(data.groupId);
+      const groupRef = db().doc(`goldExchangeGroups/${groupId}`);
+      const groupSnap = await tx.get(groupRef);
+      const now = FieldValue.serverTimestamp();
+      tx.update(requestRef, { status: "canceled", canceledAt: now, updatedAt: now });
+      if (groupSnap.exists && String(groupSnap.get("bonusGoldRequestUid") || "") === uid) {
+        tx.set(groupRef, {
+          bonusGoldUsageStatus: "canceled",
+          bonusGoldCanceledAt: now,
+          updatedAt: now,
+        }, { merge: true });
+      }
+      return {
+        groupId,
+        amountG: toNonNegativeInteger(data.amountMilliGrams) / 1000,
+      };
+    });
+
+    await Promise.allSettled([
+      addNotificationForUser(uid, {
+        type: "bonus_gold_usage_canceled",
+        title: "적립 순금 사용 신청 취소",
+        body: `${result.amountG.toFixed(2)}g이 다시 사용 가능한 상태입니다.`,
+        link: "/profile",
+        meta: { groupId: result.groupId, amountG: result.amountG },
+      }),
+      addNotificationForAdmins({
+        type: "admin_bonus_gold_usage_canceled",
+        title: "적립 순금 사용 신청 취소",
+        body: "고객이 적립 순금 사용 신청을 취소했습니다.",
+        link: `/admin/gold-exchange?groupId=${encodeURIComponent(result.groupId)}`,
+        meta: { groupId: result.groupId, customerUid: uid },
+      }),
+    ]);
+
+    return { ok: true, ...result };
+  }
+);
+
+export const bonusAdminConfirmGoldUsage = onCall<{
+  groupId: string;
+  requestCode: string;
+  finalRecognizedG: number;
+}>(
+  { region: "asia-northeast3" },
+  async (req) => {
+    requireAdmin((req.auth?.token || {}) as Record<string, unknown>);
+    const adminUid = req.auth?.uid || "admin";
+    const groupId = cleanGroupId(req.data?.groupId);
+    const requestCode = cleanUsageCode(req.data?.requestCode);
+    const finalRecognizedG = Number(req.data?.finalRecognizedG);
+
+    if (!groupId || requestCode.length !== 6) {
+      throw new HttpsError("invalid-argument", "교환번호와 고객의 6자리 확인 코드가 필요합니다.");
+    }
+    if (!Number.isFinite(finalRecognizedG) || finalRecognizedG <= 0 || finalRecognizedG > 1000000) {
+      throw new HttpsError("invalid-argument", "현장에서 확인한 인정 순금 중량을 입력해 주세요.");
+    }
+
+    const exchangeQuery = db().collection("goldExchanges").where("groupId", "==", groupId);
+    let exchangeDocs: FirebaseFirestore.DocumentSnapshot[] = (await exchangeQuery.get()).docs;
+    if (exchangeDocs.length === 0) {
+      const single = await db().doc(`goldExchanges/${groupId}`).get();
+      if (single.exists) exchangeDocs = [single];
+    }
+    if (exchangeDocs.length === 0) throw new HttpsError("not-found", "금교환 예약을 찾을 수 없습니다.");
+
+    const groupRef = db().doc(`goldExchangeGroups/${groupId}`);
+    const result = await db().runTransaction(async (tx) => {
+      const groupSnap = await tx.get(groupRef);
+      if (!groupSnap.exists) throw new HttpsError("not-found", "금교환 예약 요약을 찾을 수 없습니다.");
+      const groupData = groupSnap.data() || {};
+      const uid = String(groupData.bonusGoldRequestUid || groupData.ownerUid || "");
+      if (!uid || groupData.bonusGoldUsageStatus !== "requested") {
+        throw new HttpsError("failed-precondition", "확인 대기 중인 적립 순금 신청이 없습니다.");
+      }
+
+      const userRef = db().doc(`users/${uid}`);
+      const requestRef = db().doc(`bonusGoldRedemptionRequests/${uid}`);
+      const ledgerRef = userRef.collection("ledger").doc(`redeem_${groupId}`);
+      const [userSnap, requestSnap, ledgerSnap] = await Promise.all([
+        tx.get(userRef),
+        tx.get(requestRef),
+        tx.get(ledgerRef),
+      ]);
+      const requestData = requestSnap.exists ? requestSnap.data() || {} : {};
+      if (requestData.status === "used" && String(requestData.groupId || "") === groupId) {
+        return {
+          alreadyUsed: true,
+          uid,
+          amountG: Number(requestData.amountG || 0),
+          finalRecognizedG: Number(requestData.finalRecognizedG || 0),
+          finalAppliedG: Number(requestData.finalAppliedG || 0),
+        };
+      }
+      if (
+        requestData.status !== "requested" ||
+        String(requestData.groupId || "") !== groupId ||
+        cleanUsageCode(requestData.requestCode) !== requestCode
+      ) {
+        throw new HttpsError("failed-precondition", "고객의 6자리 확인 코드가 일치하지 않습니다.");
+      }
+      if (ledgerSnap.exists) {
+        throw new HttpsError("already-exists", "이미 차감 처리된 적립 순금입니다.");
+      }
+
+      const amountMg = toNonNegativeInteger(requestData.amountMilliGrams);
+      const balanceMg = bonusBalanceMilliGrams(userSnap.data());
+      if (amountMg <= 0 || balanceMg < amountMg) {
+        throw new HttpsError("failed-precondition", "고객의 적립 순금 잔액을 다시 확인해 주세요.");
+      }
+
+      const nextBalanceMg = balanceMg - amountMg;
+      const amountG = amountMg / 1000;
+      const recognizedG = roundTo3(finalRecognizedG);
+      const finalAppliedG = roundTo3(recognizedG + amountG);
+      const now = FieldValue.serverTimestamp();
+
+      tx.set(userRef, {
+        bonusGoldMilliGrams: nextBalanceMg,
+        bonusGoldG: nextBalanceMg / 1000,
+        bonusGoldUpdatedAt: now,
+      }, { merge: true });
+      tx.update(requestRef, {
+        status: "used",
+        finalRecognizedG: recognizedG,
+        finalAppliedG,
+        usedAt: now,
+        usedBy: adminUid,
+        updatedAt: now,
+      });
+      tx.create(ledgerRef, {
+        direction: "debit",
+        amountMilliGrams: amountMg,
+        amountG,
+        source: "gold_exchange_redemption",
+        groupId,
+        finalRecognizedG: recognizedG,
+        finalAppliedG,
+        createdAt: now,
+        createdBy: adminUid,
+      });
+      tx.set(groupRef, {
+        bonusGoldUsageStatus: "used",
+        bonusGoldUsedMilliGrams: amountMg,
+        bonusGoldUsedG: amountG,
+        bonusGoldUsedAt: now,
+        bonusGoldUsedBy: adminUid,
+        finalRecognizedG: recognizedG,
+        finalAppliedG,
+        updatedAt: now,
+      }, { merge: true });
+      exchangeDocs.forEach((document) => {
+        tx.set(document.ref, {
+          bonusGoldUsageStatus: "used",
+          bonusGoldUsedMilliGrams: amountMg,
+          bonusGoldUsedG: amountG,
+          bonusGoldUsedAt: now,
+          bonusGoldUsedBy: adminUid,
+          finalRecognizedG: recognizedG,
+          finalAppliedG,
+          updatedAt: now,
+        }, { merge: true });
+      });
+
+      return { alreadyUsed: false, uid, amountG, finalRecognizedG: recognizedG, finalAppliedG };
+    });
+
+    if (!result.alreadyUsed) {
+      await addNotificationForUser(result.uid, {
+        type: "bonus_gold_usage_completed",
+        title: "적립 순금 사용 완료",
+        body: `적립 순금 ${result.amountG.toFixed(2)}g을 적용해 최종 ${result.finalAppliedG.toFixed(3)}g으로 확인했습니다.`,
+        link: "/my-exchanges",
+        meta: { groupId, amountG: result.amountG, finalAppliedG: result.finalAppliedG },
+      });
+    }
+    return { ok: true, groupId, ...result };
+  }
+);
+
+export const bonusAdminCancelGoldUsage = onCall<{ groupId: string; reason?: string }>(
+  { region: "asia-northeast3" },
+  async (req) => {
+    requireAdmin((req.auth?.token || {}) as Record<string, unknown>);
+    const groupId = cleanGroupId(req.data?.groupId);
+    const reason = String(req.data?.reason || "매장 확인 중 신청 취소").trim().slice(0, 200);
+    if (!groupId) throw new HttpsError("invalid-argument", "교환번호가 필요합니다.");
+
+    const groupRef = db().doc(`goldExchangeGroups/${groupId}`);
+    const result = await db().runTransaction(async (tx) => {
+      const groupSnap = await tx.get(groupRef);
+      if (!groupSnap.exists || groupSnap.get("bonusGoldUsageStatus") !== "requested") {
+        throw new HttpsError("failed-precondition", "취소할 적립 순금 사용 신청이 없습니다.");
+      }
+      const uid = String(groupSnap.get("bonusGoldRequestUid") || "");
+      const requestRef = db().doc(`bonusGoldRedemptionRequests/${uid}`);
+      const requestSnap = await tx.get(requestRef);
+      if (!requestSnap.exists || requestSnap.get("status") !== "requested") {
+        throw new HttpsError("failed-precondition", "고객의 사용 신청 상태를 다시 확인해 주세요.");
+      }
+      const amountG = toNonNegativeInteger(requestSnap.get("amountMilliGrams")) / 1000;
+      const now = FieldValue.serverTimestamp();
+      tx.update(requestRef, { status: "canceled", reason, canceledAt: now, updatedAt: now });
+      tx.set(groupRef, {
+        bonusGoldUsageStatus: "canceled",
+        bonusGoldCanceledAt: now,
+        bonusGoldCanceledBy: req.auth?.uid || "admin",
+        bonusGoldCancelReason: reason,
+        updatedAt: now,
+      }, { merge: true });
+      return { uid, amountG };
+    });
+
+    await addNotificationForUser(result.uid, {
+      type: "bonus_gold_usage_canceled",
+      title: "적립 순금 사용 신청 취소",
+      body: `${result.amountG.toFixed(2)}g 사용 신청이 취소되어 다시 사용할 수 있습니다.`,
+      link: "/profile",
+      meta: { groupId, amountG: result.amountG, reason },
+    });
+    return { ok: true, groupId, ...result };
+  }
+);
+
+async function reconcileBonusUsageForGroup(args: {
+  groupId: string;
+  targetStatus: string;
+  adminUid: string;
+}): Promise<void> {
+  const { groupId, targetStatus, adminUid } = args;
+  const groupRef = db().doc(`goldExchangeGroups/${groupId}`);
+  const result = await db().runTransaction(async (tx) => {
+    const groupSnap = await tx.get(groupRef);
+    if (!groupSnap.exists) return null;
+    const groupData = groupSnap.data() || {};
+    const usageStatus = String(groupData.bonusGoldUsageStatus || "");
+    const uid = String(groupData.bonusGoldRequestUid || groupData.ownerUid || "");
+    if (!uid || !["requested", "used"].includes(usageStatus)) return null;
+
+    const requestRef = db().doc(`bonusGoldRedemptionRequests/${uid}`);
+    const requestSnap = await tx.get(requestRef);
+    const requestData = requestSnap.exists ? requestSnap.data() || {} : {};
+    const now = FieldValue.serverTimestamp();
+
+    if (usageStatus === "requested") {
+      if (!["canceled", "rejected"].includes(targetStatus)) return null;
+      if (requestData.status === "requested" && String(requestData.groupId || "") === groupId) {
+        tx.update(requestRef, {
+          status: "canceled",
+          reason: `exchange_${targetStatus}`,
+          canceledAt: now,
+          updatedAt: now,
+        });
+      }
+      tx.set(groupRef, {
+        bonusGoldUsageStatus: "canceled",
+        bonusGoldCanceledAt: now,
+        bonusGoldCanceledBy: adminUid,
+        updatedAt: now,
+      }, { merge: true });
+      return {
+        uid,
+        amountG: toNonNegativeInteger(groupData.bonusGoldRequestedMilliGrams) / 1000,
+        restored: false,
+      };
+    }
+
+    const amountMg = toNonNegativeInteger(groupData.bonusGoldUsedMilliGrams);
+    if (amountMg <= 0) return null;
+    const userRef = db().doc(`users/${uid}`);
+    const restoreLedgerRef = userRef.collection("ledger").doc(`restore_${groupId}`);
+    const [userSnap, restoreLedgerSnap] = await Promise.all([
+      tx.get(userRef),
+      tx.get(restoreLedgerRef),
+    ]);
+    if (restoreLedgerSnap.exists) return null;
+
+    const nextBalanceMg = bonusBalanceMilliGrams(userSnap.data()) + amountMg;
+    tx.set(userRef, {
+      bonusGoldMilliGrams: nextBalanceMg,
+      bonusGoldG: nextBalanceMg / 1000,
+      bonusGoldUpdatedAt: now,
+    }, { merge: true });
+    if (requestSnap.exists && String(requestData.groupId || "") === groupId) {
+      tx.update(requestRef, {
+        status: "restored",
+        restoredAt: now,
+        restoredBy: adminUid,
+        restoreReason: `exchange_${targetStatus}`,
+        updatedAt: now,
+      });
+    }
+    tx.create(restoreLedgerRef, {
+      direction: "credit",
+      amountMilliGrams: amountMg,
+      amountG: amountMg / 1000,
+      source: "gold_exchange_redemption_restore",
+      groupId,
+      reason: `exchange_${targetStatus}`,
+      createdAt: now,
+      createdBy: adminUid,
+    });
+    tx.set(groupRef, {
+      bonusGoldUsageStatus: "restored",
+      bonusGoldRestoredAt: now,
+      bonusGoldRestoredBy: adminUid,
+      updatedAt: now,
+    }, { merge: true });
+    return { uid, amountG: amountMg / 1000, restored: true };
+  });
+
+  if (!result) return;
+  await addNotificationForUser(result.uid, {
+    type: result.restored ? "bonus_gold_usage_restored" : "bonus_gold_usage_canceled",
+    title: result.restored ? "적립 순금이 복구되었습니다" : "적립 순금 사용 신청 취소",
+    body: result.restored
+      ? `교환 상태 변경으로 ${result.amountG.toFixed(2)}g이 다시 적립되었습니다.`
+      : `${result.amountG.toFixed(2)}g 사용 신청이 취소되었습니다.`,
+    link: "/profile",
+    meta: { groupId, amountG: result.amountG, targetStatus },
+  });
+}

@@ -56,7 +56,7 @@ const Button = styled.button`
   padding: 8px 12px;
   border: none;
   border-radius: 4px;
-  background: ${({ $variant }) => ($variant === "delete" ? "#e74c3c" : "#007bff")};
+  background: ${({ $variant, theme }) => ($variant === "delete" ? theme.colors.error : theme.gradients.primary)};
   color: #fff;
   cursor: pointer;
   opacity: ${({ disabled }) => (disabled ? 0.6 : 1)};

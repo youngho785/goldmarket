@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import { DollarSign, Sparkles, BadgeDollarSign } from "lucide-react";
 
 /**

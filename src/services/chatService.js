@@ -79,7 +79,7 @@ export async function createOrGetChatRoom(productId, sellerId, buyerId) {
       try { await fixChatDocShapeIfNeeded(chatRef, [sellerId, buyerId]); } catch {}
       return chatRoomId;
     }
-  } catch (e) {
+  } catch {
     // 그냥 진행 (네트워크 일시 오류일 수 있음)
   }
 
@@ -121,7 +121,7 @@ export async function createOrGetChatRoom(productId, sellerId, buyerId) {
         try { await fixChatDocShapeIfNeeded(foundRef, [sellerId, buyerId]); } catch {}
         return found.id;
       }
-    } catch (fallbackErr) {
+    } catch {
       // 무시하고 최종 throw
     }
     // 최종 실패

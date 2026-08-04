@@ -4,11 +4,11 @@ import styled from "styled-components";
 import ExchangeList from "../../components/admin/ExchangeList";
 
 const Page = styled.div`
-  padding: 20px;
+  padding: 0 0 24px;
 `;
 const H1 = styled.h1`
   margin-bottom: 12px;
-  color: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.text};
 `;
 const Legend = styled.div`
   display: flex;
@@ -20,9 +20,9 @@ const Legend = styled.div`
 `;
 const Pill = styled.span`
   display: inline-block;
-  padding: 4px 8px;
+  padding: 5px 9px;
   border-radius: 9999px;
-  background: ${({ theme }) => theme.colors.surface};
+  background: ${({ theme }) => theme.colors.surfaceAlt};
   border: 1px solid ${({ theme }) => theme.colors.border};
 `;
 

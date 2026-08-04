@@ -141,7 +141,7 @@ export default function TapTeasers() {
             <MiniRow>
               <Pill>5문항</Pill>
               <Pill>30초</Pill>
-              <Pill>AI 해설</Pill>
+              <Pill>정답 해설</Pill>
             </MiniRow>
             <MiniRow>
               <div style={{ height: 36, background: "#e5e7eb", borderRadius: 8, flex: 1 }} />
@@ -162,7 +162,7 @@ export default function TapTeasers() {
           <Headline>오늘 교환하면 받는 <b>골드바 조합</b></Headline>
           <Preview>
             <MiniRow>
-              <Pill>예상 순금: 37.5g</Pill>
+            <Pill>계산 예시: 순금 37.5g</Pill>
               <Pill>잔여: 0.8g</Pill>
             </MiniRow>
             <MiniRow>

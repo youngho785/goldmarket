@@ -2,6 +2,28 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { fileURLToPath, URL } from 'node:url';
+import { Buffer } from 'node:buffer';
+import ogSocialCardBase64 from './src/assets/ogSocialCard.js';
+import goldVerificationImage from './src/assets/goldVerificationImage.js';
+
+const emitBrandAssets = {
+  name: 'emit-koreagoldmarket-brand-assets',
+  generateBundle() {
+    this.emitFile({
+      type: 'asset',
+      fileName: 'og.jpg',
+      source: Buffer.from(ogSocialCardBase64, 'base64'),
+    });
+    this.emitFile({
+      type: 'asset',
+      fileName: 'gold-verification.jpg',
+      source: Buffer.from(
+        goldVerificationImage.replace(/^data:image\/jpeg;base64,/, ''),
+        'base64'
+      ),
+    });
+  },
+};
 
 export default defineConfig(({ mode }) => {
   const isProd = mode === 'production';
@@ -25,7 +47,8 @@ export default defineConfig(({ mode }) => {
             ]
           ]
         }
-      })
+      }),
+      emitBrandAssets,
     ],
 
     // SPA 기준 루트 경로(Firebase Hosting면 '/')
