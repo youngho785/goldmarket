@@ -9,9 +9,9 @@ import { claimGoldQuizBonus, getGoldQuizBonusStatus } from "@/services/quizClien
    UI
    ============================ */
 const Page = styled.main`
-  --quiz-gold: #af8434;
-  --quiz-gold-deep: #7d5a1e;
-  --quiz-navy: #0d2034;
+  --quiz-gold: ${({ theme }) => theme.colors.gold};
+  --quiz-gold-deep: ${({ theme }) => theme.colors.secondaryDark};
+  --quiz-navy: ${({ theme }) => theme.colors.primary};
 
   position: relative;
   isolation: isolate;
@@ -32,7 +32,7 @@ const Page = styled.main`
     width: min(320px, 54vw);
     height: min(320px, 54vw);
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(198, 163, 75, 0.13), rgba(198, 163, 75, 0) 68%);
+    background: radial-gradient(circle, color-mix(in srgb, var(--quiz-gold) 15%, transparent), transparent 68%);
     pointer-events: none;
   }
 `;
@@ -86,7 +86,7 @@ const Card = styled.section`
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 0;
   padding: clamp(18px, 4vw, 28px);
-  box-shadow: 0 18px 48px rgba(23, 32, 51, 0.09);
+  box-shadow: ${({ theme }) => theme.shadows.card};
 
   &::before {
     content: "";
@@ -103,12 +103,12 @@ const QCard = styled.div`
   padding: clamp(16px, 3vw, 20px);
   margin: 14px 0;
   background: ${({ theme }) => theme.colors.surface};
-  box-shadow: 0 4px 16px rgba(23, 32, 51, 0.035);
+  box-shadow: ${({ theme }) => theme.shadows.xs};
   transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
 
   &:focus-within {
     border-color: ${({ theme }) => theme.colors.primary};
-    box-shadow: 0 0 0 3px rgba(45, 106, 227, 0.11), 0 8px 22px rgba(23, 32, 51, 0.07);
+    box-shadow: ${({ theme }) => theme.focus.ring};
   }
 `;
 const QuestionTitle = styled.h3`
@@ -130,11 +130,11 @@ const QuestionTitle = styled.h3`
     display: inline-grid;
     place-items: center;
     border-radius: 0;
-    background: linear-gradient(145deg, var(--quiz-navy), #2b3851);
-    color: #f6e7b0;
+    background: ${({ theme }) => theme.gradients.primary};
+    color: ${({ theme }) => theme.colors.goldLight};
     font-size: 14px;
     font-weight: 900;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, ${({ theme }) => theme.on.primary} 12%, transparent);
   }
 `;
 
@@ -156,19 +156,19 @@ const Choice = styled.label`
   transition: background 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
 
   &:hover {
-    border-color: rgba(45, 106, 227, 0.38);
-    background: rgba(45, 106, 227, 0.055);
+    border-color: ${({ theme }) => theme.colors.primary};
+    background: ${({ theme }) => theme.colors.primaryLight};
     transform: translateY(-1px);
   }
   &.wrong {
-    background: ${({ theme }) => theme.semantic?.alertErrorBg || "rgba(239,68,68,.08)"};
-    border-color: rgba(239, 68, 68, 0.42);
-    box-shadow: inset 3px 0 0 #ef4444;
+    background: ${({ theme }) => theme.semantic.alertErrorBg};
+    border-color: ${({ theme }) => theme.colors.error};
+    box-shadow: inset 3px 0 0 ${({ theme }) => theme.colors.error};
   }
   &.correct {
-    background: ${({ theme }) => theme.semantic?.alertSuccessBg || "rgba(16,185,129,.08)"};
-    border-color: rgba(22, 163, 74, 0.42);
-    box-shadow: inset 3px 0 0 #16a34a;
+    background: ${({ theme }) => theme.semantic.alertSuccessBg};
+    border-color: ${({ theme }) => theme.colors.success};
+    box-shadow: inset 3px 0 0 ${({ theme }) => theme.colors.success};
   }
 
   input[type="radio"]{
@@ -208,14 +208,14 @@ const Button = styled.button`
   letter-spacing: -0.01em;
   cursor: pointer;
   text-decoration: none;
-  background: ${({ theme }) => theme.gradients?.primary || theme.colors.primary};
-  color: ${({ theme }) => theme.on?.primary || "#fff"};
-  box-shadow: 0 8px 18px rgba(45, 106, 227, 0.2);
+  background: ${({ theme }) => theme.gradients.primary};
+  color: ${({ theme }) => theme.on.primary};
+  box-shadow: ${({ theme }) => theme.shadows.card};
   transition: transform 150ms ease, box-shadow 150ms ease, filter 150ms ease;
 
   &:hover:not(:disabled) {
     transform: translateY(-1px);
-    box-shadow: 0 11px 22px rgba(45, 106, 227, 0.25);
+    box-shadow: ${({ theme }) => theme.shadows.hover};
     filter: saturate(0.94);
   }
   &:focus-visible {
@@ -223,8 +223,8 @@ const Button = styled.button`
     outline-offset: 3px;
   }
   &:disabled {
-    background: #aeb4bd;
-    color: #fff;
+    background: ${({ theme }) => theme.colors.disabled};
+    color: ${({ theme }) => theme.on.primary};
     box-shadow: none;
     cursor: not-allowed;
     opacity: 0.72;
@@ -238,7 +238,7 @@ const Ghost = styled(Button)`
 
   &:hover:not(:disabled) {
     background: ${({ theme }) => theme.semantic?.buttonAltBg || theme.colors.surface};
-    box-shadow: 0 7px 16px rgba(23, 32, 51, 0.08);
+    box-shadow: ${({ theme }) => theme.shadows.card};
   }
 `;
 const Help = styled.p`
@@ -252,8 +252,8 @@ const Banner = styled.div`
   padding: 17px 18px;
   border-radius: 0;
   margin: 18px 0 22px;
-  background: linear-gradient(135deg, rgba(198, 163, 75, 0.16), rgba(45, 106, 227, 0.07));
-  border: 1px solid rgba(198, 163, 75, 0.48);
+  background: ${({ theme }) => theme.gradients.recommendation};
+  border: 1px solid ${({ theme }) => theme.colors.gold};
   box-shadow: inset 4px 0 0 var(--quiz-gold);
   color: ${({ theme }) => theme.colors.text};
   line-height: 1.6;
@@ -272,7 +272,7 @@ const ProgressWrap = styled.div`
   border-radius: 999px;
   overflow: hidden;
   margin: 2px 0 22px;
-  box-shadow: inset 0 1px 2px rgba(23, 32, 51, 0.08);
+  box-shadow: inset ${({ theme }) => theme.shadows.xs};
 `;
 const ProgressBar = styled.div`
   height: 100%;
@@ -285,8 +285,8 @@ const ErrorText = styled.p`
   margin: 16px 0 0;
   padding: 11px 13px;
   border-radius: 0;
-  color: ${({ theme }) => theme.semantic?.alertErrorText || theme.colors.error};
-  background: ${({ theme }) => theme.semantic?.alertErrorBg || "rgba(239,68,68,.08)"};
+  color: ${({ theme }) => theme.semantic.alertErrorText};
+  background: ${({ theme }) => theme.semantic.alertErrorBg};
   font-weight: 750;
   line-height: 1.55;
 `;
@@ -296,8 +296,8 @@ const Success = styled.p`
   margin: 0;
   padding: 6px 10px;
   border-radius: 999px;
-  color: ${({ theme }) => theme.semantic?.alertSuccessText || theme.colors.success};
-  background: ${({ theme }) => theme.semantic?.alertSuccessBg || "rgba(16,185,129,.08)"};
+  color: ${({ theme }) => theme.semantic.alertSuccessText};
+  background: ${({ theme }) => theme.semantic.alertSuccessBg};
   font-weight: 850;
 `;
 
@@ -309,14 +309,14 @@ const HintBox = styled.div`
   line-height: 1.55;
 
   &.wrong {
-    background: ${({ theme }) => theme.semantic?.alertErrorBg || "rgba(239,68,68,.08)"};
-    border: 1px solid rgba(239, 68, 68, 0.35);
-    color: ${({ theme }) => theme.semantic?.alertErrorText || "#b91c1c"};
+    background: ${({ theme }) => theme.semantic.alertErrorBg};
+    border: 1px solid ${({ theme }) => theme.colors.error};
+    color: ${({ theme }) => theme.semantic.alertErrorText};
   }
   &.correct {
-    background: ${({ theme }) => theme.semantic?.alertSuccessBg || "rgba(16,185,129,.08)"};
-    border: 1px solid rgba(22, 163, 74, 0.35);
-    color: ${({ theme }) => theme.semantic?.alertSuccessText || "#047857"};
+    background: ${({ theme }) => theme.semantic.alertSuccessBg};
+    border: 1px solid ${({ theme }) => theme.colors.success};
+    color: ${({ theme }) => theme.semantic.alertSuccessText};
   }
 
   @media (prefers-reduced-motion: reduce) {

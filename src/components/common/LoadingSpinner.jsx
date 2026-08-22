@@ -9,8 +9,8 @@ const spin = keyframes`
 `;
 
 const Spinner = styled.div`
-  border: 8px solid #f3f3f3; /* 연한 회색 */
-  border-top: 8px solid ${({ theme }) => theme.colors.primary || "#3498db"}; /* 테마의 메인 색상 */
+  border: 8px solid ${({ theme }) => theme.colors.surfaceAlt};
+  border-top: 8px solid ${({ theme }) => theme.colors.gold};
   border-radius: 50%;
   width: 60px;
   height: 60px;

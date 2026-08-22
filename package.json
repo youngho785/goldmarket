@@ -10,26 +10,23 @@
     "lint": "eslint .",
     "fix": "eslint --fix .",
     "preview": "vite preview",
-
     "// 설명": "빌드 직전에 sitemap.xml / rss.xml 자동 생성",
     "prebuild": "node scripts/generate-sitemap.mjs",
-
-    
     "gen:sitemap": "node scripts/generate-sitemap.mjs",
-
-    "migrate:products": "node scripts/migrate-products-visibility.mjs",
-
-    
-    "deploy": "npm run build && firebase deploy --only hosting"
+    "test:rules": "firebase emulators:exec --only firestore \"npm --prefix tests/rules test\"",
+    "deploy": "npm run build && firebase deploy --only hosting",
+    "android:prepare": "npm run build && npx cap sync android"
   },
   "dependencies": {
-    "chart.js": "^4.5.0",
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/core": "^8.5.0",
+    "@capacitor/push-notifications": "^8.1.2",
     "date-fns": "^4.1.0",
     "firebase": "^12.1.0",
     "framer-motion": "^12.23.12",
     "lucide-react": "^0.541.0",
     "react": "^19.1.1",
-    "react-chartjs-2": "^5.3.0",
     "react-content-loader": "^7.1.1",
     "react-datepicker": "^8.7.0",
     "react-dom": "^19.1.1",
@@ -38,6 +35,7 @@
     "styled-components": "^6.1.19"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.0",
     "@eslint/js": "^9.33.0",
     "@types/react": "^19.1.10",
     "@types/react-dom": "^19.1.7",

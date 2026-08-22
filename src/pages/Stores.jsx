@@ -161,7 +161,7 @@ const VisitGuide = styled.aside`
   padding: clamp(30px, 5vw, 54px);
   border-left: 1px solid ${({ theme }) => theme.colors.border};
   background:
-    linear-gradient(rgba(13, 32, 52, .028) 1px, transparent 1px),
+    linear-gradient(color-mix(in srgb, ${({ theme }) => theme.colors.primary} 4%, transparent) 1px, transparent 1px),
     ${({ theme }) => theme.colors.surfaceAlt};
   background-size: 100% 31px, auto;
 

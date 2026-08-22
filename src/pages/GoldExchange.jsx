@@ -1,6 +1,7 @@
 // src/pages/GoldExchange.jsx
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import styled, { keyframes, css } from "styled-components";
+import { useLocation } from "react-router-dom";
 import { useAuthContext } from "../context/AuthContext";
 import { db } from "../firebase/firebase";
 import { doc, onSnapshot } from "firebase/firestore";
@@ -8,9 +9,12 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { addDays, format } from "date-fns";
 import GoldExchangeTracker from "../components/GoldExchangeTracker";
+import PushPermissionPrompt from "../components/common/PushPermissionPrompt";
 import shopLogo from "@/assets/logo.webp";
 import useGuardAction from "@/hooks/useGuardAction";
 import useReservedSlots from "@/hooks/useReservedSlots"; // ✅ 예약 슬롯 훅
+import useBookingAvailability, { getBookingAvailabilityEntry } from "@/hooks/useBookingAvailability";
+import { nudgeAppInstall } from "@/hooks/useInstallPrompt";
 
 // 🔗 공용 goldRates 모듈
 import {
@@ -74,6 +78,22 @@ const PageLead = styled.p`
   max-width: 700px;
   margin: 13px 0 0;
   color: ${({ theme }) => theme.colors.textSecondary};
+`;
+
+const RebookNotice = styled.div`
+  max-width: 760px;
+  margin: 18px 0 0;
+  padding: 12px 14px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-left: 3px solid ${({ theme }) => theme.colors.secondary};
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: .92rem;
+  line-height: 1.6;
+
+  strong {
+    color: ${({ theme }) => theme.colors.text};
+  }
 `;
 
 const FlowTrack = styled.ol`
@@ -207,6 +227,60 @@ const ConsentLink = styled.a`
   text-underline-offset: 2px;
 `;
 
+const PrivacyModalBackdrop = styled.div`
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.56);
+`;
+
+const PrivacyModal = styled.div`
+  width: min(920px, 100%);
+  height: min(82svh, 820px);
+  display: grid;
+  grid-template-rows: auto 1fr;
+  overflow: hidden;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.surface};
+  box-shadow: ${({ theme }) => theme.shadows.card};
+`;
+
+const PrivacyModalHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+`;
+
+const PrivacyModalTitle = styled.strong`
+  color: ${({ theme }) => theme.colors.text};
+  font-size: 1rem;
+`;
+
+const PrivacyCloseButton = styled.button`
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  border: 1px solid ${({ theme }) => theme.colors.borderStrong};
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
+  font-weight: 800;
+  cursor: pointer;
+`;
+
+const PrivacyFrame = styled.iframe`
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: ${({ theme }) => theme.colors.surface};
+`;
+
 const Input = styled.input`
   padding: 11px 12px;
   border: 1px solid ${({ theme }) => theme.colors.border};
@@ -235,7 +309,7 @@ const Button = styled.button`
   cursor: pointer;
   transition: filter .18s ease, transform .12s ease;
   &:hover { filter: brightness(1.03); transform: translateY(-1px); }
-  &:disabled { background: #c7cbd1; cursor: not-allowed; }
+  &:disabled { background: ${({ theme }) => theme.colors.disabled}; cursor: not-allowed; }
 `;
 
 const OutlineButton = styled(Button)`
@@ -258,7 +332,7 @@ const SmallButton = styled(Button)`
 `;
 
 const RemoveButton = styled(SmallButton)`
-  background: #ef4444;
+  background: ${({ theme }) => theme.colors.error};
   &:hover { filter: brightness(1.03); }
   margin-left: auto;
 `;
@@ -293,9 +367,9 @@ const Table = styled.table`
     font-weight: 900;
     border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   }
-  tbody td { border-top: 1px solid #f0f2f5; }
+  tbody td { border-top: 1px solid ${({ theme }) => theme.colors.dividerSubtle}; }
   tbody tr:first-child td { border-top: none; }
-  tfoot td { font-weight: 900; background: #fbfcfe; }
+  tfoot td { font-weight: 900; background: ${({ theme }) => theme.colors.surfaceAlt}; }
 `;
 
 /* 세그먼트(그램/돈 탭) */
@@ -318,26 +392,14 @@ const SegBtn = styled.button`
   cursor: pointer;
   background: ${({ $active, theme }) => ($active ? theme.colors.surface : "transparent")};
   color: ${({ $active, theme }) => ($active ? theme.colors.primary : theme.colors.textSecondary)}; 
-  box-shadow: ${({ $active }) => ($active ? "0 1px 6px rgba(0,0,0,.06)" : "none")};
+  box-shadow: ${({ $active, theme }) => ($active ? theme.shadows.xs : "none")};
 `;
 
 /* 추천 하이라이트/스타일 */
-const GOLD_BORDER = "#d4af37";
-const GOLD_BG_TINT = "rgba(212,175,55,.08)";
 const aiPulse = keyframes`
-  0%   { box-shadow: 0 0 0 0 rgba(178,138,59,0.30); }
-  60%  { box-shadow: 0 0 0 12px rgba(178,138,59,0); }
-  100% { box-shadow: 0 0 0 0 rgba(178,138,59,0); }
-`;
-const AIBanner = styled.div`
-  display: flex; align-items: center; gap: 8px;
-  padding: 10px 12px;
-  margin: 6px 0 10px;
-  border-radius: 0;
-  font-weight: 800;
-  background: ${({ theme }) => theme.semantic.badgeGoldBg};
-  border: 1px solid ${({ theme }) => theme.colors.secondary}66;
-  color: ${({ theme }) => theme.semantic.badgeGoldText};
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--gm-gold) 30%, transparent); }
+  60%  { box-shadow: 0 0 0 12px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
 `;
 const AIBadge = styled.span`
   display: inline-flex; align-items: center; gap: 6px;
@@ -360,13 +422,13 @@ const DenomGrid = styled.div`
 const DenomTile = styled.button`
   position: relative;
   border: 2px solid ${({ $active, $recommended, theme }) =>
-    $active ? GOLD_BORDER : $recommended ? theme.colors.primary : theme.colors.border};
+    $active ? theme.colors.gold : $recommended ? theme.colors.primary : theme.colors.border};
   background:
-    ${({ $active, $recommended }) =>
+    ${({ $active, $recommended, theme }) =>
       $active
-        ? GOLD_BG_TINT
+        ? theme.colors.goldLight
         : $recommended
-        ? "linear-gradient(135deg, rgba(31,58,95,.10), rgba(178,138,59,.12))"
+        ? theme.gradients.recommendation
         : "transparent"};
   color: ${({ $active, theme }) => ($active ? theme.colors.primary : theme.colors.text)};
   border-radius: 0;
@@ -377,9 +439,9 @@ const DenomTile = styled.button`
   gap: 4px;
   transition: border-color .15s ease, box-shadow .15s ease, background .15s ease, transform .06s ease;
   &:hover {
-    border-color: ${({ $active, $recommended }) =>
-      $active ? GOLD_BORDER : $recommended ? "rgba(31,58,95,.72)" : GOLD_BORDER};
-    box-shadow: 0 0 0 2px rgba(212,175,55,0.15);
+    border-color: ${({ $recommended, theme }) =>
+      $recommended ? theme.colors.primary : theme.colors.gold};
+    box-shadow: 0 0 0 2px color-mix(in srgb, ${({ theme }) => theme.colors.gold} 18%, transparent);
     transform: translateY(-1px);
   }
   ${({ $recommended }) =>
@@ -390,7 +452,7 @@ const DenomTile = styled.button`
         position: absolute;
         inset: -2px;
         border-radius: 0;
-        background: linear-gradient(135deg, rgba(31,58,95,.16), rgba(178,138,59,.20));
+        background: ${({ theme }) => theme.gradients.recommendation};
         z-index: -1;
         filter: blur(8px);
       }
@@ -403,9 +465,9 @@ const StepMark = styled.div`
   display: inline-block;
   margin: 0 auto 12px;
   padding: 6px 14px;
-  border: 2px solid ${GOLD_BORDER};
-  background: ${GOLD_BG_TINT};
-  color: ${GOLD_BORDER};
+  border: 2px solid ${({ theme }) => theme.colors.gold};
+  background: ${({ theme }) => theme.colors.goldLight};
+  color: ${({ theme }) => theme.colors.secondaryDark};
   font-weight: 900;
   border-radius: 0;
   text-align: center;
@@ -415,6 +477,11 @@ const StepMark = styled.div`
 /* ── Constants & Helpers ───────────────────────── */
 const STEP = { CALC: 0, BARS: 1, RESERVE: 2, DONE: 3 };
 const TIME_SLOTS = ["11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00"];
+const MAX_BOOKING_DAYS_AHEAD = 60;
+const MAX_PRODUCTS_PER_BOOKING = 20;
+const MAX_PRODUCT_GRAMS = 10_000;
+const MAX_NAME_LENGTH = 40;
+const MAX_PHONE_LENGTH = 20;
 
 /** 골드바 규격 정의 */
 const BAR_GROUPS = {
@@ -441,6 +508,7 @@ const BAR_GROUPS = {
 };
 /** 잔여 조합용: 모든 규격(오름차순) */
 const ALL_DENOMS = [...BAR_GROUPS.grams, ...BAR_GROUPS.don].sort((a, b) => a.grams - b.grams);
+const MIN_BAR_GRAMS = ALL_DENOMS[0].grams;
 
 /* ── 제품 옵션 ───────────────────────── */
 /** ⚠️ value 문자열은 DEFAULT_PURITY 키와 "완전히 동일"해야 합니다. */
@@ -670,15 +738,50 @@ function BarStep({
   onGoReserve,
   setStep,
 }) {
-  const current = BAR_GROUPS[barGroup];
-  let recIdx = 0;
-  for (let i = 0; i < current.length; i++) if (current[i].grams <= totalGrams) recIdx = i;
+  if (totalGrams < MIN_BAR_GRAMS) {
+    const needed = roundTo3Custom(MIN_BAR_GRAMS - totalGrams);
+    return (
+      <Card>
+        <StepCenter><StepMark>스텝 2</StepMark></StepCenter>
+        <Title>예상 순금이 1g 미만입니다</Title>
+        <InfoCard role="status">
+          <p style={{ margin: 0 }}>
+            예상 순금은 <b>{fmtG(totalGrams)}g</b>이며, 최소 골드바 1g까지
+            <b> {toFixed3CustomStr(needed)}g</b>이 더 필요합니다.
+          </p>
+          <p style={{ margin: "8px 0 0" }}>
+            1g 골드바를 임의로 선택하지 않습니다. 제품을 추가하거나 매장에서 실측 후
+            매입·교환 방법을 안내받으세요.
+          </p>
+        </InfoCard>
+        <SectionSeparator />
+        <div style={{ display: "grid", gap: 10 }}>
+          <Button type="button" onClick={onGoReserve}>현장 확인 방문예약</Button>
+          <GhostButton type="button" onClick={() => setStep(STEP.CALC)}>이전(제품 추가)</GhostButton>
+        </div>
+      </Card>
+    );
+  }
 
-  const safeIdx = Math.min(barChoice.idx, current.length - 1);
+  const current = BAR_GROUPS[barGroup];
+  let recIdx = -1;
+  for (let i = 0; i < current.length; i++) {
+    if (current[i].grams <= totalGrams + 1e-9) recIdx = i;
+  }
+  const topUpIdx = current.findIndex((d) => d.grams > totalGrams + 1e-9);
+  const maxVisibleIdx = topUpIdx >= 0 ? topUpIdx : current.length - 1;
+
+  const safeIdx = Math.min(Math.max(0, barChoice.idx), maxVisibleIdx);
   const selectedBar = current[safeIdx];
-  const safeQty = Math.max(1, barChoice.qty || 1);
+  // 현재 환산량으로 만들 수 있는 수량 + 부족분을 보태서 만들 수 있는 바로 다음 수량까지 허용
+  const maxSelectableQty = Math.max(1, Math.ceil((totalGrams - 1e-9) / selectedBar.grams));
+  const safeQty = Math.min(
+    maxSelectableQty,
+    Math.max(1, Number(barChoice.qty) || 1)
+  );
 
   const isTileRecommended = (i) => i === recIdx;
+  const isTileTopUp = (i) => i === topUpIdx;
 
   return (
     <Card>
@@ -720,11 +823,6 @@ function BarStep({
         </Table>
       </TableWrap>
 
-      <AIBanner aria-live="polite">
-        <span aria-hidden="true">✓</span>
-        <span>입력한 예상 중량을 기준으로 선택 가능한 골드바 규격을 계산했습니다.</span>
-      </AIBanner>
-
       <SubTitle>골드바 규격 선택</SubTitle>
       <Seg role="tablist" aria-label="골드바 규격 선택 탭">
         <SegBtn
@@ -761,33 +859,53 @@ function BarStep({
         {current.map((d, i) => {
           const active = i === safeIdx;
           const recommended = isTileRecommended(i);
+          const topUpRecommended = isTileTopUp(i);
+          const disabled = i > maxVisibleIdx;
+          const topUpGramsForOne = roundTo3Custom(Math.max(0, d.grams - totalGrams));
           return (
             <DenomTile
               key={d.key}
               type="button"
               $active={active}
-              $recommended={recommended}
+              $recommended={recommended || topUpRecommended}
               role="radio"
               aria-checked={active}
-              aria-label={`${d.label}${recommended ? " — 예상 중량 기준 추천 조합" : ""}`}
-              tabIndex={0}
+              aria-label={`${d.label}${recommended ? " — 현재 금으로 추천" : topUpRecommended ? " — 조금 추가해서 선택 가능" : ""}`}
+              tabIndex={disabled ? -1 : 0}
+              disabled={disabled}
+              style={disabled ? { opacity: 0.42, cursor: "not-allowed" } : undefined}
               onClick={() => {
-                setBarChoice({ idx: i, qty: Math.max(1, safeQty) });
+                if (disabled) return;
+                const nextMaxQty = Math.max(1, Math.ceil((totalGrams - 1e-9) / d.grams));
+                setBarChoice({ idx: i, qty: Math.min(nextMaxQty, Math.max(1, safeQty)) });
               }}
               onKeyDown={(e) => {
+                if (disabled) return;
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
-                  setBarChoice({ idx: i, qty: Math.max(1, safeQty) });
+                  const nextMaxQty = Math.max(1, Math.ceil((totalGrams - 1e-9) / d.grams));
+                  setBarChoice({ idx: i, qty: Math.min(nextMaxQty, Math.max(1, safeQty)) });
                 }
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "space-between" }}>
                 <div style={{ fontWeight: 900 }}>{d.label}</div>
-                {recommended && <AIBadge>추천 조합</AIBadge>}
+                {recommended && <AIBadge>현재 금 추천</AIBadge>}
+                {topUpRecommended && !recommended && <AIBadge>추가해서 선택</AIBadge>}
               </div>
-              <div style={{ fontSize: ".9rem", color: "#6b7280" }}>
+              <div style={{ fontSize: ".9rem", color: "var(--gm-text-secondary)" }}>
                 ≈ {fmtD(d.don)} 돈 / {toFixed3CustomStr(d.grams)} g
               </div>
+              {topUpRecommended && topUpGramsForOne > 0 && (
+                <div style={{ fontSize: ".82rem", fontWeight: 800, color: "var(--gm-primary)" }}>
+                  + {fmtD(topUpGramsForOne / DON_TO_GRAMS)} 돈 ({toFixed3CustomStr(topUpGramsForOne)}g) 추가 시 1개 선택 가능
+                </div>
+              )}
+              {disabled && (
+                <div style={{ fontSize: ".8rem", color: "var(--gm-text-secondary)" }}>
+                  바로 위 규격까지만 추가 선택할 수 있습니다.
+                </div>
+              )}
             </DenomTile>
           );
         })}
@@ -807,11 +925,13 @@ function BarStep({
           <Input
             type="number"
             min={1}
+            max={maxSelectableQty}
             step="1"
-            value={Math.max(1, barChoice.qty || 1)}
+            value={safeQty}
             onChange={(e) => {
               const v = Number(e.target.value) || 1;
-              setBarChoice((prev) => ({ ...prev, qty: Math.max(1, v) }));
+              const qty = Math.min(maxSelectableQty, Math.max(1, Math.trunc(v)));
+              setBarChoice((prev) => ({ ...prev, qty }));
             }}
             style={{ width: 100, textAlign: "center" }}
           />
@@ -819,31 +939,43 @@ function BarStep({
             type="button"
             aria-label="수량 증가"
             style={{ width: 44, padding: "8px 0" }}
-            onClick={() => setBarChoice((p) => ({ ...p, qty: (p.qty || 1) + 1 }))}
+            disabled={safeQty >= maxSelectableQty}
+            onClick={() =>
+              setBarChoice((p) => ({
+                ...p,
+                qty: Math.min(maxSelectableQty, Math.max(1, (p.qty || 1) + 1)),
+              }))
+            }
           >
             +
           </SmallButton>
         </Inline>
         <HelpText>
-          선택 사용량: <b>{toFixed3CustomStr(roundTo3Custom(selectedBar.grams * Math.max(1, barChoice.qty || 1)))}</b> g / <b>{fmtD((selectedBar.grams * Math.max(1, barChoice.qty || 1)) / DON_TO_GRAMS)}</b> 돈{" "}
-          (환산 기준 권장 최대 {Math.floor(totalGrams / selectedBar.grams) || 1}개)
+          선택 골드바 총중량: <b>{toFixed3CustomStr(roundTo3Custom(selectedBar.grams * safeQty))}</b> g / <b>{fmtD((selectedBar.grams * safeQty) / DON_TO_GRAMS)}</b> 돈{" "}
+          (선택 가능 최대 {maxSelectableQty}개)
         </HelpText>
       </FormGroup>
 
       <SubTitle>안내</SubTitle>
       <InfoCard>
         {(() => {
-          const qty = Math.max(1, barChoice.qty || 1);
+          const qty = safeQty;
           const usedExact = selectedBar.grams * qty;
-          const shortfallG = Math.max(0, usedExact - totalGrams);
-          const leftoverG = Math.max(0, totalGrams - usedExact);
+          const topUpG = roundTo3Custom(Math.max(0, usedExact - totalGrams));
+          const leftoverG = roundTo3Custom(Math.max(0, totalGrams - usedExact));
           const groupMin = BAR_GROUPS[barGroup][0];
 
-          if (shortfallG > 0) {
+          if (topUpG > 0) {
             return (
-              <p style={{ margin: 0 }}>
-                선택한 골드바가 환산량보다 <b>{(Math.round(shortfallG * 100) / 100).toFixed(2)} g</b> (<b>{fmtD(shortfallG / DON_TO_GRAMS)} 돈</b>) 만큼 <b>추가</b>로 필요합니다.
-              </p>
+              <>
+                <p style={{ margin: 0 }}>
+                  현재 예상 순금은 <b>{fmtG(totalGrams)}g</b> ({fmtD(totalDon)}돈)이며, 선택한 <b>{selectedBar.label} × {qty}</b>를 만들려면
+                  <b> {toFixed3CustomStr(topUpG)}g</b> (<b>{fmtD(topUpG / DON_TO_GRAMS)}돈</b>)을 추가하면 됩니다.
+                </p>
+                <p style={{ margin: "8px 0 0", fontWeight: 700 }}>
+                  실제 추가량과 금액은 방문 시 실측한 순금 중량과 당일 기준에 따라 최종 안내됩니다.
+                </p>
+              </>
             );
           }
 
@@ -863,8 +995,8 @@ function BarStep({
                         padding: "6px 10px",
                         borderRadius: 9999,
                         margin: "6px 6px 0 0",
-                        background: "#eef2ff",
-                        color: "#4338ca",
+                        background: "var(--gm-info-soft)",
+                        color: "var(--gm-primary)",
                         fontWeight: 800,
                         fontSize: ".9rem",
                       }}
@@ -882,7 +1014,7 @@ function BarStep({
           return (
             <>
               <p style={{ margin: 0 }}>
-                남는 무게는 <b>{(Math.round(leftoverG * 100) / 100).toFixed(2)} g</b> (<b>{fmtD(leftoverG / DON_TO_GRAMS)} 돈</b>) 로, 선택 가능한 최솟값보다 적습니다.
+                남는 금은 <b>{(Math.round(leftoverG * 100) / 100).toFixed(2)} g</b> (<b>{fmtD(leftoverG / DON_TO_GRAMS)} 돈</b>)입니다.
               </p>
               <p style={{ margin: "6px 0 0" }}>
                 <b>{groupMin.label}</b> 1개를 추가하려면 <b>{(Math.round(needMore * 100) / 100).toFixed(2)} g</b> (<b>{fmtD(needMore / DON_TO_GRAMS)} 돈</b>)이 더 필요합니다.
@@ -917,6 +1049,29 @@ function ReserveStep({
 }) {
   const dateKey = visitDate ? format(visitDate, "yyyy-MM-dd") : "";
   const taken = useReservedSlots(dateKey); // ✅ 날짜별 선점 시간 Set
+  const { dates: bookingAvailabilityDates } = useBookingAvailability();
+  const availability = useMemo(
+    () => getBookingAvailabilityEntry({ dates: bookingAvailabilityDates }, dateKey),
+    [bookingAvailabilityDates, dateKey]
+  );
+  const [privacyOpen, setPrivacyOpen] = useState(false);
+
+  useEffect(() => {
+    if (!privacyOpen) return undefined;
+
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") setPrivacyOpen(false);
+    };
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [privacyOpen]);
 
   // 사용자가 선택해 둔 시간이 실시간으로 선점되면 자동 해제
   useEffect(() => {
@@ -924,11 +1079,28 @@ function ReserveStep({
     if (taken.has(visitTime)) setVisitTime("");
   }, [taken, visitTime, dateKey, setVisitTime]);
 
+  useEffect(() => {
+    if (!dateKey) return;
+    if (availability.closed) {
+      setError(availability.reason || "해당 날짜는 예약을 받지 않습니다.");
+      setVisitTime("");
+      return;
+    }
+    if (visitTime && availability.blockedSlots.has(visitTime)) {
+      setError(availability.reason || "해당 시간은 예약을 받지 않습니다.");
+      setVisitTime("");
+    }
+  }, [availability.closed, availability.blockedSlots, availability.reason, dateKey, setError, setVisitTime, visitTime]);
+
   const handleTimeChange = (e) => {
     const v = e.target.value;
     if (!dateKey) return;
-    if (taken.has(v)) {
-      setError("이미 예약된 시간입니다. 다른 시간을 선택해 주세요.");
+    if (taken.has(v) || availability.blockedSlots.has(v)) {
+      setError(
+        availability.blockedSlots.has(v)
+          ? (availability.reason || "해당 시간은 예약을 받지 않습니다.")
+          : "이미 예약된 시간입니다. 다른 시간을 선택해 주세요."
+      );
       setVisitTime("");
       return;
     }
@@ -950,7 +1122,8 @@ function ReserveStep({
           onChange={(d) => { setError(""); setVisitTime(""); setVisitDate(d); }}
           dateFormat="yyyy-MM-dd"
           minDate={addDays(new Date(), 1)}
-          filterDate={(date) => date.getDay() !== 0}
+          maxDate={addDays(new Date(), MAX_BOOKING_DAYS_AHEAD)}
+          filterDate={(date) => date.getDay() !== 0 && !getBookingAvailabilityEntry({ dates: bookingAvailabilityDates }, format(date, "yyyy-MM-dd")).closed}
           placeholderText="날짜 선택"
         />
       </FormGroup>
@@ -960,18 +1133,20 @@ function ReserveStep({
         <Select value={visitTime} onChange={handleTimeChange} disabled={!visitDate}>
           <option value="">시간 선택</option>
           {TIME_SLOTS.map((t) => {
-            const disabled = taken.has(t);
+            const reserved = taken.has(t);
+            const blocked = availability.blockedSlots.has(t);
+            const disabled = reserved || blocked;
             return (
               <option key={t} value={t} disabled={disabled} aria-disabled={disabled}>
-                {disabled ? `${t} (이미 예약된 시간)` : t}
+                {disabled ? `${t} (${blocked ? "예약 마감" : "이미 예약된 시간"})` : t}
               </option>
             );
           })}
         </Select>
       </FormGroup>
       <HelpText>
-        일요일은 예약 불가이며, <b>(이미 예약된 시간)</b> 표기된 시간은 선택할 수 없습니다.
-        가능한 다른 시간대를 선택해 주세요.
+        일요일과 휴무일은 예약할 수 없으며, <b>예약 마감</b> 또는 <b>이미 예약된 시간</b>은 선택할 수 없습니다.
+        가능한 다른 날짜와 시간을 선택해 주세요.
       </HelpText>
 
       <SectionSeparator />
@@ -985,7 +1160,14 @@ function ReserveStep({
       >
         <FormGroup>
           <Label>성명</Label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} required autoComplete="name" placeholder="예: 홍길동" />
+          <Input
+            value={name}
+            maxLength={MAX_NAME_LENGTH}
+            onChange={(e) => setName(e.target.value.slice(0, MAX_NAME_LENGTH))}
+            required
+            autoComplete="name"
+            placeholder="예: 홍길동"
+          />
         </FormGroup>
         <FormGroup>
           <Label>전화번호</Label>
@@ -994,7 +1176,14 @@ function ReserveStep({
             inputMode="tel"
             placeholder="예: 010-1234-5678"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            maxLength={MAX_PHONE_LENGTH}
+            onChange={(e) =>
+              setPhone(
+                e.target.value
+                  .replace(/[^0-9+()\-\s]/g, "")
+                  .slice(0, MAX_PHONE_LENGTH)
+              )
+            }
             required
             autoComplete="tel"
           />
@@ -1014,7 +1203,13 @@ function ReserveStep({
             />
             <span>
               [필수] 방문 예약을 위한 개인정보 수집·이용에 동의합니다.{" "}
-              <ConsentLink href="/privacy" target="_blank" rel="noopener noreferrer">
+              <ConsentLink
+                href="/privacy"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setPrivacyOpen(true);
+                }}
+              >
                 개인정보처리방침
               </ConsentLink>
             </span>
@@ -1024,6 +1219,39 @@ function ReserveStep({
             연락 · 보유 기간: 목적 달성 후 파기(관계 법령에 따른 보관 기간은 예외)
           </ConsentDetails>
         </ConsentBox>
+
+        {privacyOpen && (
+          <PrivacyModalBackdrop
+            role="presentation"
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) setPrivacyOpen(false);
+            }}
+          >
+            <PrivacyModal
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="privacy-modal-title"
+            >
+              <PrivacyModalHeader>
+                <PrivacyModalTitle id="privacy-modal-title">
+                  개인정보처리방침
+                </PrivacyModalTitle>
+                <PrivacyCloseButton
+                  type="button"
+                  onClick={() => setPrivacyOpen(false)}
+                  aria-label="개인정보처리방침 닫기"
+                >
+                  닫기
+                </PrivacyCloseButton>
+              </PrivacyModalHeader>
+              <PrivacyFrame
+                src="/privacy"
+                title="개인정보처리방침"
+              />
+            </PrivacyModal>
+          </PrivacyModalBackdrop>
+        )}
+
         <div style={{ display: "grid", gap: 10 }}>
           <Button type="submit" disabled={loading} aria-busy={loading}>
             {loading ? "제출 중..." : "예약요청 하기"}
@@ -1049,7 +1277,15 @@ function DoneStep({ status }) {
     <>
       <GoldExchangeTracker status={status} />
       <Card>
-        <Title>요청 접수 완료</Title>
+        <Title>예약 신청 접수 완료</Title>
+        <HelpText>관리자 확인 후 예약이 확정되면 알림으로 안내드립니다.</HelpText>
+
+        <PushPermissionPrompt
+          context="exchange-complete"
+          variant="inline"
+          snoozeDays={1}
+        />
+
         <SectionSeparator />
         <Title style={{ fontSize: "1.2rem" }}>매장 방문 안내</Title>
         <img
@@ -1089,6 +1325,30 @@ function DoneStep({ status }) {
 }
 
 /* ── Main Component ───────────────────────────── */
+function normalizeRebookProducts(rebook) {
+  const rawProducts = Array.isArray(rebook?.products) ? rebook.products : [];
+
+  return rawProducts
+    .slice(0, MAX_PRODUCTS_PER_BOOKING)
+    .map((product) => {
+      const goldType = String(product?.goldType || "").trim();
+      const quantity = Number(product?.quantity);
+      const inputUnit = product?.inputUnit === "don" ? "don" : "g";
+      const exchangeType = String(product?.exchangeType || "999.9골드바").trim();
+
+      if (!goldType || !Number.isFinite(quantity) || quantity <= 0) return null;
+
+      return {
+        goldType,
+        quantity: String(quantity),
+        inputUnit,
+        exchangeType: exchangeType || "999.9골드바",
+        finalWeight: 0,
+      };
+    })
+    .filter(Boolean);
+}
+
 function getInitialProductsFromQuery() {
   const emptyProduct = {
     goldType: "",
@@ -1118,13 +1378,37 @@ function getInitialProductsFromQuery() {
 export default function GoldExchange() {
   const { user } = useAuthContext();
   const guard = useGuardAction();
+  const location = useLocation();
+  const rebook = location.state?.rebook || null;
+  const initialRebookProductsRef = useRef(normalizeRebookProducts(rebook));
+  const isRebook = !!rebook;
+  const isDirectRebook = isRebook && (rebook?.directReservation === true || initialRebookProductsRef.current.length === 0);
 
   /* 스텝 상태 */
-  const [step, setStep] = useState(STEP.CALC);
+  const [step, setStep] = useState(isRebook ? STEP.RESERVE : STEP.CALC);
+  const pageTopRef = useRef(null);
+
+  // 같은 라우트 안에서 단계만 바뀌는 경우에도 새 단계의 맨 위부터 보여줍니다.
+  // Capacitor 앱처럼 window 자체가 아닌 WebView 스크롤 컨테이너인 경우를 위해
+  // scrollIntoView와 window.scrollTo를 함께 사용합니다.
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const frame = window.requestAnimationFrame(() => {
+      pageTopRef.current?.scrollIntoView?.({ block: "start", inline: "nearest", behavior: "auto" });
+      window.scrollTo?.({ top: 0, left: 0, behavior: "auto" });
+      if (document?.documentElement) document.documentElement.scrollTop = 0;
+      if (document?.body) document.body.scrollTop = 0;
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [step]);
 
   /* 계산 상태 */
-  const [products, setProducts] = useState(getInitialProductsFromQuery);
-  const [calculated, setCalculated] = useState(false);
+  const [products, setProducts] = useState(() =>
+    initialRebookProductsRef.current.length > 0
+      ? initialRebookProductsRef.current
+      : getInitialProductsFromQuery()
+  );
+  const [calculated, setCalculated] = useState(isRebook && !isDirectRebook);
 
   /* 골드바 선택 상태 */
   const [barGroup, setBarGroup] = useState("don");
@@ -1134,8 +1418,8 @@ export default function GoldExchange() {
   /* 예약/연락처 */
   const [visitDate, setVisitDate] = useState(null);
   const [visitTime, setVisitTime] = useState("");
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
+  const [name, setName] = useState(() => String(rebook?.requester?.name || ""));
+  const [phone, setPhone] = useState(() => String(rebook?.requester?.phone || ""));
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
 
   /* 제출/결과 */
@@ -1146,7 +1430,10 @@ export default function GoldExchange() {
   const [status, setStatus] = useState("requested");
 
   /* 환산율 */
-  const [rates, setRates] = useState({ purity: DEFAULT_PURITY, exchange: DEFAULT_EXCHANGE });
+  const [rates, setRates] = useState({
+    purity: DEFAULT_PURITY,
+    exchange: DEFAULT_EXCHANGE,
+  });
 
   /* 예약 상태 구독 → 그룹 요약 문서 구독 유지 */
   useEffect(() => {
@@ -1168,6 +1455,33 @@ export default function GoldExchange() {
     );
     return () => unsub && unsub();
   }, []);
+
+  /* 취소 예약 다시 신청: 기존 제품은 유지하고 현재 환산율로 다시 계산 */
+  useEffect(() => {
+    if (!isRebook || isDirectRebook) return;
+
+    setProducts((prev) =>
+      prev.map((product) => {
+        const n = Number(product.quantity);
+        if (!Number.isFinite(n) || n <= 0 || !product.goldType) {
+          return { ...product, finalWeight: 0 };
+        }
+        const grams = product.inputUnit === "don" ? n * DON_TO_GRAMS : n;
+        return {
+          ...product,
+          finalWeight: computeFinalWeightFromRates({
+            grams,
+            goldType: product.goldType,
+            exchangeType: product.exchangeType,
+            purity: rates.purity,
+            exchange: rates.exchange,
+          }),
+        };
+      })
+    );
+    setCalculated(true);
+    initializedChoiceRef.current = false;
+  }, [isDirectRebook, isRebook, rates.exchange, rates.purity]);
 
   /* 사용자 정보로 기본값 채우기 */
   useEffect(() => {
@@ -1193,11 +1507,17 @@ export default function GoldExchange() {
     setProducts((prev) => prev.map((p, i) => (i === idx ? { ...p, [field]: value } : p)));
   }, []);
 
-  const addProduct = () =>
+  const addProduct = () => {
+    if (products.length >= MAX_PRODUCTS_PER_BOOKING) {
+      setError(`제품은 한 예약에 최대 ${MAX_PRODUCTS_PER_BOOKING}개까지 추가할 수 있습니다.`);
+      return;
+    }
+    setError("");
     setProducts((prev) => [
       ...prev,
       { goldType: "", quantity: "", inputUnit: "g", exchangeType: "999.9골드바", finalWeight: 0 },
     ]);
+  };
 
   const removeProduct = (idx) =>
     setProducts((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== idx) : prev));
@@ -1207,10 +1527,20 @@ export default function GoldExchange() {
     e.preventDefault();
     setError("");
 
+    if (products.length > MAX_PRODUCTS_PER_BOOKING) {
+      setError(`제품은 한 예약에 최대 ${MAX_PRODUCTS_PER_BOOKING}개까지 등록할 수 있습니다.`);
+      return;
+    }
+
     for (const p of products) {
-      const qty = parseFloat(p.quantity);
-      if (!p.goldType || !p.exchangeType || isNaN(qty) || qty <= 0) {
+      const qty = Number(p.quantity);
+      const grams = p.inputUnit === "don" ? qty * DON_TO_GRAMS : qty;
+      if (!p.goldType || !p.exchangeType || !Number.isFinite(qty) || qty <= 0) {
         setError("모든 제품 항목을 정확히 입력해주세요.");
+        return;
+      }
+      if (!Number.isFinite(grams) || grams > MAX_PRODUCT_GRAMS) {
+        setError(`제품 한 항목의 중량은 ${MAX_PRODUCT_GRAMS.toLocaleString("ko-KR")}g 이하여야 합니다.`);
         return;
       }
     }
@@ -1226,6 +1556,7 @@ export default function GoldExchange() {
     setCalculated(true);
     initializedChoiceRef.current = false;
     setStep(STEP.BARS);
+    window.setTimeout(() => nudgeAppInstall("calculation-complete"), 1400);
   };
 
   // 예상 중량 계산은 로그인 없이 이용할 수 있습니다.
@@ -1254,7 +1585,7 @@ export default function GoldExchange() {
   /* 계산 후 골드바 기본 선택 */
   useEffect(() => {
     if (!calculated || initializedChoiceRef.current) return;
-    if (totalGrams <= 0) return;
+    if (totalGrams < MIN_BAR_GRAMS) return;
     const best = findBestChoice(totalGrams);
     setBarGroup(best.group);
     const maxQty = Math.max(1, Math.floor(totalGrams / BAR_GROUPS[best.group][best.idx].grams));
@@ -1265,12 +1596,23 @@ export default function GoldExchange() {
   /* barsPlan 생성 (서버 저장용) */
   const makeBarsPlan = () => {
     if (!calculated) return undefined;
+    if (totalGrams < MIN_BAR_GRAMS) return null;
     const current = BAR_GROUPS[barGroup];
     const idx = Math.min(barChoice.idx, current.length - 1);
     const selectedBar = current[idx];
-    const maxSelectableQty = Math.floor(totalGrams / selectedBar.grams) || 1;
-    const qty = Math.min(Math.max(1, barChoice.qty || 1), Math.max(1, maxSelectableQty));
+    const topUpIdx = current.findIndex((d) => d.grams > totalGrams + 1e-9);
+    const maxVisibleIdx = topUpIdx >= 0 ? topUpIdx : current.length - 1;
+    if (idx > maxVisibleIdx) {
+      throw new Error("추가 선택은 현재 예상 중량의 바로 위 골드바 규격까지만 가능합니다.");
+    }
+    const maxSelectableQty = Math.max(1, Math.ceil((totalGrams - 1e-9) / selectedBar.grams));
+    const qty = Math.max(1, Math.trunc(Number(barChoice.qty) || 1));
+    if (qty > maxSelectableQty) {
+      throw new Error(`선택 가능한 최대 수량은 ${maxSelectableQty}개입니다.`);
+    }
     const usedByChoice = roundTo3Custom(selectedBar.grams * qty);
+    const topUpGrams = roundTo3Custom(Math.max(0, usedByChoice - totalGrams));
+    const topUpDon = topUpGrams / DON_TO_GRAMS;
     const leftoverGrams = roundTo3Custom(Math.max(0, totalGrams - usedByChoice));
     const leftoverDon = leftoverGrams / DON_TO_GRAMS;
     const extraCombo = breakdownByDenoms(leftoverGrams);
@@ -1287,6 +1629,9 @@ export default function GoldExchange() {
         usedGrams: Number(fmtG(usedByChoice)),
         usedDon: Number(fmtD(usedByChoice / DON_TO_GRAMS)),
       },
+      requiresTopUp: topUpGrams > 0,
+      topUpGrams: Number(fmtG(topUpGrams)),
+      topUpDon: Number(fmtD(topUpDon)),
       leftoverGrams: Number(fmtG(leftoverGrams)),
       leftoverDon: Number(fmtD(leftoverDon)),
       autoBreakdown: extraCombo.items.map(({ denom, qty: q }) => ({
@@ -1307,13 +1652,19 @@ export default function GoldExchange() {
       setError("로그인이 필요합니다.");
       return;
     }
+    const nameTrim = (name || "").trim();
     const phoneTrim = (phone || "").trim();
-    const phoneDigits = phoneTrim.replace(/[^\d+]/g, "");
-    if (!name || !phoneTrim) {
-      setError("성명과 전화번호는 필수입니다.");
+    const phoneDigits = phoneTrim.replace(/\D/g, "");
+    if (nameTrim.length < 2 || nameTrim.length > MAX_NAME_LENGTH) {
+      setError(`성명은 2자 이상 ${MAX_NAME_LENGTH}자 이하로 입력해 주세요.`);
       return;
     }
-    if (phoneDigits.length < 9) {
+    if (
+      phoneTrim.length > MAX_PHONE_LENGTH ||
+      !/^[0-9+()\-\s]+$/.test(phoneTrim) ||
+      phoneDigits.length < 9 ||
+      phoneDigits.length > 15
+    ) {
       setError("전화번호 형식을 다시 확인해 주세요.");
       return;
     }
@@ -1339,9 +1690,8 @@ export default function GoldExchange() {
     const payload = {
       visitDate: visitDateStr,
       visitTime,
-      name,
+      name: nameTrim,
       phone: phoneTrim, // 서버 스키마 유지 (표시는 사용자가 입력한 형태)
-      email: user.email || null,
       privacyConsent: true,
       privacyConsentVersion: "reservation-v1.0",
       products: hasValidProducts
@@ -1373,8 +1723,13 @@ export default function GoldExchange() {
         setVisitTime(""); // 즉시 해제하여 UI 동기화
       } else if (code === "unauthenticated" || code === "permission-denied") {
         setError("권한이 없습니다. 다시 로그인 해주세요.");
-      } else if (code === "invalid-argument") {
-        setError("입력값이 올바르지 않습니다. 다시 확인해 주세요.");
+      } else if (
+        code === "invalid-argument" ||
+        code === "failed-precondition" ||
+        code === "resource-exhausted" ||
+        code === "already-exists"
+      ) {
+        setError(err?.message || "예약 정보를 다시 확인해 주세요.");
       } else {
         setError(`제출 실패: ${err?.message || "알 수 없는 오류"}`);
       }
@@ -1386,7 +1741,7 @@ export default function GoldExchange() {
   const onSubmitReservation = (e) => onSubmitReservationCore(e);
 
   return (
-    <PageContainer>
+    <PageContainer ref={pageTopRef}>
       <FlowHeader>
         <PageEyebrow>GOLD EXCHANGE APPLICATION</PageEyebrow>
         <PageTitle>내 금을 999.9 골드바로 교환</PageTitle>
@@ -1394,6 +1749,12 @@ export default function GoldExchange() {
           예상 중량 계산은 로그인 없이 이용할 수 있습니다. 매장 방문 예약은
           계산 결과와 골드바 조합을 확인한 뒤 진행하세요.
         </PageLead>
+        {isRebook && (
+          <RebookNotice role="status">
+            <strong>취소된 예약 내용을 불러왔습니다.</strong><br />
+            기존 제품과 연락처는 유지되며, 새로운 방문 날짜와 시간을 선택해 다시 신청해 주세요.
+          </RebookNotice>
+        )}
         <FlowTrack aria-label="금교환 진행 단계">
           {["01 예상계산", "02 조합선택", "03 방문예약", "04 접수완료"].map(
             (label, index) => (

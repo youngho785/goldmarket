@@ -1,145 +1,51 @@
 {
   "indexes": [
     {
-      "collectionGroup": "board",
+      "collectionGroup": "supportTickets",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "category", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
+        {
+          "fieldPath": "authorId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
       ],
       "density": "SPARSE_ALL"
     },
     {
-      "collectionGroup": "board",
+      "collectionGroup": "supportTickets",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "category", "order": "ASCENDING" },
-        { "fieldPath": "status",   "order": "ASCENDING" },
-        { "fieldPath": "createdAt","order": "DESCENDING" }
+        {
+          "fieldPath": "authorId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
       ],
       "density": "SPARSE_ALL"
     },
     {
-      "collectionGroup": "chats",
+      "collectionGroup": "supportTickets",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "participants", "arrayConfig": "CONTAINS" },
-        { "fieldPath": "lastUpdated", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "chats",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "participants", "arrayConfig": "CONTAINS" },
-        { "fieldPath": "lastMessageAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "chats",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "participants", "arrayConfig": "CONTAINS" },
-        { "fieldPath": "updatedAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "chats",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "participants", "arrayConfig": "CONTAINS" },
-        { "fieldPath": "productId", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "goldExchangeReviews",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "exchangeId", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ],
-      "density": "SPARSE_ALL"
-    },
-    {
-      "collectionGroup": "notifications",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "to", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ],
-      "density": "SPARSE_ALL"
-    },
-    {
-      "collectionGroup": "products",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "sellerId", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ],
-      "density": "SPARSE_ALL"
-    },
-    {
-      "collectionGroup": "products",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "approved", "order": "ASCENDING" },
-        { "fieldPath": "completed", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ],
-      "density": "SPARSE_ALL"
-    },
-    {
-      "collectionGroup": "orders",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "buyerId", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ],
-      "density": "SPARSE_ALL"
-    },
-    {
-      "collectionGroup": "orders",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "sellerId", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ],
-      "density": "SPARSE_ALL"
-    },
-    {
-      "collectionGroup": "orders",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "buyerId", "order": "ASCENDING" },
-        { "fieldPath": "productId", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" }
-      ],
-      "density": "SPARSE_ALL"
-    },
-    {
-      "collectionGroup": "orders",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "buyerId", "order": "ASCENDING" },
-        { "fieldPath": "productId", "order": "ASCENDING" }
-      ],
-      "density": "SPARSE_ALL"
-    },
-    {
-      "collectionGroup": "transactionReviews",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "sellerId", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ],
-      "density": "SPARSE_ALL"
-    },
-    {
-      "collectionGroup": "transactionReviews",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "productId", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
       ],
       "density": "SPARSE_ALL"
     },
@@ -147,25 +53,32 @@
       "collectionGroup": "items",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "read", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" },
-        { "fieldPath": "__name__", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "items",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "chatId", "order": "ASCENDING" },
-        { "fieldPath": "read", "order": "ASCENDING" }
+        {
+          "fieldPath": "read",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "goldExchangeGroups",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "repStatus", "order": "ASCENDING" },
-        { "fieldPath": "updatedAt", "order": "DESCENDING" }
+        {
+          "fieldPath": "repStatus",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "updatedAt",
+          "order": "DESCENDING"
+        }
       ]
     }
   ],

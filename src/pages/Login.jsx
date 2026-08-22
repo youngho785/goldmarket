@@ -1,8 +1,13 @@
 // src/pages/Login.jsx
 import React, { useState } from "react";
 import styled from "styled-components";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuthContext } from "../context/AuthContext";
+import {
+  beginMfaSignIn,
+  completeMfaSignIn,
+} from "../services/mfaService";
+import { sendVerificationEmailIfNeeded } from "../services/authService";
 
 /* Layout */
 const Container = styled.div`
@@ -11,8 +16,8 @@ const Container = styled.div`
   align-items: flex-start;
   padding: clamp(28px, 6vw, 64px) 18px;
   background:
-    radial-gradient(circle at 50% 0%, rgba(178,138,59,.11), transparent 28rem),
-    ${({ theme }) => theme.colors.background || "#F4F6F9"};
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, ${({ theme }) => theme.colors.gold} 12%, transparent), transparent 28rem),
+    ${({ theme }) => theme.colors.background};
   min-height: calc(100svh - 180px);
 `;
 const Card = styled.div`
@@ -67,7 +72,7 @@ const LuxuryCta = styled(Link)`
   text-decoration: none;
 
   color: ${({ theme }) => theme.on.primary};
-  border: 1px solid rgba(200,168,90,.55);
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 55%, transparent);
   background: ${({ theme }) => theme.gradients.primary};
   box-shadow: ${({ theme }) => theme.shadows.card};
   transition: transform 0.06s ease, box-shadow 0.15s ease, background 0.2s ease, filter 0.2s ease;
@@ -91,9 +96,10 @@ const CtaLineMain = styled.span`
 const CtaLineSub = styled.span`
   font-size: 0.9rem;
   font-weight: 700;
-  color: rgba(255,255,255,.78);
+  color: ${({ theme }) => theme.on.primary};
   letter-spacing: 0.1px;
   opacity: 0.95;
+  opacity: .78;
 `;
 
 const Divider = styled.div`
@@ -166,15 +172,32 @@ const LinkText = styled.p`
 `;
 
 export default function Login() {
-  // useAuthContext는 내부에서 authService.login을 호출하며,
-  // authService는 에러를 표준 타입으로 정규화하여 throw합니다.
-  const { login, sendEmailVerification } = useAuthContext();
+  // 기존 로그인/MFA 로직은 유지하고, 금시세 페이지에서 온 경우에만
+  // 로그인 성공 후 /gold-price로 복귀합니다.
+  const { login } = useAuthContext();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const queryFrom = new URLSearchParams(location.search).get("from");
+  const stateFrom = location.state?.from;
+  const returnTo =
+    stateFrom === "/gold-price" || queryFrom === "gold-price"
+      ? "/gold-price"
+      : "/";
+
+  const registerPath =
+    returnTo === "/gold-price" ? "/register?from=gold-price" : "/register";
+  const registerState =
+    returnTo === "/gold-price"
+      ? { from: "/gold-price", intent: "gold-price-notification" }
+      : { intent: "exchange" };
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showResend, setShowResend] = useState(false);
   const [resendMsg, setResendMsg] = useState("");
+  const [mfaChallenge, setMfaChallenge] = useState(null);
+  const [mfaCode, setMfaCode] = useState("");
 
   // 서비스 표준 타입 + SDK 코드 대응
   const errorMap = {
@@ -208,10 +231,25 @@ export default function Login() {
         setError("이메일 인증이 필요합니다. 메일함에서 인증을 완료해 주세요.");
         setShowResend(true);
       } else {
-        navigate("/", { replace: true });
+        navigate(returnTo, { replace: true });
       }
     } catch (err) {
       const key = err?.type || err?.code;
+      if (err?.code === "auth/multi-factor-auth-required") {
+        try {
+          const challenge = await beginMfaSignIn(
+            err,
+            "login-mfa-recaptcha"
+          );
+          setMfaChallenge(challenge);
+          setError(
+            `관리자 2단계 인증번호를 ${challenge.phoneNumber || "등록된 휴대전화"}로 발송했습니다.`
+          );
+        } catch (mfaError) {
+          setError(mfaError?.message || "2단계 인증을 시작하지 못했습니다.");
+        }
+        return;
+      }
       let msg = errorMap[key] || "이메일 또는 비밀번호가 올바르지 않습니다.";
 
       // ⚠️ 일부 환경에서 이메일/비번 오류가 모두 invalid-credential로 내려옵니다.
@@ -226,10 +264,38 @@ export default function Login() {
     }
   };
 
+  const handleMfaSubmit = async (event) => {
+    event.preventDefault();
+    if (!mfaChallenge) return;
+    setLoading(true);
+    setError("");
+    try {
+      const user = await completeMfaSignIn(mfaChallenge, mfaCode);
+      setMfaChallenge(null);
+      setMfaCode("");
+      if (!user.emailVerified) {
+        setError("이메일 인증이 필요합니다. 메일함에서 인증을 완료해 주세요.");
+        setShowResend(true);
+      } else {
+        navigate(returnTo, { replace: true });
+      }
+    } catch (err) {
+      setError(
+        err?.code === "auth/invalid-verification-code"
+          ? "인증번호가 올바르지 않습니다."
+          : err?.message || "2단계 인증에 실패했습니다."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleResend = async () => {
     setResendMsg("");
     try {
-      await sendEmailVerification();
+      await sendVerificationEmailIfNeeded(
+        returnTo === "/gold-price" ? "/gold-price" : "/verify-email"
+      );
       setResendMsg("인증 메일이 재발송되었습니다. 메일함을 확인해 주세요!");
     } catch (err) {
       setResendMsg(
@@ -248,8 +314,8 @@ export default function Login() {
 
         <TopCtaWrap>
           <LuxuryCta
-            to="/register"
-            state={{ intent: "exchange" }}
+            to={registerPath}
+            state={registerState}
             aria-label="회원가입하러 가기 - 회원가입 즉시 웰컴 순금 0.01g 적립"
           >
             <CtaLineMain>회원가입하러가기</CtaLineMain>
@@ -272,7 +338,28 @@ export default function Login() {
         )}
 
         {/* HTML5 검증 + FormData */}
-        <Form onSubmit={handleSubmit} autoComplete="on" noValidate={false}>
+        {mfaChallenge ? (
+          <Form onSubmit={handleMfaSubmit} autoComplete="on">
+            <FormGroup>
+              <Label htmlFor="loginMfaCode">관리자 2단계 인증번호</Label>
+              <Input
+                id="loginMfaCode"
+                name="mfa-code"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                value={mfaCode}
+                onChange={(event) => setMfaCode(event.target.value)}
+                required
+                autoFocus
+                disabled={loading}
+              />
+            </FormGroup>
+            <Button type="submit" disabled={loading}>
+              {loading ? "확인 중..." : "2단계 인증"}
+            </Button>
+          </Form>
+        ) : (
+          <Form onSubmit={handleSubmit} autoComplete="on" noValidate={false}>
           <FormGroup>
             <Label htmlFor="loginEmail">이메일</Label>
             <Input
@@ -300,14 +387,16 @@ export default function Login() {
           <Button type="submit" disabled={loading}>
             {loading ? "로그인 중..." : "로그인"}
           </Button>
-        </Form>
+          </Form>
+        )}
+        <div id="login-mfa-recaptcha" />
 
         <LinkText>
           <Link to="/reset-password">비밀번호를 잊으셨나요?</Link>
         </LinkText>
         <LinkText>
           처음이세요?{" "}
-          <Link to="/register" state={{ intent: "exchange" }}>
+          <Link to={registerPath} state={registerState}>
             회원가입
           </Link>
         </LinkText>

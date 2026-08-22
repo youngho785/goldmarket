@@ -11,6 +11,7 @@
   "scripts": {
     "clean": "rimraf lib",
     "build": "tsc -p tsconfig.json",
+    "migrate:support": "npm run build && node scripts/migrate-support-tickets.mjs",
     "watch": "tsc -w -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
@@ -19,7 +20,8 @@
     "shell": "firebase functions:shell",
     "start": "npm run shell",
     "deploy": "npm run build && firebase deploy --only functions",
-    "logs": "firebase functions:log"
+    "logs": "firebase functions:log",
+    "test:policy": "npm run build && node scripts/test-booking-policy.mjs"
   },
   "dependencies": {
     "firebase-admin": "^12.6.0",
@@ -29,6 +31,7 @@
     "eslint": "^9.6.0",
     "typescript": "^5.6.3",
     "typescript-eslint": "^8.7.0",
-    "rimraf": "^5.0.5"
+    "rimraf": "^5.0.5",
+    "@types/node": "^22.10.0"
   }
 }

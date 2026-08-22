@@ -18,22 +18,22 @@ export const Button = styled.button.withConfig({
   font-weight: 750;
   color: ${({ theme, variant, $variant }) => {
     const v = variant ?? $variant;
-    return v === "secondary" ? theme.semantic?.buttonAltText || theme.colors.text : theme.on?.primary || "#fff";
+    return v === "secondary" ? theme.semantic.buttonAltText : theme.on.primary;
   }};
 
   /* variant 해석 (variant 또는 $variant 중 존재하는 값 사용) */
   background: ${({ theme, variant, $variant }) => {
     const v = variant ?? $variant;
-    if (v === "secondary") return theme.semantic?.buttonAltBg || theme.colors?.surfaceAlt || "#eef2f6";
-    if (v === "danger" || v === "delete") return theme.colors?.danger || "#e74c3c";
-    return theme.gradients?.primary || theme.colors?.primary || "#1f3a5f";
+    if (v === "secondary") return theme.semantic.buttonAltBg;
+    if (v === "danger" || v === "delete") return theme.colors.danger;
+    return theme.gradients.primary;
   }};
 
   border: 1px solid ${({ theme, variant, $variant }) => {
     const v = variant ?? $variant;
-    return v === "secondary" ? theme.colors?.border || "#dce3ec" : "transparent";
+    return v === "secondary" ? theme.colors.border : "transparent";
   }};
-  border-radius: ${({ theme }) => theme.radii?.default || "8px"};
+  border-radius: ${({ theme }) => theme.radii.default};
   cursor: pointer;
   box-shadow: ${({ theme }) => theme.shadows?.xs};
   transition: filter .15s ease, transform .15s ease, box-shadow .2s ease;

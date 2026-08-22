@@ -1,34 +1,23 @@
 // src/components/admin/ExchangeList.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import styled from "styled-components";
 import { useSearchParams } from "react-router-dom";
-import { db, functions } from "../../firebase/firebase";
-import {
-  collection,
-  getDocs,
-  doc,
-  query,
-  orderBy,
-  limit as qLimit,
-  startAfter,
-  getDoc,
-  onSnapshot,
-} from "firebase/firestore";
+import { db, functions } from "@/firebase/firebase";
 import { httpsCallable } from "firebase/functions";
+import { collection, getDocs, limit, onSnapshot, orderBy, query, where } from "firebase/firestore";
+import {
+  fetchAdminExchangeGroup,
+  fetchAdminExchangeGroupItems,
+  fetchAdminExchangeGroupsPage,
+  fetchAdminProfile,
+} from "@/services/adminExchangeService";
 
-const DEBUG =
-  (typeof window !== "undefined" &&
-    (window.location.search.includes("debug=1") ||
-      localStorage.getItem("DEBUG_EXCHANGE_LIST") === "1")) ||
-  false;
-
-/* ─────────────── 상수 & 유틸 ─────────────── */
 const PAGE_SIZE = 20;
 const DON_TO_GRAMS = 3.75;
 
 const STATUS_LABEL = {
-  requested: "요청(대기)",
-  scheduled: "예약 승인",
+  requested: "예약 확인 대기",
+  scheduled: "예약 확정",
   in_progress: "진행 중",
   completed: "완료",
   rejected: "거절",
@@ -36,204 +25,294 @@ const STATUS_LABEL = {
   교환중: "진행 중",
 };
 
-// 대표상태 우선순위 (인덱스 작을수록 상위)
-const STATUS_PRIORITY = [
-  "rejected",
-  "canceled",
-  "completed",
-  "scheduled",
-  "in_progress",
-  "교환중",
-  "requested",
-];
-
-function fmt(ts) {
-  try {
-    if (!ts) return "-";
-    const d = typeof ts.toDate === "function" ? ts.toDate() : new Date(ts);
-    return (
-      d.getFullYear() +
-      "-" +
-      String(d.getMonth() + 1).padStart(2, "0") +
-      "-" +
-      String(d.getDate()).padStart(2, "0") +
-      " " +
-      String(d.getHours()).padStart(2, "0") +
-      ":" +
-      String(d.getMinutes()).padStart(2, "0")
-    );
-  } catch {
-    return "-";
+const displayReservationStatus = (status, scheduleChangeType = "") => {
+  const normalized = status === "교환중" ? "in_progress" : String(status || "requested");
+  if (normalized === "requested" && scheduleChangeType === "rescheduled") {
+    return "일정 변경 확인 대기";
   }
-}
-
-/* GoldExchange & MyExchanges와 동일한 라운딩/포맷 규칙 */
-const roundTo3Custom = (n) => {
-  if (!isFinite(n)) return 0;
-  const sign = n < 0 ? -1 : 1;
-  const abs = Math.abs(n);
-  const t = Math.floor(abs * 10000 + 1e-8);
-  let thousands = Math.floor(t / 10);
-  const fourth = t % 10;
-  if (fourth >= 7) thousands += 1;
-  return sign * (thousands / 1000);
-};
-const toFixed3CustomStr = (n) => roundTo3Custom(n).toFixed(3);
-const fmtG3 = (n) => toFixed3CustomStr(Number(n || 0)); // g: 소수점 3자리(커스텀 반올림)
-const fmtD2 = (n) => (Number(n || 0)).toFixed(2);       // 돈: 소수점 2자리
-const fmtG2Min = (n) => {                                // 안내용 최소 0.01g
-  const x = Number(n || 0);
-  if (x > 0 && x < 0.01) return "0.01";
-  return (Math.round(x * 100) / 100).toFixed(2);
-};
-
-const displayOriginalQty = (doc) => {
-  const origQ = doc.originalQuantity;
-  const unit = doc.inputUnit; // 'g' | 'don'
-  if (origQ != null && unit) {
-    const n = Number(origQ) || 0;
-    if (unit === "g") {
-      return `${toFixed3CustomStr(n)} g (${fmtD2(roundTo3Custom(n / DON_TO_GRAMS))} 돈)`;
-    }
-    return `${toFixed3CustomStr(roundTo3Custom(n * DON_TO_GRAMS))} g (${fmtD2(roundTo3Custom(n))} 돈)`;
+  if (normalized === "scheduled" && scheduleChangeType === "rescheduled") {
+    return "변경 예약 확정";
   }
-  const grams = Number(doc.quantity) || 0;
-  return `${toFixed3CustomStr(grams)} g (${fmtD2(roundTo3Custom(grams / DON_TO_GRAMS))} 돈)`;
+  return STATUS_LABEL[normalized] || normalized;
 };
 
-const normalizeStatusKey = (s) => (s === "교환중" ? "in_progress" : s || "requested");
+const PageWrap = styled.div`
+  display: grid;
+  gap: 10px;
+  font-size: 0.9rem;
 
-/* ─────────────── 스타일 ─────────────── */
+  @media (max-width: 520px) {
+    font-size: 0.92rem;
+  }
+`;
+
 const StickyToolbar = styled.div`
   position: sticky;
   top: 0;
   z-index: 5;
-  padding: 10px;
-  background: ${({ theme }) => theme.colors.surface};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(280px, 400px) auto minmax(0, 1fr);
   align-items: center;
-`;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 10px;
+  background: ${({ theme }) => theme.colors.surface};
 
-const Summary = styled.span`
-  margin-left: auto;
-  font-size: 0.9rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
-`;
+  @media (max-width: 780px) {
+    position: static;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
 
-const ListContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  ${DEBUG ? "outline: 2px dashed #B28A3B;" : ""}
-`;
-
-const DebugBar = styled.div`
-  display: ${DEBUG ? "block" : "none"};
-  background: ${({ theme }) => theme.colors.primary};
-  color: #fff;
-  font-weight: 800;
-  font-size: 12px;
-  padding: 6px 10px;
-  border-radius: 6px;
-  margin: 8px 0;
+  @media (max-width: 520px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 const Input = styled.input`
-  padding: 8px 10px;
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  padding: 7px 10px;
   border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 6px;
-  min-width: 220px;
+  border-radius: 8px;
   background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
+  font-size: 0.84rem;
+
+  &::placeholder {
+    color: ${({ theme }) => theme.colors.textLight};
+  }
 `;
 
-const GroupCard = styled.div`
+const ToolbarButton = styled.button`
+  min-height: 38px;
+  padding: 7px 11px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 8px;
   background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
+  font-size: 0.82rem;
+  font-weight: 750;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+  }
+`;
+
+const Summary = styled.span`
+  justify-self: end;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 0.78rem;
+  line-height: 1.35;
+  text-align: right;
+  white-space: nowrap;
+
+  @media (max-width: 780px) {
+    grid-column: 1 / -1;
+    justify-self: start;
+    text-align: left;
+  }
+`;
+
+const ErrorBox = styled.p`
+  margin: 0;
+  padding: 12px;
+  border: 1px solid ${({ theme }) => theme.colors.error};
+  border-radius: 10px;
+  background: ${({ theme }) => theme.semantic.alertErrorBg};
+  color: ${({ theme }) => theme.semantic.alertErrorText};
+`;
+
+const TodayPanel = styled.section`
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 12px;
+  background: ${({ theme }) => theme.colors.surface};
+  box-shadow: ${({ theme }) => theme.shadows.card};
+`;
+
+const TodayPanelHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+
+  > div {
+    display: grid;
+    gap: 2px;
+  }
+
+  strong {
+    color: ${({ theme }) => theme.colors.text};
+    font-size: 1rem;
+    font-weight: 900;
+  }
+
+  span {
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: 0.78rem;
+  }
+`;
+
+const TodayGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+`;
+
+const TodayCard = styled.article`
+  display: grid;
+  gap: 8px;
+  padding: 11px 12px;
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 10px;
+  background: ${({ theme }) => theme.colors.background};
+`;
+
+const TodayTime = styled.strong`
+  color: ${({ theme }) => theme.colors.primary};
+  font-family: ${({ theme }) => theme.fonts.numeric};
+  font-size: 1.05rem;
+  font-weight: 900;
+`;
+
+const TodayMeta = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+
+  span {
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: 0.82rem;
+  }
+`;
+
+const TodayEmpty = styled.p`
+  margin: 0;
+  padding: 8px 2px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 0.84rem;
+`;
+
+const GroupCard = styled.article`
   overflow: hidden;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 12px;
+  background: ${({ theme }) => theme.colors.surface};
   box-shadow: ${({ theme }) => theme.shadows.card};
 `;
 
 const GroupHeader = styled.button`
-  all: unset;
   width: 100%;
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  padding: 10px 12px;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 0;
   background: ${({ theme }) => theme.colors.background};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-  cursor: pointer;
-  &:hover { background: ${({ theme }) => theme.colors.surfaceAlt || "#f7f9fc"}; }
-`;
-
-const HLeft = styled.div`
-  display: grid;
-  grid-template-columns: auto 1fr;
-  column-gap: .6rem;
-  row-gap: .25rem;
-  align-items: baseline;
-  min-width: 0;
-`;
-
-const HLabel = styled.span`
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-weight: 600;
-  font-size: .92rem;
-`;
-const HValue = styled.span`
   color: ${({ theme }) => theme.colors.text};
-  font-weight: 700;
-  font-size: .95rem;
-  min-width: 0;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.surfaceAlt};
+  }
+
+  @media (max-width: 720px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
-const HRight = styled.div`
+const HeaderInfo = styled.div`
+  display: grid;
+  grid-template-columns: 6.3em minmax(0, 1fr);
+  gap: 2px 8px;
+  min-width: 0;
+  line-height: 1.35;
+
+  small {
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: 0.75rem;
+    font-weight: 650;
+  }
+
+  strong {
+    color: ${({ theme }) => theme.colors.text};
+    font-size: 0.92rem;
+    font-weight: 820;
+  }
+
+  span {
+    min-width: 0;
+    overflow: hidden;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: 0.78rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+`;
+
+const HeaderRight = styled.div`
   display: flex;
   align-items: center;
-  gap: .5rem;
+  justify-content: flex-end;
+  gap: 7px;
+  flex-wrap: wrap;
+
+  @media (max-width: 720px) {
+    justify-content: flex-start;
+  }
 `;
 
 const StatusBadge = styled.span`
-  padding: .32rem .6rem;
-  border-radius: 9999px;
-  font-weight: 800;
-  font-size: .83rem;
+  padding: 3px 7px;
+  border-radius: 999px;
   background: ${({ $status, theme }) => {
-    if ($status === 'requested') return theme.colors.warning;
-    if ($status === 'scheduled') return theme.colors.success;
-    if ($status === 'completed') return theme.colors.secondary;
-    if ($status === 'rejected') return theme.colors.error;
-    if ($status === 'canceled') return theme.colors.gray;
-    if ($status === 'in_progress' || $status === '교환중') return theme.colors.info;
+    if ($status === "requested") return theme.colors.warning;
+    if ($status === "scheduled") return theme.colors.success;
+    if ($status === "in_progress") return theme.colors.info;
+    if ($status === "completed") return theme.colors.secondary;
+    if ($status === "rejected") return theme.colors.error;
     return theme.colors.gray;
   }};
-  color: #fff;
+  color: ${({ $status, theme }) => ($status === "requested" ? theme.on.warning : theme.on.primary)};
+  font-size: 0.75rem;
+  font-weight: 850;
 `;
 
-const Chev = styled.span`
-  display: inline-block;
-  transition: transform .2s ease;
-  transform: rotate(${({ $open }) => ($open ? '180deg' : '0deg')});
-  font-size: 1rem;
-  opacity: .7;
+const Chip = styled.span`
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: ${({ theme }) => theme.semantic.badgeGoldBg};
+  color: ${({ theme }) => theme.colors.primary};
+  font-family: ${({ theme }) => theme.fonts.numeric};
+  font-size: 0.76rem;
+  font-weight: 800;
 `;
 
 const GroupBody = styled.div`
-  padding: .9rem 1rem 1.1rem;
   display: grid;
-  grid-template-columns: 1fr;
-  gap: .9rem;
+  gap: 10px;
+  padding: 11px 12px 12px;
+  border-top: 1px solid ${({ theme }) => theme.colors.border};
 `;
 
 const MetaGrid = styled.div`
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: .75rem 1.25rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px 14px;
+
   @media (max-width: 720px) {
     grid-template-columns: 1fr;
   }
@@ -241,131 +320,98 @@ const MetaGrid = styled.div`
 
 const Field = styled.div`
   display: grid;
-  grid-template-columns: 6.5em 1fr;
+  grid-template-columns: 6.2em minmax(0, 1fr);
+  gap: 6px;
   align-items: baseline;
-  column-gap: .5rem;
-`;
-const Label = styled.span`
-  font-weight: 800;
-  color: ${({ theme }) => theme.colors.text};
-  letter-spacing: -0.01em;
-`;
-const Value = styled.span`
-  color: ${({ theme }) => theme.colors.textSecondary};
-  word-break: break-word;
+  line-height: 1.4;
+
+  strong {
+    color: ${({ theme }) => theme.colors.text};
+    font-size: 0.81rem;
+    font-weight: 800;
+  }
+
+  span {
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: 0.84rem;
+    word-break: break-word;
+  }
 `;
 
-const Divider = styled.hr`
-  height: 1px;
-  background: ${({ theme }) => theme.colors.border};
-  border: none;
-  margin: .25rem 0 .25rem;
+const PhoneLink = styled.a`
+  color: ${({ theme }) => theme.colors.link};
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+`;
+
+const TableWrap = styled.div`
+  overflow-x: auto;
+`;
+
+const TotalSummary = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 9px;
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+  color: ${({ theme }) => theme.colors.text};
+  font-size: 0.82rem;
+
+  strong {
+    margin-right: 2px;
+    font-size: 0.84rem;
+    font-weight: 850;
+  }
+
+  @media (max-width: 520px) {
+    justify-content: flex-start;
+  }
 `;
 
 const ItemsTable = styled.table`
   width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  overflow: hidden;
-  border-radius: 10px;
-  thead th {
+  min-width: 680px;
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: 7px 9px;
+    border-bottom: 1px solid ${({ theme }) => theme.colors.border};
     text-align: left;
+    vertical-align: top;
+  }
+
+  th {
     background: ${({ theme }) => theme.colors.background};
     color: ${({ theme }) => theme.colors.text};
-    padding: .55rem .65rem;
-    font-size: .92rem;
-    border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+    font-size: 0.79rem;
+    font-weight: 800;
+    white-space: nowrap;
   }
-  tbody td {
-    padding: .55rem .65rem;
-    border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-    vertical-align: top;
+
+  td {
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .92rem;
-  }
-  tbody tr:nth-child(even) td {
-    background: ${({ theme }) => theme.colors.surfaceAlt || "#fafafa"};
-  }
-  tbody tr:last-child td { border-bottom: none; }
-  @media (max-width: 640px) {
-    th[data-col='exchangeType'], td[data-col='exchangeType'],
-    th[data-col='status'], td[data-col='status'] { display: none; }
+    font-size: 0.82rem;
+    line-height: 1.4;
   }
 `;
 
-const TotalRow = styled.div`
-  margin-top: .35rem;
-  font-weight: 800;
-  display: flex;
-  gap: .5rem;
-  align-items: center;
-`;
-
-const Chips = styled.span`
-  display: inline-flex;
-  gap: .35rem;
-  flex-wrap: wrap;
-`;
-const Chip = styled.span`
-  display: inline-block;
-  padding: .12rem .45rem;
-  border-radius: 9999px;
-  font-weight: 800;
-  font-size: .82rem;
-  color: #fff;
-  background: ${({ $tone, theme }) => {
-    if ($tone === 'grams') return theme.colors.primary;
-    if ($tone === 'don') return theme.colors.secondary;
-    return theme.colors.info;
-  }};
-`;
-
-const PlanCard = styled.div`
-  margin-top: .5rem;
-  padding: .75rem .9rem;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 10px;
-  background: linear-gradient(180deg, #fcfdff, #f7f9fc);
-`;
-const PlanRow = styled.div`
+const NoticeCard = styled.section`
   display: grid;
-  grid-template-columns: 7em 1fr;
-  gap: .5rem;
-  margin: .25rem 0;
-`;
-const PlanLabel = styled.span`font-weight: 800;`;
-const PlanValue = styled.span``;
-const Pill = styled.span`
-  display: inline-block;
-  padding: .2rem .55rem;
-  border-radius: 9999px;
-  background: #eef2ff;
-  color: #4338ca;
-  font-weight: 800;
-  font-size: .82rem;
-  margin-right: .35rem;
-  margin-top: .25rem;
-`;
+  gap: 6px;
+  padding: 12px;
+  border-left: 4px solid ${({ $danger, theme }) =>
+    $danger ? theme.colors.error : theme.colors.warning};
+  background: ${({ theme }) => theme.colors.surfaceAlt};
 
-const ButtonGroup = styled.div`
-  margin-top: 8px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-`;
-const ActionButton = styled.button`
-  padding: 8px 12px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  background: ${({ theme }) => theme.colors.primary};
-  color: ${({ theme }) => theme.colors.buttonText};
-  &:hover {
-    background: ${({ theme }) => theme.colors.secondary};
-  }
-  &:disabled {
-    opacity: .6;
-    cursor: not-allowed;
+  p {
+    margin: 0;
   }
 `;
 
@@ -376,28 +422,6 @@ const BonusCard = styled.section`
   border: 1px solid ${({ theme }) => theme.colors.secondary};
   border-radius: 12px;
   background: ${({ theme }) => theme.semantic.badgeGoldBg};
-  color: ${({ theme }) => theme.colors.text};
-`;
-
-const BonusHead = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
-`;
-
-const BonusBadge = styled.span`
-  display: inline-flex;
-  align-items: center;
-  min-height: 26px;
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: ${({ $status, theme }) =>
-    $status === "requested" ? theme.colors.error : theme.colors.primary};
-  color: #fff;
-  font-size: .76rem;
-  font-weight: 850;
 `;
 
 const BonusGrid = styled.div`
@@ -414,793 +438,1357 @@ const BonusField = styled.label`
   display: grid;
   gap: 6px;
   color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: .85rem;
+  font-size: .86rem;
   font-weight: 750;
 `;
 
 const BonusInput = styled.input`
-  width: 100%;
   min-height: 44px;
   padding: 9px 10px;
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 9px;
   background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.text};
-  font-size: 1rem;
 `;
 
-const BonusEquation = styled.div`
-  display: flex;
+const PlanCard = styled.section`
+  display: grid;
   gap: 7px;
-  align-items: center;
-  flex-wrap: wrap;
-  padding: 10px 12px;
-  border-radius: 9px;
-  background: ${({ theme }) => theme.colors.surface};
-  font-family: ${({ theme }) => theme.fonts.numeric};
+  padding: 12px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 10px;
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+`;
+
+const OverviewGrid = styled.section`
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+
+  @media (max-width: 980px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (max-width: 560px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const OverviewCard = styled.div`
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 10px;
+  background: ${({ $accent, theme }) =>
+    $accent ? theme.semantic.badgeGoldBg : theme.colors.surfaceAlt};
+`;
+
+const OverviewLabel = styled.div`
+  margin-bottom: 5px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 0.75rem;
   font-weight: 800;
 `;
 
-const PhoneLink = styled.a`
-  color: ${({ theme }) => theme.colors.link};
+const OverviewValue = styled.div`
+  overflow-wrap: anywhere;
+  color: ${({ theme }) => theme.colors.text};
+  font-size: 0.98rem;
+  font-weight: 900;
+  line-height: 1.35;
+`;
+
+const OverviewSub = styled.div`
+  margin-top: 4px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 0.76rem;
+  line-height: 1.4;
+`;
+
+const SectionTitle = styled.div`
+  margin-top: 2px;
+  color: ${({ theme }) => theme.colors.text};
+  font-size: 0.86rem;
+  font-weight: 900;
+`;
+
+const ButtonGroup = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+`;
+
+const ActionButton = styled.button`
+  min-height: 38px;
+  padding: 7px 11px;
+  border: 0;
+  border-radius: 8px;
+  background: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.on.primary};
+  font-size: 0.82rem;
   font-weight: 800;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+  }
 `;
 
 const LoadMoreWrap = styled.div`
   display: flex;
-  gap: 8px;
   justify-content: center;
-  margin: 16px 0 24px;
-`;
-const LoadMoreBtn = styled.button`
-  padding: 10px 16px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 8px;
-  cursor: pointer;
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-`;
-const TopButton = styled.button`
-  position: fixed;
-  right: 16px;
-  bottom: 16px;
-  padding: 10px 12px;
-  border: none;
-  border-radius: 9999px;
-  background: ${({ theme }) => theme.colors.primary};
-  color: #fff;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
-  cursor: pointer;
+  gap: 8px;
+  padding: 8px 0 24px;
 `;
 
-/* ─────────────── 컴포넌트 ─────────────── */
+function fmt(value) {
+  try {
+    if (!value) return "-";
+    const date =
+      typeof value.toDate === "function" ? value.toDate() : new Date(value);
+    return date.toLocaleString("ko-KR", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "-";
+  }
+}
+
+function roundTo3(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return 0;
+  const sign = number < 0 ? -1 : 1;
+  const absolute = Math.abs(number);
+  const times10000 = Math.floor(absolute * 10000 + 1e-8);
+  let thousandths = Math.floor(times10000 / 10);
+  if (times10000 % 10 >= 7) thousandths += 1;
+  return sign * (thousandths / 1000);
+}
+
+function gramsText(value) {
+  return `${roundTo3(value).toFixed(3)}g`;
+}
+
+function donText(value) {
+  return `${(Number(value || 0) / DON_TO_GRAMS).toFixed(2)}돈`;
+}
+
+function originalQuantityText(item) {
+  const original = Number(item.originalQuantity);
+  const grams = Number(item.quantity || 0);
+
+  if (Number.isFinite(original) && item.inputUnit === "don") {
+    return `${roundTo3(original * DON_TO_GRAMS).toFixed(3)}g (${original.toFixed(2)}돈)`;
+  }
+  if (Number.isFinite(original) && item.inputUnit === "g") {
+    return `${roundTo3(original).toFixed(3)}g (${(original / DON_TO_GRAMS).toFixed(2)}돈)`;
+  }
+  return `${roundTo3(grams).toFixed(3)}g (${(grams / DON_TO_GRAMS).toFixed(2)}돈)`;
+}
+
+function normalizeStatus(value) {
+  return value === "교환중" ? "in_progress" : String(value || "requested");
+}
+
+function matchesStatusFilter(status, filter) {
+  const normalized = normalizeStatus(status);
+  if (!filter) return true;
+  if (filter === "active") return ["scheduled", "in_progress"].includes(normalized);
+  return normalized === filter;
+}
+
+function latestItem(items) {
+  return [...items].sort((a, b) => {
+    const aTime = a.updatedAt?.toDate?.()?.getTime?.() || new Date(a.updatedAt || 0).getTime();
+    const bTime = b.updatedAt?.toDate?.()?.getTime?.() || new Date(b.updatedAt || 0).getTime();
+    return bTime - aTime;
+  })[0] || {};
+}
+
+function seoulDateKey(now = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+const TODAY_ACTIVE_STATUSES = new Set(["requested", "scheduled", "in_progress"]);
+
 export default function ExchangeList() {
-  // 로우 문서(페이지 누적)
-  const [docs, setDocs] = useState([]);
-  const [qText, setQText] = useState("");
+  const [searchParams] = useSearchParams();
+  const statusFilter = String(searchParams.get("status") || "").trim();
+  const focusGroupId = String(searchParams.get("groupId") || "").trim();
+
+  const [groups, setGroups] = useState([]);
+  const [cursor, setCursor] = useState(null);
+  const [hasMore, setHasMore] = useState(false);
   const [loadingFirst, setLoadingFirst] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [lastDoc, setLastDoc] = useState(null);
-  const [hasMore, setHasMore] = useState(true);
-
-  // 그룹 확장 상태
+  const [qText, setQText] = useState("");
   const [expanded, setExpanded] = useState({});
-  const toggle = (gid) => setExpanded((p) => ({ ...p, [gid]: !p[gid] }));
-
-  // 프로필 캐시 (userId -> profile)
+  const [details, setDetails] = useState({});
   const [profiles, setProfiles] = useState({});
-
-  // 그룹 단위 busy 상태 (중복 클릭 방지)
-  const [busy, setBusy] = useState({}); // { [groupId]: boolean }
-  const [groupMeta, setGroupMeta] = useState({});
+  const [busy, setBusy] = useState({});
   const [bonusForms, setBonusForms] = useState({});
-  const [searchParams] = useSearchParams();
-  const focusGroupId = (searchParams.get("groupId") || "").trim();
-  const statusFilter = (searchParams.get("status") || "").trim();
+  const [error, setError] = useState("");
+  const [todayReservations, setTodayReservations] = useState([]);
+  const [todayLoading, setTodayLoading] = useState(true);
+  const [todayError, setTodayError] = useState("");
+  const [todayKey, setTodayKey] = useState(() => seoulDateKey());
 
-  // 최초 페이지 로드 (createdAt desc 정렬로만 페이징)
-  useEffect(() => {
-    let cancelled = false;
-    async function loadFirstPage() {
-      setLoadingFirst(true);
-      setHasMore(true);
-      setLastDoc(null);
-      try {
-        const baseQ = query(
-          collection(db, "goldExchanges"),
-          orderBy("createdAt", "desc"),
-          qLimit(PAGE_SIZE)
-        );
-        const snap = await getDocs(baseQ);
-        if (cancelled) return;
-        const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        setDocs(rows);
-        setLastDoc(snap.docs[snap.docs.length - 1] || null);
-        setHasMore(snap.size === PAGE_SIZE);
-      } catch (e) {
-        console.error("첫 페이지 로드 실패:", e);
-      } finally {
-        if (!cancelled) setLoadingFirst(false);
-      }
+  const loadTodayReservations = useCallback(async (silent = false) => {
+    if (!silent) setTodayLoading(true);
+    setTodayError("");
+
+    try {
+      const currentTodayKey = seoulDateKey();
+      setTodayKey(currentTodayKey);
+      const snapshot = await getDocs(
+        query(
+          collection(db, "goldExchangeGroups"),
+          where("visitDate", "==", currentTodayKey)
+        )
+      );
+
+      const activeGroups = snapshot.docs
+        .map((document) => ({ id: document.id, ...document.data() }))
+        .filter((group) => TODAY_ACTIVE_STATUSES.has(normalizeStatus(group.repStatus)));
+
+      const rows = await Promise.all(
+        activeGroups.map(async (group) => {
+          const items = await fetchAdminExchangeGroupItems(group.id).catch(() => []);
+          const latest = latestItem(items);
+          const totalG = Number(
+            group.totalG ??
+              items.reduce((sum, item) => sum + Number(item.finalWeight || 0), 0)
+          );
+
+          return {
+            ...group,
+            repStatus: normalizeStatus(group.repStatus),
+            name: latest.name || latest.requesterName || "이름 확인",
+            phone: latest.phone || "",
+            totalG,
+            scheduleChangeType: String(group.scheduleChangeType || latest.scheduleChangeType || ""),
+          };
+        })
+      );
+
+      rows.sort((a, b) =>
+        String(a.visitTime || "99:99").localeCompare(String(b.visitTime || "99:99"))
+      );
+      setTodayReservations(rows);
+    } catch (todayLoadError) {
+      console.error("[ExchangeList] today reservations failed:", todayLoadError);
+      setTodayError("오늘 예약을 불러오지 못했습니다.");
+    } finally {
+      if (!silent) setTodayLoading(false);
     }
-    loadFirstPage();
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
-  // 더 불러오기
-  const loadMore = async () => {
-    if (loadingMore || !hasMore || !lastDoc) return;
-    setLoadingMore(true);
+  useEffect(() => {
+    loadTodayReservations();
+
+    const currentTodayKey = seoulDateKey();
+    const liveTodayQuery = query(
+      collection(db, "goldExchangeGroups"),
+      where("visitDate", "==", currentTodayKey)
+    );
+    const unsubscribe = onSnapshot(
+      liveTodayQuery,
+      () => loadTodayReservations(true),
+      (snapshotError) => {
+        console.warn("[ExchangeList] today live subscribe failed:", snapshotError);
+      }
+    );
+
+    // 실시간 구독이 일시적으로 끊기는 상황을 대비한 보조 재조회
+    const timer = window.setInterval(() => loadTodayReservations(true), 5 * 60_000);
+    return () => {
+      unsubscribe?.();
+      window.clearInterval(timer);
+    };
+  }, [loadTodayReservations]);
+
+  const loadFirst = useCallback(async () => {
+    setLoadingFirst(true);
+    setError("");
+
     try {
-      const baseQ = query(
-        collection(db, "goldExchanges"),
-        orderBy("createdAt", "desc"),
-        startAfter(lastDoc),
-        qLimit(PAGE_SIZE)
+      const result = await fetchAdminExchangeGroupsPage({
+        status: statusFilter,
+        pageSize: PAGE_SIZE,
+      });
+
+      let nextGroups = result.groups;
+
+      if (
+        focusGroupId &&
+        !nextGroups.some((group) => group.id === focusGroupId)
+      ) {
+        const focused = await fetchAdminExchangeGroup(focusGroupId);
+        if (focused) nextGroups = [focused, ...nextGroups];
+      }
+
+      setGroups(nextGroups);
+      setCursor(result.cursor);
+      setHasMore(result.hasMore);
+
+      if (focusGroupId) {
+        setExpanded((current) => ({ ...current, [focusGroupId]: true }));
+      }
+    } catch (loadError) {
+      console.error("[ExchangeList] group load failed:", loadError);
+      setError(
+        loadError?.message ||
+          "금교환 그룹 목록을 불러오지 못했습니다."
       );
-      const snap = await getDocs(baseQ);
-      const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      setDocs((prev) => [...prev, ...rows]);
-      setLastDoc(snap.docs[snap.docs.length - 1] || null);
-      setHasMore(snap.size === PAGE_SIZE);
-    } catch (e) {
-      console.error("추가 로드 실패:", e);
+      setGroups([]);
+    } finally {
+      setLoadingFirst(false);
+    }
+  }, [focusGroupId, statusFilter]);
+
+  useEffect(() => {
+    loadFirst();
+  }, [loadFirst]);
+
+  // 관리자 목록의 첫 페이지는 Firestore 실시간 구독으로 유지합니다.
+  // 고객의 일정 변경/취소가 발생해도 알림이나 새로고침 없이 즉시 반영됩니다.
+  useEffect(() => {
+    const constraints = [];
+    if (statusFilter === "active") {
+      constraints.push(where("repStatus", "in", ["scheduled", "in_progress"]));
+    } else if (
+      ["requested", "scheduled", "in_progress", "completed", "rejected", "canceled"].includes(
+        statusFilter
+      )
+    ) {
+      constraints.push(where("repStatus", "==", statusFilter));
+    }
+    constraints.push(orderBy("updatedAt", "desc"));
+    constraints.push(limit(PAGE_SIZE));
+
+    const liveQuery = query(collection(db, "goldExchangeGroups"), ...constraints);
+    const unsubscribe = onSnapshot(
+      liveQuery,
+      (snapshot) => {
+        setGroups((current) => {
+          const merged = new Map(current.map((group) => [group.id, group]));
+
+          snapshot.docChanges().forEach((change) => {
+            const row = { id: change.doc.id, ...change.doc.data() };
+            if (change.type === "removed") {
+              merged.delete(row.id);
+            } else {
+              merged.set(row.id, row);
+            }
+          });
+
+          if (focusGroupId && !merged.has(focusGroupId)) {
+            // 포커스 그룹은 아래 loadFirst/fetchAdminExchangeGroup 경로가 다시 보완합니다.
+          }
+
+          return Array.from(merged.values()).sort((a, b) => {
+            const aTime =
+              a.updatedAt?.toDate?.()?.getTime?.() ||
+              new Date(a.updatedAt || 0).getTime() ||
+              0;
+            const bTime =
+              b.updatedAt?.toDate?.()?.getTime?.() ||
+              new Date(b.updatedAt || 0).getTime() ||
+              0;
+            return bTime - aTime;
+          });
+        });
+
+        // 이미 펼쳐 본 상세 데이터도 대표 상태/일정 변경 정보를 즉시 맞춥니다.
+        if (snapshot.docChanges().length > 0) {
+          setDetails((current) => {
+            let didChange = false;
+            const next = { ...current };
+
+            snapshot.docChanges().forEach((change) => {
+              if (change.type === "removed") return;
+              const row = { id: change.doc.id, ...change.doc.data() };
+              const detail = current[row.id];
+              if (!detail?.items?.length) return;
+
+              didChange = true;
+              next[row.id] = {
+                ...detail,
+                items: detail.items.map((item) => ({
+                  ...item,
+                  status: normalizeStatus(row.repStatus || item.status),
+                  visitDate: row.visitDate || item.visitDate,
+                  visitTime: row.visitTime || item.visitTime,
+                  scheduleChangeType:
+                    row.scheduleChangeType ?? item.scheduleChangeType,
+                  previousVisitDate:
+                    row.previousVisitDate ?? item.previousVisitDate,
+                  previousVisitTime:
+                    row.previousVisitTime ?? item.previousVisitTime,
+                  scheduleChangeReason:
+                    row.scheduleChangeReason ?? item.scheduleChangeReason,
+                  cancellationReason:
+                    row.cancellationReason ?? item.cancellationReason,
+                  scheduleChangeRequestedAt:
+                    row.scheduleChangeRequestedAt ?? item.scheduleChangeRequestedAt,
+                  cancellationRequestedAt:
+                    row.cancellationRequestedAt ?? item.cancellationRequestedAt,
+                  updatedAt: row.updatedAt || item.updatedAt,
+                })),
+              };
+            });
+
+            return didChange ? next : current;
+          });
+        }
+      },
+      (snapshotError) => {
+        console.warn("[ExchangeList] live group subscribe failed:", snapshotError);
+      }
+    );
+
+    return () => unsubscribe?.();
+  }, [focusGroupId, statusFilter]);
+
+  const loadMore = async () => {
+    if (!cursor || !hasMore || loadingMore) return;
+    setLoadingMore(true);
+    setError("");
+
+    try {
+      const result = await fetchAdminExchangeGroupsPage({
+        status: statusFilter,
+        cursor,
+        pageSize: PAGE_SIZE,
+      });
+
+      setGroups((current) => {
+        const merged = new Map(current.map((group) => [group.id, group]));
+        result.groups.forEach((group) => merged.set(group.id, group));
+        return Array.from(merged.values());
+      });
+      setCursor(result.cursor);
+      setHasMore(result.hasMore);
+    } catch (loadError) {
+      console.error("[ExchangeList] more groups failed:", loadError);
+      setError("추가 금교환 그룹을 불러오지 못했습니다.");
     } finally {
       setLoadingMore(false);
     }
   };
 
-  // 관리자에게 필요한 그룹 요약과 적립 순금 사용 상태를 실시간으로 반영합니다.
-  useEffect(() => {
-    const summariesQuery = query(
-      collection(db, "goldExchangeGroups"),
-      orderBy("updatedAt", "desc"),
-      qLimit(100)
-    );
-    return onSnapshot(
-      summariesQuery,
-      (snapshot) => {
-        const next = {};
-        snapshot.forEach((item) => {
-          next[item.id] = { id: item.id, ...item.data() };
-        });
-        setGroupMeta(next);
-      },
-      (error) => {
-        console.warn("[Admin ExchangeList] group summaries failed:", error?.code || error);
+  const ensureDetails = useCallback(
+    async (groupId) => {
+      if (!groupId || details[groupId]?.loaded || details[groupId]?.loading) {
+        return;
       }
-    );
-  }, []);
 
-  // docs -> 그룹화(+대표상태/합계/요청자/플랜)
-  const groups = useMemo(() => {
-    const map = new Map();
-    for (const r of docs) {
-      const gid = r.groupId || r.id;
-      if (!map.has(gid)) map.set(gid, []);
-      map.get(gid).push(r);
-    }
+      setDetails((current) => ({
+        ...current,
+        [groupId]: {
+          ...(current[groupId] || {}),
+          loading: true,
+          error: "",
+        },
+      }));
 
-    const out = [];
-    for (const [gid, items] of map) {
-      const statuses = items.map((i) => i.status).filter(Boolean);
-      const repStatus =
-        statuses.sort(
-          (a, b) =>
-            STATUS_PRIORITY.indexOf(a ?? "requested") -
-            STATUS_PRIORITY.indexOf(b ?? "requested")
-        )[0] || "requested";
+      try {
+        const items = await fetchAdminExchangeGroupItems(groupId);
+        const latest = latestItem(items);
+        const uid = String(latest.userId || items.find((item) => item.userId)?.userId || "");
 
-      const createdNs = items
-        .map((i) => {
-          const t = i.createdAt;
-          if (!t) return null;
-          return typeof t.toDate === "function" ? t.toDate().getTime() : new Date(t).getTime();
-        })
-        .filter((n) => Number.isFinite(n));
-      const updatedNs = items
-        .map((i) => {
-          const t = i.updatedAt;
-          if (!t) return null;
-          return typeof t.toDate === "function" ? t.toDate().getTime() : new Date(t).getTime();
-        })
-        .filter((n) => Number.isFinite(n));
+        let profile = uid ? profiles[uid] : null;
+        if (uid && profile === undefined) {
+          profile = await fetchAdminProfile(uid).catch(() => null);
+          setProfiles((current) => ({ ...current, [uid]: profile }));
+        }
 
-      const createdAt = createdNs.length ? new Date(Math.min(...createdNs)) : null;
-      const updatedAt = updatedNs.length ? new Date(Math.max(...updatedNs)) : null;
-
-      // 예약일/시간(대표)
-      const any = items[0] || {};
-      const visitDate = any.visitDate || "";
-      const visitTime = any.visitTime || "";
-      const scheduledAt =
-        items
-          .map((i) => i.scheduledAt)
-          .map((t) => (t && typeof t.toDate === "function" ? t.toDate() : t))
-          .filter(Boolean)
-          .sort((a, b) => (b?.getTime?.() ?? 0) - (a?.getTime?.() ?? 0))[0] || null;
-
-      // 요청자(업데이트 최근 문서 우선)
-      const latestByUpdate =
-        items
-          .slice()
-          .sort((a, b) => {
-            const au = a.updatedAt && (typeof a.updatedAt.toDate === "function" ? a.updatedAt.toDate().getTime() : new Date(a.updatedAt).getTime());
-            const bu = b.updatedAt && (typeof b.updatedAt.toDate === "function" ? b.updatedAt.toDate().getTime() : new Date(b.updatedAt).getTime());
-            return (bu || 0) - (au || 0);
-          })[0] || {};
-      const requester = {
-        userId: latestByUpdate.userId || items.find(i => i.userId)?.userId || "",
-        name: latestByUpdate.name || latestByUpdate.requesterName || "-",
-        phone: latestByUpdate.phone || "-",
-        address: latestByUpdate.address || "-",
-        email: latestByUpdate.email || "-", // 프로필 보강은 렌더 시 적용
-      };
-
-      // 수치 보정 + 합계
-      const enrichedItems = items.map((it) => {
-        const fwNum = Number.isFinite(Number(it.finalWeight)) ? Number(it.finalWeight) : 0;
-        const fwDon = Number.isFinite(Number(it.finalWeightDon)) ? Number(it.finalWeightDon) : fwNum / DON_TO_GRAMS;
-        return {
-          ...it,
-          _displayOriginal: displayOriginalQty(it),
-          _finalWeight: fwNum,
-          _finalWeightDon: fwDon,
-        };
-      });
-      const totalG = enrichedItems.reduce((s, i) => s + (Number(i._finalWeight) || 0), 0);
-
-      // 최신 barsPlan
-      const planDoc =
-        items
-          .filter((i) => i.barsPlan)
-          .sort((a, b) => {
-            const au = a.updatedAt && (typeof a.updatedAt.toDate === "function" ? a.updatedAt.toDate().getTime() : new Date(a.updatedAt).getTime());
-            const bu = b.updatedAt && (typeof b.updatedAt.toDate === "function" ? b.updatedAt.toDate().getTime() : new Date(b.updatedAt).getTime());
-            return (bu || 0) - (au || 0);
-          })[0] || null;
-
-      out.push({
-        groupId: gid,
-        items: enrichedItems,
-        repStatus,
-        createdAt,
-        updatedAt,
-        visitDate,
-        visitTime,
-        scheduledAt,
-        requester,
-        totalG,
-        plan: planDoc ? planDoc.barsPlan : null,
-      });
-    }
-
-    // 최신 업데이트 순 정렬
-    out.sort((a, b) => {
-      const at = a.updatedAt?.getTime?.() ?? 0;
-      const bt = b.updatedAt?.getTime?.() ?? 0;
-      return bt - at;
-    });
-
-    return out;
-  }, [docs]);
-
-  // 처음 한 개는 기본 펼침
-  useEffect(() => {
-    if (groups.length === 0) return;
-    setExpanded((prev) => {
-      if (Object.keys(prev).length) return prev;
-      return { [groups[0].groupId]: true };
-    });
-  }, [groups]);
+        setDetails((current) => ({
+          ...current,
+          [groupId]: {
+            loaded: true,
+            loading: false,
+            error: "",
+            items,
+            profile,
+          },
+        }));
+      } catch (detailError) {
+        console.error("[ExchangeList] details failed:", detailError);
+        setDetails((current) => ({
+          ...current,
+          [groupId]: {
+            loaded: false,
+            loading: false,
+            error: "상세 정보를 불러오지 못했습니다.",
+            items: [],
+          },
+        }));
+      }
+    },
+    [details, profiles]
+  );
 
   useEffect(() => {
-    if (!focusGroupId || groups.length === 0) return;
-    if (groups.some((group) => group.groupId === focusGroupId)) {
-      setQText(focusGroupId);
-      setExpanded((current) => ({ ...current, [focusGroupId]: true }));
-    }
-  }, [focusGroupId, groups]);
+    if (focusGroupId) ensureDetails(focusGroupId);
+  }, [ensureDetails, focusGroupId]);
 
-  // 프로필 보강(이메일/전화) — 현재 페이지에 나타난 userId만
-  useEffect(() => {
-    const need = Array.from(
-      new Set(groups.map((g) => g.requester.userId).filter(Boolean))
-    ).filter((uid) => !profiles[uid]);
+  const toggleGroup = async (groupId) => {
+    const willOpen = !expanded[groupId];
+    setExpanded((current) => ({ ...current, [groupId]: willOpen }));
+    if (willOpen) await ensureDetails(groupId);
+  };
 
-    if (need.length === 0) return;
-
-    (async () => {
-      const entries = await Promise.all(
-        need.map(async (uid) => {
-          try {
-            const ref = doc(db, "profiles", uid);
-            const snap = await getDoc(ref);
-            if (snap.exists()) {
-              return [uid, snap.data()];
-            }
-          } catch (e) {
-            console.warn("[Admin ExchangeList] profile fetch failed:", uid, e?.message || e);
-          }
-          return [uid, null];
-        })
-      );
-      setProfiles((prev) => {
-        const next = { ...prev };
-        for (const [uid, data] of entries) next[uid] = data;
-        return next;
-      });
-    })();
-  }, [groups, profiles]);
-
-  // 검색 필터 (그룹 단위)
-  const groupsFiltered = useMemo(() => {
-    const statusMatched = groups.filter((group) => {
-      const status = normalizeStatusKey(group.repStatus);
-      if (statusFilter === "requested") return status === "requested";
-      if (statusFilter === "active") return ["scheduled", "in_progress"].includes(status);
-      return true;
-    });
+  const filteredGroups = useMemo(() => {
     const term = qText.trim().toLowerCase();
-    if (!term) return statusMatched;
-    return statusMatched.filter((g) => {
-      const prof = g.requester.userId ? profiles[g.requester.userId] : null;
-      const hay = [
-        g.groupId,
-        g.requester.userId,
-        g.requester.name,
-        g.requester.phone || prof?.phone,
-        g.requester.email || prof?.email,
-        g.visitDate,
-        g.visitTime,
-        ...g.items.flatMap((it) => [
-          it.id,
-          it.goldType,
-          it.exchangeType,
-          it.status,
-          displayOriginalQty(it),
+    if (!term) return groups;
+
+    return groups.filter((group) => {
+      const detail = details[group.id];
+      const items = detail?.items || [];
+      const latest = latestItem(items);
+      const profile = detail?.profile || {};
+      const values = [
+        group.id,
+        group.visitDate,
+        group.visitTime,
+        group.repStatus,
+        latest.name,
+        latest.phone,
+        latest.userId,
+        profile.displayName,
+        profile.phone,
+        ...items.flatMap((item) => [
+          item.id,
+          item.goldType,
+          item.exchangeType,
+          item.status,
         ]),
       ]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
-      return hay.includes(term);
+
+      return values.includes(term);
     });
-  }, [groups, qText, profiles, statusFilter]);
+  }, [details, groups, qText]);
 
-  // 그룹 상태 일괄 업데이트 → Functions 콜러블 사용
   const updateGroupStatus = async (groupId, status) => {
-    if (!groupId || !status) return;
-    if (busy[groupId]) return; // 중복 방지
+    if (!groupId || !status || busy[groupId]) return;
 
-    setBusy((p) => ({ ...p, [groupId]: true }));
+    setBusy((current) => ({ ...current, [groupId]: true }));
     try {
       const call = httpsCallable(functions, "setExchangeGroupStatus");
-      const res = await call({ groupId, status });
-      if (!res?.data?.ok) throw new Error("상태 변경 실패");
+      const response = await call({ groupId, status });
+      if (!response?.data?.ok) throw new Error("상태 변경 결과를 확인할 수 없습니다.");
 
-      // 로컬 상태 반영(낙관적 갱신)
-      setDocs((prev) =>
-        prev.map((d) =>
-          (d.groupId || d.id) === groupId
-            ? { ...d, status, updatedAt: new Date() }
-            : d
-        )
+      setGroups((current) => {
+        const updated = current.map((group) =>
+          group.id === groupId
+            ? { ...group, repStatus: status, updatedAt: new Date() }
+            : group
+        );
+        if (focusGroupId === groupId || matchesStatusFilter(status, statusFilter)) {
+          return updated;
+        }
+        return updated.filter((group) => group.id !== groupId);
+      });
+      setDetails((current) => {
+        const detail = current[groupId];
+        if (!detail?.items) return current;
+        return {
+          ...current,
+          [groupId]: {
+            ...detail,
+            items: detail.items.map((item) => ({ ...item, status })),
+          },
+        };
+      });
+      setTodayReservations((current) =>
+        current
+          .map((row) =>
+            row.id === groupId ? { ...row, repStatus: normalizeStatus(status) } : row
+          )
+          .filter((row) => TODAY_ACTIVE_STATUSES.has(normalizeStatus(row.repStatus)))
       );
-    } catch (err) {
-      console.error("그룹 상태 업데이트 실패:", err);
-      alert("그룹 상태 업데이트에 실패했습니다.");
+    } catch (statusError) {
+      console.error("[ExchangeList] status update failed:", statusError);
+      alert(
+        statusError?.message?.replace(/^FirebaseError:\s*/i, "") ||
+          "그룹 상태 변경에 실패했습니다."
+      );
     } finally {
-      setBusy((p) => ({ ...p, [groupId]: false }));
+      setBusy((current) => ({ ...current, [groupId]: false }));
     }
   };
 
   const updateBonusForm = (groupId, field, value) => {
     setBonusForms((current) => ({
       ...current,
-      [groupId]: { ...(current[groupId] || {}), [field]: value },
+      [groupId]: {
+        ...(current[groupId] || {}),
+        [field]: value,
+      },
     }));
   };
 
-  const confirmBonusUsage = async (group) => {
-    const form = bonusForms[group.groupId] || {};
-    const requestCode = String(form.requestCode || "").replace(/\D/g, "").slice(0, 6);
-    const finalRecognizedG = Number(form.finalRecognizedG ?? group.totalG);
-    const meta = groupMeta[group.groupId] || {};
-    const amountG = Number(meta.bonusGoldRequestedG || 0);
-    if (requestCode.length !== 6) {
-      alert("고객 휴대폰에 표시된 6자리 확인 코드를 입력해 주세요.");
+  const confirmBonusUsage = async (group, totalG) => {
+    const form = bonusForms[group.id] || {};
+    const code = String(form.requestCode || "").replace(/\D/g, "").slice(0, 6);
+    const finalRecognizedG = Number(form.finalRecognizedG ?? totalG);
+    const amountG = Number(group.bonusGoldRequestedG || 0);
+
+    if (code.length !== 6) {
+      alert("고객의 6자리 확인 코드를 입력해 주세요.");
       return;
     }
     if (!Number.isFinite(finalRecognizedG) || finalRecognizedG <= 0) {
       alert("현장에서 확인한 인정 순금 중량을 입력해 주세요.");
       return;
     }
-    if (!window.confirm(
-      `현장 인정 ${finalRecognizedG.toFixed(3)}g에 적립 순금 ${amountG.toFixed(2)}g을 사용 확정할까요?`
-    )) return;
+    if (
+      !window.confirm(
+        `현장 인정 ${finalRecognizedG.toFixed(3)}g에 적립 순금 ${amountG.toFixed(2)}g을 사용 확정할까요?`
+      )
+    ) {
+      return;
+    }
 
-    setBusy((current) => ({ ...current, [group.groupId]: true }));
+    setBusy((current) => ({ ...current, [group.id]: true }));
     try {
       const call = httpsCallable(functions, "bonusAdminConfirmGoldUsage");
-      const response = await call({ groupId: group.groupId, requestCode, finalRecognizedG });
-      const data = response?.data || {};
-      if (!data.ok) throw new Error("적립 순금 사용 확정 실패");
-      setGroupMeta((current) => ({
-        ...current,
-        [group.groupId]: {
-          ...(current[group.groupId] || {}),
-          bonusGoldUsageStatus: "used",
-          bonusGoldUsedG: Number(data.amountG || amountG),
-          finalRecognizedG: Number(data.finalRecognizedG || finalRecognizedG),
-          finalAppliedG: Number(data.finalAppliedG || 0),
-        },
-      }));
-      setBonusForms((current) => ({
-        ...current,
-        [group.groupId]: { ...current[group.groupId], requestCode: "" },
-      }));
-      alert("적립 순금 사용이 확정되었습니다.");
-    } catch (error) {
-      console.error("적립 순금 사용 확정 실패:", error);
-      alert(error?.message || "적립 순금 사용을 확정하지 못했습니다.");
+      const response = await call({
+        groupId: group.id,
+        requestCode: code,
+        finalRecognizedG,
+      });
+      const result = response?.data || {};
+      if (!result.ok) throw new Error("적립 순금 사용 확정 실패");
+
+      setGroups((current) =>
+        current.map((item) =>
+          item.id === group.id
+            ? {
+                ...item,
+                bonusGoldUsageStatus: "used",
+                bonusGoldUsedG: Number(result.amountG || amountG),
+                finalRecognizedG: Number(
+                  result.finalRecognizedG || finalRecognizedG
+                ),
+                finalAppliedG: Number(result.finalAppliedG || 0),
+                ...(result.barsPlan
+                  ? { barsPlan: result.barsPlan }
+                  : {}),
+              }
+            : item
+        )
+      );
+
+      if (result.barsPlan) {
+        setDetails((current) => {
+          const detail = current[group.id];
+          if (!detail?.items) return current;
+
+          return {
+            ...current,
+            [group.id]: {
+              ...detail,
+              items: detail.items.map((item) => ({
+                ...item,
+                barsPlan: result.barsPlan,
+                bonusGoldUsageStatus: "used",
+                bonusGoldUsedG: Number(
+                  result.amountG || amountG
+                ),
+                finalRecognizedG: Number(
+                  result.finalRecognizedG ||
+                    finalRecognizedG
+                ),
+                finalAppliedG: Number(
+                  result.finalAppliedG || 0
+                ),
+              })),
+            },
+          };
+        });
+      }
+    } catch (bonusError) {
+      console.error("[ExchangeList] bonus confirm failed:", bonusError);
+      alert(bonusError?.message || "적립 순금 사용을 확정하지 못했습니다.");
     } finally {
-      setBusy((current) => ({ ...current, [group.groupId]: false }));
+      setBusy((current) => ({ ...current, [group.id]: false }));
     }
   };
 
   const cancelBonusUsage = async (groupId) => {
-    if (!window.confirm("이 교환 건의 적립 순금 사용 신청을 취소할까요?")) return;
+    if (!window.confirm("적립 순금 사용 신청을 취소할까요?")) return;
+
     setBusy((current) => ({ ...current, [groupId]: true }));
     try {
       const call = httpsCallable(functions, "bonusAdminCancelGoldUsage");
-      const response = await call({ groupId, reason: "매장 확인 중 신청 취소" });
+      const response = await call({
+        groupId,
+        reason: "매장 확인 중 신청 취소",
+      });
       if (!response?.data?.ok) throw new Error("사용 신청 취소 실패");
-      setGroupMeta((current) => ({
-        ...current,
-        [groupId]: { ...(current[groupId] || {}), bonusGoldUsageStatus: "canceled" },
-      }));
-    } catch (error) {
-      console.error("적립 순금 사용 신청 취소 실패:", error);
-      alert(error?.message || "적립 순금 사용 신청을 취소하지 못했습니다.");
+
+      setGroups((current) =>
+        current.map((group) =>
+          group.id === groupId
+            ? { ...group, bonusGoldUsageStatus: "canceled" }
+            : group
+        )
+      );
+    } catch (bonusError) {
+      console.error("[ExchangeList] bonus cancel failed:", bonusError);
+      alert(bonusError?.message || "적립 순금 사용 신청을 취소하지 못했습니다.");
     } finally {
       setBusy((current) => ({ ...current, [groupId]: false }));
     }
   };
 
-  if (loadingFirst && docs.length === 0) {
-    return <p>금 교환 요청을 불러오는 중…</p>;
-  }
-  if (groups.length === 0) {
-    return (
-      <>
-        <StickyToolbar>
-          <Input
-            placeholder="그룹/사용자/연락처/항목/일시 검색"
-            value={qText}
-            onChange={(e) => setQText(e.target.value)}
-          />
-          <Summary>총 0건</Summary>
-        </StickyToolbar>
-        <p style={{ padding: 12 }}>금 교환 요청이 없습니다.</p>
-      </>
-    );
+  const todayCounts = useMemo(() => {
+    const counts = { requested: 0, scheduled: 0, in_progress: 0, rescheduled: 0 };
+    todayReservations.forEach((reservation) => {
+      const status = normalizeStatus(reservation.repStatus);
+      if (status in counts) counts[status] += 1;
+      if (status === "requested" && reservation.scheduleChangeType === "rescheduled") {
+        counts.rescheduled += 1;
+      }
+    });
+    return counts;
+  }, [todayReservations]);
+
+  if (loadingFirst) {
+    return <p>금교환 그룹을 불러오는 중…</p>;
   }
 
   return (
-    <>
+    <PageWrap>
+      <TodayPanel aria-label="오늘 금교환 예약">
+        <TodayPanelHeader>
+          <div>
+            <strong>오늘 예약 · {todayReservations.length}건</strong>
+            <span>
+              {todayKey} · 확인 대기 {todayCounts.requested} · 확정 {todayCounts.scheduled} · 진행 {todayCounts.in_progress}
+              {todayCounts.rescheduled > 0 ? ` · 변경 확인 ${todayCounts.rescheduled}` : ""}
+            </span>
+          </div>
+          <ToolbarButton
+            type="button"
+            onClick={() => loadTodayReservations()}
+            disabled={todayLoading}
+          >
+            오늘 예약 새로고침
+          </ToolbarButton>
+        </TodayPanelHeader>
+
+        {todayLoading ? (
+          <TodayEmpty>오늘 예약을 불러오는 중…</TodayEmpty>
+        ) : todayError ? (
+          <ErrorBox role="alert">{todayError}</ErrorBox>
+        ) : todayReservations.length === 0 ? (
+          <TodayEmpty>오늘 방문 예정인 금교환 예약이 없습니다.</TodayEmpty>
+        ) : (
+          <TodayGrid>
+            {todayReservations.map((reservation) => {
+              const status = normalizeStatus(reservation.repStatus);
+              return (
+                <TodayCard key={reservation.id}>
+                  <TodayMeta>
+                    <TodayTime>{reservation.visitTime || "시간 미정"}</TodayTime>
+                    <StatusBadge $status={status}>
+                      {displayReservationStatus(status, reservation.scheduleChangeType)}
+                    </StatusBadge>
+                  </TodayMeta>
+                  <TodayMeta>
+                    <span><strong>{reservation.name}</strong></span>
+                    <span>{gramsText(reservation.totalG)}</span>
+                  </TodayMeta>
+                  <TodayMeta>
+                    <span>전화</span>
+                    <span>
+                      {reservation.phone ? (
+                        <PhoneLink href={`tel:${reservation.phone.replace(/\D/g, "")}`}>
+                          {reservation.phone}
+                        </PhoneLink>
+                      ) : (
+                        "미등록"
+                      )}
+                    </span>
+                  </TodayMeta>
+                </TodayCard>
+              );
+            })}
+          </TodayGrid>
+        )}
+      </TodayPanel>
+
       <StickyToolbar>
         <Input
-          placeholder="그룹/사용자/연락처/항목/일시 검색"
           value={qText}
-          onChange={(e) => setQText(e.target.value)}
+          onChange={(event) => setQText(event.target.value)}
+          placeholder="그룹번호·요청자·전화·제품 검색"
+          aria-label="금교환 요청 검색"
         />
+        <ToolbarButton
+          type="button"
+          onClick={() => {
+            loadFirst();
+            loadTodayReservations();
+          }}
+        >
+          새로고침
+        </ToolbarButton>
         <Summary>
-          {statusFilter ? `필터 ${statusFilter} · ` : ""}그룹: {groupsFiltered.length}건 / 로드된 문서: {docs.length}건
+          {statusFilter ? `필터 ${statusFilter} · ` : ""}
+          표시 <strong>{filteredGroups.length}</strong>건 · 불러온 그룹{" "}
+          <strong>{groups.length}</strong>건
         </Summary>
       </StickyToolbar>
 
-      <ListContainer data-testid="admin-exchange-list">
-        {DEBUG && (
-          <DebugBar>
-            DEBUG · Admin ExchangeList (Grouped) · src/components/admin/ExchangeList.js
-          </DebugBar>
-        )}
+      {error && <ErrorBox role="alert">{error}</ErrorBox>}
 
-        {groupsFiltered.map((g) => {
-          const statusKey = normalizeStatusKey(g.repStatus);
-          const meta = groupMeta[g.groupId] || {};
-          const bonusStatus = String(meta.bonusGoldUsageStatus || "");
-          const bonusForm = bonusForms[g.groupId] || {};
-          const prof = g.requester.userId ? profiles[g.requester.userId] : null;
-          const email = g.requester.email !== "-" ? g.requester.email : (prof?.email || "미등록");
-          const phone = g.requester.phone !== "-" ? g.requester.phone : (prof?.phone || "미등록");
-          const visitLine =
-            g.scheduledAt
-              ? fmt(g.scheduledAt)
-              : [g.visitDate, g.visitTime].filter(Boolean).join(" ") || "-";
-
-          const disabled = !!busy[g.groupId];
+      {filteredGroups.length === 0 ? (
+        <p>조건에 맞는 금교환 요청이 없습니다.</p>
+      ) : (
+        filteredGroups.map((group) => {
+          const status = normalizeStatus(group.repStatus);
+          const detail = details[group.id] || {};
+          const items = detail.items || [];
+          const latest = latestItem(items);
+          const profile = detail.profile || {};
+          const totalG = Number(
+            group.totalG ??
+              items.reduce((sum, item) => sum + Number(item.finalWeight || 0), 0)
+          );
+          const name =
+            latest.name ||
+            latest.requesterName ||
+            profile.displayName ||
+            "상세 정보 확인";
+          const phone = latest.phone || profile.phone || "";
+          const plan =
+            group.barsPlan ||
+            items.find((item) => item.barsPlan)?.barsPlan ||
+            null;
+          const scheduleType = String(group.scheduleChangeType || latest.scheduleChangeType || "");
+          const schedulePreviousVisitDate = String(
+            group.previousVisitDate || latest.previousVisitDate || ""
+          );
+          const schedulePreviousVisitTime = String(
+            group.previousVisitTime || latest.previousVisitTime || ""
+          );
+          const scheduleReason = String(
+            scheduleType === "canceled"
+              ? (
+                  group.cancellationReason ||
+                  latest.cancellationReason ||
+                  ""
+                )
+              : (
+                  group.scheduleChangeReason ||
+                  latest.scheduleChangeReason ||
+                  ""
+                )
+          );
+          const bonusStatus = String(group.bonusGoldUsageStatus || "");
+          const bonusForm = bonusForms[group.id] || {};
+          const disabled = !!busy[group.id];
+          const isBonusUsed = bonusStatus === "used";
+          const planBasisG = Number(
+            isBonusUsed
+              ? group.finalAppliedG ||
+                  plan?.totalGrams ||
+                  totalG
+              : plan?.totalGrams || totalG
+          );
 
           return (
-            <GroupCard key={g.groupId}>
-              <GroupHeader onClick={() => toggle(g.groupId)} aria-expanded={!!expanded[g.groupId]}>
-                <HLeft>
-                  <HLabel>요청일</HLabel>
-                  <HValue>{fmt(g.createdAt)}</HValue>
-                  <HLabel>업데이트</HLabel>
-                  <HValue>{fmt(g.updatedAt)}</HValue>
-                  <HLabel>예약</HLabel>
-                  <HValue>{visitLine}</HValue>
-                </HLeft>
-                <HRight>
+            <GroupCard key={group.id}>
+              <GroupHeader
+                type="button"
+                aria-expanded={!!expanded[group.id]}
+                onClick={() => toggleGroup(group.id)}
+              >
+                <HeaderInfo>
+                  <small>방문 일정</small>
+                  <strong>
+                    {[group.visitDate, group.visitTime].filter(Boolean).join(" ") || "미정"}
+                  </strong>
+                  <small>최근 업데이트</small>
+                  <span>{fmt(group.updatedAt)}</span>
+                  <small>그룹 번호</small>
+                  <span>{group.id}</span>
+                </HeaderInfo>
+
+                <HeaderRight>
                   {bonusStatus === "requested" && (
-                    <BonusBadge $status="requested">적립 사용 확인</BonusBadge>
+                    <StatusBadge $status="requested">적립 사용 확인</StatusBadge>
                   )}
-                  <Chips>
-                    <Chip $tone="grams">{fmtG3(g.totalG)} g</Chip>
-                    <Chip $tone="don">{fmtD2((g.totalG || 0) / DON_TO_GRAMS)} 돈</Chip>
-                  </Chips>
-                  <StatusBadge $status={statusKey}>
-                    {STATUS_LABEL[g.repStatus] || STATUS_LABEL[statusKey] || g.repStatus}
+                  <Chip>{gramsText(totalG)}</Chip>
+                  <Chip>{donText(totalG)}</Chip>
+                  <StatusBadge $status={status}>
+                    {displayReservationStatus(status, scheduleType)}
                   </StatusBadge>
-                  <Chev $open={!!expanded[g.groupId]}>▾</Chev>
-                </HRight>
+                  <span aria-hidden>{expanded[group.id] ? "▲" : "▼"}</span>
+                </HeaderRight>
               </GroupHeader>
 
-              {expanded[g.groupId] && (
+              {expanded[group.id] && (
                 <GroupBody>
-                  {/* 예약/요청자 정보 */}
-                  <MetaGrid>
-                    <Field><Label>요청 그룹</Label><Value>{g.groupId}</Value></Field>
-                    <Field><Label>요청자</Label><Value>{g.requester.name}</Value></Field>
-                    <Field>
-                      <Label>전화</Label>
-                      <Value>
-                        <PhoneLink href={`tel:${String(phone).replace(/\D/g, "")}`}>{phone}</PhoneLink>
-                      </Value>
-                    </Field>
-                    <Field><Label>이메일</Label><Value>{email}</Value></Field>
-                  </MetaGrid>
+                  {detail.loading && <p>상세 정보를 불러오는 중…</p>}
+                  {detail.error && <ErrorBox>{detail.error}</ErrorBox>}
 
-                  <Divider />
-
-                  {/* 항목 리스트 */}
-                  <div>
-                    <ItemsTable>
-                      <thead>
-                        <tr>
-                          <th style={{width: '24%'}}>제품 종류</th>
-                          <th style={{width: '30%'}}>요청 수량</th>
-                          <th data-col="exchangeType" style={{width: '20%'}}>교환 유형</th>
-                          <th data-col="status" style={{width: '16%'}}>상태</th>
-                          <th style={{width: '10%'}}>교환 중량</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {g.items
-                          .slice()
-                          .sort((a, b) => {
-                            const ac = a.createdAt && (typeof a.createdAt.toDate === "function" ? a.createdAt.toDate().getTime() : new Date(a.createdAt).getTime());
-                            const bc = b.createdAt && (typeof b.createdAt.toDate === "function" ? b.createdAt.toDate().getTime() : new Date(b.createdAt).getTime());
-                            return (ac || 0) - (bc || 0);
-                          })
-                          .map((it) => (
-                            <tr key={it.id}>
-                              <td>{it.goldType || "-"}</td>
-                              <td>{it._displayOriginal}</td>
-                              <td data-col="exchangeType">
-                                {it.unknown ? "현장 확인" : (it.exchangeType || "999.9골드바")}
-                              </td>
-                              <td data-col="status">{STATUS_LABEL[it.status] || it.status || "-"}</td>
-                              <td>
-                                <Chips>
-                                  <Chip $tone="grams">{fmtG3(it._finalWeight)} g</Chip>
-                                  <Chip $tone="don">{fmtD2(it._finalWeightDon)} 돈</Chip>
-                                </Chips>
-                              </td>
-                            </tr>
-                          ))}
-                      </tbody>
-                    </ItemsTable>
-
-                    <TotalRow>
-                      합계(순금 중량):
-                      <Chips>
-                        <Chip $tone="grams">{fmtG3(g.totalG)} g</Chip>
-                        <Chip $tone="don">{fmtD2((g.totalG || 0) / DON_TO_GRAMS)} 돈</Chip>
-                      </Chips>
-                    </TotalRow>
-                  </div>
-
-                  {bonusStatus && (
-                    <BonusCard aria-label="적립 순금 사용 처리">
-                      <BonusHead>
-                        <strong>적립 순금 사용</strong>
-                        <BonusBadge $status={bonusStatus}>
-                          {bonusStatus === "requested" ? "확인 대기" :
-                           bonusStatus === "used" ? "사용 완료" :
-                           bonusStatus === "restored" ? "잔액 복구" : "신청 취소"}
-                        </BonusBadge>
-                      </BonusHead>
-
-                      {bonusStatus === "requested" && (
-                        <>
-                          <BonusGrid>
-                            <BonusField>
-                              신청 중량
-                              <BonusInput
-                                value={`${Number(meta.bonusGoldRequestedG || 0).toFixed(2)}g`}
-                                readOnly
-                              />
-                            </BonusField>
-                            <BonusField>
-                              고객 6자리 코드
-                              <BonusInput
-                                inputMode="numeric"
-                                autoComplete="one-time-code"
-                                maxLength={6}
-                                placeholder="고객 코드 입력"
-                                value={bonusForm.requestCode || ""}
-                                onChange={(event) => updateBonusForm(
-                                  g.groupId,
-                                  "requestCode",
-                                  event.target.value.replace(/\D/g, "").slice(0, 6)
-                                )}
-                              />
-                            </BonusField>
-                            <BonusField>
-                              현장 인정 순금(g)
-                              <BonusInput
-                                inputMode="decimal"
-                                value={bonusForm.finalRecognizedG ?? fmtG3(g.totalG)}
-                                onChange={(event) => updateBonusForm(
-                                  g.groupId,
-                                  "finalRecognizedG",
-                                  event.target.value
-                                )}
-                              />
-                            </BonusField>
-                          </BonusGrid>
-                          <BonusEquation>
-                            현장 인정 중량 + 적립 {Number(meta.bonusGoldRequestedG || 0).toFixed(2)}g
-                            = 최종 교환 적용 중량
-                          </BonusEquation>
-                          <ButtonGroup>
-                            <ActionButton disabled={disabled} onClick={() => confirmBonusUsage(g)}>
-                              {disabled ? "처리 중…" : `${Number(meta.bonusGoldRequestedG || 0).toFixed(2)}g 사용 확정`}
-                            </ActionButton>
-                            <ActionButton disabled={disabled} onClick={() => cancelBonusUsage(g.groupId)}>
-                              사용 신청 취소
-                            </ActionButton>
-                          </ButtonGroup>
-                        </>
-                      )}
-
-                      {bonusStatus === "used" && (
-                        <BonusEquation>
-                          현장 인정 {Number(meta.finalRecognizedG || 0).toFixed(3)}g
-                          + 적립 {Number(meta.bonusGoldUsedG || 0).toFixed(2)}g
-                          = 최종 {Number(meta.finalAppliedG || 0).toFixed(3)}g
-                        </BonusEquation>
-                      )}
-                      {bonusStatus === "restored" && <span>교환 상태 변경으로 사용 중량을 고객 잔액에 복구했습니다.</span>}
-                      {bonusStatus === "canceled" && <span>차감 없이 사용 신청만 취소되었습니다.</span>}
-                    </BonusCard>
-                  )}
-
-                  {/* 교환 계획 (barsPlan) */}
-                  {g.plan && (
+                  {detail.loaded && (
                     <>
-                      <Divider />
-                      <PlanCard>
-                        <strong>교환 계획</strong>
-                        <PlanRow>
-                          <PlanLabel>선택 규격</PlanLabel>
-                          <PlanValue>
-                            {g.plan.selected?.label} × {g.plan.selected?.qty}
-                          </PlanValue>
-                        </PlanRow>
-                        <PlanRow>
-                          <PlanLabel>사용량</PlanLabel>
-                          <PlanValue>
-                            {fmtG3(g.plan.selected?.usedGrams)} g / {fmtD2(g.plan.selected?.usedDon)} 돈
-                          </PlanValue>
-                        </PlanRow>
-                        <PlanRow>
-                          <PlanLabel>잔여</PlanLabel>
-                          <PlanValue>
-                            {fmtG2Min(g.plan.leftoverGrams)} g / {fmtD2(g.plan.leftoverDon)} 돈
-                            {Number(g.plan.leftoverGrams) > 0 ? " · 남은 금은 매입 가능합니다." : ""}
-                          </PlanValue>
-                        </PlanRow>
-                        {Array.isArray(g.plan.autoBreakdown) && g.plan.autoBreakdown.length > 0 && (
-                          <PlanRow>
-                            <PlanLabel>추가 조합</PlanLabel>
-                            <PlanValue>
-                              {g.plan.autoBreakdown.map((x, i) => (
-                                <Pill key={`${x.label}-${i}`}>{x.label} × {x.qty}</Pill>
-                              ))}
-                            </PlanValue>
-                          </PlanRow>
+                      <MetaGrid>
+                        <Field>
+                          <strong>요청자</strong>
+                          <span>{name}</span>
+                        </Field>
+                        <Field>
+                          <strong>회원 UID</strong>
+                          <span>{latest.userId || "비식별/없음"}</span>
+                        </Field>
+                        <Field>
+                          <strong>전화</strong>
+                          <span>
+                            {phone ? (
+                              <PhoneLink href={`tel:${phone.replace(/\D/g, "")}`}>
+                                {phone}
+                              </PhoneLink>
+                            ) : (
+                              "미등록"
+                            )}
+                          </span>
+                        </Field>
+                      </MetaGrid>
+
+                      {scheduleType && (
+                        <NoticeCard $danger={scheduleType === "canceled"}>
+                          <strong>
+                            {scheduleType === "canceled"
+                              ? "고객 예약 취소"
+                              : status === "requested"
+                                ? "일정 변경 확인 필요"
+                                : status === "scheduled"
+                                  ? "변경 예약 확정됨"
+                                  : "최근 일정 변경"}
+                          </strong>
+                          <p>
+                            이전: {schedulePreviousVisitDate || "-"}{" "}
+                            {schedulePreviousVisitTime || ""}
+                          </p>
+                          {scheduleType !== "canceled" && (
+                            <p>
+                              변경: {latest.visitDate || "-"} {latest.visitTime || ""}
+                            </p>
+                          )}
+                          {scheduleReason && (
+                            <p>
+                              사유: {scheduleReason}
+                            </p>
+                          )}
+                        </NoticeCard>
+                      )}
+
+                      <SectionTitle>요청 핵심 요약</SectionTitle>
+                      <OverviewGrid aria-label="금교환 요청 핵심 요약">
+                        <OverviewCard $accent>
+                          <OverviewLabel>예상 순금</OverviewLabel>
+                          <OverviewValue>{gramsText(totalG)}</OverviewValue>
+                          <OverviewSub>{donText(totalG)}</OverviewSub>
+                        </OverviewCard>
+
+                        <OverviewCard>
+                          <OverviewLabel>선택 골드바</OverviewLabel>
+                          <OverviewValue>
+                            {plan?.selected?.label
+                              ? `${plan.selected.label} × ${plan.selected.qty || 0}`
+                              : "선택 정보 없음"}
+                          </OverviewValue>
+                          <OverviewSub>
+                            {plan?.selected?.usedGrams != null
+                              ? `총 ${gramsText(plan.selected.usedGrams)} / ${Number(
+                                  plan.selected.usedDon || 0
+                                ).toFixed(2)}돈`
+                              : "고객 선택 계획을 확인하세요."}
+                          </OverviewSub>
+                        </OverviewCard>
+
+                        <OverviewCard>
+                          <OverviewLabel>추가 필요 / 잔여</OverviewLabel>
+                          <OverviewValue>
+                            {plan
+                              ? plan.requiresTopUp || Number(plan.topUpGrams) > 0
+                                ? `+${gramsText(plan.topUpGrams)}`
+                                : gramsText(plan.leftoverGrams)
+                              : "계획 없음"}
+                          </OverviewValue>
+                          <OverviewSub>
+                            {plan
+                              ? plan.requiresTopUp || Number(plan.topUpGrams) > 0
+                                ? `추가 필요 · ${Number(plan.topUpDon || 0).toFixed(2)}돈`
+                                : `예상 잔여 · ${Number(plan.leftoverDon || 0).toFixed(2)}돈`
+                              : "현장 확인이 필요한 요청일 수 있습니다."}
+                          </OverviewSub>
+                        </OverviewCard>
+
+                        <OverviewCard>
+                          <OverviewLabel>예약 / 진행 상태</OverviewLabel>
+                          <OverviewValue>{displayReservationStatus(status, scheduleType)}</OverviewValue>
+                          <OverviewSub>
+                            {[group.visitDate, group.visitTime].filter(Boolean).join(" ") ||
+                              "방문 일정 미정"}
+                          </OverviewSub>
+                        </OverviewCard>
+                      </OverviewGrid>
+
+                      <SectionTitle>제품별 상세</SectionTitle>
+                      <TableWrap>
+                        <ItemsTable>
+                          <thead>
+                            <tr>
+                              <th>제품 종류</th>
+                              <th>요청 수량</th>
+                              <th>교환 유형</th>
+                              <th>상태</th>
+                              <th>환산 중량</th>
+                              <th>환산 기준</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {items.map((item) => (
+                              <tr key={item.id}>
+                                <td>{item.goldType || "-"}</td>
+                                <td>{originalQuantityText(item)}</td>
+                                <td>
+                                  {item.unknown
+                                    ? "현장 확인"
+                                    : item.exchangeType || "999.9골드바"}
+                                </td>
+                                <td>
+                                  {STATUS_LABEL[normalizeStatus(item.status)] ||
+                                    item.status ||
+                                    "-"}
+                                </td>
+                                <td>{gramsText(item.finalWeight)}</td>
+                                <td>
+                                  {Number.isFinite(Number(item.purityUsed))
+                                    ? `${(Number(item.purityUsed) * 100).toFixed(2)}%`
+                                    : "현장 확인"}
+                                  {item.rateVersion ? ` · v${item.rateVersion}` : ""}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </ItemsTable>
+                      </TableWrap>
+
+                      <TotalSummary aria-label="환산 중량 합계">
+                        <strong>환산 중량 합계</strong>
+                        <Chip>{gramsText(totalG)}</Chip>
+                        <Chip>{donText(totalG)}</Chip>
+                      </TotalSummary>
+
+                      {plan && (
+                        <PlanCard>
+                          <strong>
+                            {isBonusUsed
+                              ? "최종 교환 계획"
+                              : "예상 교환 계획"}
+                          </strong>
+
+                          {isBonusUsed ? (
+                            <>
+                              <span>
+                                현장 인정 중량:{" "}
+                                <strong>
+                                  {gramsText(group.finalRecognizedG)}
+                                </strong>
+                              </span>
+                              <span>
+                                적립 순금:{" "}
+                                <strong>
+                                  +{gramsText(group.bonusGoldUsedG)}
+                                </strong>
+                              </span>
+                              <span>
+                                최종 적용 합계:{" "}
+                                <strong>
+                                  {gramsText(group.finalAppliedG)}
+                                </strong>{" "}
+                                /{" "}
+                                {(
+                                  Number(group.finalAppliedG || 0) /
+                                  DON_TO_GRAMS
+                                ).toFixed(2)}
+                                돈
+                              </span>
+                            </>
+                          ) : (
+                            <span>
+                              계산 기준: {gramsText(planBasisG)} /{" "}
+                              {(planBasisG / DON_TO_GRAMS).toFixed(2)}돈
+                            </span>
+                          )}
+
+                          <span>
+                            선택 규격: {plan.selected?.label || "-"} ×{" "}
+                            {plan.selected?.qty || 0}
+                          </span>
+                          <span>
+                            골드바 총중량:{" "}
+                            {gramsText(plan.selected?.usedGrams)} /{" "}
+                            {Number(
+                              plan.selected?.usedDon || 0
+                            ).toFixed(2)}
+                            돈
+                          </span>
+                          {plan.requiresTopUp || Number(plan.topUpGrams) > 0 ? (
+                            <NoticeCard>
+                              <p><strong>추가 교환 선택</strong></p>
+                              <p>
+                                고객 예상 순금: {gramsText(planBasisG)} / {(planBasisG / DON_TO_GRAMS).toFixed(2)}돈
+                              </p>
+                              <p>
+                                추가 필요: <strong>+{gramsText(plan.topUpGrams)} / {Number(plan.topUpDon || 0).toFixed(2)}돈</strong>
+                              </p>
+                              <p>방문 시 실측 후 실제 추가량과 금액을 최종 안내하세요.</p>
+                            </NoticeCard>
+                          ) : (
+                            <span>
+                              {isBonusUsed ? "최종 잔여" : "예상 잔여"}:{" "}
+                              {gramsText(plan.leftoverGrams)} /{" "}
+                              {Number(
+                                plan.leftoverDon || 0
+                              ).toFixed(2)}
+                              돈
+                            </span>
+                          )}
+                          {Array.isArray(plan.autoBreakdown) &&
+                            plan.autoBreakdown.length > 0 && (
+                              <span>
+                                추가 조합:{" "}
+                                {plan.autoBreakdown
+                                  .map(
+                                    (item) =>
+                                      `${item.label} × ${item.qty}`
+                                  )
+                                  .join(", ")}
+                              </span>
+                            )}
+                        </PlanCard>
+                      )}
+
+                      {bonusStatus && (
+                        <BonusCard>
+                          <strong>
+                            적립 순금 사용 ·{" "}
+                            {bonusStatus === "requested"
+                              ? "확인 대기"
+                              : bonusStatus === "used"
+                                ? "사용 완료"
+                                : bonusStatus === "restored"
+                                  ? "잔액 복구"
+                                  : "신청 취소"}
+                          </strong>
+
+                          {bonusStatus === "requested" && (
+                            <>
+                              <BonusGrid>
+                                <BonusField>
+                                  신청 중량
+                                  <BonusInput
+                                    readOnly
+                                    value={`${Number(
+                                      group.bonusGoldRequestedG || 0
+                                    ).toFixed(2)}g`}
+                                  />
+                                </BonusField>
+                                <BonusField>
+                                  고객 6자리 코드
+                                  <BonusInput
+                                    inputMode="numeric"
+                                    maxLength={6}
+                                    value={bonusForm.requestCode || ""}
+                                    onChange={(event) =>
+                                      updateBonusForm(
+                                        group.id,
+                                        "requestCode",
+                                        event.target.value
+                                          .replace(/\D/g, "")
+                                          .slice(0, 6)
+                                      )
+                                    }
+                                  />
+                                </BonusField>
+                                <BonusField>
+                                  현장 인정 순금(g)
+                                  <BonusInput
+                                    inputMode="decimal"
+                                    value={
+                                      bonusForm.finalRecognizedG ??
+                                      roundTo3(totalG).toFixed(3)
+                                    }
+                                    onChange={(event) =>
+                                      updateBonusForm(
+                                        group.id,
+                                        "finalRecognizedG",
+                                        event.target.value
+                                      )
+                                    }
+                                  />
+                                </BonusField>
+                              </BonusGrid>
+                              <ButtonGroup>
+                                <ActionButton
+                                  disabled={disabled}
+                                  onClick={() =>
+                                    confirmBonusUsage(group, totalG)
+                                  }
+                                >
+                                  {disabled ? "처리 중…" : "사용 확정"}
+                                </ActionButton>
+                                <ActionButton
+                                  disabled={disabled}
+                                  onClick={() => cancelBonusUsage(group.id)}
+                                >
+                                  신청 취소
+                                </ActionButton>
+                              </ButtonGroup>
+                            </>
+                          )}
+
+                          {bonusStatus === "used" && (
+                            <span>
+                              현장 인정{" "}
+                              {Number(group.finalRecognizedG || 0).toFixed(3)}g +
+                              적립{" "}
+                              {Number(group.bonusGoldUsedG || 0).toFixed(2)}g =
+                              최종{" "}
+                              {Number(group.finalAppliedG || 0).toFixed(3)}g
+                            </span>
+                          )}
+                        </BonusCard>
+                      )}
+
+                      <ButtonGroup>
+                        {status === "requested" && (
+                          <>
+                            <ActionButton
+                              disabled={disabled}
+                              onClick={() =>
+                                updateGroupStatus(group.id, "scheduled")
+                              }
+                            >
+                              {scheduleType === "rescheduled" ? "변경 예약 확정" : "예약 확정"}
+                            </ActionButton>
+                            <ActionButton
+                              disabled={disabled}
+                              onClick={() =>
+                                updateGroupStatus(group.id, "rejected")
+                              }
+                            >
+                              {scheduleType === "rescheduled" ? "변경 요청 거절" : "거절"}
+                            </ActionButton>
+                          </>
                         )}
-                      </PlanCard>
+
+                        {status === "scheduled" && (
+                          <>
+                            <ActionButton
+                              disabled={disabled}
+                              onClick={() =>
+                                updateGroupStatus(group.id, "in_progress")
+                              }
+                            >
+                              진행 중
+                            </ActionButton>
+                            <ActionButton
+                              disabled={disabled}
+                              onClick={() =>
+                                updateGroupStatus(group.id, "canceled")
+                              }
+                            >
+                              취소
+                            </ActionButton>
+                          </>
+                        )}
+
+                        {status === "in_progress" && (
+                          <>
+                            <ActionButton
+                              disabled={disabled}
+                              onClick={() =>
+                                updateGroupStatus(group.id, "completed")
+                              }
+                            >
+                              완료
+                            </ActionButton>
+                            <ActionButton
+                              disabled={disabled}
+                              onClick={() =>
+                                updateGroupStatus(group.id, "canceled")
+                              }
+                            >
+                              취소
+                            </ActionButton>
+                          </>
+                        )}
+
+                        {status === "rejected" && (
+                          <ActionButton
+                            disabled={disabled}
+                            onClick={() =>
+                              updateGroupStatus(group.id, "requested")
+                            }
+                          >
+                            요청으로 되돌리기
+                          </ActionButton>
+                        )}
+                      </ButtonGroup>
                     </>
                   )}
-
-                  {/* 그룹 상태 일괄 제어 */}
-                  <ButtonGroup>
-                    {statusKey === "requested" && (
-                      <>
-                        <ActionButton disabled={disabled} onClick={() => updateGroupStatus(g.groupId, "scheduled")}>
-                          {disabled ? "처리 중…" : "예약 승인"}
-                        </ActionButton>
-                        <ActionButton disabled={disabled} onClick={() => updateGroupStatus(g.groupId, "rejected")}>
-                          {disabled ? "처리 중…" : "거절"}
-                        </ActionButton>
-                      </>
-                    )}
-                    {statusKey === "scheduled" && (
-                      <>
-                        <ActionButton disabled={disabled} onClick={() => updateGroupStatus(g.groupId, "in_progress")}>
-                          {disabled ? "처리 중…" : "진행 중"}
-                        </ActionButton>
-                        <ActionButton disabled={disabled} onClick={() => updateGroupStatus(g.groupId, "completed")}>
-                          {disabled ? "처리 중…" : "완료"}
-                        </ActionButton>
-                        <ActionButton disabled={disabled} onClick={() => updateGroupStatus(g.groupId, "canceled")}>
-                          {disabled ? "처리 중…" : "취소"}
-                        </ActionButton>
-                      </>
-                    )}
-                    {statusKey === "in_progress" && (
-                      <>
-                        <ActionButton disabled={disabled} onClick={() => updateGroupStatus(g.groupId, "completed")}>
-                          {disabled ? "처리 중…" : "완료"}
-                        </ActionButton>
-                        <ActionButton disabled={disabled} onClick={() => updateGroupStatus(g.groupId, "canceled")}>
-                          {disabled ? "처리 중…" : "취소"}
-                        </ActionButton>
-                      </>
-                    )}
-                    {(statusKey === "rejected" || statusKey === "canceled" || statusKey === "completed") && (
-                      <ActionButton disabled={disabled} onClick={() => updateGroupStatus(g.groupId, "requested")}>
-                        {disabled ? "처리 중…" : "요청으로 되돌리기"}
-                      </ActionButton>
-                    )}
-                  </ButtonGroup>
                 </GroupBody>
               )}
             </GroupCard>
           );
-        })}
-      </ListContainer>
+        })
+      )}
 
       <LoadMoreWrap>
-        <LoadMoreBtn onClick={loadMore} disabled={!hasMore || loadingMore}>
-          {loadingMore ? "불러오는 중..." : hasMore ? "더보기" : "더 이상 없음"}
-        </LoadMoreBtn>
-        <LoadMoreBtn
+        <ToolbarButton
+          type="button"
+          disabled={!hasMore || loadingMore}
+          onClick={loadMore}
+        >
+          {loadingMore
+            ? "불러오는 중…"
+            : hasMore
+              ? "다음 20건 불러오기"
+              : "더 이상 없음"}
+        </ToolbarButton>
+        <ToolbarButton
+          type="button"
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
         >
           맨 위로
-        </LoadMoreBtn>
+        </ToolbarButton>
       </LoadMoreWrap>
-
-      <TopButton
-        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-        aria-label="맨 위로"
-        title="맨 위로"
-      >
-        ▲
-      </TopButton>
-    </>
+    </PageWrap>
   );
 }

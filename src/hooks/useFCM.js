@@ -1,238 +1,603 @@
 // src/hooks/useFCM.js
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { useAuthContext } from '../context/AuthContext';
-import { registerForPush, onPushMessage } from '../firebase/firebase';
 
-/** 런타임 환경 가드 */
-const hasWindow = typeof window !== 'undefined';
-const hasNavigator = typeof navigator !== 'undefined';
-const hasNotification = hasWindow && 'Notification' in window;
-const hasSW = hasNavigator && 'serviceWorker' in navigator;
+import {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+} from "react";
 
-/** 권한이 허용(granted)인지 */
+import { useAuthContext } from "@/context/AuthContext";
+
+import {
+  registerForPush,
+  onPushMessage,
+  showForegroundPushNotification,
+} from "@/firebase/firebase";
+
+
+/* ────────────────────────────────────────────────────────────
+ * 브라우저 환경 확인
+ * ──────────────────────────────────────────────────────────── */
+
+const hasWindow =
+  typeof window !== "undefined";
+
+const hasNavigator =
+  typeof navigator !== "undefined";
+
+const hasNotification =
+  hasWindow &&
+  "Notification" in window;
+
+const hasSW =
+  hasNavigator &&
+  "serviceWorker" in navigator;
+
+
+/* ────────────────────────────────────────────────────────────
+ * 알림 권한 확인
+ * ──────────────────────────────────────────────────────────── */
+
 function isGranted() {
-  if (!hasNotification) return false;
   try {
-    return window.Notification.permission === 'granted';
+    return (
+      hasNotification &&
+      window.Notification.permission === "granted"
+    );
   } catch {
     return false;
   }
 }
 
-/** (옵션) Permissions API 지원 여부 */
-function getPermissionsQuery() {
-  try {
-    if (!hasNavigator || !('permissions' in navigator)) return null;
-    // @ts-ignore
-    return navigator.permissions.query({ name: 'notifications' });
-  } catch {
-    return null;
-  }
-}
 
-/** SW ready를 기다리되, 타임아웃 방어 */
-async function waitServiceWorkerReady(timeoutMs = 10000) {
-  if (!hasSW) return null;
-  try {
-    const readyPromise =
-      (hasWindow && window.__swReadyPromise) ||
-      navigator.serviceWorker.ready;
-
-    if (!readyPromise) return null;
-
-    const timeout = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('SW ready timeout')), timeoutMs)
-    );
-    // race
-    return await Promise.race([readyPromise, timeout]);
-  } catch {
-    return null;
-  }
-}
+/* ────────────────────────────────────────────────────────────
+ * FCM Hook
+ * ──────────────────────────────────────────────────────────── */
 
 export default function useFCM() {
-  const { user } = useAuthContext();
-  const [fcmToken, setFcmToken] = useState(null);
-  const [message, setMessage] = useState(null);
+  const { user } =
+    useAuthContext();
 
-  const initUidRef = useRef(null); // 같은 uid로 중복 초기화 방지
-  const unsubRef = useRef(null);   // 포그라운드 리스너 해제용
-  const tryingRef = useRef(false); // 동시 중복 등록 방지
+  const uid =
+    user?.uid || "";
 
-  /** 현재 환경에서 FCM을 시도할 수 있는지 (필수 조건만 체크) */
-  const canTryFCM = () => hasNotification && hasSW;
 
-  /** 실제 등록 시도 로직 */
-  const tryRegister = useCallback(async (uid) => {
-    if (!uid) return;
-    if (!canTryFCM()) return;                 // 브라우저 미지원 시 패스
-    if (!isGranted()) return;                 // 권한 없는 경우 패스 (Prompt에서 허용 후 재시도)
+  const [fcmToken, setFcmToken] =
+    useState(null);
 
-    if (tryingRef.current) return;            // 이미 진행 중
-    tryingRef.current = true;
+  const [message, setMessage] =
+    useState(null);
 
-    try {
-      const ready = await waitServiceWorkerReady(12000);
-      if (!ready) {
-        console.warn('Service Worker not ready; skip FCM register (timeout)');
-        return;
-      }
 
-      const t = await registerForPush(uid);   // 내부에서 getToken
-      if (t) setFcmToken(t);
-    } catch (e) {
-      console.error('FCM 등록 오류:', e);
-    } finally {
-      tryingRef.current = false;
-    }
-  }, []);
+  /*
+   * 현재 포그라운드 메시지 리스너가
+   * 어느 UID에 연결되어 있는지 확인
+   */
+  const listenerUidRef =
+    useRef("");
 
-  // 1) uid 기준 1회 초기화 (권한 허용 상태에서만 등록)
-  useEffect(() => {
-    const uid = user?.uid;
-    if (!uid) return;
 
-    // uid 변경 시 포그라운드 리스너도 새로 세팅하기 위해 해제
-    if (initUidRef.current && initUidRef.current !== uid) {
-      try {
-        if (unsubRef.current) {
-          unsubRef.current();
-          unsubRef.current = null;
+  /*
+   * onMessage unsubscribe 함수
+   */
+  const unsubRef =
+    useRef(null);
+
+
+  /*
+   * 동시에 여러 FCM 등록 요청이
+   * 발생하는 것을 방지
+   */
+  const tryingRef =
+    useRef(false);
+
+
+  /*
+   * 너무 짧은 시간에
+   * 동일 등록 요청이 반복되는 것 방지
+   */
+  const lastSuccessRef =
+    useRef({
+      uid: "",
+      at: 0,
+    });
+
+
+  /* ──────────────────────────────────────────────────────────
+   * FCM 사용 가능 환경 확인
+   * ────────────────────────────────────────────────────────── */
+
+  const canTryFCM =
+    useCallback(() => {
+      return (
+        hasNotification &&
+        hasSW
+      );
+    }, []);
+
+
+  /* ──────────────────────────────────────────────────────────
+   * 실제 FCM 등록
+   * ────────────────────────────────────────────────────────── */
+
+  const tryRegister =
+    useCallback(
+      async (
+        targetUid,
+        {
+          force = false,
+        } = {}
+      ) => {
+        const normalizedUid =
+          String(
+            targetUid || ""
+          ).trim();
+
+
+        if (!normalizedUid) {
+          return null;
         }
-      } catch {}
+
+
+        /*
+         * 브라우저에서
+         * Notification / Service Worker를
+         * 지원하지 않는 경우
+         */
+        if (!canTryFCM()) {
+          console.warn(
+            "[FCM] 이 브라우저에서는 푸시 알림을 사용할 수 없습니다."
+          );
+
+          return null;
+        }
+
+
+        /*
+         * 알림 권한이 없으면
+         * 여기서는 자동으로 권한창을 띄우지 않습니다.
+         *
+         * Profile / PushPermissionPrompt에서
+         * 사용자가 직접 허용한 뒤
+         * PUSH_PERMISSION_GRANTED 이벤트로
+         * 다시 들어오게 됩니다.
+         */
+        if (!isGranted()) {
+          return null;
+        }
+
+
+        /*
+         * 이미 등록 작업 중이면
+         * 중복 실행하지 않습니다.
+         */
+        if (tryingRef.current) {
+          return null;
+        }
+
+
+        /*
+         * 등록 성공 직후 여러 이벤트가
+         * 연속으로 발생하는 경우
+         * 불필요한 Firestore write를 줄입니다.
+         *
+         * force=true인 경우에는 무시하고 실행합니다.
+         */
+        const now =
+          Date.now();
+
+        const lastSuccess =
+          lastSuccessRef.current;
+
+        if (
+          !force &&
+          lastSuccess.uid ===
+            normalizedUid &&
+          now - lastSuccess.at <
+            15000
+        ) {
+          return fcmToken;
+        }
+
+
+        tryingRef.current = true;
+
+
+        try {
+          /*
+           * firebase.js의 registerForPush 실행
+           *
+           * registerForPush 내부에서 /sw.js를 직접 확인/등록하므로
+           * 여기서 navigator.serviceWorker.ready를 먼저 기다리지 않습니다.
+           * 처음 방문한 기기에서도 서비스워커 등록 기회를 보장합니다.
+           *
+           * 여기서:
+           *
+           * 1. getToken()
+           * 2. users/{uid}/fcmTokens
+           * 3. arrayUnion(token)
+           *
+           * 이 실행됩니다.
+           */
+          const token =
+            await registerForPush(
+              normalizedUid
+            );
+
+
+          if (!token) {
+            console.warn(
+              "[FCM] FCM 토큰 등록에 실패했습니다."
+            );
+
+            return null;
+          }
+
+
+          setFcmToken(token);
+
+
+          lastSuccessRef.current = {
+            uid: normalizedUid,
+            at: Date.now(),
+          };
+
+
+          return token;
+
+        } catch (error) {
+          console.error(
+            "[FCM] 등록 오류:",
+            error
+          );
+
+          return null;
+
+        } finally {
+          tryingRef.current = false;
+        }
+      },
+      [
+        canTryFCM,
+        fcmToken,
+      ]
+    );
+
+
+  /* ──────────────────────────────────────────────────────────
+   * 로그인 회원 변경 시 자동 등록
+   * ────────────────────────────────────────────────────────── */
+
+  useEffect(() => {
+    if (!uid) {
       setFcmToken(null);
       setMessage(null);
-    }
 
-    if (initUidRef.current === uid) {
-      // 이미 초기화한 uid — 다만 권한이 새로 허용되었을 수 있으니 재시도 한 번
-      tryRegister(uid);
+      listenerUidRef.current =
+        "";
+
+      lastSuccessRef.current = {
+        uid: "",
+        at: 0,
+      };
+
       return;
     }
 
-    initUidRef.current = uid;
-    tryRegister(uid);
-  }, [user?.uid, tryRegister]);
 
-  // 2) 포그라운드 메시지 리스너: 1번만 구독 (uid 기준)
+    /*
+     * 로그인된 회원이 확인되면
+     * FCM 등록을 바로 시도합니다.
+     *
+     * firebase.js에서
+     * 기존 localStorage 토큰과 같더라도
+     * Firestore에 다시 arrayUnion 하므로
+     *
+     * 기존 회원 토큰 복구가 여기서 이루어집니다.
+     */
+    tryRegister(
+      uid,
+      {
+        force: true,
+      }
+    );
+
+  }, [
+    uid,
+    tryRegister,
+  ]);
+
+
+  /* ──────────────────────────────────────────────────────────
+   * 포그라운드 메시지 리스너
+   * ────────────────────────────────────────────────────────── */
+
   useEffect(() => {
-    const uid = user?.uid;
-    if (!uid) return;
-    if (!canTryFCM()) return;
-
-    if (unsubRef.current) return; // 이미 구독 중
-
-    try {
-      unsubRef.current = onPushMessage((payload) => {
-        setMessage(payload);
-        // 전역 컨텍스트/배지 즉시 재집계 트리거
-        try {
-          if (hasWindow) {
-            window.dispatchEvent(
-              new CustomEvent('APP_PUSH_MESSAGE', { detail: payload?.data || {} })
-            );
-          }
-        } catch {}
-      });
-    } catch (e) {
-      console.warn('onPushMessage 구독 실패:', e);
+    if (
+      !uid ||
+      !canTryFCM()
+    ) {
+      return undefined;
     }
 
-    return () => {
+
+    /*
+     * 로그인 계정이 바뀐 경우
+     * 기존 메시지 리스너 제거
+     */
+    if (
+      listenerUidRef.current !==
+      uid
+    ) {
       try {
-        if (unsubRef.current) {
-          unsubRef.current();
-          unsubRef.current = null;
-        }
-      } catch {}
-    };
-  }, [user?.uid]);
-
-  // 3) 권한 상태 변화 감지 -> 허용되면 즉시 등록
-  useEffect(() => {
-    if (!canTryFCM()) return;
-    const uid = user?.uid;
-    if (!uid) return;
-
-    // Permissions API가 있을 때만 사용
-    let permStatus = null;
-    let mounted = true;
-
-    (async () => {
-      try {
-        permStatus = await getPermissionsQuery();
-        if (!mounted || !permStatus) return;
-
-        // 최초 상태 확인 후 허용이면 재시도
-        if (permStatus.state === 'granted') {
-          tryRegister(uid);
-        }
-
-        // 권한 변화 감지
-        const onChange = () => {
-          if (!mounted) return;
-          if (permStatus.state === 'granted') {
-            tryRegister(uid);
-          }
-        };
-        permStatus.addEventListener?.('change', onChange);
-
-        // 정리
-        return () => permStatus?.removeEventListener?.('change', onChange);
+        unsubRef.current?.();
       } catch {
-        // Permissions API 미지원/예외 -> 무시
+        // 기존 리스너 정리 실패는 무시
       }
-    })();
+
+      unsubRef.current =
+        null;
+
+      listenerUidRef.current =
+        uid;
+    }
+
+
+    /*
+     * 현재 리스너가 없으면
+     * 포그라운드 FCM 수신 시작
+     */
+    if (!unsubRef.current) {
+      unsubRef.current =
+        onPushMessage(
+          async (payload) => {
+            /*
+             * 포그라운드에서도 휴대폰 상단 시스템 알림을 표시합니다.
+             *
+             * 백그라운드/화면 꺼짐:
+             *   public/sw.js -> onBackgroundMessage -> showNotification()
+             *
+             * 현재 화면 활성:
+             *   여기 onMessage -> showForegroundPushNotification()
+             *
+             * 시스템 알림 표시가 성공하면 기존 화면 토스트는 중복 방지를 위해
+             * preferBadge=true로 전달하여 FCMNotifications가 억제합니다.
+             * 시스템 알림 표시가 실패한 환경에서는 기존 토스트가 폴백으로 남습니다.
+             */
+            let systemNotificationShown = false;
+
+            try {
+              systemNotificationShown =
+                await showForegroundPushNotification(payload);
+            } catch (error) {
+              console.warn(
+                "[FCM] 포그라운드 시스템 알림 표시 실패:",
+                error
+              );
+            }
+
+            const nextPayload =
+              systemNotificationShown
+                ? {
+                    ...payload,
+                    data: {
+                      ...(payload?.data || {}),
+                      preferBadge: "true",
+                    },
+                  }
+                : payload;
+
+            setMessage(nextPayload);
+
+            try {
+              window.dispatchEvent(
+                new CustomEvent(
+                  "APP_PUSH_MESSAGE",
+                  {
+                    detail:
+                      payload?.data ||
+                      {},
+                  }
+                )
+              );
+            } catch {
+              // CustomEvent 미지원 환경 무시
+            }
+          }
+        );
+    }
+
 
     return () => {
-      mounted = false;
+      try {
+        unsubRef.current?.();
+      } catch {
+        // 정리 오류 무시
+      }
+
+      unsubRef.current =
+        null;
+
+      listenerUidRef.current =
+        "";
     };
-  }, [user?.uid, tryRegister]);
 
-  // 4) 온라인/탭복귀 시 한 번 더 등록 재시도 (토큰 만료/등록 실패 보완)
+  }, [
+    canTryFCM,
+    uid,
+  ]);
+
+
+  /* ──────────────────────────────────────────────────────────
+   * 사이트 복귀 / 온라인 복귀 시 자동 복구
+   * ────────────────────────────────────────────────────────── */
+
   useEffect(() => {
-    if (!canTryFCM()) return;
-    const uid = user?.uid;
-    if (!uid) return;
+    if (
+      !uid ||
+      !canTryFCM()
+    ) {
+      return undefined;
+    }
 
-    const onOnline = () => tryRegister(uid);
+
+    /*
+     * 인터넷 연결 복구
+     */
+    const onOnline = () => {
+      tryRegister(uid);
+    };
+
+
+    /*
+     * 백그라운드 →
+     * 다시 화면으로 복귀
+     */
     const onVisible = () => {
-      try {
-        if (document.visibilityState === 'visible') tryRegister(uid);
-      } catch {}
+      if (
+        document.visibilityState ===
+        "visible"
+      ) {
+        tryRegister(uid);
+      }
     };
 
-    try {
-      window.addEventListener('online', onOnline);
-      document.addEventListener('visibilitychange', onVisible);
-    } catch {}
+
+    /*
+     * 브라우저 / PWA 창이
+     * 다시 활성화될 때
+     */
+    const onFocus = () => {
+      tryRegister(uid);
+    };
+
+
+    /*
+     * BFCache 등을 통해 페이지가
+     * 다시 나타난 경우
+     */
+    const onPageShow = () => {
+      tryRegister(uid);
+    };
+
+
+    /*
+     * 사용자가 알림 권한을
+     * 방금 허용한 경우
+     */
+    const onPermissionGranted =
+      () => {
+        tryRegister(
+          uid,
+          {
+            force: true,
+          }
+        );
+      };
+
+
+    /*
+     * 서비스 워커에서
+     * Push subscription 변경 감지
+     */
+    const onSubscriptionChanged =
+      () => {
+        tryRegister(
+          uid,
+          {
+            force: true,
+          }
+        );
+      };
+
+
+    window.addEventListener(
+      "online",
+      onOnline
+    );
+
+    document.addEventListener(
+      "visibilitychange",
+      onVisible
+    );
+
+    window.addEventListener(
+      "focus",
+      onFocus
+    );
+
+    window.addEventListener(
+      "pageshow",
+      onPageShow
+    );
+
+    window.addEventListener(
+      "PUSH_PERMISSION_GRANTED",
+      onPermissionGranted
+    );
+
+    window.addEventListener(
+      "PUSH_SUBSCRIPTION_CHANGED",
+      onSubscriptionChanged
+    );
+
 
     return () => {
-      try {
-        window.removeEventListener('online', onOnline);
-        document.removeEventListener('visibilitychange', onVisible);
-      } catch {}
+      window.removeEventListener(
+        "online",
+        onOnline
+      );
+
+      document.removeEventListener(
+        "visibilitychange",
+        onVisible
+      );
+
+      window.removeEventListener(
+        "focus",
+        onFocus
+      );
+
+      window.removeEventListener(
+        "pageshow",
+        onPageShow
+      );
+
+      window.removeEventListener(
+        "PUSH_PERMISSION_GRANTED",
+        onPermissionGranted
+      );
+
+      window.removeEventListener(
+        "PUSH_SUBSCRIPTION_CHANGED",
+        onSubscriptionChanged
+      );
     };
-  }, [user?.uid, tryRegister]);
 
-  // 5) PushPermissionPrompt와 연동하고 싶다면(선택):
-  //    권한 허용 직후 아래 커스텀 이벤트를 쏘도록 하고, 여기서도 재시도 가능.
-  useEffect(() => {
-    const uid = user?.uid;
-    if (!uid) return;
+  }, [
+    canTryFCM,
+    tryRegister,
+    uid,
+  ]);
 
-    const onGranted = () => tryRegister(uid);
-    try {
-      window.addEventListener('PUSH_PERMISSION_GRANTED', onGranted);
-    } catch {}
 
-    return () => {
-      try {
-        window.removeEventListener('PUSH_PERMISSION_GRANTED', onGranted);
-      } catch {}
-    };
-  }, [user?.uid, tryRegister]);
+  /* ──────────────────────────────────────────────────────────
+   * 메시지 초기화
+   * ────────────────────────────────────────────────────────── */
 
-  const clearMessage = useCallback(() => setMessage(null), []);
-  return { fcmToken, message, clearMessage };
+  const clearMessage =
+    useCallback(
+      () => {
+        setMessage(null);
+      },
+      []
+    );
+
+
+  return {
+    fcmToken,
+    message,
+    clearMessage,
+  };
 }

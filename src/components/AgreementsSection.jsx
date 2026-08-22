@@ -6,35 +6,42 @@ import { FiExternalLink } from "react-icons/fi";
 
 const Box = styled.div`
   display: flex; flex-direction: column; gap: 12px;
-  padding: 14px; border: 1px solid #eee; border-radius: 8px; background:#fafafa;
+  padding: 14px; border: 1px solid ${({ theme }) => theme.colors.border}; border-radius: 8px; background: ${({ theme }) => theme.colors.surfaceAlt};
 `;
 const Row = styled.div`
   display: grid;
-  grid-template-columns: 20px 1fr auto;  /* 체크박스 / 텍스트 / 아이콘버튼 */
+  grid-template-columns: 20px 1fr auto;
   column-gap: 10px; align-items: start;
 `;
 const Checkbox = styled.input.attrs({ type: "checkbox" })`
   width: 18px; height: 18px; margin-top: 2px;
 `;
 const Text = styled.label`
-  font-size: 0.95rem; color:#1f2937; line-height: 1.5; cursor: pointer;
+  font-size: 0.95rem; color: ${({ theme }) => theme.colors.text}; line-height: 1.5; cursor: pointer;
+`;
+const Detail = styled.span`
+  display: block;
+  margin-top: 4px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: .82rem;
+  line-height: 1.5;
 `;
 const Badge = styled.span`
   display: inline-flex; align-items: center; gap: 4px;
   font-size: 0.78rem; line-height: 1;
   padding: 4px 6px; border-radius: 9999px;
-  background: #f3f4f6; color: #4b5563; border: 1px solid #e5e7eb;
+  background: ${({ theme }) => theme.semantic.badgeInfoBg}; color: ${({ theme }) => theme.semantic.badgeInfoText}; border: 1px solid ${({ theme }) => theme.colors.border};
   margin-right: 6px;
 `;
 const IconBtn = styled(Link)`
   display: inline-flex; align-items: center; justify-content: center;
   width: 36px; height: 36px;
   border-radius: 8px;
-  border: 1px dashed #d1d5db;
-  background: #fff; color: #374151;
+  border: 1px dashed ${({ theme }) => theme.colors.borderStrong};
+  background: ${({ theme }) => theme.colors.surface}; color: ${({ theme }) => theme.colors.text};
   text-decoration: none;
   outline-offset: 2px;
-  &:hover { background:#f9fafb; border-style: solid; }
+  &:hover { background: ${({ theme }) => theme.colors.goldLight}; border-style: solid; }
   &:focus-visible { outline: 2px solid ${({ theme }) => theme.focus.outline}; }
 `;
 const Placeholder = styled.span`
@@ -42,12 +49,10 @@ const Placeholder = styled.span`
 `;
 
 export function AgreementsSection({ value = {}, onChange, onOpen }) {
-  // age14가 없을 때도 안전하게 false로 처리
   const { age14 = false, tos = false, privacy = false, marketing = false } = value;
 
   return (
     <Box role="group" aria-label="약관 동의">
-      {/* 만 14세 이상 확인 */}
       <Row>
         <Checkbox
           id="agree_age14"
@@ -58,11 +63,9 @@ export function AgreementsSection({ value = {}, onChange, onOpen }) {
           <Badge>필수</Badge>
           만 14세 이상(또는 법정대리인 동의)임을 확인합니다.
         </Text>
-        {/* 아이콘 버튼 없음 — 그리드 정렬 유지용 자리 표시 */}
         <Placeholder aria-hidden />
       </Row>
 
-      {/* 이용약관 */}
       <Row>
         <Checkbox
           id="agree_tos"
@@ -83,7 +86,6 @@ export function AgreementsSection({ value = {}, onChange, onOpen }) {
         </IconBtn>
       </Row>
 
-      {/* 개인정보 수집·이용 */}
       <Row>
         <Checkbox
           id="agree_privacy"
@@ -104,7 +106,6 @@ export function AgreementsSection({ value = {}, onChange, onOpen }) {
         </IconBtn>
       </Row>
 
-      {/* 마케팅 수신(선택) */}
       <Row>
         <Checkbox
           id="agree_marketing"
@@ -113,12 +114,16 @@ export function AgreementsSection({ value = {}, onChange, onOpen }) {
         />
         <Text htmlFor="agree_marketing">
           <Badge style={{ opacity: .85 }}>선택</Badge>
-          이메일/푸시 등 마케팅 정보 수신에 동의합니다.
+          금시세·혜택 알림 받기
+          <Detail>
+            금시세 업데이트, 주요 소식, 이벤트·혜택 등을 이메일/푸시로 받아봅니다.
+            <br />광고성 정보 수신동의(선택)
+          </Detail>
         </Text>
         <IconBtn
-          to="/privacy#6"
-          aria-label="마케팅 안내 항목 보기"
-          title="마케팅 안내 보기"
+          to="/privacy#marketing"
+          aria-label="광고성 정보 수신동의 안내 보기"
+          title="광고성 정보 수신동의 안내 보기"
           onClick={() => onOpen?.("marketing")}
         >
           <FiExternalLink aria-hidden />

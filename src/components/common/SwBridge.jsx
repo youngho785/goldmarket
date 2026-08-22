@@ -2,36 +2,51 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
+function toInternalPath(value) {
+  try {
+    const url = new URL(value, window.location.origin);
+    if (url.origin !== window.location.origin) return null;
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return null;
+  }
+}
+
 export default function SwBridge() {
   const navigate = useNavigate();
 
   useEffect(() => {
     const onMessage = (event) => {
       const { type, data } = event.data || {};
+
       if (type === "OPEN_URL" && data?.url) {
-        try {
-          const u = new URL(data.url, window.location.origin);
-          // SPA 라우팅: 페이지 리로드 없이 이동
-          navigate(u.pathname + u.search + u.hash);
-        } catch {
-          // URL 파싱 실패 시 풀 리다이렉트
-          window.location.href = data.url;
-        }
+        const path = toInternalPath(data.url);
+        if (path) navigate(path);
+        else window.location.assign(data.url);
+        return;
       }
 
-      // 선택: 푸시로 온 데이터로 UI 갱신/토스트 띄우기 등
-      // if (type === "PUSH_MESSAGE") { ... }
-      // if (type === "PUSH_SUBSCRIPTION_CHANGED") { ... }
-    };
+      if (type === "PUSH_MESSAGE") {
+        window.dispatchEvent(
+          new CustomEvent("APP_PUSH_MESSAGE", {
+            detail: data || {},
+          })
+        );
+        return;
+      }
 
-    if (navigator.serviceWorker) {
-      navigator.serviceWorker.addEventListener("message", onMessage);
-    }
-    return () => {
-      if (navigator.serviceWorker) {
-        navigator.serviceWorker.removeEventListener("message", onMessage);
+      if (type === "PUSH_SUBSCRIPTION_CHANGED") {
+        window.dispatchEvent(
+          new CustomEvent("PUSH_SUBSCRIPTION_CHANGED")
+        );
       }
     };
+
+    if (!("serviceWorker" in navigator)) return undefined;
+
+    navigator.serviceWorker.addEventListener("message", onMessage);
+    return () =>
+      navigator.serviceWorker.removeEventListener("message", onMessage);
   }, [navigate]);
 
   return null;

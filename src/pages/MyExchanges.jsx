@@ -1,26 +1,37 @@
-// src/pages/MyExchanges.js
+// src/pages/MyExchanges.jsx
 import React, { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
-import { format, isValid } from 'date-fns';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+import { addDays, format, isValid } from 'date-fns';
 import { db } from '../firebase/firebase';
 import { useAuthContext } from '../context/AuthContext';
 import GoldExchangeReviewForm from '@/components/reviews/GoldExchangeReviewForm';
+import useReservedSlots from '@/hooks/useReservedSlots';
+import useBookingAvailability, { getBookingAvailabilityEntry } from '@/hooks/useBookingAvailability';
+import {
+  cancelGoldExchangeGroup,
+  rescheduleGoldExchangeGroup,
+} from '@/services/exchangeClient';
 
 /* ── 상수/유틸 ─────────────────────────────────── */
 const DON_TO_GRAMS = 3.75;
 
 const STATUS_LABEL = {
-  requested: '예약대기중',
+  requested: '예약 확인 대기',
   in_progress: '교환중',
   교환중: '교환중',
-  scheduled: '예약완료',
+  scheduled: '예약 확정',
   completed: '교환완료',
+  canceled: '취소',
   rejected: '거절',
 };
 
 // 대표 상태 선택 우선순위 (인덱스가 작을수록 우선)
-const STATUS_PRIORITY = ['rejected', 'completed', 'scheduled', 'in_progress', '교환중', 'requested'];
+const STATUS_PRIORITY = ['rejected', 'canceled', 'completed', 'scheduled', 'in_progress', '교환중', 'requested'];
+const TIME_SLOTS = ['11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'];
 
 // 필터용 그룹
 const FILTER_LABEL = {
@@ -28,17 +39,19 @@ const FILTER_LABEL = {
   active: '진행중',     // requested / in_progress(교환중)
   scheduled: '예약',
   completed: '완료',
+  canceled: '취소',
   rejected: '거절',
 };
 
-const get = (theme, path, fallback) => {
-  try {
-    return path
-      .split('.')
-      .reduce((o, k) => (o && o[k] != null ? o[k] : undefined), theme) ?? fallback;
-  } catch {
-    return fallback;
+const displayCustomerStatus = (status, scheduleActivity) => {
+  const normalized = status === '교환중' ? 'in_progress' : String(status || 'requested');
+  if (normalized === 'requested' && scheduleActivity?.type === 'rescheduled') {
+    return '일정 변경 확인 대기';
   }
+  if (normalized === 'scheduled' && scheduleActivity?.type === 'rescheduled') {
+    return '변경 예약 확정';
+  }
+  return STATUS_LABEL[normalized] || normalized;
 };
 
 const toJSDate = (v) => {
@@ -92,17 +105,33 @@ const displayOriginalQty = (doc) => {
 
 /* ── 스타일 ───────────────────────────────────── */
 const Page = styled.div`
-  padding: 30px 0 4rem;
-  max-width: 1080px;
+  width: 100%;
+  max-width: 980px;
+  min-width: 0;
   margin: 0 auto;
+  padding: 20px 16px 3rem;
+  box-sizing: border-box;
+  overflow-x: hidden;
+
+  @media (max-width: 720px) {
+    padding: 12px 10px 2.5rem;
+  }
 `;
 
 const PageHeader = styled.header`
-  margin-bottom: 18px;
-  padding: clamp(28px, 5vw, 50px);
+  width: 100%;
+  min-width: 0;
+  margin-bottom: 14px;
+  padding: clamp(20px, 4vw, 32px);
+  box-sizing: border-box;
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-top: 3px solid ${({ theme }) => theme.colors.secondary};
+  border-radius: 14px;
   background: ${({ theme }) => theme.colors.surface};
+
+  @media (max-width: 520px) {
+    padding: 18px 15px;
+  }
 `;
 
 const Kicker = styled.p`
@@ -116,93 +145,162 @@ const Kicker = styled.p`
 
 const HeaderLead = styled.p`
   max-width: 680px;
-  margin: 12px 0 0;
+  margin: 8px 0 0;
   color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 0.9rem;
+  line-height: 1.55;
 `;
 
 const SectionTitle = styled.h1`
   margin: 0;
   color: ${({ theme }) => theme.colors.primary};
-  font-size: clamp(2rem, 5vw, 3.35rem);
+  font-size: clamp(1.65rem, 4vw, 2.45rem);
 `;
 
 const FilterBar = styled.div`
+  width: 100%;
+  min-width: 0;
   display: flex;
   flex-wrap: wrap;
-  gap: .5rem;
-  margin: .25rem 0 1rem;
+  gap: 6px;
+  margin: 0 0 12px;
 `;
 
 const FilterChip = styled.button`
-  padding: .48rem .8rem;
-  border-radius: 0;
-  border: 1px solid ${({ theme }) => get(theme, 'colors.border', '#e5e7eb')};
-  background: ${({ $active, theme }) => ($active ? get(theme,'colors.surfaceAlt', '#eef2ff') : get(theme,'colors.surface','#fff'))};
+  min-height: 36px;
+  padding: 7px 11px;
+  border-radius: 999px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ $active, theme }) =>
+    $active
+      ? theme.colors.goldLight
+      : theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
+  font-size: 0.8rem;
   font-weight: 800;
-  font-size: .85rem;
   cursor: pointer;
 `;
 
 const Count = styled.span`
   margin-left: .35rem;
   font-weight: 800;
-  color: ${({ theme }) => get(theme, 'colors.primary', '#1f6feb')};
+  color: ${({ theme }) => theme.colors.primary};
 `;
 
 const CardGrid = styled.div`
+  width: 100%;
+  min-width: 0;
   display: grid;
-  grid-template-columns: 1fr;
-  gap: .9rem;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
 `;
 
-const Card = styled.div`
-  background: ${({ theme }) => get(theme, 'colors.surface', '#ffffff')};
-  border: 1px solid ${({ theme }) => get(theme, 'colors.border', '#e5e7eb')};
-  border-radius: 0;
-  box-shadow: ${({ theme }) => theme.shadows.card};
+const Card = styled.article`
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   overflow: hidden;
+  box-sizing: border-box;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 14px;
+  background: ${({ theme }) => theme.colors.surface};
+  box-shadow: ${({ theme }) => theme.shadows.card};
 `;
 
 const CardHeader = styled.button`
-  all: unset;
-  cursor: pointer;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: .75rem;
   width: 100%;
-  padding: .85rem 1rem;
-  background: ${({ theme }) => get(theme, 'colors.background', '#f8fafc')};
-  border-bottom: 1px solid ${({ theme }) => get(theme, 'colors.border', '#e5e7eb')};
-  &:hover { background: ${({ theme }) => get(theme, 'colors.background', '#f1f5f9')}; }
+  min-width: 0;
+  max-width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 15px;
+  box-sizing: border-box;
+  border: 0;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.text};
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.surfaceAlt};
+  }
+
+  @media (max-width: 640px) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 9px;
+    padding: 12px;
+  }
 `;
 
 const HeaderLeft = styled.div`
-  display: grid;
-  grid-template-columns: auto 1fr;
-  column-gap: .6rem;
-  row-gap: .25rem;
-  align-items: baseline;
   min-width: 0;
+  display: grid;
+  gap: 4px;
 `;
 
 const HLabel = styled.span`
-  color: ${({ theme }) => get(theme, 'colors.textSecondary', '#475569')};
-  font-weight: 600;
-  font-size: .92rem;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 0.76rem;
+  font-weight: 750;
 `;
 
 const HValue = styled.span`
-  color: ${({ theme }) => get(theme, 'colors.text', '#111827')};
-  font-weight: 700;
-  font-size: .95rem;
   min-width: 0;
+  color: ${({ theme }) => theme.colors.text};
+  font-size: 1rem;
+  font-weight: 850;
+  line-height: 1.35;
 `;
 
 const HeaderRight = styled.div`
+  min-width: 0;
+  max-width: 100%;
   display: flex;
   align-items: center;
-  gap: .5rem;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-wrap: wrap;
+
+  @media (max-width: 640px) {
+    width: 100%;
+    justify-content: flex-start;
+  }
+`;
+
+const HeaderMeta = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 0.78rem;
+`;
+
+const FinalWeight = styled.div`
+  min-width: 0;
+  max-width: 100%;
+  display: grid;
+  gap: 2px;
+  text-align: right;
+
+  small {
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: 0.72rem;
+  }
+
+  strong {
+    color: ${({ theme }) => theme.colors.primary};
+    font-family: ${({ theme }) => theme.fonts.numeric};
+    font-size: 1rem;
+    font-weight: 900;
+  }
+
+  @media (max-width: 640px) {
+    min-width: 0;
+    text-align: left;
+  }
 `;
 
 const StatusBadge = styled.span`
@@ -211,14 +309,14 @@ const StatusBadge = styled.span`
   font-weight: 800;
   font-size: .83rem;
   background: ${({ $status, theme }) => {
-    if ($status === 'requested') return get(theme, 'colors.warning', '#f59e0b');
-    if ($status === 'scheduled') return get(theme, 'colors.success', '#10b981');
-    if ($status === 'completed') return get(theme, 'colors.secondary', '#6366f1');
-    if ($status === 'rejected') return get(theme, 'colors.error', '#ef4444');
-    if ($status === 'in_progress' || $status === '교환중') return get(theme, 'colors.info', '#3b82f6');
-    return get(theme, 'colors.gray', '#9ca3af');
+    if ($status === 'requested') return theme.colors.warning;
+    if ($status === 'scheduled') return theme.colors.success;
+    if ($status === 'completed') return theme.colors.secondary;
+    if ($status === 'rejected') return theme.colors.error;
+    if ($status === 'in_progress' || $status === '교환중') return theme.colors.info;
+    return theme.colors.gray;
   }};
-  color: #fff;
+  color: ${({ $status, theme }) => ($status === 'requested' ? theme.on.warning : theme.on.primary)};
 `;
 
 const Chev = styled.span`
@@ -230,16 +328,38 @@ const Chev = styled.span`
 `;
 
 const CardBody = styled.div`
-  padding: .9rem 1rem 1.1rem;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   display: grid;
-  grid-template-columns: 1fr;
-  gap: .9rem;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  padding: 13px 15px 16px;
+  box-sizing: border-box;
+  overflow: hidden;
+  border-top: 1px solid ${({ theme }) => theme.colors.border};
+
+  > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  @media (max-width: 640px) {
+    padding: 11px 10px 14px;
+  }
 `;
 
 const MetaGrid = styled.div`
+  width: 100%;
+  min-width: 0;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: .75rem 1.25rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px 14px;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  border-radius: 10px;
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+
   @media (max-width: 720px) {
     grid-template-columns: 1fr;
   }
@@ -247,50 +367,62 @@ const MetaGrid = styled.div`
 
 const Field = styled.div`
   display: grid;
-  grid-template-columns: 6.5em 1fr;
+  grid-template-columns: 5.7em minmax(0, 1fr);
   align-items: baseline;
-  column-gap: .5rem;
+  gap: 6px;
+  font-size: 0.84rem;
 `;
 const Label = styled.span`
   font-weight: 800;
-  color: ${({ theme }) => get(theme, 'colors.text', '#0f172a')};
+  color: ${({ theme }) => theme.colors.text};
   letter-spacing: -0.01em;
 `;
 const Value = styled.span`
-  color: ${({ theme }) => get(theme, 'colors.textSecondary', '#334155')};
+  color: ${({ theme }) => theme.colors.textSecondary};
   word-break: break-word;
 `;
 
 const Divider = styled.hr`
   height: 1px;
-  background: ${({ theme }) => get(theme, 'colors.border', '#e5e7eb')};
+  background: ${({ theme }) => theme.colors.border};
   border: none;
   margin: .25rem 0 .25rem;
 `;
 
+const TableWrap = styled.div`
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-inline: contain;
+`;
+
 const ItemsTable = styled.table`
   width: 100%;
+  min-width: 560px;
   border-collapse: separate;
   border-spacing: 0;
   overflow: hidden;
   border-radius: 10px;
   thead th {
     text-align: left;
-    background: ${({ theme }) => get(theme, 'colors.background', '#f1f5f9')};
-    color: ${({ theme }) => get(theme, 'colors.text', '#0f172a')};
-    padding: .55rem .65rem;
-    font-size: .92rem;
-    border-bottom: 1px solid ${({ theme }) => get(theme, 'colors.border', '#e5e7eb')};
+    background: ${({ theme }) => theme.colors.background};
+    color: ${({ theme }) => theme.colors.text};
+    padding: 7px 9px;
+    font-size: 0.8rem;
+    border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   }
   tbody td {
-    padding: .55rem .65rem;
-    border-bottom: 1px solid ${({ theme }) => get(theme, 'colors.border', '#e5e7eb')};
+    padding: 7px 9px;
+    border-bottom: 1px solid ${({ theme }) => theme.colors.border};
     vertical-align: top;
-    color: ${({ theme }) => get(theme, 'colors.textSecondary', '#334155')};
-    font-size: .92rem;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: 0.82rem;
   }
   tbody tr:nth-child(even) td {
-    background: ${({ theme }) => get(theme, 'colors.surfaceAlt', '#fafafa')};
+    background: ${({ theme }) => theme.colors.surfaceAlt};
   }
   tbody tr:last-child td { border-bottom: none; }
   @media (max-width: 640px) {
@@ -310,26 +442,37 @@ const Chip = styled.span`
   border-radius: 9999px;
   font-weight: 800;
   font-size: .82rem;
-  color: #fff;
+  color: ${({ theme }) => theme.on.primary};
   background: ${({ $tone, theme }) => {
-    if ($tone === 'grams') return get(theme, 'colors.primary', '#1f6feb');
-    if ($tone === 'don') return get(theme, 'colors.secondary', '#6366f1');
-    return get(theme, 'colors.complementary', '#0ea5e9');
+    if ($tone === 'grams') return theme.colors.primary;
+    if ($tone === 'don') return theme.colors.secondary;
+    return theme.colors.info;
   }};
 `;
 
 const TotalRow = styled.div`
-  margin-top: .35rem;
-  font-weight: 800;
   display: flex;
-  gap: .5rem;
   align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+  font-size: 0.84rem;
+  font-weight: 800;
+
+  @media (max-width: 520px) {
+    justify-content: flex-start;
+  }
 `;
 
 const Help = styled.p`
-  color: ${({ theme }) => get(theme, 'colors.textSecondary', '#6b7280')};
-  margin: .25rem 0 0;
-  font-size: .9rem;
+  margin: 4px 0 0;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 0.78rem;
+  line-height: 1.45;
 `;
 
 const Empty = styled.p`
@@ -337,38 +480,355 @@ const Empty = styled.p`
 `;
 
 const PlanCard = styled.div`
-  margin-top: .5rem;
-  padding: .75rem .9rem;
-  border: 1px solid ${({ theme }) => get(theme, 'colors.border', '#e5e7eb')};
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
+  border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 10px;
-  background: linear-gradient(180deg, #fcfdff, #f7f9fc);
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+  font-size: 0.84rem;
 `;
 const PlanRow = styled.div`
+  min-width: 0;
   display: grid;
-  grid-template-columns: 7em 1fr;
-  gap: .5rem;
-  margin: .25rem 0;
+  grid-template-columns: 6.2em minmax(0, 1fr);
+  gap: 7px;
+
+  @media (max-width: 420px) {
+    grid-template-columns: 5.5em minmax(0, 1fr);
+  }
 `;
 const PlanLabel = styled.span`font-weight: 800;`;
-const PlanValue = styled.span``;
+const PlanValue = styled.span`
+  min-width: 0;
+  overflow-wrap: anywhere;
+`;
+
+const ScheduleActivity = styled.div`
+  padding: .8rem .9rem;
+  border-left: 3px solid ${({ $type, theme }) =>
+    $type === 'canceled' ? theme.colors.error : theme.colors.warning};
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  strong { color: ${({ theme }) => theme.colors.text}; }
+  p { margin: .3rem 0 0; }
+`;
+
+const ScheduleActionsPanel = styled.section`
+  width: 100%;
+  min-width: 0;
+  margin-top: .25rem;
+  padding: 1rem;
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+
+  @media (max-width: 640px) {
+    padding: 12px;
+  }
+`;
+
+const ScheduleActionTitle = styled.h3`
+  margin: 0;
+  font-size: 1rem;
+  color: ${({ theme }) => theme.colors.text};
+`;
+
+const ScheduleActionLead = styled.p`
+  margin: .35rem 0 .8rem;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: .9rem;
+`;
+
+const ScheduleButtonRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+`;
+
+const ScheduleButton = styled.button`
+  min-height: 42px;
+  padding: .55rem .85rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  border: 1px solid ${({ $danger, theme }) =>
+    $danger ? theme.colors.error : theme.colors.primary};
+  background: ${({ $danger, theme }) =>
+    $danger ? theme.colors.surface : theme.colors.primary};
+  color: ${({ $danger, theme }) =>
+    $danger ? theme.colors.error : theme.on.primary};
+  font-weight: 800;
+  cursor: pointer;
+  &:disabled { cursor: not-allowed; opacity: .55; }
+`;
+
+const ScheduleForm = styled.div`
+  display: grid;
+  gap: .75rem;
+  margin-top: .9rem;
+  padding-top: .9rem;
+  border-top: 1px solid ${({ theme }) => theme.colors.border};
+`;
+
+const ScheduleFormGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .75rem;
+  @media (max-width: 640px) { grid-template-columns: 1fr; }
+`;
+
+const ScheduleFormField = styled.label`
+  display: grid;
+  gap: .35rem;
+  color: ${({ theme }) => theme.colors.text};
+  font-weight: 800;
+  font-size: .9rem;
+  .react-datepicker-wrapper { width: 100%; }
+  input, select, textarea {
+    width: 100%;
+    min-height: 42px;
+    padding: .6rem .7rem;
+    border: 1px solid ${({ theme }) => theme.colors.border};
+    background: ${({ theme }) => theme.colors.surface};
+    color: ${({ theme }) => theme.colors.text};
+    font: inherit;
+    font-weight: 500;
+    box-sizing: border-box;
+  }
+  textarea { min-height: 84px; resize: vertical; }
+`;
+
+const ScheduleMessage = styled.p`
+  margin: 0;
+  color: ${({ $error, theme }) =>
+    $error ? theme.colors.error : theme.colors.success};
+  font-weight: 700;
+  font-size: .9rem;
+`;
+
 const Pill = styled.span`
   display: inline-block;
   padding: .2rem .55rem;
   border-radius: 9999px;
-  background: #eef2ff;
-  color: #4338ca;
+  background: ${({ theme }) => theme.semantic.badgeInfoBg};
+  color: ${({ theme }) => theme.semantic.badgeInfoText};
   font-weight: 800;
   font-size: .82rem;
   margin-right: .35rem;
   margin-top: .25rem;
 `;
 
+function ScheduleActions({ group }) {
+  const [mode, setMode] = useState('');
+  const [visitDate, setVisitDate] = useState(null);
+  const [visitTime, setVisitTime] = useState('');
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const dateKey = visitDate ? format(visitDate, 'yyyy-MM-dd') : '';
+  const taken = useReservedSlots(dateKey);
+  const { dates: bookingAvailabilityDates } = useBookingAvailability();
+  const availability = useMemo(
+    () => getBookingAvailabilityEntry({ dates: bookingAvailabilityDates }, dateKey),
+    [bookingAvailabilityDates, dateKey]
+  );
+
+  useEffect(() => {
+    if (visitTime && taken.has(visitTime)) setVisitTime('');
+  }, [taken, visitTime]);
+
+  useEffect(() => {
+    if (!dateKey) return;
+    if (availability.closed) {
+      setVisitTime('');
+      setError(availability.reason || '해당 날짜는 예약을 받지 않습니다.');
+      return;
+    }
+    if (visitTime && availability.blockedSlots.has(visitTime)) {
+      setVisitTime('');
+      setError(availability.reason || '해당 시간은 예약을 받지 않습니다.');
+    }
+  }, [availability.closed, availability.blockedSlots, availability.reason, dateKey, visitTime]);
+
+  const openMode = (nextMode) => {
+    setMode(nextMode);
+    setVisitDate(null);
+    setVisitTime('');
+    setReason('');
+    setError('');
+    setNotice('');
+  };
+
+  const closeMode = () => {
+    if (busy) return;
+    setMode('');
+    setError('');
+  };
+
+  const submitReschedule = async () => {
+    if (!dateKey || !visitTime) {
+      setError('변경할 방문 날짜와 시간을 선택해 주세요.');
+      return;
+    }
+    if (!reason.trim()) {
+      setError('일정 변경 사유를 입력해 주세요.');
+      return;
+    }
+    setBusy(true);
+    setError('');
+    try {
+      await rescheduleGoldExchangeGroup({
+        groupId: group.groupId,
+        visitDate: dateKey,
+        visitTime,
+        reason: reason.trim(),
+      });
+      setMode('');
+      setNotice('일정 변경 요청이 접수되었습니다. 관리자 확인 후 변경된 예약 확정 알림이 발송됩니다.');
+    } catch (submitError) {
+      setError(
+        submitError?.code === 'aborted'
+          ? '이미 예약된 시간입니다. 다른 시간을 선택해 주세요.'
+          : submitError?.message || '일정 변경 요청을 처리하지 못했습니다.'
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const submitCancellation = async () => {
+    if (!reason.trim()) {
+      setError('예약 취소 사유를 입력해 주세요.');
+      return;
+    }
+    setBusy(true);
+    setError('');
+    try {
+      await cancelGoldExchangeGroup({ groupId: group.groupId, reason: reason.trim() });
+      setMode('');
+      setNotice('예약이 취소되었습니다.');
+    } catch (submitError) {
+      setError(submitError?.message || '예약을 취소하지 못했습니다.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <ScheduleActionsPanel aria-label="예약 일정 변경 및 취소">
+      <ScheduleActionTitle>예약 일정 관리</ScheduleActionTitle>
+      <ScheduleActionLead>
+        일정 변경은 새 시간을 먼저 확보한 뒤 관리자 확인 대기로 전환되며, 확인 후 예약 확정 알림이 발송됩니다.
+      </ScheduleActionLead>
+      <ScheduleButtonRow>
+        <ScheduleButton type="button" onClick={() => openMode('reschedule')} disabled={busy}>
+          일정 변경
+        </ScheduleButton>
+        <ScheduleButton type="button" $danger onClick={() => openMode('cancel')} disabled={busy}>
+          예약 취소
+        </ScheduleButton>
+      </ScheduleButtonRow>
+
+      {notice && <ScheduleMessage role="status">{notice}</ScheduleMessage>}
+
+      {mode === 'reschedule' && (
+        <ScheduleForm>
+          <ScheduleFormGrid>
+            <ScheduleFormField>
+              변경할 날짜
+              <DatePicker
+                selected={visitDate}
+                onChange={(date) => { setVisitDate(date); setVisitTime(''); setError(''); }}
+                dateFormat="yyyy-MM-dd"
+                minDate={addDays(new Date(), 1)}
+                maxDate={addDays(new Date(), 60)}
+                filterDate={(date) => date.getDay() !== 0 && !getBookingAvailabilityEntry({ dates: bookingAvailabilityDates }, format(date, 'yyyy-MM-dd')).closed}
+                placeholderText="날짜 선택"
+                disabled={busy}
+              />
+            </ScheduleFormField>
+            <ScheduleFormField>
+              변경할 시간
+              <select
+                value={visitTime}
+                onChange={(event) => { setVisitTime(event.target.value); setError(''); }}
+                disabled={!visitDate || busy}
+              >
+                <option value="">시간 선택</option>
+                {TIME_SLOTS.map((time) => {
+                  const reserved = taken.has(time);
+                  const blocked = availability.blockedSlots.has(time);
+                  return (
+                    <option key={time} value={time} disabled={reserved || blocked}>
+                      {reserved || blocked ? `${time} (${blocked ? '예약 마감' : '이미 예약됨'})` : time}
+                    </option>
+                  );
+                })}
+              </select>
+            </ScheduleFormField>
+          </ScheduleFormGrid>
+          <ScheduleFormField>
+            변경 사유
+            <textarea
+              value={reason}
+              onChange={(event) => { setReason(event.target.value.slice(0, 200)); setError(''); }}
+              maxLength={200}
+              placeholder="예: 개인 일정으로 방문 날짜를 변경합니다."
+              disabled={busy}
+            />
+          </ScheduleFormField>
+          {error && <ScheduleMessage $error role="alert">{error}</ScheduleMessage>}
+          <ScheduleButtonRow>
+            <ScheduleButton type="button" onClick={submitReschedule} disabled={busy}>
+              {busy ? '변경 요청 중…' : '변경 요청 보내기'}
+            </ScheduleButton>
+            <ScheduleButton type="button" $danger onClick={closeMode} disabled={busy}>닫기</ScheduleButton>
+          </ScheduleButtonRow>
+        </ScheduleForm>
+      )}
+
+      {mode === 'cancel' && (
+        <ScheduleForm>
+          <ScheduleFormField>
+            취소 사유
+            <textarea
+              value={reason}
+              onChange={(event) => { setReason(event.target.value.slice(0, 200)); setError(''); }}
+              maxLength={200}
+              placeholder="예약을 취소하는 이유를 입력해 주세요."
+              disabled={busy}
+            />
+          </ScheduleFormField>
+          <ScheduleMessage $error>
+            취소하면 현재 예약 시간은 즉시 다른 고객이 예약할 수 있습니다.
+          </ScheduleMessage>
+          {error && <ScheduleMessage $error role="alert">{error}</ScheduleMessage>}
+          <ScheduleButtonRow>
+            <ScheduleButton type="button" $danger onClick={submitCancellation} disabled={busy}>
+              {busy ? '취소 처리 중…' : '예약 취소 확정'}
+            </ScheduleButton>
+            <ScheduleButton type="button" onClick={closeMode} disabled={busy}>돌아가기</ScheduleButton>
+          </ScheduleButtonRow>
+        </ScheduleForm>
+      )}
+    </ScheduleActionsPanel>
+  );
+}
+
 /* 스켈레톤 */
 const Skeleton = styled.div`
   width: 100%;
   height: 64px;
   border-radius: 12px;
-  background: linear-gradient(90deg, #f3f4f6, #e5e7eb, #f3f4f6);
+  background: linear-gradient(90deg, var(--gm-surface-alt), var(--gm-border), var(--gm-surface-alt));
   background-size: 200% 100%;
   animation: shimmer 1.2s infinite linear;
   @keyframes shimmer {
@@ -382,10 +842,11 @@ export default function MyExchanges() {
   const { user } = useAuthContext();
   const [docsA, setDocsA] = useState([]); // userId == uid
   const [docsB, setDocsB] = useState([]); // participants array-contains uid
+  const [groupSummaries, setGroupSummaries] = useState({});
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState({});
-  const [statusFilter, setStatusFilter] = useState('all'); // all | active | scheduled | completed | rejected
+  const [statusFilter, setStatusFilter] = useState('all'); // all | active | scheduled | completed | canceled | rejected
 
   // 구독
   useEffect(() => {
@@ -395,6 +856,7 @@ export default function MyExchanges() {
     }
     const qUser = query(collection(db, 'goldExchanges'), where('userId', '==', user.uid));
     const qPart = query(collection(db, 'goldExchanges'), where('participants', 'array-contains', user.uid));
+    const qGroups = query(collection(db, 'goldExchangeGroups'), where('ownerUid', '==', user.uid));
 
     const unsub1 = onSnapshot(
       qUser,
@@ -413,10 +875,25 @@ export default function MyExchanges() {
       (snap) => setDocsB(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
       () => {}
     );
+    const unsub3 = onSnapshot(
+      qGroups,
+      (snap) => {
+        const next = {};
+        snap.docs.forEach((d) => {
+          next[d.id] = { id: d.id, ...d.data() };
+        });
+        setGroupSummaries(next);
+      },
+      (e) => {
+        // 레거시 그룹처럼 ownerUid가 없는 문서는 기존 goldExchanges 구독으로 계속 표시됩니다.
+        console.warn('[MyExchanges] group summary subscribe failed:', e);
+      }
+    );
 
     return () => {
       unsub1?.();
       unsub2?.();
+      unsub3?.();
     };
   }, [user?.uid]);
 
@@ -439,11 +916,13 @@ export default function MyExchanges() {
 
     const out = [];
     for (const [gid, items] of map) {
+      const summary = groupSummaries[gid] || {};
       const statuses = items.map((i) => i.status).filter(Boolean);
-      const repStatus =
+      const itemRepStatus =
         statuses.sort(
           (a, b) => STATUS_PRIORITY.indexOf(a ?? 'requested') - STATUS_PRIORITY.indexOf(b ?? 'requested')
         )[0] || 'requested';
+      const repStatus = String(summary.repStatus || itemRepStatus || 'requested');
 
       const createdNs = items
         .map((i) => toJSDate(i.createdAt)?.getTime?.())
@@ -452,13 +931,15 @@ export default function MyExchanges() {
         .map((i) => toJSDate(i.updatedAt)?.getTime?.())
         .filter((n) => Number.isFinite(n));
 
-      const createdAt = createdNs.length ? new Date(Math.min(...createdNs)) : null;
-      const updatedAt = updatedNs.length ? new Date(Math.max(...updatedNs)) : null;
+      const summaryCreatedAt = toJSDate(summary.createdAt);
+      const summaryUpdatedAt = toJSDate(summary.updatedAt);
+      const createdAt = summaryCreatedAt || (createdNs.length ? new Date(Math.min(...createdNs)) : null);
+      const updatedAt = summaryUpdatedAt || (updatedNs.length ? new Date(Math.max(...updatedNs)) : null);
 
       const any = items[0] || {};
-      const visitDate = any.visitDate || '';
-      const visitTime = any.visitTime || '';
-      const scheduledAt = toJSDate(any.scheduledAt) ?? null;
+      const visitDate = String(summary.visitDate || any.visitDate || '');
+      const visitTime = String(summary.visitTime || any.visitTime || '');
+      const scheduledAt = toJSDate(summary.scheduledAt || any.scheduledAt) ?? null;
 
       const latestByUpdate =
         items
@@ -467,11 +948,9 @@ export default function MyExchanges() {
             (a, b) => (toJSDate(b.updatedAt)?.getTime?.() ?? 0) - (toJSDate(a.updatedAt)?.getTime?.() ?? 0)
           )[0] || {};
 
-      // 이메일은 문서에 없을 수 있으므로, 회원가입 Auth 이메일로 폴백
       const requester = {
         name: latestByUpdate.name || latestByUpdate.requesterName || user?.displayName || '-',
         phone: latestByUpdate.phone || '-',
-        email: latestByUpdate.email || user?.email || '-', // 폴백
       };
 
       const enrichedItems = items.map((it) => {
@@ -488,11 +967,44 @@ export default function MyExchanges() {
       });
 
       const totalG = enrichedItems.reduce((s, i) => s + (Number(i._finalWeight) || 0), 0);
-      const bonus = latestByUpdate.bonusGoldUsageStatus ? {
-        status: String(latestByUpdate.bonusGoldUsageStatus),
-        amountG: Number(latestByUpdate.bonusGoldUsedG || 0),
-        finalRecognizedG: Number(latestByUpdate.finalRecognizedG || 0),
-        finalAppliedG: Number(latestByUpdate.finalAppliedG || 0),
+      const bonus = latestByUpdate.bonusGoldUsageStatus
+        ? {
+            status: String(latestByUpdate.bonusGoldUsageStatus),
+            amountG: Number(latestByUpdate.bonusGoldUsedG || 0),
+            finalRecognizedG: Number(
+              latestByUpdate.finalRecognizedG || 0
+            ),
+            finalAppliedG: Number(
+              latestByUpdate.finalAppliedG || 0
+            ),
+          }
+        : null;
+      const scheduleType = String(summary.scheduleChangeType || latestByUpdate.scheduleChangeType || '');
+      const scheduleActivity = scheduleType ? {
+        type: scheduleType,
+        previousVisitDate: String(summary.previousVisitDate || latestByUpdate.previousVisitDate || ''),
+        previousVisitTime: String(summary.previousVisitTime || latestByUpdate.previousVisitTime || ''),
+        visitDate: String(summary.visitDate || latestByUpdate.visitDate || visitDate || ''),
+        visitTime: String(summary.visitTime || latestByUpdate.visitTime || visitTime || ''),
+        reason: String(
+          scheduleType === 'canceled'
+            ? (
+                summary.cancellationReason ||
+                latestByUpdate.cancellationReason ||
+                ''
+              )
+            : (
+                summary.scheduleChangeReason ||
+                latestByUpdate.scheduleChangeReason ||
+                ''
+              )
+        ),
+        requestedAt: toJSDate(
+          summary.scheduleChangeRequestedAt ||
+          summary.cancellationRequestedAt ||
+          latestByUpdate.scheduleChangeRequestedAt ||
+          latestByUpdate.cancellationRequestedAt
+        ),
       } : null;
 
       // 최신 barsPlan 보유 문서
@@ -514,6 +1026,7 @@ export default function MyExchanges() {
         requester,
         totalG,
         bonus,
+        scheduleActivity,
         plan: planDoc ? planDoc.barsPlan : null,
       });
     }
@@ -525,16 +1038,7 @@ export default function MyExchanges() {
     });
 
     return out;
-  }, [docsA, docsB, user?.displayName, user?.email]);
-
-  // 최신 1개만 기본 펼침
-  useEffect(() => {
-    if (groups.length === 0) return;
-    setExpanded((prev) => {
-      if (Object.keys(prev).length) return prev; // 사용자가 이미 토글했으면 유지
-      return { [groups[0].groupId]: true };
-    });
-  }, [groups]);
+  }, [docsA, docsB, groupSummaries, user?.displayName]);
 
   const toggle = (gid) => setExpanded((p) => ({ ...p, [gid]: !p[gid] }));
 
@@ -549,11 +1053,12 @@ export default function MyExchanges() {
 
   // 필터별 카운트
   const counts = useMemo(() => {
-    const base = { all: groups.length, active: 0, scheduled: 0, completed: 0, rejected: 0 };
+    const base = { all: groups.length, active: 0, scheduled: 0, completed: 0, canceled: 0, rejected: 0 };
     for (const g of groups) {
       if (['requested','in_progress','교환중'].includes(g.repStatus)) base.active += 1;
       if (g.repStatus === 'scheduled') base.scheduled += 1;
       if (g.repStatus === 'completed') base.completed += 1;
+      if (g.repStatus === 'canceled') base.canceled += 1;
       if (g.repStatus === 'rejected') base.rejected += 1;
     }
     return base;
@@ -566,7 +1071,7 @@ export default function MyExchanges() {
       <PageHeader>
         <Kicker>MY EXCHANGE LEDGER</Kicker>
         <SectionTitle>나의 금 교환 내역</SectionTitle>
-        <HeaderLead>접수한 교환 요청과 예약, 확정된 골드바 조합을 한곳에서 확인합니다.</HeaderLead>
+        <HeaderLead>예약 상태와 최종 교환 중량을 확인하고, 필요한 내역만 펼쳐볼 수 있습니다.</HeaderLead>
       </PageHeader>
       <FilterBar>
         {Object.entries(FILTER_LABEL).map(([key, label]) => (
@@ -579,7 +1084,7 @@ export default function MyExchanges() {
       </CardGrid>
     </Page>
   );
-  if (err) return <Page><Empty style={{ color: '#ef4444' }}>{err}</Empty></Page>;
+  if (err) return <Page><Empty style={{ color: 'var(--gm-error)' }}>{err}</Empty></Page>;
   if (groups.length === 0) return <Page><Empty>등록된 교환 요청이 없습니다.</Empty></Page>;
 
   return (
@@ -587,7 +1092,7 @@ export default function MyExchanges() {
       <PageHeader>
         <Kicker>MY EXCHANGE LEDGER</Kicker>
         <SectionTitle>나의 금 교환 내역</SectionTitle>
-        <HeaderLead>접수한 교환 요청과 예약, 확정된 골드바 조합을 한곳에서 확인합니다.</HeaderLead>
+        <HeaderLead>예약 상태와 최종 교환 중량을 확인하고, 필요한 내역만 펼쳐볼 수 있습니다.</HeaderLead>
       </PageHeader>
 
       <FilterBar role="tablist" aria-label="상태 필터">
@@ -609,9 +1114,15 @@ export default function MyExchanges() {
         {groupsFiltered.map((g) => {
           const statusKey = g.repStatus === '교환중' ? 'in_progress' : g.repStatus;
           const visitLine =
-            g.scheduledAt && isValid(g.scheduledAt)
-              ? fmt(g.scheduledAt)
-              : [g.visitDate, g.visitTime].filter(Boolean).join(' ') || '-';
+            [g.visitDate, g.visitTime]
+              .filter(Boolean)
+              .join(' ') || '-';
+          const isBonusUsed = g.bonus?.status === 'used';
+          const planBasisG = Number(
+            isBonusUsed
+              ? g.bonus.finalAppliedG || g.plan?.totalGrams || g.totalG
+              : g.plan?.totalGrams || g.totalG
+          );
 
           return (
             <Card key={g.groupId}>
@@ -622,20 +1133,48 @@ export default function MyExchanges() {
                 title={`요청일 ${fmt(g.createdAt)} · 업데이트 ${fmt(g.updatedAt)} · 예약 ${visitLine}`}
               >
                 <HeaderLeft>
-                  <HLabel>요청일</HLabel>
-                  <HValue>{fmt(g.createdAt)}</HValue>
-                  <HLabel>업데이트</HLabel>
-                  <HValue>{fmt(g.updatedAt)}</HValue>
-                  <HLabel>예약</HLabel>
+                  <HLabel>방문 일정</HLabel>
                   <HValue>{visitLine}</HValue>
+                  <HeaderMeta>
+                    <span>요청 {fmt(g.createdAt, 'yyyy.MM.dd')}</span>
+                    <span>·</span>
+                    <span>제품 {g.items.length}건</span>
+                    {g.bonus?.status === 'used' && (
+                      <>
+                        <span>·</span>
+                        <span>
+                          적립 순금 {Number(g.bonus.amountG || 0).toFixed(2)}g 적용
+                        </span>
+                      </>
+                    )}
+                  </HeaderMeta>
                 </HeaderLeft>
+
                 <HeaderRight>
-                  <Chips>
-                    <Chip $tone="grams">{fmtG3(g.totalG)} g</Chip>
-                    <Chip $tone="don">{fmtD2((g.totalG || 0) / DON_TO_GRAMS)} 돈</Chip>
-                  </Chips>
+                  <FinalWeight>
+                    <small>
+                      {g.bonus?.status === 'used'
+                        ? '최종 적용 중량'
+                        : '예상 교환 중량'}
+                    </small>
+                    <strong>
+                      {fmtG3(
+                        g.bonus?.status === 'used'
+                          ? g.bonus.finalAppliedG
+                          : g.totalG
+                      )}g ·{' '}
+                      {fmtD2(
+                        Number(
+                          g.bonus?.status === 'used'
+                            ? g.bonus.finalAppliedG
+                            : g.totalG
+                        ) / DON_TO_GRAMS
+                      )}돈
+                    </strong>
+                  </FinalWeight>
+
                   <StatusBadge $status={statusKey}>
-                    {STATUS_LABEL[g.repStatus] || STATUS_LABEL[statusKey] || g.repStatus}
+                    {displayCustomerStatus(statusKey, g.scheduleActivity)}
                   </StatusBadge>
                   <Chev $open={!!expanded[g.groupId]}>▾</Chev>
                 </HeaderRight>
@@ -645,17 +1184,53 @@ export default function MyExchanges() {
                 <CardBody id={`panel-${g.groupId}`}>
                   {/* 예약/요청자 정보 */}
                   <MetaGrid>
-                    <Field><Label>요청 그룹</Label><Value>{g.groupId}</Value></Field>
-                    <Field><Label>요청자</Label><Value>{g.requester.name}</Value></Field>
-                    <Field><Label>전화</Label><Value>{g.requester.phone}</Value></Field>
-                    <Field><Label>이메일</Label><Value>{g.requester.email}</Value></Field>
+                    <Field>
+                      <Label>요청 번호</Label>
+                      <Value>{g.groupId}</Value>
+                    </Field>
+                    <Field>
+                      <Label>최근 변경</Label>
+                      <Value>{fmt(g.updatedAt)}</Value>
+                    </Field>
+                    <Field>
+                      <Label>요청자</Label>
+                      <Value>{g.requester.name}</Value>
+                    </Field>
+                    <Field>
+                      <Label>연락처</Label>
+                      <Value>{g.requester.phone}</Value>
+                    </Field>
                   </MetaGrid>
+
+                  {g.scheduleActivity && (
+                    <ScheduleActivity $type={g.scheduleActivity.type}>
+                      <strong>
+                        {g.scheduleActivity.type === 'canceled'
+                          ? '예약 취소'
+                          : statusKey === 'requested'
+                            ? '일정 변경 확인 대기'
+                            : statusKey === 'scheduled'
+                              ? '변경된 예약 확정'
+                              : '최근 일정 변경'}
+                      </strong>
+                      <p>
+                        {g.scheduleActivity.type === 'canceled'
+                          ? `${g.scheduleActivity.previousVisitDate} ${g.scheduleActivity.previousVisitTime}`
+                          : `${g.scheduleActivity.previousVisitDate} ${g.scheduleActivity.previousVisitTime} → ${g.scheduleActivity.visitDate} ${g.scheduleActivity.visitTime}`}
+                      </p>
+                      {g.scheduleActivity.reason && <p>사유: {g.scheduleActivity.reason}</p>}
+                      {g.scheduleActivity.requestedAt && (
+                        <p>요청 시각: {fmt(g.scheduleActivity.requestedAt)}</p>
+                      )}
+                    </ScheduleActivity>
+                  )}
 
                   <Divider />
 
                   {/* 제품 리스트 */}
                   <div>
-                    <ItemsTable>
+                    <TableWrap>
+                      <ItemsTable>
                       <thead>
                         <tr>
                           <th style={{width: '24%'}}>제품 종류</th>
@@ -688,7 +1263,8 @@ export default function MyExchanges() {
                             </tr>
                           ))}
                       </tbody>
-                    </ItemsTable>
+                      </ItemsTable>
+                    </TableWrap>
 
                     <TotalRow>
                       합계(순금 중량):
@@ -697,28 +1273,22 @@ export default function MyExchanges() {
                         <Chip $tone="don">{fmtD2((g.totalG || 0) / DON_TO_GRAMS)} 돈</Chip>
                       </Chips>
                     </TotalRow>
-                    <Help>교환 중량 및 합계는 <strong>입력하신 값</strong>이 계산되어 저장된 값을 그대로 표시합니다.</Help>
                   </div>
 
                   {g.bonus?.status === "used" && (
                     <>
                       <Divider />
                       <PlanCard aria-label="적립 순금 적용 명세">
-                        <strong>적립 순금 적용 명세</strong>
-                        <PlanRow>
-                          <PlanLabel>현장 인정</PlanLabel>
-                          <PlanValue>{fmtG3(g.bonus.finalRecognizedG)} g</PlanValue>
-                        </PlanRow>
-                        <PlanRow>
-                          <PlanLabel>적립 순금</PlanLabel>
-                          <PlanValue>+ {Number(g.bonus.amountG || 0).toFixed(2)} g</PlanValue>
-                        </PlanRow>
-                        <PlanRow>
-                          <PlanLabel>최종 적용</PlanLabel>
-                          <PlanValue><strong>{fmtG3(g.bonus.finalAppliedG)} g</strong></PlanValue>
-                        </PlanRow>
+                        <strong>적립 순금 적용</strong>
+                        <PlanValue>
+                          {fmtG3(g.bonus.finalRecognizedG)}g
+                          {' + '}
+                          적립 {Number(g.bonus.amountG || 0).toFixed(2)}g
+                          {' = '}
+                          <strong>최종 {fmtG3(g.bonus.finalAppliedG)}g</strong>
+                        </PlanValue>
                         <Help>
-                          매장에서 본인 확인과 6자리 코드 확인 후 관리자가 확정한 사용 내역입니다.
+                          매장에서 본인 확인 후 확정된 사용 내역입니다.
                         </Help>
                       </PlanCard>
                     </>
@@ -729,26 +1299,103 @@ export default function MyExchanges() {
                     <>
                       <Divider />
                       <PlanCard>
-                        <strong>교환 계획</strong>
+                        <strong>
+                          {isBonusUsed
+                            ? '최종 교환 계획'
+                            : '예상 교환 계획'}
+                        </strong>
+
+                        {isBonusUsed ? (
+                          <>
+                            <PlanRow>
+                              <PlanLabel>현장 인정</PlanLabel>
+                              <PlanValue>
+                                {fmtG3(
+                                  g.bonus.finalRecognizedG
+                                )} g
+                              </PlanValue>
+                            </PlanRow>
+                            <PlanRow>
+                              <PlanLabel>적립 순금</PlanLabel>
+                              <PlanValue>
+                                +{fmtG3(g.bonus.amountG)} g
+                              </PlanValue>
+                            </PlanRow>
+                            <PlanRow>
+                              <PlanLabel>최종 합계</PlanLabel>
+                              <PlanValue>
+                                <strong>
+                                  {fmtG3(
+                                    g.bonus.finalAppliedG
+                                  )} g
+                                </strong>{' '}
+                                /{' '}
+                                {fmtD2(
+                                  Number(
+                                    g.bonus.finalAppliedG || 0
+                                  ) / DON_TO_GRAMS
+                                )}{' '}
+                                돈
+                              </PlanValue>
+                            </PlanRow>
+                          </>
+                        ) : (
+                          <PlanRow>
+                            <PlanLabel>계산 기준</PlanLabel>
+                            <PlanValue>
+                              {fmtG3(planBasisG)} g /{' '}
+                              {fmtD2(
+                                planBasisG / DON_TO_GRAMS
+                              )}{' '}
+                              돈
+                            </PlanValue>
+                          </PlanRow>
+                        )}
+
                         <PlanRow>
                           <PlanLabel>선택 규격</PlanLabel>
                           <PlanValue>
-                            {g.plan.selected?.label} × {g.plan.selected?.qty}
+                            {g.plan.selected?.label} ×{' '}
+                            {g.plan.selected?.qty}
                           </PlanValue>
                         </PlanRow>
                         <PlanRow>
-                          <PlanLabel>사용량</PlanLabel>
+                          <PlanLabel>골드바 총중량</PlanLabel>
                           <PlanValue>
-                            {fmtG3(g.plan.selected?.usedGrams)} g / {fmtD2(g.plan.selected?.usedDon)} 돈
+                            {fmtG3(
+                              g.plan.selected?.usedGrams
+                            )} g /{' '}
+                            {fmtD2(
+                              g.plan.selected?.usedDon
+                            )} 돈
                           </PlanValue>
                         </PlanRow>
-                        <PlanRow>
-                          <PlanLabel>잔여</PlanLabel>
-                          <PlanValue>
-                            {fmtG2Min(g.plan.leftoverGrams)} g / {fmtD2(g.plan.leftoverDon)} 돈
-                            {Number(g.plan.leftoverGrams) > 0 ? ' · 남은 금은 매입 가능합니다.' : ''}
-                          </PlanValue>
-                        </PlanRow>
+                        {g.plan.requiresTopUp || Number(g.plan.topUpGrams) > 0 ? (
+                          <PlanRow>
+                            <PlanLabel>추가 예정</PlanLabel>
+                            <PlanValue>
+                              <strong>+{fmtG3(g.plan.topUpGrams)} g / {fmtD2(g.plan.topUpDon)} 돈</strong>
+                              {' · '}방문 시 실측 후 최종 확정
+                            </PlanValue>
+                          </PlanRow>
+                        ) : (
+                          <PlanRow>
+                            <PlanLabel>
+                              {isBonusUsed ? '최종 잔여' : '예상 잔여'}
+                            </PlanLabel>
+                            <PlanValue>
+                              {fmtG2Min(
+                                g.plan.leftoverGrams
+                              )} g /{' '}
+                              {fmtD2(
+                                g.plan.leftoverDon
+                              )} 돈
+                              {Number(g.plan.leftoverGrams) > 0
+                                ? ' · 남은 금은 매입 가능합니다.'
+                                : ''}
+                            </PlanValue>
+                          </PlanRow>
+                        )}
                         {Array.isArray(g.plan.autoBreakdown) && g.plan.autoBreakdown.length > 0 && (
                           <PlanRow>
                             <PlanLabel>추가 조합</PlanLabel>
@@ -761,6 +1408,51 @@ export default function MyExchanges() {
                         )}
                       </PlanCard>
                     </>
+                  )}
+
+                  {['requested', 'scheduled'].includes(statusKey) && (
+                    <ScheduleActions group={g} />
+                  )}
+
+                  {statusKey === 'canceled' && (
+                    <ScheduleActionsPanel aria-label="취소된 예약 다시 신청">
+                      <ScheduleActionTitle>다시 예약하시겠어요?</ScheduleActionTitle>
+                      <ScheduleActionLead>
+                        취소된 예약 기록은 그대로 유지되며, 새로운 날짜와 시간으로 다시 신청할 수 있습니다.
+                      </ScheduleActionLead>
+                      <ScheduleButtonRow>
+                        <ScheduleButton
+                          as={Link}
+                          to="/gold-exchange"
+                          state={{
+                            rebook: {
+                              sourceGroupId: g.groupId,
+                              requester: {
+                                name: g.requester?.name && g.requester.name !== '-' ? g.requester.name : '',
+                                phone: g.requester?.phone && g.requester.phone !== '-' ? g.requester.phone : '',
+                              },
+                              products: g.items
+                                .filter((item) => !item.unknown && item.goldType && item.goldType !== '미확인')
+                                .map((item) => ({
+                                  goldType: item.goldType,
+                                  quantity: String(
+                                    item.originalQuantity != null
+                                      ? item.originalQuantity
+                                      : item.quantity ?? ''
+                                  ),
+                                  inputUnit: item.inputUnit === 'don' ? 'don' : 'g',
+                                  exchangeType: item.exchangeType || '999.9골드바',
+                                })),
+                              directReservation: g.items.every(
+                                (item) => item.unknown || !item.goldType || item.goldType === '미확인'
+                              ),
+                            },
+                          }}
+                        >
+                          다시 예약 신청하기
+                        </ScheduleButton>
+                      </ScheduleButtonRow>
+                    </ScheduleActionsPanel>
                   )}
 
                   <GoldExchangeReviewForm

@@ -4,12 +4,12 @@
 }
 
 .not-found h1 {
-  color: #ff5e57;
+  color: var(--gm-error);
   font-size: 80px;
 }
 
 .not-found p {
-  color: #555;
+  color: var(--gm-text-secondary);
   font-size: 18px;
 }
 
@@ -17,13 +17,13 @@
   display: inline-block;
   margin-top: 20px;
   padding: 10px 20px;
-  color: white;
+  color: var(--gm-surface);
   font-size: 16px;
   text-decoration: none;
-  background-color: #1f3a5f;
+  background-color: var(--gm-primary);
   border-radius: 5px;
 }
 
 .home-link:hover {
-  background-color: #142840;
+  background-color: var(--gm-primary-dark);
 }

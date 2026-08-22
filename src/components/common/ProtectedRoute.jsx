@@ -85,7 +85,7 @@ export default function ProtectedRoute({
         {!isOpen && (
           <div style={{ maxWidth: 520, margin: "48px auto", padding: 20, textAlign: "center" }}>
             <h2 style={{ marginBottom: 8 }}>회원가입 웰컴 순금 0.01g 적립</h2>
-            <p style={{ color: "#666" }}>
+            <p style={{ color: "var(--gm-text-secondary)" }}>
               웰컴 순금은 골드바 교환 시 사용할 수 있습니다. 아래 버튼으로
               로그인 또는 회원가입 페이지로 이동해 주세요.
             </p>
@@ -95,8 +95,8 @@ export default function ProtectedRoute({
                 state={{ from: location.pathname }}
                 style={{
                   padding: "10px 14px",
-                  background: "#1F3A5F",
-                  color: "#fff",
+                  background: "var(--gm-primary)",
+                  color: "var(--gm-surface)",
                   borderRadius: 8,
                   fontWeight: 700,
                   textDecoration: "none",
@@ -109,8 +109,8 @@ export default function ProtectedRoute({
                 state={{ from: location.pathname }}
                 style={{
                   padding: "10px 14px",
-                  border: "1px solid #1F3A5F",
-                  color: "#1F3A5F",
+                  border: "1px solid var(--gm-primary)",
+                  color: "var(--gm-primary)",
                   borderRadius: 8,
                   fontWeight: 700,
                   textDecoration: "none",

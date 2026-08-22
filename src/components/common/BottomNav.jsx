@@ -1,8 +1,15 @@
+// src/components/common/BottomNav.jsx
 import React from "react";
 import { createPortal } from "react-dom";
 import { NavLink, useLocation } from "react-router-dom";
 import styled from "styled-components";
-import { Calculator, ClipboardList, Home, Sparkles, User } from "lucide-react";
+import {
+  Calculator,
+  ClipboardList,
+  Home,
+  Sparkles,
+  User,
+} from "lucide-react";
 
 const Nav = styled.nav.attrs({
   role: "navigation",
@@ -18,12 +25,18 @@ const Nav = styled.nav.attrs({
   min-height: 66px;
   padding: 5px;
   border: 1px solid ${({ theme }) => theme.colors.border};
-  background: color-mix(in srgb, ${({ theme }) => theme.colors.surface} 95%, transparent);
-  box-shadow: 0 16px 44px rgba(7, 22, 37, .18);
+  background: color-mix(
+    in srgb,
+    ${({ theme }) => theme.colors.surface} 95%,
+    transparent
+  );
+  box-shadow: ${({ theme }) => theme.shadows.hover};
   backdrop-filter: blur(18px);
   transition: transform ${({ theme }) => theme.transitions.base};
 
-  @media (max-width: 768px) { display: grid; }
+  @media (max-width: 768px) {
+    display: grid;
+  }
 `;
 
 const Item = styled(NavLink)`
@@ -37,7 +50,7 @@ const Item = styled(NavLink)`
   min-height: 54px;
   padding: 5px 2px;
   color: ${({ theme }) => theme.colors.textLight};
-  font-size: .67rem;
+  font-size: 0.67rem;
   font-weight: 780;
   text-align: center;
 
@@ -52,7 +65,9 @@ const Item = styled(NavLink)`
     color: ${({ theme }) => theme.colors.white};
   }
 
-  &:focus-visible { outline-offset: -2px; }
+  &:focus-visible {
+    outline-offset: -2px;
+  }
 `;
 
 const ITEMS = [
@@ -65,6 +80,7 @@ const ITEMS = [
 
 export default function BottomNav() {
   const { pathname } = useLocation();
+
   if (typeof document === "undefined") return null;
 
   return createPortal(

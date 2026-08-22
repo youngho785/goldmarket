@@ -18,11 +18,11 @@ const Sheet = styled.section`
   padding: clamp(22px, 3vw, 34px);
   border: 1px solid ${({ theme }) => theme.colors.border};
   background:
-    linear-gradient(rgba(13, 32, 52, .032) 1px, transparent 1px),
+    linear-gradient(color-mix(in srgb, ${({ theme }) => theme.colors.primary} 4%, transparent) 1px, transparent 1px),
     ${({ theme }) => theme.colors.surface};
   background-size: 100% 32px, auto;
   box-shadow:
-    18px 18px 0 rgba(175, 132, 52, .10),
+    18px 18px 0 color-mix(in srgb, ${({ theme }) => theme.colors.gold} 12%, transparent),
     ${({ theme }) => theme.shadows.lg};
 
   &::before,
@@ -48,7 +48,7 @@ const Sheet = styled.section`
 
   @media (max-width: 720px) {
     box-shadow:
-      8px 8px 0 rgba(175, 132, 52, .10),
+      8px 8px 0 color-mix(in srgb, ${({ theme }) => theme.colors.gold} 12%, transparent),
       ${({ theme }) => theme.shadows.card};
   }
 `;

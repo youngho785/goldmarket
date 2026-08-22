@@ -20,6 +20,7 @@ function cdata(value) {
 async function generate() {
   const staticUrls = [
     { loc: `${baseUrl}/`, changefreq: "weekly", priority: 1.0 },
+    { loc: `${baseUrl}/gold-price`, changefreq: "daily", priority: 1.0 },
     { loc: `${baseUrl}/gold-exchange`, changefreq: "weekly", priority: 1.0 },
     { loc: `${baseUrl}/goldbar-fee`, changefreq: "monthly", priority: 0.8 },
     { loc: `${baseUrl}/stores`, changefreq: "monthly", priority: 0.8 },
@@ -45,6 +46,11 @@ async function generate() {
     `\n</urlset>`;
 
   const rssEntries = [
+    {
+      title: "오늘의 한국골드마켓 금시세",
+      path: "/gold-price",
+      description: "순금·18K·14K 금시세와 전일 대비 변화를 확인합니다.",
+    },
     {
       title: "내 금 예상 중량과 골드바 조합 계산",
       path: "/gold-exchange",
@@ -75,9 +81,9 @@ async function generate() {
   const rss =
     `<?xml version="1.0" encoding="UTF-8"?>\n` +
     `<rss version="2.0">\n<channel>\n` +
-    `<title>한국골드마켓 골드바 교환 안내</title>\n` +
+    `<title>한국골드마켓 금시세·골드바 교환 안내</title>\n` +
     `<link>${baseUrl}</link>\n` +
-    `<description>예상 중량 계산, 골드바 공임과 부산 매장 이용 안내입니다.</description>\n` +
+    `<description>오늘의 금시세, 예상 중량 계산, 골드바 공임과 부산 매장 이용 안내입니다.</description>\n` +
     `<language>ko</language>\n` +
     `<lastBuildDate>${new Date().toUTCString()}</lastBuildDate>\n` +
     rssItems +
@@ -86,7 +92,7 @@ async function generate() {
   fs.mkdirSync(outDir, { recursive: true });
   fs.writeFileSync(path.join(outDir, "sitemap.xml"), sitemap, "utf8");
   fs.writeFileSync(path.join(outDir, "rss.xml"), rss, "utf8");
-  console.log("금교환 전용 sitemap.xml / rss.xml 생성 완료");
+  console.log("한국골드마켓 sitemap.xml / rss.xml 생성 완료");
 }
 
 generate().catch((error) => {

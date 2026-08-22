@@ -1,17 +1,20 @@
-// src/context/AppProviders.jsx
+//src/context/AppProviders.jsx
 import React from "react";
 import { AuthProvider } from "@/context/AuthContext";
 import { LoginGateProvider } from "@/context/LoginGateContext";
+import { NotificationProvider } from "@/context/NotificationContext";
 
 /**
- * 금교환 전용 서비스에서 필요한 인증과 로그인 게이트만 마운트합니다.
- * 순서 중요:
- * - LoginGateProvider는 AuthContext를 사용하므로 AuthProvider "안쪽"에 둡니다.
+ * Provider 순서
+ * - NotificationProvider와 LoginGateProvider는 AuthContext를 사용하므로
+ *   반드시 AuthProvider 안쪽에 둡니다.
  */
 export default function AppProviders({ children }) {
   return (
     <AuthProvider>
-      <LoginGateProvider>{children}</LoginGateProvider>
+      <NotificationProvider>
+        <LoginGateProvider>{children}</LoginGateProvider>
+      </NotificationProvider>
     </AuthProvider>
   );
 }

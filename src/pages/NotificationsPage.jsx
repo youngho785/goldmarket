@@ -2,104 +2,204 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
-import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
-import { useAuthContext } from "../context/AuthContext";
-import { db, callmarkChatAsRead } from "@/firebase/firebase";
+import { useAuthContext } from "@/context/AuthContext";
+import { useNotificationContext } from "@/context/NotificationContext";
 import {
-  markNotificationAsRead,
+  fetchNotificationsPage,
   markAllNotificationsAsRead,
-} from "../services/notificationService";
+  markNotificationAsRead,
+} from "@/services/notificationService";
 
-const Wrap = styled.div` max-width: 860px; margin: 0 auto; padding: 8px 0 30px; `;
-const H1 = styled.h1` color: ${({ theme }) => theme.colors.text}; margin-bottom: 18px; `;
-const Toolbar = styled.div` display:flex; gap:8px; align-items:center; margin-bottom:12px; flex-wrap:wrap; `;
-const Button = styled.button`
-  min-height:42px; padding:8px 12px; border:1px solid ${({ theme }) => theme.colors.border};
-  background:${({ theme }) => theme.colors.surface}; color: ${({ theme }) => theme.colors.text}; border-radius:10px; cursor:pointer;
+const PAGE_SIZE = 30;
+
+const Wrap = styled.div`
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 8px 0 30px;
 `;
-const List = styled.ul` list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px; `;
+const H1 = styled.h1`
+  color: ${({ theme }) => theme.colors.text};
+  margin-bottom: 18px;
+`;
+const Toolbar = styled.div`
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+`;
+const Button = styled.button`
+  min-height: 42px;
+  padding: 8px 12px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
+  border-radius: 10px;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+  }
+`;
+const List = styled.ul`
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
 const Item = styled.li`
-  border:1px solid ${({ theme }) => theme.colors.border};
-  background: ${({ $unread, theme }) => ($unread ? theme.semantic.alertInfoBg : theme.colors.surface)};
-  border-radius:14px; padding:14px 16px; cursor:pointer;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ $unread, theme }) =>
+    $unread ? theme.semantic.alertInfoBg : theme.colors.surface};
+  border-radius: 14px;
+  padding: 14px 16px;
+  cursor: pointer;
   box-shadow: ${({ theme }) => theme.shadows.card};
   transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
-  &:hover { transform: translateY(-1px); box-shadow: ${({ theme }) => theme.shadows.hover}; border-color: ${({ theme }) => theme.colors.borderStrong}; }
-`;
-const Title = styled.div` font-weight:700; `;
-const Body  = styled.div` color:${({ theme }) => theme.colors.textSecondary}; margin-top:4px; `;
-const Time  = styled.div` font-size:.85rem; color:${({ theme }) => theme.colors.textLight}; margin-top:6px; `;
 
-function fmt(ts) {
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: ${({ theme }) => theme.shadows.hover};
+    border-color: ${({ theme }) => theme.colors.borderStrong};
+  }
+`;
+const Title = styled.div`
+  font-weight: 700;
+`;
+const Body = styled.div`
+  color: ${({ theme }) => theme.colors.textSecondary};
+  margin-top: 4px;
+`;
+const Time = styled.div`
+  font-size: .85rem;
+  color: ${({ theme }) => theme.colors.textLight};
+  margin-top: 6px;
+`;
+const LoadMore = styled(Button)`
+  display: block;
+  margin: 18px auto 0;
+`;
+
+function formatTimestamp(value) {
   try {
-    if (!ts) return "-";
-    const d = typeof ts.toDate === "function" ? ts.toDate() : new Date(ts);
-    return d.toLocaleString();
-  } catch { return "-"; }
+    if (!value) return "-";
+    const date =
+      typeof value.toDate === "function" ? value.toDate() : new Date(value);
+    return date.toLocaleString("ko-KR");
+  } catch {
+    return "-";
+  }
+}
+
+function safeInternalLink(value) {
+  if (!value) return "";
+  try {
+    const url = new URL(value, window.location.origin);
+    if (url.origin !== window.location.origin) return "";
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return "";
+  }
 }
 
 export default function NotificationsPage() {
   const { user } = useAuthContext();
-  const uid = user?.uid;
-  const nav = useNavigate();
+  const { unreadNotifications, refresh } = useNotificationContext();
+  const uid = user?.uid || "";
+  const navigate = useNavigate();
 
   const [items, setItems] = useState([]);
+  const [cursor, setCursor] = useState(null);
+  const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [markingAll, setMarkingAll] = useState(false);
+  const [error, setError] = useState("");
 
-  // 내 알림함 구독
-  useEffect(() => {
+  const loadFirstPage = useCallback(async () => {
     if (!uid) return;
     setLoading(true);
-    const colRef = collection(db, `notifications/${uid}/items`);
-    const qy = query(colRef, orderBy("createdAt", "desc"));
-    const unsub = onSnapshot(
-      qy,
-      (snap) => {
-        const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        setItems(arr);
-        setLoading(false);
-      },
-      () => setLoading(false)
-    );
-    return () => unsub();
+    setError("");
+
+    try {
+      const result = await fetchNotificationsPage(uid, null, PAGE_SIZE);
+      setItems(result.items);
+      setCursor(result.cursor);
+      setHasMore(result.hasMore);
+    } catch (loadError) {
+      console.error("[NotificationsPage] load failed:", loadError);
+      setError("알림을 불러오지 못했습니다.");
+    } finally {
+      setLoading(false);
+    }
   }, [uid]);
 
-  const unreadCount = useMemo(
-    () => items.reduce((s, n) => s + (n?.read ? 0 : 1), 0),
+  useEffect(() => {
+    loadFirstPage();
+  }, [loadFirstPage]);
+
+  const unreadOnPage = useMemo(
+    () => items.reduce((sum, item) => sum + (item.read ? 0 : 1), 0),
     [items]
   );
 
-  const openItem = useCallback(
-    (n) => {
-      if (!uid) return;
-      const link   = n?.link ?? n?.data?.link ?? "";
-      const type   = n?.type ?? n?.data?.type ?? "";
-      const chatId = n?.chatId ?? n?.meta?.chatId ?? n?.data?.chatId ?? null;
+  const loadMore = async () => {
+    if (!uid || !cursor || !hasMore || loadingMore) return;
+    setLoadingMore(true);
 
-      // 1) 네비게이트 먼저
-      if (link) nav(link);
-
-      // 2) 읽음/동기화는 백그라운드
-      queueMicrotask(async () => {
-        try {
-          if (!n.read) {
-            setItems((prev) => prev.map((x) => (x.id === n.id ? { ...x, read: true } : x)));
-            await markNotificationAsRead(n.id, uid); // (notificationId, uid)
-          }
-        } catch {}
-        if (type === "chat" && chatId) {
-          try { await callmarkChatAsRead(chatId); } catch {}
-        }
+    try {
+      const result = await fetchNotificationsPage(uid, cursor, PAGE_SIZE);
+      setItems((current) => {
+        const merged = new Map(current.map((item) => [item.id, item]));
+        result.items.forEach((item) => merged.set(item.id, item));
+        return Array.from(merged.values());
       });
-    },
-    [uid, nav]
-  );
+      setCursor(result.cursor);
+      setHasMore(result.hasMore);
+    } catch (loadError) {
+      console.error("[NotificationsPage] load more failed:", loadError);
+      setError("추가 알림을 불러오지 못했습니다.");
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
-  const markAll = useCallback(() => {
+  const openItem = async (item) => {
     if (!uid) return;
-    setItems((prev) => prev.map((x) => ({ ...x, read: true })));
-    markAllNotificationsAsRead(uid).catch(() => {});
-  }, [uid]);
+
+    if (!item.read) {
+      setItems((current) =>
+        current.map((value) =>
+          value.id === item.id ? { ...value, read: true } : value
+        )
+      );
+      await markNotificationAsRead(item.id, uid).catch(() => refresh());
+    }
+
+    const link = safeInternalLink(item.link || item.data?.link);
+    if (link) navigate(link);
+  };
+
+  const markAll = async () => {
+    if (!uid || markingAll) return;
+    setMarkingAll(true);
+    setError("");
+    setItems((current) => current.map((item) => ({ ...item, read: true })));
+
+    try {
+      await markAllNotificationsAsRead(uid);
+      refresh();
+    } catch (markError) {
+      console.error("[NotificationsPage] mark all failed:", markError);
+      setError("전체 읽음 처리에 실패했습니다.");
+      await loadFirstPage();
+    } finally {
+      setMarkingAll(false);
+    }
+  };
 
   if (!uid) return <Wrap>로그인이 필요합니다.</Wrap>;
   if (loading) return <Wrap>로딩 중…</Wrap>;
@@ -109,23 +209,52 @@ export default function NotificationsPage() {
       <H1>알림</H1>
 
       <Toolbar>
-        <div>안 읽은 알림: <strong>{unreadCount}</strong>건</div>
-        {unreadCount > 0 && <Button onClick={markAll}>모두 읽음</Button>}
-        <Button onClick={() => nav(-1)}>← 돌아가기</Button>
+        <div>
+          안 읽은 알림: <strong>{unreadNotifications}</strong>건
+          {unreadOnPage !== unreadNotifications && (
+            <small> · 현재 목록 {unreadOnPage}건</small>
+          )}
+        </div>
+        {unreadNotifications > 0 && (
+          <Button type="button" disabled={markingAll} onClick={markAll}>
+            {markingAll ? "처리 중…" : "모두 읽음"}
+          </Button>
+        )}
+        <Button type="button" onClick={() => navigate(-1)}>
+          ← 돌아가기
+        </Button>
       </Toolbar>
+
+      {error && <p role="alert">{error}</p>}
 
       {items.length === 0 ? (
         <p>알림이 없습니다.</p>
       ) : (
-        <List>
-          {items.map((n) => (
-            <Item key={n.id} $unread={!n.read} onClick={() => openItem(n)}>
-              <Title>{n.title || "알림"}</Title>
-              {n.body && <Body>{n.body}</Body>}
-              <Time>{fmt(n.createdAt)}</Time>
-            </Item>
-          ))}
-        </List>
+        <>
+          <List>
+            {items.map((item) => (
+              <Item
+                key={item.id}
+                $unread={!item.read}
+                onClick={() => openItem(item)}
+              >
+                <Title>{item.title || "알림"}</Title>
+                {item.body && <Body>{item.body}</Body>}
+                <Time>{formatTimestamp(item.createdAt)}</Time>
+              </Item>
+            ))}
+          </List>
+
+          {hasMore && (
+            <LoadMore
+              type="button"
+              disabled={loadingMore}
+              onClick={loadMore}
+            >
+              {loadingMore ? "불러오는 중…" : "알림 더 보기"}
+            </LoadMore>
+          )}
+        </>
       )}
     </Wrap>
   );

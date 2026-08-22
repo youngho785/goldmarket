@@ -1,11 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
 <channel>
-<title>한국골드마켓 골드바 교환 안내</title>
+<title>한국골드마켓 금시세·골드바 교환 안내</title>
 <link>https://koreagoldmarket.com</link>
-<description>예상 중량 계산, 골드바 공임과 부산 매장 이용 안내입니다.</description>
+<description>오늘의 금시세, 예상 중량 계산, 골드바 공임과 부산 매장 이용 안내입니다.</description>
 <language>ko</language>
-<lastBuildDate>Tue, 04 Aug 2026 05:43:33 GMT</lastBuildDate>
+<lastBuildDate>Sat, 22 Aug 2026 15:51:06 GMT</lastBuildDate>
+    <item>
+      <title><![CDATA[오늘의 한국골드마켓 금시세]]></title>
+      <link>https://koreagoldmarket.com/gold-price</link>
+      <description><![CDATA[순금·18K·14K 금시세와 전일 대비 변화를 확인합니다.]]></description>
+    </item>
     <item>
       <title><![CDATA[내 금 예상 중량과 골드바 조합 계산]]></title>
       <link>https://koreagoldmarket.com/gold-exchange</link>

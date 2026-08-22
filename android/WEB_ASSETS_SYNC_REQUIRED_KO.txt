@@ -1,0 +1,13 @@
+한국골드마켓 Android 웹 자산 동기화 안내
+
+이 프로젝트의 React/Vite 소스를 수정한 뒤 Android 앱을 빌드하기 전에는 반드시 프로젝트 루트에서 실행하세요.
+
+  npm run android:prepare
+
+이 명령은 다음을 순서대로 실행합니다.
+  1) npm run build
+  2) npx cap sync android
+
+android/app/src/main/assets/public 은 생성 산출물입니다.
+배포용 통합 ZIP에서는 오래된 웹 번들이 섞이는 것을 막기 위해 이 폴더를 제외합니다.
+`npm run android:prepare` 실행 후 현재 소스로 다시 생성됩니다.

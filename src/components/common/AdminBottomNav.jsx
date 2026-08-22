@@ -21,7 +21,7 @@ const Nav = styled.nav.attrs({
   padding: 5px;
   border: 1px solid ${({ theme }) => theme.colors.border};
   background: color-mix(in srgb, ${({ theme }) => theme.colors.surface} 96%, transparent);
-  box-shadow: 0 16px 44px rgba(7, 22, 37, .22);
+  box-shadow: ${({ theme }) => theme.shadows.hover};
   backdrop-filter: blur(18px);
 
   @media (max-width: 768px) {
@@ -69,7 +69,7 @@ const Badge = styled.span`
   border: 2px solid ${({ theme }) => theme.colors.surface};
   border-radius: 999px;
   background: ${({ theme }) => theme.colors.error};
-  color: #fff;
+  color: ${({ theme }) => theme.on.error};
   font-size: .62rem;
   font-weight: 900;
 `;
@@ -97,12 +97,12 @@ export default function AdminBottomNav() {
       active: location.pathname === "/admin",
     },
     {
-      key: "requested",
-      to: "/admin/gold-exchange?status=requested",
-      label: "신규요청",
+      key: "exchange",
+      to: "/admin/gold-exchange",
+      label: "금교환",
       icon: BellRing,
       badge: countLabel(pendingCount),
-      active: location.pathname === "/admin/gold-exchange" && status === "requested",
+      active: location.pathname === "/admin/gold-exchange",
     },
     {
       key: "active",

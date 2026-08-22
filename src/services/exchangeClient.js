@@ -1,5 +1,5 @@
 // src/services/exchangeClient.js
-import { getFunctions, httpsCallable /* , httpsCallableFromURL */ } from "firebase/functions";
+import { getFunctions, httpsCallable } from "firebase/functions";
 import { app } from "@/firebase/firebase";
 
 /**
@@ -8,39 +8,62 @@ import { app } from "@/firebase/firebase";
  */
 const functions = getFunctions(app, "asia-northeast3");
 
+async function callExchangeFunction(name, payload) {
+  const call = httpsCallable(functions, name);
+  try {
+    const res = await call(payload);
+    return res?.data ?? { ok: false };
+  } catch (err) {
+    const rawCode = String(err?.code || "");
+    const code = rawCode.startsWith("functions/")
+      ? rawCode.slice("functions/".length)
+      : rawCode;
+
+    const detailsMessage =
+      typeof err?.details === "string"
+        ? err.details
+        : typeof err?.details?.message === "string"
+          ? err.details.message
+          : "";
+
+    const message =
+      detailsMessage ||
+      (typeof err?.message === "string"
+        ? err.message.replace(/^FirebaseError:\s*/i, "")
+        : "") ||
+      "서버 요청 처리 중 오류가 발생했습니다.";
+
+    const normalized = new Error(message);
+    normalized.code =
+      code ||
+      (typeof err?.details?.code === "string" ? err.details.code : "");
+    normalized.details = err?.details;
+    throw normalized;
+  }
+}
+
 /**
  * 예약/그룹 생성 (Functions: onCall)
  * @param {Object} payload
- * @param {string} payload.visitDate   yyyy-MM-dd
- * @param {string} payload.visitTime   "HH:mm"
+ * @param {string} payload.visitDate
+ * @param {string} payload.visitTime
  * @param {string} payload.name
  * @param {string} payload.phone
  * @param {string|null=} payload.email
  * @param {boolean} payload.privacyConsent
  * @param {string} payload.privacyConsentVersion
- * @param {Array<{goldType:string; quantity:number; inputUnit:"g"; exchangeType:"999.9골드바">>=} payload.products
+ * @param {Array<{goldType:string; quantity:number; inputUnit:"g"|"don"; exchangeType:"999.9골드바"}>=} payload.products
  * @param {Record<string,unknown>|null=} payload.barsPlan
  * @returns {Promise<{ok:boolean, groupId?:string}>}
  */
 export async function submitGoldExchangeGroup(payload) {
-  // 기본: 함수 이름 기반 callable
-  const call = httpsCallable(functions, "requestGoldExchangeGroup");
+  return callExchangeFunction("requestGoldExchangeGroup", payload);
+}
 
-  // URL 기반을 강제로 쓰고 싶으면 위 대신 아래 사용
-  // const call = httpsCallableFromURL(functions, "https://asia-northeast3-<proj>.cloudfunctions.net/requestGoldExchangeGroup");
+export async function rescheduleGoldExchangeGroup(payload) {
+  return callExchangeFunction("rescheduleGoldExchangeGroup", payload);
+}
 
-  try {
-    const res = await call(payload);
-    return res?.data ?? { ok: false };
-  } catch (err) {
-    // FirebaseError: code 예) "functions/invalid-argument"
-    const raw = err?.code || "";
-    const code = raw.startsWith("functions/") ? raw.split("/")[1] : raw;
-
-    const msg = err?.message || (typeof err?.details === "string" ? err.details : "callable error");
-    const e = new Error(msg);
-    // 호출부에서 코드로 분기할 수 있도록 부착
-    e.code = code || (typeof err?.details?.code === "string" ? err.details.code : "");
-    throw e;
-  }
+export async function cancelGoldExchangeGroup(payload) {
+  return callExchangeFunction("cancelGoldExchangeGroup", payload);
 }

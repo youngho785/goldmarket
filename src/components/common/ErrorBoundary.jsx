@@ -50,7 +50,7 @@ export default class ErrorBoundary extends React.Component {
         <div style={{ padding: 24 }}>
           <h2>문제가 발생했습니다. 잠시 후 다시 시도해 주세요.</h2>
           {import.meta.env.DEV && (
-            <pre style={{ whiteSpace: "pre-wrap", color: "#666" }}>
+            <pre style={{ whiteSpace: "pre-wrap", color: "var(--gm-text-secondary)" }}>
               {String(this.state.error)}
             </pre>
           )}

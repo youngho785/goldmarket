@@ -8,7 +8,7 @@ import { auth } from "../firebase/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import {
   fetchMyInquiriesPaged,
-} from "../services/boardService";
+} from "../services/supportService";
 
 const Wrap = styled.div`
   padding: 20px;
@@ -21,35 +21,35 @@ const Header = styled.div`
 const Title = styled.h1` margin: 0; `;
 const NewBtn = styled.button`
   padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer;
-  background: ${({ theme }) => theme.gradients?.primary || theme.colors?.primary || "#1F3A5F"};
-  color: ${({ theme }) => theme.on?.primary || "#fff"};
+  background: ${({ theme }) => theme.gradients.primary};
+  color: ${({ theme }) => theme.on.primary};
 `;
 const Tabs = styled.div`
   display: flex; gap: 8px; margin: 8px 0 16px;
 `;
 const Tab = styled.button`
-  padding: 8px 12px; border-radius: 999px; border: 1px solid #e5e7eb; cursor: pointer;
-  background: ${({ $active }) => ($active ? "#111827" : "#fff")};
-  color: ${({ $active }) => ($active ? "#fff" : "#111827")};
+  padding: 8px 12px; border-radius: 999px; border: 1px solid ${({ theme }) => theme.colors.border}; cursor: pointer;
+  background: ${({ $active, theme }) => ($active ? theme.colors.primary : theme.colors.surface)};
+  color: ${({ $active, theme }) => ($active ? theme.on.primary : theme.colors.text)};
 `;
 const Item = styled.div`
-  padding: 16px; border-bottom: 1px solid #eee; cursor: pointer;
-  &:hover { background: #fafafa; }
+  padding: 16px; border-bottom: 1px solid ${({ theme }) => theme.colors.dividerSubtle}; cursor: pointer;
+  &:hover { background: ${({ theme }) => theme.colors.surfaceAlt}; }
 `;
 const Title2 = styled.h2` font-size: 1.1rem; margin: 0; `;
 const Meta = styled.div`
-  margin-top: 6px; font-size: .85rem; color: #666;
+  margin-top: 6px; font-size: .85rem; color: ${({ theme }) => theme.colors.textSecondary};
   display: flex; align-items: center; gap: 6px;
 `;
 const Badge = styled.span`
   display: inline-block; padding: 2px 8px; font-size: 12px; border-radius: 999px;
-  background: ${({ $type }) => ($type === "done" ? "#e6f4ea" : "#fff8e1")};
-  color: ${({ $type }) => ($type === "done" ? "#137333" : "#8a6d3b")};
-  border: 1px solid ${({ $type }) => ($type === "done" ? "#c6e7cc" : "#f3e2b3")};
+  background: ${({ $type, theme }) => ($type === "done" ? theme.semantic.alertSuccessBg : theme.semantic.alertWarningBg)};
+  color: ${({ $type, theme }) => ($type === "done" ? theme.semantic.alertSuccessText : theme.semantic.alertWarningText)};
+  border: 1px solid ${({ $type, theme }) => ($type === "done" ? theme.colors.success : theme.colors.warning)};
 `;
 const More = styled.button`
-  margin: 16px auto 0; display: block; padding: 10px 14px; border: 1px solid #e5e7eb;
-  border-radius: 8px; background: #fff; cursor: pointer;
+  margin: 16px auto 0; display: block; padding: 10px 14px; border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 8px; background: ${({ theme }) => theme.colors.surface}; color: ${({ theme }) => theme.colors.text}; cursor: pointer;
 `;
 
 export default function MyInquiries() {
@@ -135,7 +135,7 @@ export default function MyInquiries() {
     <Wrap>
       <Header>
         <Title>내 문의</Title>
-        <NewBtn onClick={() => navigate("/board/new")}>문의 작성</NewBtn>
+        <NewBtn onClick={() => navigate("/support/new")}>문의 작성</NewBtn>
       </Header>
 
       <Tabs>
@@ -157,11 +157,11 @@ export default function MyInquiries() {
           key={post.id}
           role="button"
           tabIndex={0}
-          onClick={() => navigate(`/board/${post.id}`)}
+          onClick={() => navigate(`/support/${post.id}`)}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
-              navigate(`/board/${post.id}`);
+              navigate(`/support/${post.id}`);
             }
           }}
         >
@@ -182,7 +182,7 @@ export default function MyInquiries() {
         </Item>
       ))}
 
-      {!loading && rows.length === 0 && <div style={{ color: "#888" }}>문의글이 없습니다.</div>}
+      {!loading && rows.length === 0 && <div style={{ color: "var(--gm-text-light)" }}>문의글이 없습니다.</div>}
 
       {cursor && (
         <More onClick={loadMore} disabled={loading}>

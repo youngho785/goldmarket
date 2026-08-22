@@ -19,14 +19,14 @@ const Circle = styled.div`
   width: 32px;
   height: 32px;
   background-color: ${({ $active, theme }) =>
-    $active ? theme.colors.primary : theme.colors.border || "#ddd"};
+    $active ? theme.colors.primary : theme.colors.border};
   border-radius: 50%;
   margin: 0 auto;
   line-height: 32px;
-  color: ${({ theme }) => theme.colors.onPrimary || "#fff"};
+  color: ${({ theme }) => theme.on.primary};
   font-weight: bold;
   border: 1px solid ${({ $active, theme }) =>
-    $active ? theme.colors.primary : theme.colors.border || "#ddd"};
+    $active ? theme.colors.primary : theme.colors.border};
 `;
 
 const Label = styled.div`
@@ -44,7 +44,7 @@ const ProgressBar = styled.div`
   width: calc(100% - 32px);
   height: 4px;
   background-color: ${({ $filled, theme }) =>
-    $filled ? theme.colors.primary : theme.colors.border || "#ddd"};
+    $filled ? theme.colors.primary : theme.colors.border};
   z-index: -1;
   border-radius: 2px;
 `;

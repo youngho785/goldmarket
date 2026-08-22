@@ -1,3 +1,4 @@
+//src\components\common\Navbar.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import styled from "styled-components";
@@ -49,7 +50,7 @@ const UtilityInner = styled.div`
     height: 6px;
     border-radius: 50%;
     background: ${({ theme }) => theme.colors.secondary};
-    box-shadow: 0 0 0 3px rgba(175, 132, 52, .18);
+    box-shadow: 0 0 0 3px color-mix(in srgb, ${({ theme }) => theme.colors.gold} 20%, transparent);
   }
 
   @media (max-width: 680px) {
@@ -199,6 +200,31 @@ const Badge = styled.span`
   font-size: .62rem;
 `;
 
+const MobileActions = styled.div`
+  display: none;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+
+  @media (max-width: 980px) {
+    display: flex;
+  }
+`;
+
+const MobileNotificationSlot = styled.div`
+  display: grid;
+  place-items: center;
+
+  /* Notifications.jsx 안의 버튼이 모바일 네비바 높이와 자연스럽게 맞도록 */
+  > div > button {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0 8px;
+    font-size: 1.05rem;
+    color: ${({ theme }) => theme.colors.primary};
+  }
+`;
+
 const MobileButton = styled.button`
   display: none;
   width: 44px;
@@ -238,7 +264,7 @@ const Drawer = styled.aside`
     calc(24px + env(safe-area-inset-bottom, 0px));
   border-left: 1px solid ${({ theme }) => theme.colors.border};
   background: ${({ theme }) => theme.colors.background};
-  box-shadow: -24px 0 70px rgba(7, 22, 37, .24);
+  box-shadow: ${({ theme }) => theme.shadows.lg};
 `;
 
 const DrawerHead = styled.div`
@@ -427,7 +453,7 @@ export default function Navbar() {
         badge: formatBadge(exchangeCount),
       },
       ...(isAdmin
-        ? [{ to: "/admin/gold-exchange?status=requested", label: "금교환 관리", badge: formatBadge(pendingCount) }]
+        ? [{ to: "/admin/gold-exchange", label: "금교환 관리", badge: formatBadge(pendingCount) }]
         : []),
     ],
     [exchangeCount, isAdmin, pendingCount]
@@ -468,23 +494,32 @@ export default function Navbar() {
             </>
           ) : (
             <>
-              <Notifications userId={user.uid} />
+              <Notifications />
               {!isEmailVerified && <MenuLink to="/verify-email">이메일 인증</MenuLink>}
+              <MenuLink to="/settings" end>설정</MenuLink>
               <TextButton type="button" onClick={handleLogout}>로그아웃</TextButton>
               <AccountLink to="/profile">내 정보</AccountLink>
             </>
           )}
         </Account>
 
-        <MobileButton
-          type="button"
-          aria-label="전체 메뉴 열기"
-          aria-expanded={drawerOpen}
-          aria-controls="mobile-menu"
-          onClick={() => setDrawerOpen(true)}
-        >
-          <Menu size={22} aria-hidden />
-        </MobileButton>
+        <MobileActions>
+          {user && (
+            <MobileNotificationSlot>
+              <Notifications />
+            </MobileNotificationSlot>
+          )}
+
+          <MobileButton
+            type="button"
+            aria-label="전체 메뉴 열기"
+            aria-expanded={drawerOpen}
+            aria-controls="mobile-menu"
+            onClick={() => setDrawerOpen(true)}
+          >
+            <Menu size={22} aria-hidden />
+          </MobileButton>
+        </MobileActions>
       </Nav>
 
       <DrawerBackdrop
@@ -517,7 +552,11 @@ export default function Navbar() {
             </>
           ) : (
             <>
+              <DrawerAction to="/notifications" tabIndex={drawerOpen ? 0 : -1}>
+                알림
+              </DrawerAction>
               <DrawerAction to="/profile" tabIndex={drawerOpen ? 0 : -1}>내 정보</DrawerAction>
+              <DrawerAction to="/settings" tabIndex={drawerOpen ? 0 : -1}>설정</DrawerAction>
               <TextButton type="button" onClick={handleLogout} tabIndex={drawerOpen ? 0 : -1}>
                 로그아웃
               </TextButton>

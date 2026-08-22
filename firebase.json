@@ -17,7 +17,6 @@
         "*.local"
       ],
       "predeploy": [
-        "npm --prefix \"$RESOURCE_DIR\" run lint",
         "npm --prefix \"$RESOURCE_DIR\" run build"
       ]
     }
@@ -33,114 +32,204 @@
       {
         "source": "/manifest.webmanifest",
         "headers": [
-          { "key": "Content-Type", "value": "application/manifest+json; charset=utf-8" },
-          { "key": "Cache-Control", "value": "public, max-age=600" }
+          {
+            "key": "Content-Type",
+            "value": "application/manifest+json; charset=utf-8"
+          },
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=600"
+          }
         ]
       },
       {
         "source": "/sitemap*.xml",
         "headers": [
-          { "key": "Content-Type", "value": "application/xml; charset=utf-8" },
-          { "key": "Cache-Control", "value": "public, max-age=600" }
+          {
+            "key": "Content-Type",
+            "value": "application/xml; charset=utf-8"
+          },
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=600"
+          }
         ]
       },
       {
         "source": "/rss.xml",
         "headers": [
-          { "key": "Content-Type", "value": "application/rss+xml; charset=utf-8" },
-          { "key": "Cache-Control", "value": "public, max-age=600" }
+          {
+            "key": "Content-Type",
+            "value": "application/rss+xml; charset=utf-8"
+          },
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=600"
+          }
         ]
       },
       {
         "source": "/robots.txt",
         "headers": [
-          { "key": "Content-Type", "value": "text/plain; charset=utf-8" },
-          { "key": "Cache-Control", "value": "public, max-age=600" }
-        ]
-      },
-
-      {
-        "source": "/sell",
-        "headers": [
-          { "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive" }
-        ]
-      },
-      {
-        "source": "/sell/**",
-        "headers": [
-          { "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive" }
+          {
+            "key": "Content-Type",
+            "value": "text/plain; charset=utf-8"
+          },
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=600"
+          }
         ]
       },
       {
         "source": "/login",
         "headers": [
-          { "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive" }
+          {
+            "key": "X-Robots-Tag",
+            "value": "noindex, nofollow, noarchive"
+          }
         ]
       },
       {
         "source": "/register",
         "headers": [
-          { "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive" }
+          {
+            "key": "X-Robots-Tag",
+            "value": "noindex, nofollow, noarchive"
+          }
         ]
       },
       {
         "source": "/profile",
         "headers": [
-          { "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive" }
+          {
+            "key": "X-Robots-Tag",
+            "value": "noindex, nofollow, noarchive"
+          }
         ]
       },
-      {
-        "source": "/chat",
-        "headers": [
-          { "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive" }
-        ]
-      },
-      {
-        "source": "/chat/**",
-        "headers": [
-          { "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive" }
-        ]
-      },
-
       {
         "source": "/icons/**",
         "headers": [
-          { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=31536000, immutable"
+          }
         ]
       },
       {
         "source": "/sw.js",
         "headers": [
-          { "key": "Cache-Control", "value": "no-store" }
+          {
+            "key": "Cache-Control",
+            "value": "no-store"
+          }
         ]
       },
       {
         "source": "**/*.@(js|css|map)",
         "headers": [
-          { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=31536000, immutable"
+          }
         ]
       },
       {
         "source": "**/*.@(png|jpg|jpeg|gif|webp|svg|ico)",
         "headers": [
-          { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=31536000, immutable"
+          }
         ]
       },
       {
         "source": "/index.html",
         "headers": [
-          { "key": "Cache-Control", "value": "no-cache" }
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
         ]
       },
       {
         "source": "/",
         "headers": [
-          { "key": "Cache-Control", "value": "no-cache" }
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
         ]
       }
     ],
+    "redirects": [
+      {
+        "source": "/trade",
+        "destination": "/gold-exchange",
+        "type": 301
+      },
+      {
+        "source": "/product/**",
+        "destination": "/gold-exchange",
+        "type": 301
+      },
+      {
+        "source": "/sell",
+        "destination": "/gold-exchange",
+        "type": 301
+      },
+      {
+        "source": "/sell/**",
+        "destination": "/gold-exchange",
+        "type": 301
+      },
+      {
+        "source": "/my-products",
+        "destination": "/my-exchanges",
+        "type": 301
+      },
+      {
+        "source": "/favorites",
+        "destination": "/gold-exchange",
+        "type": 301
+      },
+      {
+        "source": "/chat",
+        "destination": "/my-exchanges",
+        "type": 301
+      },
+      {
+        "source": "/chat/**",
+        "destination": "/my-exchanges",
+        "type": 301
+      },
+      {
+        "source": "/my-orders",
+        "destination": "/my-exchanges",
+        "type": 301
+      },
+      {
+        "source": "/transactionReviews/**",
+        "destination": "/gold-exchange",
+        "type": 301
+      },
+      {
+        "source": "/board",
+        "destination": "/support",
+        "type": 301
+      },
+      {
+        "source": "/board/**",
+        "destination": "/support",
+        "type": 301
+      }
+    ],
     "rewrites": [
-      { "source": "**", "destination": "/index.html" }
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
     ],
     "predeploy": [
       "npm run build"
@@ -148,5 +237,27 @@
   },
   "storage": {
     "rules": "storage.rules"
+  },
+  "emulators": {
+    "auth": {
+      "port": 9099
+    },
+    "firestore": {
+      "port": 8080
+    },
+    "functions": {
+      "port": 5001
+    },
+    "hosting": {
+      "port": 5000
+    },
+    "storage": {
+      "port": 9199
+    },
+    "ui": {
+      "enabled": true,
+      "port": 4000
+    },
+    "singleProjectMode": true
   }
 }

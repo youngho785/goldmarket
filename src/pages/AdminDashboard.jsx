@@ -1,4 +1,4 @@
-// src/pages/AdminDashboard.js
+//src/pages/AdminDashboard.jsx
 import React, { useEffect, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import styled from "styled-components";
@@ -9,21 +9,73 @@ import { useNotificationContext } from "../context/NotificationContext";
 
 const Container = styled.div`
   padding: 8px 0 32px;
+
+  h1 {
+    margin-bottom: 14px;
+    font-size: clamp(1.55rem, 3vw, 2.25rem);
+  }
+
+  h2 { font-size: clamp(1.25rem, 2.4vw, 1.7rem); }
+  h3 { font-size: clamp(1.05rem, 2vw, 1.3rem); }
+  table { font-size: .92rem; }
+  th, td { padding: 9px 11px; }
+  input, select { min-height: 42px; padding-block: 8px; }
+
+  @media (max-width: 768px) {
+    padding-top: 4px;
+    h1 { font-size: 1.55rem; }
+    th, td { padding: 8px 9px; }
+  }
 `;
+
 const Title = styled.h1`
   color: ${({ theme }) => theme.colors.text};
-  margin-bottom: 1.25rem;
+  margin: 0 0 1rem;
+  font-size: clamp(1.65rem, 3vw, 2.35rem);
 `;
+
 const Menu = styled.nav`
-  display: flex;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1.15fr 1.15fr;
+  gap: 8px;
   margin-bottom: 1.5rem;
-  padding: 6px;
-  overflow-x: auto;
+  padding: 8px;
   background: ${({ theme }) => theme.colors.surfaceAlt};
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 14px;
+
+  @media (max-width: 980px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (max-width: 620px) {
+    display: flex;
+    overflow-x: auto;
+  }
 `;
+
+const MenuGroup = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 5px;
+  padding: 7px;
+  border-radius: 10px;
+  background: ${({ theme }) => theme.colors.surface};
+
+  @media (max-width: 620px) {
+    min-width: 230px;
+  }
+`;
+
+const MenuLabel = styled.strong`
+  width: 100%;
+  padding: 0 5px 3px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: .7rem;
+  letter-spacing: .08em;
+`;
+
 const Tab = styled(NavLink)`
   position: relative;
   padding: 0.65rem 1rem;
@@ -46,6 +98,7 @@ const Tab = styled(NavLink)`
     border-color: ${({ theme }) => theme.colors.primary};
   }
 `;
+
 const Badge = styled.span`
   margin-left: 4px;
   background: ${({ theme }) => theme.colors.error};
@@ -74,9 +127,11 @@ const UrgentCard = styled(NavLink)`
     display: block;
     font-size: 1.05rem;
   }
+
   span {
     font-size: .86rem;
   }
+
   b {
     white-space: nowrap;
   }
@@ -85,15 +140,14 @@ const UrgentCard = styled(NavLink)`
 export default function AdminDashboard() {
   const pendingGoldExchangeCount = usePendingGoldExchangeCount();
   const { unreadNotifications = 0 } = useNotificationContext() || {};
-
-  // ▶ 답변대기 문의 수
   const [pendingInquiryCount, setPendingInquiryCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+
     (async () => {
       try {
-        const coll = collection(db, "board");
+        const coll = collection(db, "supportTickets");
         const q = query(
           coll,
           where("category", "==", "inquiry"),
@@ -102,12 +156,14 @@ export default function AdminDashboard() {
         const agg = await getCountFromServer(q);
         if (!cancelled) setPendingInquiryCount(agg.data().count || 0);
       } catch (e) {
-        // 집계 실패 시 배지 표시 없이 넘어갑니다(UX 저하 방지)
         if (!cancelled) setPendingInquiryCount(0);
-        // 콘솔에만 남겨 슬랙/로그수집 등과 연계 가능
-        console.warn("[AdminDashboard] pending inquiry count failed:", e?.message || e);
+        console.warn(
+          "[AdminDashboard] pending inquiry count failed:",
+          e?.message || e
+        );
       }
     })();
+
     return () => {
       cancelled = true;
     };
@@ -116,6 +172,7 @@ export default function AdminDashboard() {
   return (
     <Container>
       <Title>관리자 대시보드</Title>
+
       {pendingGoldExchangeCount > 0 && (
         <UrgentCard to="gold-exchange?status=requested">
           <span>
@@ -125,27 +182,49 @@ export default function AdminDashboard() {
           <b>바로 처리 →</b>
         </UrgentCard>
       )}
+
       <Menu>
-        {/* 중첩 라우트 상대 경로 사용 */}
-        <Tab to="." end>개요</Tab>
+        <MenuGroup>
+          <MenuLabel>운영</MenuLabel>
+          <Tab to="." end>개요</Tab>
+          <Tab to="gold-exchange">
+            금교환 관리
+            {pendingGoldExchangeCount > 0 && (
+              <Badge>{pendingGoldExchangeCount}</Badge>
+            )}
+          </Tab>
+          <Tab to="support">
+            문의
+            {pendingInquiryCount > 0 && (
+              <Badge>{pendingInquiryCount}</Badge>
+            )}
+          </Tab>
+        </MenuGroup>
 
-        <Tab to="gold-exchange?status=requested">
-          금 교환 요청
-          {pendingGoldExchangeCount > 0 && <Badge>{pendingGoldExchangeCount}</Badge>}
-        </Tab>
+        <MenuGroup>
+          <MenuLabel>가격·기준</MenuLabel>
+          <Tab to="gold-rates">환산율</Tab>
+          <Tab to="gold-price">금시세</Tab>
+        </MenuGroup>
 
-        <Tab to="notifications">
-          알림
-          {unreadNotifications > 0 && <Badge>{unreadNotifications}</Badge>}
-        </Tab>
+        <MenuGroup>
+          <MenuLabel>고객·알림</MenuLabel>
+          <Tab to="members">회원관리</Tab>
+          <Tab to="notifications">
+            알림함
+            {unreadNotifications > 0 && (
+              <Badge>{unreadNotifications}</Badge>
+            )}
+          </Tab>
+          <Tab to="notification-send">알림 발송</Tab>
+        </MenuGroup>
 
-        {/* ✅ 추가: 문의 관리 (답변대기 배지 표시) */}
-        <Tab to="board/inquiries">
-          문의 관리
-          {pendingInquiryCount > 0 && <Badge>{pendingInquiryCount}</Badge>}
-        </Tab>
-
-        <Tab to="statistics">통계 보기</Tab>
+        <MenuGroup>
+          <MenuLabel>분석·보안</MenuLabel>
+          <Tab to="statistics">통계</Tab>
+          <Tab to="audit-logs">감사로그</Tab>
+          <Tab to="security">보안·MFA</Tab>
+        </MenuGroup>
       </Menu>
 
       <Outlet />

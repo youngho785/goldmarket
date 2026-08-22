@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import styled from "styled-components";
-import { fetchInquiriesByStatus } from "@/services/boardService";
+import { fetchInquiriesByStatus } from "@/services/supportService";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
@@ -18,33 +18,33 @@ const Title = styled.h1` margin: 0; `;
 const Controls = styled.div` display: flex; gap: 8px; align-items: center; `;
 const Tabs = styled.div` display: flex; gap: 6px; `;
 const Tab = styled.button`
-  padding: 8px 12px; border-radius: 999px; border: 1px solid #ddd; cursor: pointer;
-  background: ${({ $active }) => ($active ? "#111827" : "#fff")};
-  color: ${({ $active }) => ($active ? "#fff" : "#111827")};
+  padding: 8px 12px; border-radius: 999px; border: 1px solid ${({ theme }) => theme.colors.border}; cursor: pointer;
+  background: ${({ $active, theme }) => ($active ? theme.colors.primary : theme.colors.surface)};
+  color: ${({ $active, theme }) => ($active ? theme.on.primary : theme.colors.text)};
 `;
 const Button = styled.button`
   padding: 8px 12px; border-radius: 6px; border: none; cursor: pointer;
-  background: ${({ theme }) => theme.gradients?.primary || theme.colors?.primary || "#1F3A5F"}; color: ${({ theme }) => theme.on?.primary || "#fff"};
+  background: ${({ theme }) => theme.gradients.primary}; color: ${({ theme }) => theme.on.primary};
 `;
 const Input = styled.input`
-  padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; min-width: 220px;
+  padding: 8px 10px; border: 1px solid ${({ theme }) => theme.colors.border}; border-radius: 6px; min-width: 220px;
 `;
-const List = styled.div` border-top: 1px solid #eee; `;
+const List = styled.div` border-top: 1px solid ${({ theme }) => theme.colors.dividerSubtle}; `;
 const Row = styled.div`
-  padding: 12px 8px; border-bottom: 1px solid #eee; cursor: pointer;
+  padding: 12px 8px; border-bottom: 1px solid ${({ theme }) => theme.colors.dividerSubtle}; cursor: pointer;
   display: grid; grid-template-columns: 1fr auto; gap: 8px;
-  &:hover { background: #fafafa; }
+  &:hover { background: ${({ theme }) => theme.colors.surfaceAlt}; }
 `;
 const TitleText = styled.div` font-weight: 600; `;
 const Meta = styled.div`
-  display: flex; gap: 8px; color: #666; font-size: 0.9em; align-items: center; flex-wrap: wrap;
+  display: flex; gap: 8px; color: ${({ theme }) => theme.colors.textSecondary}; font-size: 0.9em; align-items: center; flex-wrap: wrap;
 `;
 const Right = styled.div` display: flex; gap: 8px; align-items: center; `;
 const Badge = styled.span`
   display: inline-block; padding: 2px 8px; font-size: 12px; border-radius: 999px;
-  background: ${({ $type }) => ($type === "done" ? "#e6f4ea" : "#fff8e1")};
-  color: ${({ $type }) => ($type === "done" ? "#137333" : "#8a6d3b")};
-  border: 1px solid ${({ $type }) => ($type === "done" ? "#c6e7cc" : "#f3e2b3")};
+  background: ${({ $type, theme }) => ($type === "done" ? theme.semantic.alertSuccessBg : theme.semantic.alertWarningBg)};
+  color: ${({ $type, theme }) => ($type === "done" ? theme.semantic.alertSuccessText : theme.semantic.alertWarningText)};
+  border: 1px solid ${({ $type, theme }) => ($type === "done" ? theme.colors.success : theme.colors.warning)};
 `;
 
 const tabs = [
@@ -108,23 +108,23 @@ export default function AdminInquiries() {
         </Controls>
       </Header>
 
-      {error && <div style={{ color: "#b91c1c", marginBottom: 8 }}>{error}</div>}
+      {error && <div style={{ color: "var(--gm-error)", marginBottom: 8 }}>{error}</div>}
       {loading ? (
         <div>로딩 중…</div>
       ) : filtered.length === 0 ? (
-        <div style={{ color: "#6b7280" }}>표시할 문의가 없습니다.</div>
+        <div style={{ color: "var(--gm-text-secondary)" }}>표시할 문의가 없습니다.</div>
       ) : (
         <List>
           {filtered.map(p => (
             <Row
               key={p.id}
-              onClick={() => navigate(`/board/${p.id}`)}
+              onClick={() => navigate(`/support/${p.id}`)}
               role="button"
               tabIndex={0}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
-                  navigate(`/board/${p.id}`);
+                  navigate(`/support/${p.id}`);
                 }
               }}
             >

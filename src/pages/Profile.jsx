@@ -1,22 +1,16 @@
 // src/pages/Profile.jsx
 import React, { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import styled from "styled-components";
+import { ChevronRight } from "lucide-react";
+import { getAuth, updateProfile as updateAuthProfile } from "firebase/auth";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+
 import { useAuthContext } from "../context/AuthContext";
 import { fetchMyProfile, updateUserProfile } from "../services/userService";
 import { storage } from "../firebase/firebase";
-import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import Loader from "../components/common/Loader";
-import TransactionReviewsSummary from "./TransactionReviewsSummary";
-import {
-  getAuth,
-  EmailAuthProvider,
-  reauthenticateWithCredential,
-  updateProfile as updateAuthProfile,
-  deleteUser,
-} from "firebase/auth";
 import { compressImage } from "../utils/imageCompression";
-import { callDeleteMyAccount, unregisterPush } from "../firebase/firebase";
 import {
   cancelBonusGoldUsage,
   claimWelcomeGoldBonus,
@@ -27,18 +21,12 @@ import {
 
 /* ───────────── Styled ───────────── */
 const Container = styled.div`
-  padding: 8px 0 32px;
   max-width: 720px;
-  margin: auto;
+  margin: 0 auto;
+  padding: 8px 0 32px;
   color: ${({ theme }) => theme.colors.text};
 `;
-const Title = styled.h1`
-  position: relative;
-  margin-bottom: 26px;
-  padding-bottom: 14px;
-  color: ${({ theme }) => theme.colors.text};
-  &::after { content: ""; position: absolute; left: 0; bottom: 0; width: 50px; height: 3px; border-radius: 999px; background: ${({ theme }) => theme.gradients.gold}; }
-`;
+
 const Section = styled.section`
   margin-bottom: 18px;
   padding: clamp(20px, 4vw, 28px);
@@ -47,20 +35,42 @@ const Section = styled.section`
   border-radius: ${({ theme }) => theme.radii.large};
   box-shadow: ${({ theme }) => theme.shadows.card};
 `;
+
+const Title = styled.h1`
+  position: relative;
+  margin: 0 0 26px;
+  padding-bottom: 14px;
+  color: ${({ theme }) => theme.colors.text};
+
+  &::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 50px;
+    height: 3px;
+    border-radius: 999px;
+    background: ${({ theme }) => theme.gradients.gold};
+  }
+`;
+
 const Form = styled.form`
   display: flex;
   flex-direction: column;
   gap: 16px;
 `;
+
 const FormGroup = styled.div`
   display: flex;
   flex-direction: column;
 `;
+
 const Label = styled.label`
-  font-weight: 750;
   margin-bottom: 7px;
   color: ${({ theme }) => theme.colors.text};
+  font-weight: 750;
 `;
+
 const Input = styled.input`
   min-height: 46px;
   padding: 10px 12px;
@@ -70,84 +80,82 @@ const Input = styled.input`
   color: ${({ theme }) => theme.colors.text};
   font-size: 1rem;
 
-  &::-ms-reveal,
-  &::-ms-clear {
-    display: none;
-  }
-
   &[disabled] {
     background: ${({ theme }) => theme.colors.surfaceAlt};
   }
 `;
+
 const ImgPreview = styled.img`
   width: 108px;
   height: 108px;
-  object-fit: cover;
-  border-radius: 50%;
   margin-top: 10px;
+  object-fit: cover;
   border: 3px solid ${({ theme }) => theme.colors.surface};
+  border-radius: 50%;
   outline: 1px solid ${({ theme }) => theme.colors.border};
   box-shadow: ${({ theme }) => theme.shadows.card};
 `;
+
 const ButtonRow = styled.div`
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
 `;
+
 const Button = styled.button`
   min-height: 46px;
   padding: 10px 16px;
-  font-size: 1rem;
-  background: ${({ theme }) => theme.gradients.primary};
-  color: ${({ theme }) => theme.on.primary};
   border: 1px solid transparent;
   border-radius: ${({ theme }) => theme.radii.small};
+  background: ${({ theme }) => theme.gradients.primary};
+  color: ${({ theme }) => theme.on.primary};
+  font-size: 1rem;
   font-weight: 750;
   cursor: pointer;
-  transition: background 0.2s;
+
   &:disabled {
-    opacity: .55;
+    opacity: 0.55;
     cursor: not-allowed;
   }
+
   &:hover:enabled {
-    filter: brightness(.96);
+    filter: brightness(0.96);
   }
 `;
-const DangerButton = styled(Button)`
-  background: ${({ theme }) => theme.colors.error};
-  &:hover:enabled {
-    filter: brightness(.9);
-  }
+
+const SecondaryButton = styled(Button)`
+  border-color: ${({ theme }) => theme.colors.borderStrong};
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.primary};
 `;
+
 const MessageText = styled.p`
-  color: ${({ $error, theme }) => ($error ? theme.semantic.alertErrorText : theme.semantic.alertSuccessText)};
-  background: ${({ $error, theme }) => ($error ? theme.semantic.alertErrorBg : theme.semantic.alertSuccessBg)};
+  margin: 16px 0 0;
   padding: 10px 12px;
   border-radius: 10px;
-  margin-bottom: 16px;
+  color: ${({ $error, theme }) =>
+    $error ? theme.semantic.alertErrorText : theme.semantic.alertSuccessText};
+  background: ${({ $error, theme }) =>
+    $error ? theme.semantic.alertErrorBg : theme.semantic.alertSuccessBg};
 `;
-const Divider = styled.hr`
-  margin: 32px 0;
-  border: none;
-  border-top: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
-`;
-const VisuallyHidden = styled.input`
-  position: absolute !important;
-  height: 1px;
-  width: 1px;
-  overflow: hidden;
-  clip: rect(1px, 1px, 1px, 1px);
-  white-space: nowrap;
-  border: 0;
-  padding: 0;
-  margin: -1px;
+
+const ProfileDetails = styled.div`
+  display: grid;
+  gap: 2px;
+
+  p {
+    margin: 8px 0;
+    line-height: 1.55;
+  }
 `;
 
 const RewardPanel = styled.div`
   display: grid;
   gap: 10px;
+  margin-bottom: 24px;
   padding: 16px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.border || "#e5e7eb"};
   background: ${({ theme }) => theme.semantic.alertSuccessBg};
   color: ${({ theme }) => theme.semantic.alertSuccessText};
 `;
@@ -181,7 +189,7 @@ const RewardTotal = styled(RewardRow)`
 const RewardNote = styled.p`
   margin: 0;
   color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: .86rem;
+  font-size: 0.86rem;
   line-height: 1.6;
 `;
 
@@ -196,7 +204,7 @@ const RewardAction = styled.button`
   cursor: pointer;
 
   &:disabled {
-    opacity: .55;
+    opacity: 0.55;
     cursor: not-allowed;
   }
 `;
@@ -243,18 +251,58 @@ const RewardCode = styled.strong`
   color: ${({ theme }) => theme.colors.primary};
   font-family: ${({ theme }) => theme.fonts.numeric};
   font-size: 1.55rem;
-  letter-spacing: .16em;
+  letter-spacing: 0.16em;
   text-align: center;
 `;
 
 const RewardError = styled.p`
   margin: 0;
   color: ${({ theme }) => theme.semantic.alertErrorText};
-  font-size: .9rem;
+  font-size: 0.9rem;
+`;
+
+const SettingsShortcut = styled(Link)`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 24px;
+  padding: 16px;
+  border: 1px solid ${({ theme }) => theme.colors.borderStrong};
+  border-radius: 12px;
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+  color: ${({ theme }) => theme.colors.text};
+  text-decoration: none;
+
+  &:hover {
+    border-color: ${({ theme }) => theme.colors.secondary};
+  }
+
+  > span {
+    display: grid;
+    gap: 4px;
+  }
+
+  strong {
+    color: ${({ theme }) => theme.colors.primary};
+    font-size: 0.98rem;
+  }
+
+  small {
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+
+  svg {
+    width: 19px;
+    height: 19px;
+    flex: 0 0 auto;
+    color: ${({ theme }) => theme.colors.textSecondary};
+  }
 `;
 
 /* ───────────── Utils ───────────── */
-// 10자리(3-3-4), 11자리(3-4-4)로 포맷
 function formatPhone(input) {
   const digits = (input || "").replace(/\D/g, "").slice(0, 11);
   if (digits.length <= 3) return digits;
@@ -264,34 +312,24 @@ function formatPhone(input) {
   }
   return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
 }
+
 function validatePhone(phone) {
   if (!phone) return true;
   return /^01[016789]-\d{3,4}-\d{4}$/.test(phone);
 }
-function validateNewPassword(pw) {
-  if (typeof pw !== "string" || pw.length < 8) {
-    return "비밀번호는 최소 8자 이상이어야 합니다.";
-  }
-  if (!/[A-Za-z]/.test(pw) || !/\d/.test(pw) || !/[!@#$%^&*()_+{};':",.<>/?\\|`~-]/.test(pw)) {
-    return "영문/숫자/특수문자를 모두 포함해야 합니다.";
-  }
-  return "";
-}
-function mimeToExt(t) {
-  if (!t) return "bin";
-  if (t === "image/webp") return "webp";
-  if (t === "image/png") return "png";
-  if (t === "image/jpeg" || t === "image/jpg") return "jpg";
+
+function mimeToExt(type) {
+  if (!type) return "bin";
+  if (type === "image/webp") return "webp";
+  if (type === "image/png") return "png";
+  if (type === "image/jpeg" || type === "image/jpg") return "jpg";
   return "bin";
 }
-const FLASH_PW_OK = "flash_pw_changed_ok";
-const APP_BUSY_KEY = "__app_busy__";
 
 /* ───────────── Page ───────────── */
 export default function Profile() {
-  const { user, changePassword } = useAuthContext();
+  const { user } = useAuthContext();
   const auth = getAuth();
-  const navigate = useNavigate();
 
   const [profile, setProfile] = useState({
     displayName: "",
@@ -305,6 +343,9 @@ export default function Profile() {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [uploadPct, setUploadPct] = useState(0);
+  const [initialNickname, setInitialNickname] = useState("");
+
   const [goldBonus, setGoldBonus] = useState({
     loading: true,
     welcomeClaimed: false,
@@ -322,31 +363,17 @@ export default function Profile() {
   const [bonusActionBusy, setBonusActionBusy] = useState(false);
   const [bonusActionError, setBonusActionError] = useState("");
 
-  // Password change state
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [pwdMessage, setPwdMessage] = useState("");
-  const [pwdError, setPwdError] = useState("");
-  const [changingPwd, setChangingPwd] = useState(false);
-
-  // 탈퇴
-  const [deletePwd, setDeletePwd] = useState("");
-  const [deleteAgree, setDeleteAgree] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [deleteMsg, setDeleteMsg] = useState("");
-  const [deleteErr, setDeleteErr] = useState("");
-
-  // 업로드 진행률
-  const [uploadPct, setUploadPct] = useState(0);
-
-  // 최초 닉네임 보존
-  const [initialNickname, setInitialNickname] = useState("");
-
   useEffect(() => {
-    if (!user) return;
+    if (!user?.uid) return undefined;
+
+    let cancelled = false;
+    setLoading(true);
+
     (async () => {
       try {
         const data = await fetchMyProfile(user.uid);
+        if (cancelled) return;
+
         const mergedDisplayName = data?.displayName || user.displayName || "";
         const next = {
           displayName: mergedDisplayName,
@@ -355,33 +382,38 @@ export default function Profile() {
           phone: data?.phone || "",
           profileImage: data?.photoURL || data?.profileImage || "",
         };
+
         setProfile(next);
         setInitialNickname(next.nickname || "");
 
-        // Firebase Auth 프로필 동기화
-        if (auth.currentUser && mergedDisplayName && auth.currentUser.displayName !== mergedDisplayName) {
+        if (
+          auth.currentUser &&
+          mergedDisplayName &&
+          auth.currentUser.displayName !== mergedDisplayName
+        ) {
           try {
-            await updateAuthProfile(auth.currentUser, { displayName: mergedDisplayName });
-          } catch (e) {
-            console.warn("Auth 프로필 동기화 실패:", e?.message || e);
+            await updateAuthProfile(auth.currentUser, {
+              displayName: mergedDisplayName,
+            });
+          } catch (syncError) {
+            console.warn("Auth 프로필 동기화 실패:", syncError?.message || syncError);
           }
         }
       } catch {
-        setError("프로필을 불러오는 중 오류가 발생했습니다.");
+        if (!cancelled) setError("프로필을 불러오는 중 오류가 발생했습니다.");
       } finally {
-        setLoading(false);
-        try {
-          if (sessionStorage.getItem(FLASH_PW_OK) === "1") {
-            setPwdMessage("비밀번호가 성공적으로 변경되었습니다.");
-            sessionStorage.removeItem(FLASH_PW_OK);
-          }
-        } catch {}
+        if (!cancelled) setLoading(false);
       }
     })();
-  }, [user, auth]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.uid, user?.displayName, user?.email, auth]);
 
   useEffect(() => {
     let cancelled = false;
+
     if (!user?.uid) {
       setGoldBonus({
         loading: false,
@@ -395,10 +427,13 @@ export default function Profile() {
         eligibleGroups: [],
         usageUnavailable: false,
       });
-      return () => { cancelled = true; };
+      return () => {
+        cancelled = true;
+      };
     }
 
     setGoldBonus((current) => ({ ...current, loading: true }));
+
     (async () => {
       let welcome = null;
       let welcomeUnavailable = false;
@@ -426,16 +461,25 @@ export default function Profile() {
             welcomeUnavailable,
             quizClaimed: !!quiz?.claimed,
             quizG: Number(quiz?.creditedG || 0),
-            balanceG: Number(usage?.balanceG ?? Math.max(
-              Number(welcome?.balanceG || 0),
-              Number(quiz?.balanceG || 0)
-            )),
-            spendableG: Number(usage?.spendableG ?? usage?.balanceG ?? Math.max(
-              Number(welcome?.balanceG || 0),
-              Number(quiz?.balanceG || 0)
-            )),
+            balanceG: Number(
+              usage?.balanceG ??
+                Math.max(
+                  Number(welcome?.balanceG || 0),
+                  Number(quiz?.balanceG || 0)
+                )
+            ),
+            spendableG: Number(
+              usage?.spendableG ??
+                usage?.balanceG ??
+                Math.max(
+                  Number(welcome?.balanceG || 0),
+                  Number(quiz?.balanceG || 0)
+                )
+            ),
             usage: usage?.request || null,
-            eligibleGroups: Array.isArray(usage?.eligibleGroups) ? usage.eligibleGroups : [],
+            eligibleGroups: Array.isArray(usage?.eligibleGroups)
+              ? usage.eligibleGroups
+              : [],
             usageUnavailable,
           });
         }
@@ -449,23 +493,31 @@ export default function Profile() {
             welcomeUnavailable,
             quizUnavailable: true,
             balanceG: Number(usage?.balanceG ?? welcome?.balanceG ?? 0),
-            spendableG: Number(usage?.spendableG ?? usage?.balanceG ?? welcome?.balanceG ?? 0),
+            spendableG: Number(
+              usage?.spendableG ?? usage?.balanceG ?? welcome?.balanceG ?? 0
+            ),
             usage: usage?.request || null,
-            eligibleGroups: Array.isArray(usage?.eligibleGroups) ? usage.eligibleGroups : [],
+            eligibleGroups: Array.isArray(usage?.eligibleGroups)
+              ? usage.eligibleGroups
+              : [],
             usageUnavailable,
           }));
         }
       }
     })();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [user?.uid]);
 
   useEffect(() => {
     if (!selectedBonusGroupId && goldBonus.eligibleGroups.length > 0) {
       setSelectedBonusGroupId(goldBonus.eligibleGroups[0].groupId);
     }
-    if (goldBonus.usage?.status === "requested") setBonusUsageOpen(true);
+    if (goldBonus.usage?.status === "requested") {
+      setBonusUsageOpen(true);
+    }
   }, [goldBonus.eligibleGroups, goldBonus.usage?.status, selectedBonusGroupId]);
 
   const handleBonusUsageRequest = async () => {
@@ -473,8 +525,10 @@ export default function Profile() {
       setBonusActionError("적립 순금을 사용할 금교환 예약을 선택해 주세요.");
       return;
     }
+
     setBonusActionBusy(true);
     setBonusActionError("");
+
     try {
       const result = await requestBonusGoldUsage(selectedBonusGroupId);
       setGoldBonus((current) => ({
@@ -485,7 +539,9 @@ export default function Profile() {
       }));
       setBonusUsageOpen(true);
     } catch (requestError) {
-      setBonusActionError(requestError?.message || "사용 신청을 처리하지 못했습니다.");
+      setBonusActionError(
+        requestError?.message || "사용 신청을 처리하지 못했습니다."
+      );
     } finally {
       setBonusActionBusy(false);
     }
@@ -493,8 +549,10 @@ export default function Profile() {
 
   const handleBonusUsageCancel = async () => {
     if (!window.confirm("적립 순금 사용 신청을 취소할까요?")) return;
+
     setBonusActionBusy(true);
     setBonusActionError("");
+
     try {
       await cancelBonusGoldUsage();
       const usage = await getBonusGoldUsageState();
@@ -503,41 +561,24 @@ export default function Profile() {
         balanceG: Number(usage?.balanceG || 0),
         spendableG: Number(usage?.spendableG ?? usage?.balanceG ?? 0),
         usage: usage?.request || null,
-        eligibleGroups: Array.isArray(usage?.eligibleGroups) ? usage.eligibleGroups : [],
+        eligibleGroups: Array.isArray(usage?.eligibleGroups)
+          ? usage.eligibleGroups
+          : [],
       }));
       setBonusUsageOpen(false);
     } catch (cancelError) {
-      setBonusActionError(cancelError?.message || "사용 신청을 취소하지 못했습니다.");
+      setBonusActionError(
+        cancelError?.message || "사용 신청을 취소하지 못했습니다."
+      );
     } finally {
       setBonusActionBusy(false);
     }
   };
 
-  const usageStatusLabel = {
-    requested: "매장 확인 대기",
-    used: "사용 완료",
-    canceled: "신청 취소",
-    restored: "잔액 복구 완료",
-  }[goldBonus.usage?.status] || "";
-  const canRequestBonus =
-    goldBonus.balanceG > 0 && goldBonus.usage?.status !== "requested";
+  const handlePhotoChange = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file || !user?.uid) return;
 
-  if (!user) {
-    return (
-      <Container>
-        <Title>로그인이 필요합니다</Title>
-        <Link to="/login">로그인하러 가기</Link>
-      </Container>
-    );
-  }
-  if (loading) return <Loader />;
-
-  const canSetNicknameFirstTime = !initialNickname;
-
-  /* ───────── Profile Edit ───────── */
-  const handlePhotoChange = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
     try {
       let uploadFile = file;
       try {
@@ -548,8 +589,11 @@ export default function Profile() {
           quality: 0.88,
           preferMime: "image/webp",
         });
-      } catch (compressErr) {
-        console.warn("[profile] 이미지 압축 실패, 원본 업로드로 폴백:", compressErr);
+      } catch (compressError) {
+        console.warn(
+          "[profile] 이미지 압축 실패, 원본 업로드로 폴백:",
+          compressError
+        );
       }
 
       const extFromName = (uploadFile.name.split(".").pop() || "").toLowerCase();
@@ -562,19 +606,21 @@ export default function Profile() {
         cacheControl: "public,max-age=31536000,immutable",
       });
 
-      task.on("state_changed", (s) => {
-        if (s.totalBytes > 0) {
-          setUploadPct(Math.round((s.bytesTransferred / s.totalBytes) * 100));
+      task.on("state_changed", (snapshot) => {
+        if (snapshot.totalBytes > 0) {
+          setUploadPct(
+            Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100)
+          );
         }
       });
 
       await task;
       const url = await getDownloadURL(task.snapshot.ref);
-      setProfile((p) => ({ ...p, profileImage: url }));
+      setProfile((current) => ({ ...current, profileImage: url }));
       setMessage("프로필 사진이 업로드되었습니다.");
       setError("");
-    } catch (err) {
-      console.error(err);
+    } catch (uploadError) {
+      console.error(uploadError);
       setError("프로필 사진 업로드에 실패했습니다.");
       setMessage("");
     } finally {
@@ -582,37 +628,50 @@ export default function Profile() {
     }
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
+  const canSetNicknameFirstTime = !initialNickname;
+
+  const handleInputChange = (event) => {
+    const { name, value } = event.target;
+
     if (name === "phone") {
-      setProfile((p) => ({ ...p, phone: formatPhone(value) }));
+      setProfile((current) => ({
+        ...current,
+        phone: formatPhone(value),
+      }));
     } else if (name === "nickname") {
       if (canSetNicknameFirstTime) {
-        setProfile((p) => ({ ...p, nickname: value }));
+        setProfile((current) => ({ ...current, nickname: value }));
       }
     } else {
-      setProfile((p) => ({ ...p, [name]: value }));
+      setProfile((current) => ({ ...current, [name]: value }));
     }
+
     setError("");
     setMessage("");
   };
 
-  const handleProfileSubmit = async (e) => {
-    e.preventDefault();
+  const handleProfileSubmit = async (event) => {
+    event.preventDefault();
+    if (!user?.uid) return;
+
     if (!validatePhone(profile.phone)) {
       setError("전화번호 형식을 확인해주세요.");
       return;
     }
+
     if (!canSetNicknameFirstTime && profile.nickname !== initialNickname) {
       setError("닉네임은 고유값이며 변경할 수 없습니다.");
       return;
     }
 
     setSubmitting(true);
+
     try {
       await updateUserProfile(user.uid, {
         displayName: profile.displayName || "",
-        nickname: canSetNicknameFirstTime ? (profile.nickname || "") : initialNickname,
+        nickname: canSetNicknameFirstTime
+          ? profile.nickname || ""
+          : initialNickname,
         email: profile.email || user.email || "",
         phone: profile.phone || "",
         photoURL: profile.profileImage || "",
@@ -633,8 +692,8 @@ export default function Profile() {
       setMessage("프로필이 저장되었습니다.");
       setError("");
       setEditing(false);
-    } catch (err) {
-      console.error(err);
+    } catch (saveError) {
+      console.error(saveError);
       setError("저장 중 오류가 발생했습니다.");
       setMessage("");
     } finally {
@@ -642,113 +701,29 @@ export default function Profile() {
     }
   };
 
-  /* ───────── Password Change ───────── */
-  const handlePasswordSubmit = async (e) => {
-    e.preventDefault();
-    setPwdError("");
-    setPwdMessage("");
+  const usageStatusLabel =
+    {
+      requested: "매장 확인 대기",
+      used: "사용 완료",
+      canceled: "신청 취소",
+      restored: "잔액 복구 완료",
+    }[goldBonus.usage?.status] || "";
 
-    if (!currentPassword || !newPassword) {
-      setPwdError("현재 비밀번호와 새 비밀번호를 모두 입력해주세요.");
-      return;
-    }
-    const validationMsg = validateNewPassword(newPassword);
-    if (validationMsg) {
-      setPwdError(validationMsg);
-      return;
-    }
-    if (currentPassword === newPassword) {
-      setPwdError("새 비밀번호가 현재 비밀번호와 동일합니다.");
-      return;
-    }
+  const canRequestBonus =
+    goldBonus.balanceG > 0 && goldBonus.usage?.status !== "requested";
 
-    setChangingPwd(true);
-    try {
-      const cred = EmailAuthProvider.credential(user.email, currentPassword);
-      await reauthenticateWithCredential(auth.currentUser, cred);
-      await changePassword(newPassword);
+  if (!user) {
+    return (
+      <Container>
+        <Section>
+          <Title>로그인이 필요합니다</Title>
+          <Link to="/login">로그인하러 가기</Link>
+        </Section>
+      </Container>
+    );
+  }
 
-      try {
-        sessionStorage.setItem(FLASH_PW_OK, "1");
-      } catch {}
-
-      setPwdMessage("비밀번호가 성공적으로 변경되었습니다.");
-      setCurrentPassword("");
-      setNewPassword("");
-    } catch (err) {
-      switch (err.code) {
-        case "auth/wrong-password":
-          setPwdError("현재 비밀번호가 올바르지 않습니다.");
-          break;
-        case "auth/weak-password":
-          setPwdError("새 비밀번호가 너무 약합니다. 8자 이상이며, 영문/숫자/특수문자를 포함해야 합니다.");
-          break;
-        case "auth/too-many-requests":
-          setPwdError("비밀번호 변경 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.");
-          break;
-        default:
-          setPwdError(`오류가 발생했습니다: ${err.message}`);
-      }
-    } finally {
-      setChangingPwd(false);
-    }
-  };
-
-  /* ───────── Account Deletion ───────── */
-  const handleDeleteAccount = async (e) => {
-    e.preventDefault();
-    setDeleteErr("");
-    setDeleteMsg("");
-
-    if (!deleteAgree) {
-      setDeleteErr("탈퇴 안내를 확인하고 동의해 주세요.");
-      return;
-    }
-    if (!deletePwd) {
-      setDeleteErr("보안을 위해 현재 비밀번호를 입력해 주세요.");
-      return;
-    }
-
-    setDeleting(true);
-    try {
-      sessionStorage.setItem(APP_BUSY_KEY, "1");
-    } catch {}
-
-    try {
-      const cred = EmailAuthProvider.credential(user.email, deletePwd);
-      await reauthenticateWithCredential(auth.currentUser, cred);
-
-      await callDeleteMyAccount();
-
-      try {
-        await unregisterPush(user.uid);
-      } catch {}
-
-      await deleteUser(auth.currentUser);
-
-      setDeleteMsg("계정이 삭제되었습니다. 그동안 이용해 주셔서 감사합니다.");
-
-      setTimeout(() => {
-        try {
-          sessionStorage.removeItem(APP_BUSY_KEY);
-        } catch {}
-        navigate("/", { replace: true });
-      }, 1000);
-    } catch (err) {
-      if (err?.code === "auth/wrong-password") {
-        setDeleteErr("현재 비밀번호가 올바르지 않습니다.");
-      } else if (err?.code === "auth/too-many-requests") {
-        setDeleteErr("요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.");
-      } else {
-        setDeleteErr(`탈퇴 처리 중 오류: ${err?.message || err}`);
-      }
-      try {
-        sessionStorage.removeItem(APP_BUSY_KEY);
-      } catch {}
-    } finally {
-      setDeleting(false);
-    }
-  };
+  if (loading) return <Loader />;
 
   return (
     <Container>
@@ -756,7 +731,11 @@ export default function Profile() {
         <Title>내 프로필</Title>
 
         <RewardPanel aria-label="순금 보너스 적립 내역">
-          <RewardTitle><span aria-hidden="true">✨</span> 순금 보너스</RewardTitle>
+          <RewardTitle>
+            <span aria-hidden="true">✨</span>
+            순금 보너스
+          </RewardTitle>
+
           {goldBonus.loading ? (
             <span>적립 내역을 확인하고 있습니다.</span>
           ) : (
@@ -771,6 +750,7 @@ export default function Profile() {
                       : "적립 확인 중"}
                 </b>
               </RewardRow>
+
               <RewardRow>
                 <span>퀵퀴즈 순금</span>
                 {goldBonus.quizClaimed ? (
@@ -781,6 +761,7 @@ export default function Profile() {
                   <Link to="/quiz/gold-bonus">0.01g 받기</Link>
                 )}
               </RewardRow>
+
               <RewardTotal>
                 <span>지금 사용 가능한 적립 순금</span>
                 <b>{goldBonus.spendableG.toFixed(2)}g</b>
@@ -792,13 +773,20 @@ export default function Profile() {
                   <span>
                     신청 중량 {Number(goldBonus.usage.amountG || 0).toFixed(2)}g
                     {goldBonus.usage.visitDate
-                      ? ` · ${goldBonus.usage.visitDate} ${goldBonus.usage.visitTime || ""}`
+                      ? ` · ${goldBonus.usage.visitDate} ${
+                          goldBonus.usage.visitTime || ""
+                        }`
                       : ""}
                   </span>
+
                   {goldBonus.usage.status === "requested" && (
                     <>
-                      <span>매장에서 아래 6자리 코드를 관리자에게 보여주세요.</span>
-                      <RewardCode aria-label={`매장 확인 코드 ${goldBonus.usage.requestCode}`}>
+                      <span>
+                        매장에서 아래 6자리 코드를 관리자에게 보여주세요.
+                      </span>
+                      <RewardCode
+                        aria-label={`매장 확인 코드 ${goldBonus.usage.requestCode}`}
+                      >
                         {goldBonus.usage.requestCode}
                       </RewardCode>
                       <RewardAction
@@ -810,11 +798,15 @@ export default function Profile() {
                       </RewardAction>
                     </>
                   )}
+
                   {goldBonus.usage.status === "used" && (
                     <span>
-                      현장 인정 {Number(goldBonus.usage.finalRecognizedG || 0).toFixed(3)}g
-                      {" + "}적립 {Number(goldBonus.usage.amountG || 0).toFixed(2)}g
-                      {" = "}최종 {Number(goldBonus.usage.finalAppliedG || 0).toFixed(3)}g
+                      현장 인정{" "}
+                      {Number(goldBonus.usage.finalRecognizedG || 0).toFixed(3)}g
+                      {" + "}적립{" "}
+                      {Number(goldBonus.usage.amountG || 0).toFixed(2)}g
+                      {" = "}최종{" "}
+                      {Number(goldBonus.usage.finalAppliedG || 0).toFixed(3)}g
                     </span>
                   )}
                 </RewardUsagePanel>
@@ -829,43 +821,69 @@ export default function Profile() {
                   >
                     적립 순금 사용 신청
                   </RewardAction>
-                  {bonusUsageOpen && goldBonus.usage?.status !== "requested" && (
-                    <RewardUsagePanel>
-                      <label htmlFor="bonus-exchange-group"><b>사용할 금교환 예약</b></label>
-                      <RewardSelect
-                        id="bonus-exchange-group"
-                        value={selectedBonusGroupId}
-                        onChange={(event) => setSelectedBonusGroupId(event.target.value)}
-                      >
-                        {goldBonus.eligibleGroups.map((group) => (
-                          <option key={group.groupId} value={group.groupId}>
-                            {group.visitDate || "방문일 미정"} {group.visitTime || ""} · {
-                              group.status === "requested" ? "접수" :
-                              group.status === "scheduled" ? "예약 승인" : "진행 중"
-                            }
-                          </option>
-                        ))}
-                      </RewardSelect>
-                      <RewardNote>현재 보유한 적립 순금 전액을 선택한 교환 건에 신청합니다.</RewardNote>
-                      <RewardAction
-                        type="button"
-                        disabled={bonusActionBusy || !selectedBonusGroupId}
-                        onClick={handleBonusUsageRequest}
-                      >
-                        {bonusActionBusy ? "신청 중…" : `${goldBonus.balanceG.toFixed(2)}g 사용 신청`}
-                      </RewardAction>
-                    </RewardUsagePanel>
-                  )}
+
+                  {bonusUsageOpen &&
+                    goldBonus.usage?.status !== "requested" && (
+                      <RewardUsagePanel>
+                        <label htmlFor="bonus-exchange-group">
+                          <b>사용할 금교환 예약</b>
+                        </label>
+
+                        <RewardSelect
+                          id="bonus-exchange-group"
+                          value={selectedBonusGroupId}
+                          onChange={(event) =>
+                            setSelectedBonusGroupId(event.target.value)
+                          }
+                        >
+                          {goldBonus.eligibleGroups.map((group) => (
+                            <option key={group.groupId} value={group.groupId}>
+                              {group.visitDate || "방문일 미정"}{" "}
+                              {group.visitTime || ""} ·{" "}
+                              {group.status === "requested"
+                                ? "접수"
+                                : group.status === "scheduled"
+                                  ? "예약 승인"
+                                  : "진행 중"}
+                            </option>
+                          ))}
+                        </RewardSelect>
+
+                        <RewardNote>
+                          현재 보유한 적립 순금 전액을 선택한 교환 건에
+                          신청합니다.
+                        </RewardNote>
+
+                        <RewardAction
+                          type="button"
+                          disabled={bonusActionBusy || !selectedBonusGroupId}
+                          onClick={handleBonusUsageRequest}
+                        >
+                          {bonusActionBusy
+                            ? "신청 중…"
+                            : `${goldBonus.balanceG.toFixed(2)}g 사용 신청`}
+                        </RewardAction>
+                      </RewardUsagePanel>
+                    )}
                 </>
               )}
 
-              {canRequestBonus && goldBonus.eligibleGroups.length === 0 && !goldBonus.usageUnavailable && (
-                <RewardLink to="/gold-exchange">금교환 예약 후 사용 신청</RewardLink>
+              {canRequestBonus &&
+                goldBonus.eligibleGroups.length === 0 &&
+                !goldBonus.usageUnavailable && (
+                  <RewardLink to="/gold-exchange">
+                    금교환 예약 후 사용 신청
+                  </RewardLink>
+                )}
+
+              {bonusActionError && (
+                <RewardError role="alert">{bonusActionError}</RewardError>
               )}
-              {bonusActionError && <RewardError role="alert">{bonusActionError}</RewardError>}
+
               <RewardNote>
-                웰컴 순금과 퀵퀴즈 적립 순금은 골드바 교환 시 중량으로 더해집니다.
-                현금 환급·양도는 불가하며, 매장에서 본인과 최종 인정 중량을 확인한 뒤 사용이 확정됩니다.
+                웰컴 순금과 퀵퀴즈 적립 순금은 골드바 교환 시 중량으로
+                더해집니다. 현금 환급·양도는 불가하며, 매장에서 본인과
+                최종 인정 중량을 확인한 뒤 사용이 확정됩니다.
               </RewardNote>
             </>
           )}
@@ -884,9 +902,11 @@ export default function Profile() {
                 accept="image/*"
                 onChange={handlePhotoChange}
               />
+
               {!!uploadPct && uploadPct > 0 && (
                 <MessageText>{`업로드 ${uploadPct}%`}</MessageText>
               )}
+
               {profile.profileImage && (
                 <ImgPreview src={profile.profileImage} alt="프로필" />
               )}
@@ -907,8 +927,13 @@ export default function Profile() {
             <FormGroup>
               <Label htmlFor="profileNickname">
                 닉네임{" "}
-                {!(!initialNickname) && (
-                  <small style={{ color: "#888", fontWeight: 400 }}>
+                {!!initialNickname && (
+                  <small
+                    style={{
+                      color: "var(--gm-text-light)",
+                      fontWeight: 400,
+                    }}
+                  >
                     (고유값·변경 불가)
                   </small>
                 )}
@@ -959,16 +984,20 @@ export default function Profile() {
               <Button type="submit" disabled={submitting}>
                 {submitting ? "저장중..." : "저장"}
               </Button>
-              <Button type="button" onClick={() => setEditing(false)}>
+              <SecondaryButton
+                type="button"
+                onClick={() => setEditing(false)}
+              >
                 취소
-              </Button>
+              </SecondaryButton>
             </ButtonRow>
           </Form>
         ) : (
-          <div>
+          <ProfileDetails>
             {profile.profileImage && (
               <ImgPreview src={profile.profileImage} alt="프로필" />
             )}
+
             <p>
               <strong>이름:</strong> {profile.displayName || "미등록"}
             </p>
@@ -981,122 +1010,24 @@ export default function Profile() {
             <p>
               <strong>전화번호:</strong> {profile.phone || "미등록"}
             </p>
-            <Button onClick={() => setEditing(true)}>프로필 수정</Button>
-          </div>
+
+            <ButtonRow>
+              <Button type="button" onClick={() => setEditing(true)}>
+                프로필 수정
+              </Button>
+            </ButtonRow>
+          </ProfileDetails>
         )}
-      </Section>
 
-      <Section>
-        <Title>거래 평가 내역</Title>
-        <TransactionReviewsSummary sellerId={user.uid} />
-      </Section>
-
-      <Divider />
-
-      <Section>
-        <Title>비밀번호 변경</Title>
-        {pwdError && <MessageText $error>{pwdError}</MessageText>}
-        {pwdMessage && <MessageText>{pwdMessage}</MessageText>}
-
-        <Form onSubmit={handlePasswordSubmit} autoComplete="on">
-          <VisuallyHidden
-            type="text"
-            name="username"
-            autoComplete="username"
-            defaultValue={user?.email || profile.email || ""}
-            aria-hidden="true"
-            tabIndex={-1}
-          />
-
-          <FormGroup>
-            <Label htmlFor="currentPassword">현재 비밀번호</Label>
-            <Input
-              id="currentPassword"
-              name="currentPassword"
-              type="password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              autoComplete="current-password"
-              required
-            />
-          </FormGroup>
-
-          <FormGroup>
-            <Label htmlFor="newPassword">새 비밀번호</Label>
-            <Input
-              id="newPassword"
-              name="newPassword"
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              autoComplete="new-password"
-              minLength={8}
-              required
-            />
-          </FormGroup>
-
-          <Button type="submit" disabled={changingPwd}>
-            {changingPwd ? "변경중..." : "비밀번호 변경"}
-          </Button>
-        </Form>
-      </Section>
-
-      <Divider />
-
-      <Section>
-        <Title>계정 탈퇴</Title>
-        {deleteErr && <MessageText $error>{deleteErr}</MessageText>}
-        {deleteMsg && <MessageText>{deleteMsg}</MessageText>}
-
-        <p style={{ lineHeight: 1.6, color: "#555" }}>
-          탈퇴 시 계정과 공개 프로필은 <strong>비식별 처리</strong>됩니다.
-          완료된 교환 및 고객문의 기록은 관련 법령과 개인정보처리방침에 따라
-          필요한 기간 동안 보존될 수 있습니다.
-        </p>
-
-        <Form onSubmit={handleDeleteAccount} autoComplete="on">
-          <VisuallyHidden
-            type="text"
-            name="username"
-            autoComplete="username"
-            defaultValue={user?.email || profile.email || ""}
-            aria-hidden="true"
-            tabIndex={-1}
-          />
-
-        <FormGroup>
-            <Label htmlFor="deletePwd">현재 비밀번호</Label>
-            <Input
-              id="deletePwd"
-              name="deletePwd"
-              type="password"
-              value={deletePwd}
-              onChange={(e) => setDeletePwd(e.target.value)}
-              autoComplete="current-password"
-              required
-            />
-          </FormGroup>
-
-          <label
-            style={{
-              display: "flex",
-              gap: 8,
-              alignItems: "center",
-              margin: "8px 0 16px",
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={deleteAgree}
-              onChange={(e) => setDeleteAgree(e.target.checked)}
-            />
-            <span>안내 사항을 모두 확인했으며 계정을 영구 삭제합니다.</span>
-          </label>
-
-          <DangerButton type="submit" disabled={deleting}>
-            {deleting ? "탈퇴 처리 중..." : "계정 탈퇴"}
-          </DangerButton>
-        </Form>
+        <SettingsShortcut to="/settings">
+          <span>
+            <strong>설정</strong>
+            <small>
+              알림, 보안, 약관 및 계정 관리를 변경합니다.
+            </small>
+          </span>
+          <ChevronRight aria-hidden="true" />
+        </SettingsShortcut>
       </Section>
     </Container>
   );

@@ -1,154 +1,74 @@
 // src/hooks/useInstallPrompt.js
 // ==================================
-import { useEffect, useRef, useState, useCallback } from "react";
+// 정식 앱 출시 전 정책:
+// - PWA 설치 권장/설치 프롬프트를 사용하지 않습니다.
+// - 기존 호출부가 남아 있어도 아무 UI가 뜨지 않도록 호환 API만 유지합니다.
+// - 웹 푸시용 Service Worker(/sw.js)는 이 파일과 별개로 계속 사용할 수 있습니다.
 
-/** 로컬스토리지 키 (쿨다운) */
-const KEY_SNOOZE_UNTIL = "pwa_install_snooze_until"; // ms timestamp
+import { useCallback, useState } from "react";
 
-/** UA 감지 */
+const KEY_SNOOZE_UNTIL = "pwa_install_snooze_until";
+
+export const APP_INSTALL_REQUEST_EVENT = "GM_PWA_INSTALL_REQUEST";
+export const APP_INSTALL_NUDGE_EVENT = "GM_PWA_INSTALL_NUDGE";
+
+export function detectSamsungInternet() {
+  if (typeof navigator === "undefined") return false;
+  return /SamsungBrowser/i.test(navigator.userAgent || "");
+}
+
 function detectIOS() {
   if (typeof navigator === "undefined") return false;
-  const ua = navigator.userAgent || "";
-  return /iPad|iPhone|iPod/i.test(ua);
+  return /iPad|iPhone|iPod/i.test(navigator.userAgent || "");
 }
+
 function detectStandalone() {
   if (typeof window === "undefined") return false;
   const mq = window.matchMedia?.("(display-mode: standalone)");
-  return (mq && mq.matches) || window.navigator.standalone === true;
+  return Boolean((mq && mq.matches) || window.navigator.standalone === true);
+}
+
+// 정식 Google Play 앱 출시 전에는 PWA 설치 요청을 발생시키지 않습니다.
+export function requestAppInstall() {
+  return false;
+}
+
+// 문맥형/재방문 설치 유도도 비활성화합니다.
+export function nudgeAppInstall() {
+  return false;
+}
+
+export function clearInstallSnooze() {
+  try {
+    localStorage.removeItem(KEY_SNOOZE_UNTIL);
+  } catch {}
 }
 
 export default function useInstallPrompt({ snoozeDays = 30 } = {}) {
-  const deferredRef = useRef(null);
-
   const [isIOS] = useState(detectIOS());
-  const [isStandaloneState, setStandalone] = useState(detectStandalone());
+  const [isSamsungInternet] = useState(detectSamsungInternet());
+  const [isStandalone] = useState(detectStandalone());
 
-  // 배너를 보여도 되는가? (스누즈X, 설치되지 않음)
-  const [canInstall, setCanInstall] = useState(false);
-
-  // 네이티브 설치 프롬프트가 가능한가? (BIP 확보 여부)
-  const [readyToPrompt, setReadyToPrompt] = useState(false);
-
-  // 크롬류 지원 여부(참고용)
-  const [supported, setSupported] = useState(false);
-
-  const isSnoozed = () => {
-    if (typeof window === "undefined") return false;
-    let until = 0;
-    try {
-      until = Number(localStorage.getItem(KEY_SNOOZE_UNTIL) || 0);
-    } catch {}
-    return Date.now() < until;
-  };
-
-  const snooze = useCallback((days = snoozeDays) => {
-    const until = Date.now() + days * 24 * 60 * 60 * 1000;
-    try {
-      localStorage.setItem(KEY_SNOOZE_UNTIL, String(until));
-    } catch {}
-    setCanInstall(false);
-    setReadyToPrompt(false);
-  }, [snoozeDays]);
-
-  const recompute = useCallback(() => {
-    const standalone = detectStandalone();
-    setStandalone(standalone);
-
-    // 배너 노출 조건
-    if (standalone || isSnoozed()) {
-      setCanInstall(false);
-    } else {
-      // ✅ 배너는 플랫폼 무관 “안내형”으로라도 노출
-      setCanInstall(true);
-    }
-
-    // 네이티브 프롬프트 가능 여부
-    // iOS는 항상 false (시스템 프롬프트 없음)
-    setReadyToPrompt(!!deferredRef.current && !isIOS);
-
-  }, [isIOS]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const onBIP = (e) => {
-      // 우리가 직접 띄울 것이므로 기본 동작 방지
-      e.preventDefault();
-      deferredRef.current = e;
-      setSupported(true);
-      recompute();
+  const snooze = useCallback(
+    (days = snoozeDays) => {
+      const until = Date.now() + Number(days || 0) * 24 * 60 * 60 * 1000;
       try {
-        window.dispatchEvent(new CustomEvent("PWA_INSTALL_READY"));
+        localStorage.setItem(KEY_SNOOZE_UNTIL, String(until));
       } catch {}
-    };
+    },
+    [snoozeDays]
+  );
 
-    const onInstalled = () => {
-      setStandalone(true);
-      setCanInstall(false);
-      setReadyToPrompt(false);
-      snooze(365);
-    };
-
-    // 강제 배너 노출 (테스트/디버그용)
-    const onShowAgain = () => {
-      if (detectStandalone() || isSnoozed()) {
-        setCanInstall(false);
-        return;
-      }
-      // 배너는 언제나 노출 가능(안내형), BIP 오면 자동 전환
-      setCanInstall(true);
-      setReadyToPrompt(!!deferredRef.current && !isIOS);
-    };
-
-    window.addEventListener("beforeinstallprompt", onBIP);
-    window.addEventListener("appinstalled", onInstalled);
-    window.addEventListener("PWA_INSTALL_SHOW_AGAIN", onShowAgain);
-
-    // 초기 계산
-    setTimeout(recompute, 0);
-
-    return () => {
-      window.removeEventListener("beforeinstallprompt", onBIP);
-      window.removeEventListener("appinstalled", onInstalled);
-      window.removeEventListener("PWA_INSTALL_SHOW_AGAIN", onShowAgain);
-    };
-  }, [isIOS, recompute, snooze]);
-
-  const promptInstall = useCallback(async () => {
-    const ev = deferredRef.current;
-    if (!ev) return null; // 아직 준비 안 됨
-    try {
-      ev.prompt();
-      const choice = await ev.userChoice; // { outcome: 'accepted' | 'dismissed' }
-      deferredRef.current = null;
-      setSupported(false);
-      setReadyToPrompt(false);
-      return choice?.outcome;
-    } finally {
-      // 닫기/스누즈는 호출측에서
-    }
-  }, []);
-
-  // (선택) 디버깅 편의
-  try {
-    window.PWA_DEBUG = {
-      isIOS,
-      isStandalone: isStandaloneState,
-      supported,
-      canInstall,
-      readyToPrompt,
-      snoozed: isSnoozed(),
-      hasDeferred: !!deferredRef.current,
-    };
-  } catch {}
+  const promptInstall = useCallback(async () => null, []);
 
   return {
     isIOS,
-    isStandalone: isStandaloneState,
-    supported,
-    canInstall,     // 배너 노출 여부
-    readyToPrompt,  // 네이티브 설치 가능 여부(BIP 확보)
-    promptInstall,  // 네이티브 설치 호출
-    snooze,         // 배너 닫기(쿨다운)
+    isSamsungInternet,
+    isStandalone,
+    supported: false,
+    canInstall: false,
+    readyToPrompt: false,
+    promptInstall,
+    snooze,
   };
 }

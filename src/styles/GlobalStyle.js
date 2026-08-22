@@ -1,6 +1,37 @@
+//src/styles/GlobalStyle.js
 import { createGlobalStyle } from "styled-components";
 
 const GlobalStyle = createGlobalStyle`
+  :root {
+    --gm-primary: ${({ theme }) => theme.colors.primary};
+    --gm-primary-dark: ${({ theme }) => theme.colors.primaryDark};
+    --gm-primary-soft: ${({ theme }) => theme.colors.primaryLight};
+    --gm-gold: ${({ theme }) => theme.colors.gold};
+    --gm-gold-soft: ${({ theme }) => theme.colors.goldLight};
+    --gm-mint: ${({ theme }) => theme.colors.accentMint};
+    --gm-mint-soft: ${({ theme }) => theme.semantic.alertSuccessBg};
+    --gm-text: ${({ theme }) => theme.colors.text};
+    --gm-text-secondary: ${({ theme }) => theme.colors.textSecondary};
+    --gm-text-light: ${({ theme }) => theme.colors.textLight};
+    --gm-background: ${({ theme }) => theme.colors.background};
+    --gm-surface: ${({ theme }) => theme.colors.surface};
+    --gm-surface-alt: ${({ theme }) => theme.colors.surfaceAlt};
+    --gm-elevated: ${({ theme }) => theme.colors.elevated};
+    --gm-border: ${({ theme }) => theme.colors.border};
+    --gm-border-strong: ${({ theme }) => theme.colors.borderStrong};
+    --gm-info: ${({ theme }) => theme.colors.info};
+    --gm-info-soft: ${({ theme }) => theme.semantic.alertInfoBg};
+    --gm-success: ${({ theme }) => theme.colors.success};
+    --gm-success-soft: ${({ theme }) => theme.semantic.alertSuccessBg};
+    --gm-warning: ${({ theme }) => theme.colors.warning};
+    --gm-warning-soft: ${({ theme }) => theme.semantic.alertWarningBg};
+    --gm-error: ${({ theme }) => theme.colors.error};
+    --gm-error-soft: ${({ theme }) => theme.semantic.alertErrorBg};
+    --gm-overlay: ${({ theme }) => theme.semantic.overlay};
+    --gm-shadow-card: ${({ theme }) => theme.shadows.card};
+    --gm-shadow-hover: ${({ theme }) => theme.shadows.hover};
+  }
+
   *, *::before, *::after { box-sizing: border-box; }
   * { margin: 0; }
 
@@ -32,17 +63,15 @@ const GlobalStyle = createGlobalStyle`
     text-rendering: optimizeLegibility;
   }
 
-  body:not(.chat-mode) {
+  body {
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
   }
-  body.chat-mode { padding-top: 0; padding-bottom: 0; }
 
   #root {
     min-height: 100%;
     display: flex;
     flex-direction: column;
-    isolation: isolate;
   }
 
   img, picture, video, canvas, svg { display: block; max-width: 100%; height: auto; }

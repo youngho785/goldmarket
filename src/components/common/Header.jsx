@@ -1,3 +1,4 @@
+//src/components/common/Header.jsx
 import React, { useEffect } from 'react';
 import styled from 'styled-components';
 import { useNotificationContext } from '../../context/NotificationContext';

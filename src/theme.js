@@ -60,9 +60,9 @@ export const theme = {
     error: "#A73D45",
     danger: "#A73D45",
 
-    background: "#F5F1E8",
-    surface: "#FFFDFA",
-    surfaceAlt: "#EFEAE0",
+    background: "#F9F6EE",
+    surface: "#FFFEFB",
+    surfaceAlt: "#F3EEE3",
     elevated: "#FFFFFF",
     white: "#FFFFFF",
 
@@ -82,7 +82,8 @@ export const theme = {
     accentMint: "#477768",
     accentCoral: "#A75B58",
     gold: "#AF8434",
-    goldLight: "#F2E7CD",
+    goldLight: "#F7ECD2",
+    disabled: "#B8B8B2",
 
     alertBg: "#A73D45",
     alertText: "#FFFFFF",
@@ -95,7 +96,9 @@ export const theme = {
     gold: "linear-gradient(135deg, #C8A55A 0%, #8B6322 100%)",
     success: "linear-gradient(135deg, #2D6A57, #477768)",
     mintGlow: "linear-gradient(135deg, #EDF2EE, #F4F0E7)",
-    page: "linear-gradient(180deg, #FAF8F2 0%, #F5F1E8 100%)",
+    page: "linear-gradient(180deg, #FFFCF6 0%, #F8F4EA 100%)",
+    goldShimmer: "linear-gradient(90deg, #8B6322 0%, #C0943C 22%, #E5C66A 50%, #C0943C 78%, #8B6322 100%)",
+    recommendation: "linear-gradient(135deg, #E8EDF1 0%, #F7ECD2 100%)",
   },
   on: {
     primary: "#FFFFFF",
@@ -158,6 +161,7 @@ export const darkTheme = {
     linkHover: "#F7E6BA",
     gold: "#D3B16C",
     goldLight: "#3B3223",
+    disabled: "#66717D",
     buttonText: "#0B1724",
     onPrimary: "#0B1724",
   },
@@ -168,6 +172,8 @@ export const darkTheme = {
     success: "linear-gradient(135deg, #4C9077, #68A28E)",
     mintGlow: "linear-gradient(135deg, #17283B, #192B3F)",
     page: "linear-gradient(180deg, #0E1C2B 0%, #0B1724 100%)",
+    goldShimmer: "linear-gradient(90deg, #A8792E 0%, #D3B16C 24%, #F0D79E 50%, #D3B16C 76%, #A8792E 100%)",
+    recommendation: "linear-gradient(135deg, #26394C 0%, #3B3223 100%)",
   },
   on: {
     primary: "#0B1724",

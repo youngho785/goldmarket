@@ -71,6 +71,19 @@ export default function VerifyEmail() {
   const mode = params.get("mode");
   const continueUrl = params.get("continueUrl");
 
+  const continuePath = useMemo(() => {
+    if (!continueUrl || typeof window === "undefined") return "";
+    try {
+      const url = new URL(continueUrl, window.location.origin);
+      if (url.origin !== window.location.origin) return "";
+      return `${url.pathname}${url.search}${url.hash}`;
+    } catch {
+      return "";
+    }
+  }, [continueUrl]);
+
+  const destination = continuePath || "/";
+
   /** 같은 브라우저에서 열렸고 세션에 임시 자격이 있으면 자동 로그인 */
   const tryAutoLogin = async () => {
     let email = "";
@@ -130,7 +143,7 @@ export default function VerifyEmail() {
                   }
                 } catch {}
               }
-              navigate("/", { replace: true });
+              navigate(destination, { replace: true });
             }, REDIRECT_DELAY);
             return;
           }
@@ -148,7 +161,7 @@ export default function VerifyEmail() {
           }
           if (auth.currentUser.emailVerified) {
             setMessage("✅ 이메일 인증 및 자동 로그인이 완료되었습니다! 이동합니다.");
-            setTimeout(() => navigate("/", { replace: true }), REDIRECT_DELAY);
+            setTimeout(() => navigate(destination, { replace: true }), REDIRECT_DELAY);
             return;
           }
         }
@@ -176,7 +189,7 @@ export default function VerifyEmail() {
     })();
 
     return () => { cancelled = true; };
-  }, [mode, oobCode, continueUrl, navigate]);
+  }, [mode, oobCode, continueUrl, destination, navigate]);
 
   /* 2) 로그인 상태에서 폴링 */
   useEffect(() => {
@@ -200,7 +213,7 @@ export default function VerifyEmail() {
                 }
               } catch {}
             }
-            navigate("/", { replace: true });
+            navigate(destination, { replace: true });
           }, REDIRECT_DELAY);
         }
       } catch (e) {
@@ -211,7 +224,7 @@ export default function VerifyEmail() {
     }, 4000);
 
     return () => { clearInterval(itv); setChecking(false); };
-  }, [processingLink, continueUrl, navigate]);
+  }, [processingLink, continueUrl, destination, navigate]);
 
   /* 3) 재전송 */
   const handleResend = async () => {
@@ -221,7 +234,10 @@ export default function VerifyEmail() {
       const user = auth.currentUser;
       if (!user) throw new Error("로그인이 필요합니다.");
       await sendEmailVerification(user, {
-        url: `${window.location.origin}/verify-email`,
+        url:
+          continuePath && continuePath !== "/verify-email"
+            ? `${window.location.origin}${continuePath}`
+            : `${window.location.origin}/verify-email`,
         handleCodeInApp: true,
       });
       setMessage("📧 인증 메일이 재전송되었습니다. 스팸/프로모션함도 확인해 주세요!");
@@ -246,14 +262,14 @@ export default function VerifyEmail() {
       <Title>이메일 인증</Title>
 
       {quizBonusResult && (
-        <Message $color="green">
+        <Message $color="var(--gm-success)">
           {quizBonusResult.alreadyClaimed
             ? "퀵퀴즈 보너스는 이미 지급된 계정입니다."
             : `퀵퀴즈 보너스 ${Number(quizBonusResult.creditedG || 0.01).toFixed(2)}g 적립이 완료되었습니다.`}
         </Message>
       )}
       {quizBonusError && (
-        <Message $color="#92400e">
+        <Message $color="var(--gm-warning)">
           회원가입은 완료됐지만 퀵퀴즈 보너스 확인이 필요합니다. 이메일 인증 후 퀵퀴즈 페이지에서 다시 확인해 주세요.
         </Message>
       )}
@@ -265,9 +281,9 @@ export default function VerifyEmail() {
           {!auth.currentUser ? (
             <>
               <Message>{message || "이 페이지는 로그인 후에만 접근할 수 있습니다."}</Message>
-              {pendingEmail && <Message $color="#007">최근 가입 시도: <strong>{pendingEmail}</strong></Message>}
-              <Button onClick={() => navigate("/login")}>로그인 하러 가기</Button>
-              <Message $color="#777" style={{ fontSize: "0.9rem" }}>
+              {pendingEmail && <Message $color="var(--gm-info)">최근 가입 시도: <strong>{pendingEmail}</strong></Message>}
+              <Button onClick={() => navigate("/login", { state: { from: destination } })}>로그인 하러 가기</Button>
+              <Message $color="var(--gm-text-secondary)" style={{ fontSize: "0.9rem" }}>
                 모바일 메일앱에서 링크가 잘 안 열리면 브라우저(크롬/사파리)로 다시 열어주세요.
               </Message>
             </>
@@ -275,8 +291,8 @@ export default function VerifyEmail() {
             <>
               {auth.currentUser.emailVerified ? (
                 <>
-                  <Message $color="green">이미 이메일 인증을 완료하셨습니다.</Message>
-                  <Button onClick={() => navigate("/", { replace: true })}>홈으로 이동</Button>
+                  <Message $color="var(--gm-success)">이미 이메일 인증을 완료하셨습니다.</Message>
+                  <Button onClick={() => navigate(destination, { replace: true })}>{destination === "/" ? "홈으로 이동" : "계속하기"}</Button>
                 </>
               ) : (
                 <>
@@ -285,13 +301,13 @@ export default function VerifyEmail() {
                     <br />
                     링크 클릭 또는 아래 버튼으로 재전송 후 인증해 주세요.
                   </Message>
-                  <Message $color="#007"><strong>{auth.currentUser.email}</strong></Message>
+                  <Message $color="var(--gm-info)"><strong>{auth.currentUser.email}</strong></Message>
                   <Button onClick={handleResend} disabled={checking || resending}>
                     {resending ? "재전송 중…" : "인증메일 재전송"}
                   </Button>
-                  {checking && <Message $color="green">인증 상태 확인 중...</Message>}
+                  {checking && <Message $color="var(--gm-success)">인증 상태 확인 중...</Message>}
                   {message && (
-                    <Message $color={message.startsWith("✅") ? "green" : message.startsWith("❌") ? "red" : "#555"}>
+                    <Message $color={message.startsWith("✅") ? "var(--gm-success)" : message.startsWith("❌") ? "var(--gm-error)" : "var(--gm-text-secondary)"}>
                       {message}
                     </Message>
                   )}

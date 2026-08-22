@@ -5,7 +5,19 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist', 'functions/lib']),
+  globalIgnores([
+    'dist/**',
+    'functions/lib/**',
+    '.firebase/**',
+    'backup-*/**',
+
+    // Android/Capacitor 자동 생성·복사 산출물만 제외
+    'android/.gradle/**',
+    'android/build/**',
+    'android/app/build/**',
+    'android/capacitor-cordova-android-plugins/build/**',
+    'android/app/src/main/assets/**',
+  ]),
   {
     files: ['**/*.{js,jsx}'],
     extends: [

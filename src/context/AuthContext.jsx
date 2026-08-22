@@ -1,5 +1,14 @@
-// src/context/AuthContext.js
-import React, { createContext, useContext, useState, useEffect, useRef, useMemo } from "react";
+// src/context/AuthContext.jsx
+
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+} from "react";
+
 import {
   onIdTokenChanged,
   getIdTokenResult,
@@ -15,11 +24,22 @@ import {
   updateAuthProfileFields as authUpdateProfile,
   signUp as authSignUp,
 } from "../services/authService";
+
 import { auth } from "../firebase/firebase";
 
 // ⬇️ Firestore 접근용
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  setDoc,
+  serverTimestamp,
+} from "firebase/firestore";
+
 import { db } from "../firebase/firebase";
+
+// ✅ Android Native Push
+import { isAndroid } from "../platform/runtime";
+import { initializeNativePush } from "../push/nativePush";
 
 // ✅ 스플래시(Loader) 임포트
 import Loader from "../components/common/Loader";
@@ -50,118 +70,293 @@ export const AuthProvider = ({ children }) => {
   // 🔸 null 순간 보호용 타이머 id 저장
   const nullTimerRef = useRef(null);
 
-  // Firebase Auth 토큰/유저 변화 감지
+  /*
+   * Firebase Auth 토큰/유저 변화 감지
+   */
   useEffect(() => {
-    const unsubscribe = onIdTokenChanged(auth, async (currentUser) => {
-      // 이전 대기 타이머 클리어
-      if (nullTimerRef.current) {
-        clearTimeout(nullTimerRef.current);
-        nullTimerRef.current = null;
-      }
-
-      if (currentUser) {
-        setUser(currentUser);
-        setIsEmailVerified(currentUser.emailVerified);
-
-        try {
-          const tokenResult = await getIdTokenResult(currentUser);
-          const superAdmin = tokenResult.claims.superAdmin === true;
-          setIsSuperAdmin(superAdmin);
-          setIsAdmin(tokenResult.claims.admin === true || superAdmin);
-        } catch {
-          setIsAdmin(false);
-          setIsSuperAdmin(false);
-        }
-
-        // ⬇️ 이메일 인증 완료된 사용자의 프로필 문서를 자동 생성(없을 때만)
-        if (currentUser.emailVerified) {
-          try {
-            const userDocRef = doc(db, "users", currentUser.uid);
-            const snap = await getDoc(userDocRef);
-            if (!snap.exists()) {
-              const nickname =
-                localStorage.getItem(`pending_nickname_${currentUser.uid}`) ||
-                currentUser.displayName ||
-                "";
-              const phone =
-                localStorage.getItem(`pending_phone_${currentUser.uid}`) || "";
-              await setDoc(userDocRef, {
-                nickname,
-                phone,
-                email: currentUser.email,
-                createdAt: serverTimestamp(),
-              });
-              localStorage.removeItem(`pending_nickname_${currentUser.uid}`);
-              localStorage.removeItem(`pending_phone_${currentUser.uid}`);
-            }
-          } catch (e) {
-            console.warn("프로필 자동 생성 실패:", e);
-          }
-        }
-
-        setLoading(false);
-      } else {
-        // 🔐 비번 변경 직후 등 토큰 재발급 과정에서 잠깐 null일 수 있으므로
-        // 아주 짧게(100ms) 대기 후 최종 상태 확정
-        nullTimerRef.current = setTimeout(() => {
-          const u = auth.currentUser;
-          if (u) {
-            setUser(u);
-            setIsEmailVerified(u.emailVerified);
-          } else {
-        setUser(null);
-        setIsAdmin(false);
-        setIsSuperAdmin(false);
-            setIsEmailVerified(false);
-          }
-          setLoading(false);
+    const unsubscribe = onIdTokenChanged(
+      auth,
+      async (currentUser) => {
+        // 이전 대기 타이머 클리어
+        if (nullTimerRef.current) {
+          clearTimeout(nullTimerRef.current);
           nullTimerRef.current = null;
-        }, 100);
+        }
+
+        if (currentUser) {
+          setUser(currentUser);
+          setIsEmailVerified(currentUser.emailVerified);
+
+          try {
+            const tokenResult =
+              await getIdTokenResult(currentUser);
+
+            const superAdmin =
+              tokenResult.claims.superAdmin === true;
+
+            setIsSuperAdmin(superAdmin);
+
+            setIsAdmin(
+              tokenResult.claims.admin === true ||
+                superAdmin
+            );
+          } catch {
+            setIsAdmin(false);
+            setIsSuperAdmin(false);
+          }
+
+          /*
+           * 이메일 인증 완료된 사용자의
+           * 프로필 문서를 자동 생성(없을 때만)
+           */
+          if (currentUser.emailVerified) {
+            try {
+              const userDocRef = doc(
+                db,
+                "users",
+                currentUser.uid
+              );
+
+              const snap = await getDoc(userDocRef);
+
+              if (!snap.exists()) {
+                const nickname =
+                  localStorage.getItem(
+                    `pending_nickname_${currentUser.uid}`
+                  ) ||
+                  currentUser.displayName ||
+                  "";
+
+                const phone =
+                  localStorage.getItem(
+                    `pending_phone_${currentUser.uid}`
+                  ) || "";
+
+                await setDoc(userDocRef, {
+                  nickname,
+                  phone,
+                  email: currentUser.email,
+                  createdAt: serverTimestamp(),
+                });
+
+                localStorage.removeItem(
+                  `pending_nickname_${currentUser.uid}`
+                );
+
+                localStorage.removeItem(
+                  `pending_phone_${currentUser.uid}`
+                );
+              }
+            } catch (e) {
+              console.warn(
+                "프로필 자동 생성 실패:",
+                e
+              );
+            }
+          }
+
+          setLoading(false);
+        } else {
+          /*
+           * 비번 변경 직후 등 토큰 재발급 과정에서
+           * 잠깐 null일 수 있으므로 아주 짧게(100ms)
+           * 대기 후 최종 상태 확정
+           */
+          nullTimerRef.current = setTimeout(() => {
+            const u = auth.currentUser;
+
+            if (u) {
+              setUser(u);
+              setIsEmailVerified(u.emailVerified);
+            } else {
+              setUser(null);
+              setIsAdmin(false);
+              setIsSuperAdmin(false);
+              setIsEmailVerified(false);
+            }
+
+            setLoading(false);
+            nullTimerRef.current = null;
+          }, 100);
+        }
       }
-    });
+    );
 
     return () => {
       if (nullTimerRef.current) {
         clearTimeout(nullTimerRef.current);
       }
+
       unsubscribe();
     };
   }, []);
 
-  // ✅ 컨텍스트 value 메모이즈 (불필요한 전역 리렌더 방지)
-  const ctxValue = useMemo(() => {
-    const login = (email, password) => authLogin(email, password);
+  /*
+   * ─────────────────────────────────────────────
+   * Android Native Push 연결
+   * ─────────────────────────────────────────────
+   *
+   * 로그인 상태:
+   *   현재 회원 UID와 Android FCM 토큰을 연결합니다.
+   *
+   * 로그아웃 상태:
+   *   Native Push 자체는 계속 초기화된 상태로 유지합니다.
+   *
+   * 중요:
+   *   로그아웃한다고 FCM 토큰을 삭제하지 않습니다.
+   *   따라서 이미 신청한 금교환의 진행 알림이나
+   *   동의한 금시세·혜택 알림은 계속 받을 수 있습니다.
+   *
+   * 알림 권한이 아직 prompt 상태라면
+   * 여기서는 권한창을 자동으로 띄우지 않습니다.
+   */
+  useEffect(() => {
+    if (!isAndroid || loading) {
+      return;
+    }
 
-    // 회원가입은 서비스 레이어로 단일화 (프로필 생성 + 인증메일 포함)
-    const signUp = async ({ email, password, displayName, nickname, phone }) => {
-      const user = await authSignUp({ email, password, displayName, nickname, phone });
-      return { user }; // 기존 화면과의 호환 위해 유사한 형태로 반환
+    let cancelled = false;
+
+    const initialize = async () => {
+      try {
+        const result = await initializeNativePush(
+          user?.uid || ""
+        );
+
+        if (cancelled) {
+          return;
+        }
+
+        if (
+          import.meta.env.DEV &&
+          result?.supported
+        ) {
+          console.log(
+            "[AuthContext] Native Push initialized:",
+            {
+              uid: user?.uid || null,
+              permission:
+                result.permission || "unknown",
+              hasToken: !!result.token,
+            }
+          );
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error(
+            "[AuthContext] Native Push initialization failed:",
+            error
+          );
+        }
+      }
     };
 
-    const logout = () => authLogout();
-    const resetPassword = (email) => authResetPassword(email);
-    const changePassword = (newPassword) => authChangePassword(newPassword);
-    const updateProfile = (profile) => authUpdateProfile(profile);
+    initialize();
 
-    // 이메일 인증 재전송(기존 API 유지)
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, user?.uid]);
+
+  /*
+   * 컨텍스트 value 메모이즈
+   * 불필요한 전역 리렌더 방지
+   */
+  const ctxValue = useMemo(() => {
+    const login = (email, password) =>
+      authLogin(email, password);
+
+    /*
+     * 회원가입은 서비스 레이어로 단일화
+     * 프로필 생성 + 인증메일 포함
+     */
+    const signUp = async ({
+      email,
+      password,
+      displayName,
+      nickname,
+      phone,
+    }) => {
+      const user = await authSignUp({
+        email,
+        password,
+        displayName,
+        nickname,
+        phone,
+      });
+
+      // 기존 화면과의 호환 위해 유사한 형태로 반환
+      return { user };
+    };
+
+    /*
+     * 중요:
+     *
+     * 로그아웃은 Firebase Auth 세션만 종료합니다.
+     *
+     * Android FCM 토큰,
+     * users/{uid}.fcmTokens[],
+     * users/{uid}.nativeFcmTokens[]
+     * 는 여기서 삭제하지 않습니다.
+     */
+    const logout = () => authLogout();
+
+    const resetPassword = (email) =>
+      authResetPassword(email);
+
+    const changePassword = (newPassword) =>
+      authChangePassword(newPassword);
+
+    const updateProfile = (profile) =>
+      authUpdateProfile(profile);
+
+    /*
+     * 이메일 인증 재전송
+     * 기존 API 유지
+     */
     const sendEmailVerificationLink = () => {
       if (!auth.currentUser) {
-        return Promise.reject(new Error("로그인된 사용자가 없습니다."));
+        return Promise.reject(
+          new Error(
+            "로그인된 사용자가 없습니다."
+          )
+        );
       }
-      return sendEmailVerification(auth.currentUser, {
-        url: `${window.location.origin}/verify-email`,
-        handleCodeInApp: true,
-      });
+
+      return sendEmailVerification(
+        auth.currentUser,
+        {
+          url: `${window.location.origin}/verify-email`,
+          handleCodeInApp: true,
+        }
+      );
     };
 
-    // 커스텀 클레임 최신화 헬퍼(운영 편의)
+    /*
+     * 커스텀 클레임 최신화 헬퍼
+     * 운영 편의
+     */
     const refreshClaims = async () => {
-      if (!auth.currentUser) return false;
+      if (!auth.currentUser) {
+        return false;
+      }
+
       await auth.currentUser.getIdToken(true);
-      const res = await getIdTokenResult(auth.currentUser);
-      const superAdmin = res.claims.superAdmin === true;
+
+      const res = await getIdTokenResult(
+        auth.currentUser
+      );
+
+      const superAdmin =
+        res.claims.superAdmin === true;
+
       setIsSuperAdmin(superAdmin);
-      setIsAdmin(res.claims.admin === true || superAdmin);
+
+      setIsAdmin(
+        res.claims.admin === true ||
+          superAdmin
+      );
+
       return true;
     };
 
@@ -177,10 +372,17 @@ export const AuthProvider = ({ children }) => {
       resetPassword,
       changePassword,
       updateProfile,
-      sendEmailVerification: sendEmailVerificationLink,
+      sendEmailVerification:
+        sendEmailVerificationLink,
       refreshClaims,
     };
-  }, [user, loading, isAdmin, isSuperAdmin, isEmailVerified]);
+  }, [
+    user,
+    loading,
+    isAdmin,
+    isSuperAdmin,
+    isEmailVerified,
+  ]);
 
   // ✅ 로딩 구간: 스플래시 표시
   if (loading) {
@@ -194,4 +396,5 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-export const useAuthContext = () => useContext(AuthContext);
+export const useAuthContext = () =>
+  useContext(AuthContext);

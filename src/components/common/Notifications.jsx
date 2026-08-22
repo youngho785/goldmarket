@@ -1,170 +1,296 @@
-//src/compoenets/common/Notifications.jsx
-import React, { useState, useEffect, useRef } from "react";
+//src/components/common/Notifications.jsx
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
-import {
-  listenToMyNotifications,
-  markNotificationAsRead,
-  markAllNotificationsAsRead,
-} from "../../services/notificationService";
-import { useNotificationContext } from "@/context/NotificationContext";
-import { callmarkChatAsRead } from "@/firebase/firebase";
 import styled from "styled-components";
+import { useNotificationContext } from "@/context/NotificationContext";
 
-// — styled components —
-const Wrapper = styled.div`position: relative;`;
+const Wrapper = styled.div`
+  position: relative;
+`;
+
 const Toggle = styled.button`
-  cursor: pointer; position: relative; border: 0; background: transparent; font-size: 18px;
-`;
-const Badge = styled.span`
-  position: absolute; top: -5px; right: -5px; background: red; color: #fff;
-  border-radius: 50%; padding: 2px 6px; font-size: 0.8em;
-`;
-const Dropdown = styled.div`
-  position: absolute; top: 120%; right: 0; width: 320px; background: #fff;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 100; max-height: 400px;
-  overflow-y: auto; border-radius: 8px;
-`;
-const Header = styled.div`
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;
-`;
-const Item = styled.div`
-  padding: 10px; border-bottom: 1px solid #eee; cursor: pointer;
-  background: ${({ unread }) => (unread ? "#f9f9f9" : "#fff")};
-  &:last-child { border-bottom: none; }
-`;
-const ChatItem = styled(Item)`background: #f0f8ff;`;
-const Title = styled.p`margin: 0 0 4px; font-weight: 700; font-size: .95em;`;
-const Body  = styled.p`margin: 0 0 4px; font-size: .9em; color: #333;`;
-const TimeText = styled.p`margin: 0; font-size: .8em; color: #999;`;
-const Button = styled.button`
-  background: none; border: none; color: ${({ theme }) => theme.colors.link}; cursor: pointer; font-size: .85em;
-  &:hover { text-decoration: underline; }
+  position: relative;
+  min-height: 40px;
+  padding: 6px 8px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: inherit;
+  cursor: pointer;
 `;
 
-// 안전한 Timestamp → Date 변환
-function toDateSafe(ts) {
-  try {
-    if (!ts) return null;
-    if (typeof ts.toDate === "function") return ts.toDate();
-    if (typeof ts.seconds === "number") return new Date(ts.seconds * 1000);
-    const d = new Date(ts);
-    return isNaN(d.getTime()) ? null : d;
-  } catch { return null; }
+const Badge = styled.span`
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: 18px;
+  padding: 1px 5px;
+  border-radius: 99px;
+  background: ${({ theme }) => theme.colors.error};
+  color: white;
+  font-size: .68rem;
+`;
+
+const Dropdown = styled.div`
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 1200;
+  width: min(340px, calc(100vw - 32px));
+  max-height: 420px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 14px;
+  background: ${({ theme }) => theme.colors.surface};
+  box-shadow: ${({ theme }) => theme.shadows.lg};
+
+  @media (max-width: 680px) {
+    position: fixed;
+    top: 128px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-height: min(58dvh, 430px);
+    border-radius: 14px;
+  }
+`;
+
+const Header = styled.div`
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
+  background: ${({ theme }) => theme.colors.surface};
+  font-weight: 800;
+`;
+
+const Item = styled.button`
+  display: block;
+  width: 100%;
+  min-height: auto;
+  padding: 12px 14px;
+  border: 0;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
+  border-radius: 0;
+  background: ${({ $unread, theme }) =>
+    $unread ? theme.semantic.alertInfoBg : theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
+  box-shadow: none;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    transform: none;
+    box-shadow: none;
+  }
+`;
+
+const Title = styled.p`
+  margin: 0 0 3px;
+  font-weight: 800;
+  line-height: 1.45;
+`;
+
+const Body = styled.p`
+  margin: 0 0 3px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  line-height: 1.55;
+`;
+
+const Time = styled.p`
+  margin: 0;
+  color: ${({ theme }) => theme.colors.textLight};
+  font-size: .78rem;
+`;
+
+const TextButton = styled.button`
+  min-height: 36px;
+  padding: 4px 6px;
+  border: 0;
+  background: transparent;
+  color: ${({ theme }) => theme.semantic.linkColor};
+  box-shadow: none;
+`;
+
+const FooterButton = styled(TextButton)`
+  position: sticky;
+  bottom: 0;
+  display: block;
+  width: 100%;
+  padding: 11px 14px;
+  border-top: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
+  background: ${({ theme }) => theme.colors.surface};
+  text-align: center;
+  font-weight: 800;
+`;
+
+function toDate(value) {
+  if (!value) return null;
+  if (typeof value.toDate === "function") return value.toDate();
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
-export default function Notifications({ userId }) {
-  const [notifications, setNotifications] = useState([]);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const navigate = useNavigate();
-  const { unreadChats } = useNotificationContext() || {};
+function safeInternalLink(value) {
+  if (!value) return "";
+  try {
+    const url = new URL(value, window.location.origin);
+    if (url.origin !== window.location.origin) return "";
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return "";
+  }
+}
+
+export default function Notifications() {
+  const {
+    latestNotifications,
+    unreadNotifications,
+    loading,
+    markOneRead,
+    markAllRead,
+  } = useNotificationContext();
+
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
   const wrapperRef = useRef(null);
+  const navigate = useNavigate();
 
-  // 1) 실시간 구독
-  useEffect(() => {
-    if (!userId) return;
-    const unsub = listenToMyNotifications(userId, setNotifications, 20);
-    return () => unsub && unsub();
-  }, [userId]);
-
-  // 2) 드롭다운 외부 클릭 닫기
-  useEffect(() => {
-    function handleClickOutside(e) {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
-        setDropdownOpen(false);
-      }
+  const visibleNotifications = useMemo(() => {
+    if (typeof window !== "undefined" && window.innerWidth <= 680) {
+      return latestNotifications.slice(0, 5);
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    return latestNotifications;
+  }, [latestNotifications]);
+
+  useEffect(() => {
+    const closeOutside = (event) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", closeOutside);
+    return () => document.removeEventListener("mousedown", closeOutside);
   }, []);
 
-  const handleNotificationClick = (n) => {
-    const link   = n?.link ?? n?.data?.link ?? "";
-    const type   = n?.type ?? n?.data?.type ?? "";
-    const chatId = n?.chatId ?? n?.meta?.chatId ?? n?.data?.chatId ?? null;
+  useEffect(() => {
+    if (!open) return undefined;
 
-    setDropdownOpen(false);
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [open]);
+
+  const openNotification = async (item) => {
+    setOpen(false);
+
+    if (!item.read) {
+      await markOneRead(item.id).catch(() => {});
+    }
+
+    const link = safeInternalLink(item.link || item.data?.link);
     if (link) navigate(link);
-
-    // 읽음 동기화 (알림 자체)
-    queueMicrotask(async () => {
-      try { await markNotificationAsRead(n.id, userId); } catch {}
-      // 채팅 알림인 경우: 해당 채팅의 롤업까지 읽음 처리
-      if (type === "chat" && chatId) {
-        try { await callmarkChatAsRead(chatId); } catch {}
-      }
-    });
   };
 
-  const handleChatClick = () => {
-    setDropdownOpen(false);
-    // 전역 채팅 배지는 채팅방을 실제로 열 때 Functions가 줄여줌
-    navigate("/chat");
-  };
+  const handleMarkAllRead = async () => {
+    if (busy) return;
 
-  const handleMarkAllRead = () => {
-    markAllNotificationsAsRead(userId).catch(() => {});
+    setBusy(true);
+    try {
+      await markAllRead();
+    } finally {
+      setBusy(false);
+    }
   };
-
-  const unreadNotifications = notifications.filter((n) => !n.read).length;
-  const totalBadge = (unreadNotifications || 0) + (unreadChats || 0);
 
   return (
     <Wrapper ref={wrapperRef}>
-      {/* 벨 아이콘 + 배지 */}
       <Toggle
         type="button"
         aria-label="알림 열기"
-        data-cy="notification-toggle"
-        onClick={() => setDropdownOpen((o) => !o)}
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
       >
         🔔
-        {totalBadge > 0 && <Badge data-cy="nav-notification-badge">{totalBadge}</Badge>}
+        {unreadNotifications > 0 && (
+          <Badge>
+            {unreadNotifications > 99 ? "99+" : unreadNotifications}
+          </Badge>
+        )}
       </Toggle>
 
-      {/* 드롭다운 */}
-      {dropdownOpen && (
-        <Dropdown data-cy="notification-dropdown">
+      {open && (
+        <Dropdown role="dialog" aria-label="최근 알림">
           <Header>
-            <span>알림</span>
-            {(unreadNotifications > 0 || unreadChats > 0) && (
-              <Button onClick={handleMarkAllRead}>전체 읽음</Button>
+            <span>최근 알림</span>
+
+            {unreadNotifications > 0 && (
+              <TextButton
+                type="button"
+                disabled={busy}
+                onClick={handleMarkAllRead}
+              >
+                {busy ? "처리 중…" : "전체 읽음"}
+              </TextButton>
             )}
           </Header>
 
-          {/* 채팅 미읽음 요약 */}
-          {unreadChats > 0 && (
-            <ChatItem data-cy="notification-chat-item" unread onClick={handleChatClick}>
-              <Title>새 채팅 메시지 {unreadChats}건</Title>
-            </ChatItem>
-          )}
-
-          {/* 일반 알림 리스트 */}
-          {notifications.length === 0 ? (
-            <Item unread={false}><Body>알림이 없습니다.</Body></Item>
+          {loading ? (
+            <Item type="button" $unread={false} disabled>
+              <Body>알림을 불러오고 있습니다.</Body>
+            </Item>
+          ) : visibleNotifications.length === 0 ? (
+            <Item type="button" $unread={false} disabled>
+              <Body>알림이 없습니다.</Body>
+            </Item>
           ) : (
-            notifications.map((n) => {
-              const created = toDateSafe(n.createdAt);
+            visibleNotifications.map((item) => {
+              const createdAt = toDate(item.createdAt);
+
               return (
                 <Item
-                  key={n.id}
-                  unread={!n.read}
-                  data-cy="notification-item"
-                  onClick={() => handleNotificationClick(n)}
+                  type="button"
+                  key={item.id}
+                  $unread={!item.read}
+                  onClick={() => openNotification(item)}
                 >
-                  <Title>{n.title}</Title>
-                  <Body>{n.body}</Body>
-                  {created && (
-                    <TimeText>
-                      {formatDistanceToNow(created, { addSuffix: true, locale: ko })}
-                    </TimeText>
+                  <Title>{item.title || "알림"}</Title>
+                  {item.body && <Body>{item.body}</Body>}
+
+                  {createdAt && (
+                    <Time>
+                      {formatDistanceToNow(createdAt, {
+                        addSuffix: true,
+                        locale: ko,
+                      })}
+                    </Time>
                   )}
                 </Item>
               );
             })
           )}
+
+          <FooterButton
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              navigate("/notifications");
+            }}
+          >
+            알림 전체 보기
+          </FooterButton>
         </Dropdown>
       )}
     </Wrapper>

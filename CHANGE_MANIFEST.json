@@ -1,0 +1,48 @@
+{
+  "added": [
+    "android/WEB_ASSETS_SYNC_REQUIRED_KO.txt",
+    "android/app/src/main/res/drawable/ic_stat_goldmarket.xml",
+    "docs/IMPLEMENTATION_1_TO_4_KO.md",
+    "functions/scripts/test-booking-policy.mjs",
+    "functions/src/bookingPolicy.ts",
+    "src/components/admin/BookingAvailabilityManager.jsx",
+    "src/hooks/useBookingAvailability.js",
+    "src/services/bookingAvailabilityClient.js",
+    "src/services/nicknameClient.js"
+  ],
+  "changed": [
+    ".github/workflows/quality.yml",
+    "README.md",
+    "android/app/src/main/AndroidManifest.xml",
+    "docs/EXPERT_REVIEW_KO.md",
+    "docs/LEGACY_DATA_RETIREMENT_KO.md",
+    "docs/STAGING_SETUP_KO.md",
+    "firestore.rules",
+    "functions/package.json",
+    "functions/src/audit.ts",
+    "functions/src/index.ts",
+    "package.json",
+    "public/icons/notification-bell-badge-icon-96.png",
+    "src/components/admin/ExchangeList.jsx",
+    "src/firebase/firebase.js",
+    "src/pages/GoldExchange.jsx",
+    "src/pages/MyExchanges.jsx",
+    "src/pages/Register.jsx",
+    "src/pages/admin/AdminGoldExchange.jsx",
+    "src/pages/terms/Privacy.jsx",
+    "src/services/authService.js",
+    "src/services/userService.js",
+    "tests/rules/firestore.rules.test.mjs"
+  ],
+  "deleted": [
+    "functions/scripts/backfill-confirmations.mjs",
+    "src/components/PrivateRoute.jsx",
+    "src/components/SimpleGoldExchangeCalculator.jsx",
+    "src/components/common/LedSign.jsx",
+    "src/components/common/PrivateRoute.jsx",
+    "src/hooks/useAuth.js",
+    "src/utils/apiClient.js",
+    "src/utils/draft.js",
+    "src/utils/softWall.js"
+  ]
+}

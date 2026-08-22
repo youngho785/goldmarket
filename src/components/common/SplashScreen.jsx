@@ -1,5 +1,6 @@
 import React from "react";
 import styled, { keyframes } from "styled-components";
+import { theme as defaultTheme } from "@/theme";
 
 const fadeIn = keyframes`
   from { opacity: 0; transform: translateY(8px); }
@@ -23,15 +24,15 @@ const twinkle = keyframes`
 const Wrap = styled.div`
   position: fixed; inset: 0;
   display: flex; align-items: center; justify-content: center;
-  background: radial-gradient(1200px 900px at 70% 10%, #151515, #0b0b0d);
-  color: #fff; z-index: 9999;
+  background: radial-gradient(1200px 900px at 70% 10%, ${({ theme }) => theme.colors?.primary ?? defaultTheme.colors.primary}, ${({ theme }) => theme.colors?.primaryDark ?? defaultTheme.colors.primaryDark});
+  color: ${({ theme }) => theme.on?.primary ?? defaultTheme.on.primary}; z-index: 9999;
 `;
 
 const Card = styled.div`
   display: flex; flex-direction: column; align-items: center; gap: 20px;
   padding: 36px 28px; border-radius: 16px;
-  background: rgba(255, 255, 255, 0.02);
-  box-shadow: 0 10px 40px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.05);
+  background: color-mix(in srgb, ${({ theme }) => theme.on?.primary ?? defaultTheme.on.primary} 4%, transparent);
+  box-shadow: ${({ theme }) => theme.shadows?.lg ?? defaultTheme.shadows.lg};
   backdrop-filter: blur(6px);
   animation: ${fadeIn} 420ms ease-out both;
 `;
@@ -39,14 +40,7 @@ const Card = styled.div`
 const Brand = styled.h1`
   font-weight: 800; letter-spacing: 0.6px; margin: 0; text-align: center;
   font-size: clamp(24px, 4.5vw, 34px);
-  background: linear-gradient(
-    90deg,
-    #A8751A 0%,
-    #E9C46A 25%,
-    #FFF2BF 50%,
-    #E9C46A 75%,
-    #A8751A 100%
-  );
+  background: ${({ theme }) => theme.gradients?.goldShimmer ?? defaultTheme.gradients.goldShimmer};
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -56,13 +50,13 @@ const Brand = styled.h1`
 
 const Subtitle = styled.p`
   margin: 0; opacity: 0.9; font-size: 15px;
-  color: ${({ theme }) => theme.colors?.mutedText || "#d8d8d8"};
+  color: color-mix(in srgb, ${({ theme }) => theme.on?.primary ?? defaultTheme.on.primary} 78%, transparent);
 `;
 
 const Spinner = styled.div`
   width: 64px; height: 64px; border-radius: 50%;
-  border: 6px solid rgba(255,255,255,0.1);
-  border-top-color: ${({ theme }) => theme.colors?.primary || "#E9C46A"};
+  border: 6px solid color-mix(in srgb, ${({ theme }) => theme.on?.primary ?? defaultTheme.on.primary} 12%, transparent);
+  border-top-color: ${({ theme }) => theme.colors?.gold ?? defaultTheme.colors.gold};
   animation: ${rotate} 1s linear infinite;
 `;
 
@@ -71,8 +65,8 @@ const Twinkles = styled.div`
   &::before, &::after {
     content: "✦";
     position: absolute; top: 0;
-    color: #ffe9a8;
-    text-shadow: 0 0 8px rgba(255, 233, 168, 0.6);
+    color: ${({ theme }) => theme.colors?.goldLight ?? defaultTheme.colors.goldLight};
+    text-shadow: 0 0 8px color-mix(in srgb, ${({ theme }) => theme.colors?.goldLight ?? defaultTheme.colors.goldLight} 62%, transparent);
     animation: ${twinkle} 1.8s ease-in-out infinite;
   }
   &::before { left: 22px; animation-delay: .1s; }
@@ -82,7 +76,7 @@ const Twinkles = styled.div`
 // 접근성: 동작 줄이기 선호 시 애니메이션 최소화
 const ReduceMotion = styled.div`
   @media (prefers-reduced-motion: reduce) {
-    ${Spinner} { animation: none; border-top-color: #E9C46A; }
+    ${Spinner} { animation: none; border-top-color: ${({ theme }) => theme.colors?.gold ?? defaultTheme.colors.gold}; }
     ${Brand} { animation: none; }
     ${Twinkles}::before, ${Twinkles}::after { animation: none; opacity: .5; }
   }

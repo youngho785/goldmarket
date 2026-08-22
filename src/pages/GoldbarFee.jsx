@@ -142,7 +142,7 @@ const DividerDot = styled.span`
 const Input = styled.input`
   min-width: 160px;
   padding: 10px 12px;
-  border: 1px solid #e6e8eb;
+  border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 0;
   font-size: 1rem;
   background: ${({ theme }) => theme.colors.surface};
@@ -152,7 +152,7 @@ const Input = styled.input`
 const Select = styled.select`
   min-width: 120px;
   padding: 10px 12px;
-  border: 1px solid #e6e8eb;
+  border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 0;
   font-size: 1rem;
   background: ${({ theme }) => theme.colors.surface};
@@ -170,10 +170,10 @@ const ResultBox = styled.div`
   border-radius: 0;
   padding: 10px 14px;
   background:
-    linear-gradient(#fff, #fff) padding-box,
+    linear-gradient(${({ theme }) => theme.colors.surface}, ${({ theme }) => theme.colors.surface}) padding-box,
     conic-gradient(from 180deg at 50% 50%, ${({ theme }) => theme.colors.primary}66, transparent 30%, ${({ theme }) => theme.colors.primary}66) border-box;
   border: 2px solid transparent;
-  box-shadow: 0 8px 22px rgba(0,0,0,.08), 0 0 0 6px ${({ theme }) => theme.colors.primary}0d inset;
+  box-shadow: ${({ theme }) => theme.shadows.card};
   display: flex;
   align-items: center;
   gap: 10px;
@@ -252,7 +252,7 @@ const Table = styled.table`
     font-weight: 900;
     border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   }
-  tbody td { border-top: 1px solid #f0f2f5; }
+  tbody td { border-top: 1px solid ${({ theme }) => theme.colors.dividerSubtle}; }
   tbody tr:first-child td { border-top: none; }
 `;
 

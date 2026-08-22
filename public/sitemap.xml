@@ -6,6 +6,11 @@
     <priority>1</priority>
   </url>
   <url>
+    <loc>https://koreagoldmarket.com/gold-price</loc>
+    <changefreq>daily</changefreq>
+    <priority>1</priority>
+  </url>
+  <url>
     <loc>https://koreagoldmarket.com/gold-exchange</loc>
     <changefreq>weekly</changefreq>
     <priority>1</priority>

@@ -11,9 +11,11 @@ import {
   signInAnonymously,
   linkWithCredential,
   EmailAuthProvider,
+  deleteUser,
   // 필요시 setPersistence, browserLocalPersistence, browserSessionPersistence 추가 가능
 } from "firebase/auth";
-import { auth } from "../firebase/firebase";
+import { auth, functions } from "../firebase/firebase";
+import { httpsCallable } from "firebase/functions";
 import { ensureUserProfileOnSignup } from "./userService";
 
 /* ────────────────────────────────────────────────────────────────────────── *
@@ -32,6 +34,22 @@ const EMAIL_ACTION_SETTINGS = {
   url: `${ORIGIN}/verify-email`,
   handleCodeInApp: true,
 };
+
+function buildEmailActionSettings(continueUrl = "") {
+  const value = String(continueUrl || "").trim();
+  if (!value || !ORIGIN) return EMAIL_ACTION_SETTINGS;
+
+  try {
+    const url = new URL(value, ORIGIN);
+    if (url.origin !== ORIGIN) return EMAIL_ACTION_SETTINGS;
+    return {
+      url: url.href,
+      handleCodeInApp: true,
+    };
+  } catch {
+    return EMAIL_ACTION_SETTINGS;
+  }
+}
 
 function requireAuthUser() {
   if (!auth.currentUser) {
@@ -56,8 +74,9 @@ export async function login(email, password) {
  * 회원가입
  * 1) Auth 계정 생성
  * 2) Auth.displayName 설정
- * 3) Firestore profiles/users 생성(실패해도 가입은 진행)
- * 4) 인증 메일 발송
+ * 3) 서버에서 닉네임 원자 선점
+ * 4) Firestore profiles/users 생성
+ * 5) 인증 메일 발송
  */
 export async function signUp({
   email,
@@ -65,6 +84,7 @@ export async function signUp({
   displayName = "",
   nickname = "",
   phone = "",
+  continueUrl = "",
   // nicknameLower 등 추가 파라미터가 와도 무시(하위호환)
 }) {
   const emailTrim = normalizeEmail(email);
@@ -80,7 +100,17 @@ export async function signUp({
   const safeName = (displayName || "").trim();
   await _updateAuthProfile(user, { displayName: safeName });
 
-  // 3) Firestore 문서 보장(이름/닉네임 분리 저장) — 실패해도 가입/인증은 계속
+  // 3) 닉네임을 서버 트랜잭션으로 최종 선점합니다.
+  // 사전 중복 확인과 가입 클릭 사이에 다른 회원이 같은 닉네임을 가져가는 경쟁 조건을 막습니다.
+  try {
+    const claim = httpsCallable(functions, "claimNickname");
+    await claim({ nickname: (nickname || "").trim() });
+  } catch (claimError) {
+    try { await deleteUser(user); } catch { /* 신규 Auth 계정 롤백 실패는 콘솔에서 후속 점검 */ }
+    throw claimError;
+  }
+
+  // 4) Firestore 문서 보장(이름/닉네임 분리 저장) — 실패해도 가입/인증은 계속
   try {
     await ensureUserProfileOnSignup(user, {
       displayName: safeName,
@@ -92,8 +122,8 @@ export async function signUp({
     console.warn("ensureUserProfileOnSignup 실패(가입은 계속):", e);
   }
 
-  // 4) 인증 메일
-  await sendEmailVerification(user, EMAIL_ACTION_SETTINGS);
+  // 5) 인증 메일
+  await sendEmailVerification(user, buildEmailActionSettings(continueUrl));
 
   return user;
 }
@@ -137,10 +167,10 @@ export async function updateAuthProfileFields(profile) {
  * ────────────────────────────────────────────────────────────────────────── */
 
 /** 이메일 인증이 안 되어 있으면 재발송하고 true, 이미 인증이면 false 반환 */
-export async function sendVerificationEmailIfNeeded() {
+export async function sendVerificationEmailIfNeeded(continueUrl = "") {
   const u = requireAuthUser();
   if (u.emailVerified) return false;
-  await sendEmailVerification(u, EMAIL_ACTION_SETTINGS);
+  await sendEmailVerification(u, buildEmailActionSettings(continueUrl));
   return true;
 }
 

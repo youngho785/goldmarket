@@ -1,0 +1,13 @@
+{
+  "name": "goldmarket-firestore-rules-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test firestore.rules.test.mjs"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.1",
+    "firebase": "^12.17.0",
+    "install": "^0.13.0"
+  }
+}

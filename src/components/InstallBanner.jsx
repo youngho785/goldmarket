@@ -1,7 +1,11 @@
 // src/components/InstallBanner.jsx
 // ================================
 import React, { useEffect, useMemo, useState, useRef } from "react";
-import useInstallPrompt from "@/hooks/useInstallPrompt";
+import useInstallPrompt, {
+  APP_INSTALL_NUDGE_EVENT,
+  APP_INSTALL_REQUEST_EVENT,
+  clearInstallSnooze,
+} from "@/hooks/useInstallPrompt";
 
 // 세션 단위 노출 가드 키
 const SESSION_KEY = "install_banner_shown_session";
@@ -13,6 +17,7 @@ const PROMO_LOCK = "__GM_PROMO_BUSY__"; // e.g. 'install' | null
 
 export default function InstallBanner({
   delayMs = 12000,
+  autoShow = true,
   /**
    * 스누즈 일수
    * - 1(기본): 24시간 동안 다시 안 뜸
@@ -29,6 +34,7 @@ export default function InstallBanner({
 }) {
   const {
     isIOS,
+    isSamsungInternet,
     canInstall,        // 배너 노출 (스누즈 X + 미설치) — 훅이 단일 소스로 관리
     readyToPrompt,     // 네이티브 설치 가능(BIP 확보)
     supported,         // 참고용
@@ -55,6 +61,39 @@ export default function InstallBanner({
   const waitingRef = useRef(false);
   waitingRef.current = waiting;
   const timeoutRef = useRef(null);
+
+  // 프로필/모바일 메뉴의 명시적 요청은 기존 스누즈와 무관하게 다시 엽니다.
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const openRequested = () => {
+      if (isSamsungInternet) return;
+      clearInstallSnooze();
+      try { window.dispatchEvent(new Event("PWA_INSTALL_SHOW_AGAIN")); } catch {}
+      setWaiting(false);
+      setShowHelp(isIOS);
+      setShow(true);
+    };
+    const openContextual = () => {
+      if (isSamsungInternet || !canInstall || window[PROMO_LOCK]) return;
+      window.setTimeout(() => {
+        if (!window[PROMO_LOCK]) {
+          setShowHelp(false);
+          setShow(true);
+          if (oncePerSession) {
+            try { sessionStorage.setItem(SESSION_KEY, "1"); } catch {}
+          }
+        }
+      }, 900);
+    };
+
+    window.addEventListener(APP_INSTALL_REQUEST_EVENT, openRequested);
+    window.addEventListener(APP_INSTALL_NUDGE_EVENT, openContextual);
+    return () => {
+      window.removeEventListener(APP_INSTALL_REQUEST_EVENT, openRequested);
+      window.removeEventListener(APP_INSTALL_NUDGE_EVENT, openContextual);
+    };
+  }, [canInstall, isIOS, isSamsungInternet, oncePerSession]);
 
   // 앵커 높이 자동 측정
   useEffect(() => {
@@ -88,6 +127,8 @@ export default function InstallBanner({
   // 노출(세션 1회) + 딜레이
   // 스누즈/설치 여부 등은 훅의 canInstall이 이미 반영
   useEffect(() => {
+    if (!autoShow) return undefined;
+    if (isSamsungInternet) return undefined;
     if (!singletonOk) return;
     if (!canInstall) return;
 
@@ -105,7 +146,7 @@ export default function InstallBanner({
       }
     }, delayMs);
     return () => clearTimeout(t);
-  }, [singletonOk, canInstall, delayMs, oncePerSession]);
+  }, [autoShow, singletonOk, canInstall, delayMs, oncePerSession, isSamsungInternet]);
 
   // 열리고/닫힐 때 전역 락/이벤트로 브로드캐스트 (푸시 프롬프트와 겹치지 않게)
   useEffect(() => {
@@ -145,6 +186,8 @@ export default function InstallBanner({
 
   // “설치” 버튼 → 즉시 설치 시도 + 준비 이벤트 대기(자동 프롬프트)
   const handleInstallClick = async () => {
+    if (isSamsungInternet) return;
+
     // iOS는 네이티브 프롬프트가 없어 안내 모달로 바로 전환
     if (isIOS) {
       setShowHelp(true);
@@ -182,7 +225,7 @@ export default function InstallBanner({
     }, Math.max(1500, Number(waitReadyTimeoutMs) || 4000));
   };
 
-  if (!singletonOk) return null;
+  if (!singletonOk || isSamsungInternet) return null;
   if (!show || !canInstall) return null;
 
   return (
@@ -198,11 +241,12 @@ export default function InstallBanner({
           right: 12,
           bottom,
           zIndex: 10000, // 푸시 안내보다 위
-          background: "#111827",
-          color: "#fff",
+          background: "var(--gm-surface)",
+          color: "var(--gm-text)",
+          border: "1px solid var(--gm-border)",
           borderRadius: 12,
           padding: "12px 14px",
-          boxShadow: "0 10px 30px rgba(0,0,0,.25)",
+          boxShadow: "var(--gm-shadow-hover)",
           display: "flex",
           gap: 10,
           alignItems: "center",
@@ -221,7 +265,7 @@ export default function InstallBanner({
             onClick={snooze}
             style={{
               background: "transparent",
-              color: "#cbd5e1",
+              color: "var(--gm-text-secondary)",
               border: "none",
               padding: "8px 10px",
               fontWeight: 600,
@@ -236,10 +280,10 @@ export default function InstallBanner({
             onClick={handleInstallClick}
             disabled={waiting}
             style={{
-              background: waiting ? "#16a34a" : "#10b981",
+              background: waiting ? "var(--gm-gold-soft)" : "var(--gm-gold)",
               opacity: waiting ? 0.9 : 1,
               cursor: waiting ? "wait" : "pointer",
-              color: "#0b141a",
+              color: "var(--gm-text)",
               border: "none",
               borderRadius: 8,
               padding: "8px 12px",
@@ -261,7 +305,7 @@ export default function InstallBanner({
             position: "fixed",
             inset: 0,
             zIndex: 10001,
-            background: "rgba(0,0,0,.35)",
+            background: "var(--gm-overlay)",
             display: "grid",
             placeItems: "end center",
             padding: "24px 12px calc(28px + env(safe-area-inset-bottom))",
@@ -272,10 +316,11 @@ export default function InstallBanner({
             style={{
               width: "100%",
               maxWidth: 560,
-              background: "#111827",
-              color: "#fff",
+              background: "var(--gm-surface)",
+              color: "var(--gm-text)",
+              border: "1px solid var(--gm-border)",
               borderRadius: 12,
-              boxShadow: "0 20px 40px rgba(0,0,0,.35)",
+              boxShadow: "var(--gm-shadow-hover)",
               padding: 16,
             }}
           >
@@ -307,8 +352,8 @@ export default function InstallBanner({
                 onClick={snooze}
                 style={{
                   background: "transparent",
-                  color: "#cbd5e1",
-                  border: "1px solid #334155",
+                  color: "var(--gm-text-secondary)",
+                  border: "1px solid var(--gm-border-strong)",
                   borderRadius: 8,
                   padding: "10px 12px",
                   fontWeight: 700,
@@ -323,8 +368,8 @@ export default function InstallBanner({
                   type="button"
                   onClick={async () => { try { await promptInstall(); } finally { snooze(); } }}
                   style={{
-                    background: "#10b981",
-                    color: "#0b141a",
+                    background: "var(--gm-gold)",
+                    color: "var(--gm-text)",
                     border: "none",
                     borderRadius: 8,
                     padding: "10px 12px",

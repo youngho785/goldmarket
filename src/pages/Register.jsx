@@ -2,15 +2,13 @@
 import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import { useNavigate, useLocation } from "react-router-dom";
-import {
-  collection, query, where, getDocs,
-  doc, setDoc, serverTimestamp
-} from "firebase/firestore";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import { db, auth } from "../firebase/firebase";
 import { signUp } from "../services/authService";
 import { AgreementsSection } from "../components/AgreementsSection";
 import { claimGoldQuizBonus, claimWelcomeGoldBonus } from "@/services/quizClient";
+import { checkNicknameAvailability } from "@/services/nicknameClient";
 
 // Register 폼 복구용 세션 키 (보조 용도)
 const REGISTER_FORM_KEY = "registerFormData";
@@ -29,8 +27,8 @@ const Container = styled.div`
   align-items: flex-start;
   padding: clamp(28px, 6vw, 64px) 18px;
   background:
-    radial-gradient(circle at 50% 0%, rgba(178,138,59,.11), transparent 28rem),
-    ${({ theme }) => theme.colors.background || "#F4F6F9"};
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, ${({ theme }) => theme.colors.gold} 12%, transparent), transparent 28rem),
+    ${({ theme }) => theme.colors.background};
   min-height: calc(100svh - 180px);
 `;
 const Card = styled.div`
@@ -203,22 +201,14 @@ function normalizeNickname(n) {
   const valid = /^[\p{Script=Hangul}A-Za-z0-9 _]{2,16}$/u.test(value);
   return { value, valid, lower: value.toLowerCase() };
 }
-async function isNicknameDuplicated(nick, nickLower) {
+async function isNicknameDuplicated(nick) {
   if (!nick) return false;
   try {
-    try {
-      const qLower = query(collection(db, "profiles"), where("nicknameLower", "==", nickLower));
-      const snapLower = await getDocs(qLower);
-      if (!snapLower.empty) return true;
-    } catch {
-      // 레거시 문서에 nicknameLower가 없으면 원본 닉네임으로 다시 조회합니다.
-    }
-    const qy = query(collection(db, "profiles"), where("nickname", "==", nick));
-    const snap = await getDocs(qy);
-    return !snap.empty;
+    return !(await checkNicknameAvailability(nick));
   } catch (err) {
-    console.warn("[register] nickname check skipped:", err?.message || err);
-    return false;
+    console.warn("[register] nickname availability check failed:", err?.message || err);
+    // 서버 확인 실패를 "사용 가능"으로 처리하지 않습니다.
+    throw new Error("닉네임 사용 가능 여부를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.");
   }
 }
 
@@ -226,6 +216,13 @@ async function isNicknameDuplicated(nick, nickLower) {
 export default function Register() {
   const navigate = useNavigate();
   const location = useLocation();
+
+  const searchParams = new URLSearchParams(location.search);
+  const fromGoldPrice =
+    searchParams.get("from") === "gold-price" ||
+    location.state?.from === "/gold-price" ||
+    location.state?.intent === "gold-price-notification";
+  const returnTo = fromGoldPrice ? "/gold-price" : "";
 
   const [displayName, setDisplayName]         = useState("");
   const [email, setEmail]                     = useState(location.state?.email || "");
@@ -270,7 +267,7 @@ export default function Register() {
   }, [displayName, email, nickname, phone]);
 
   const handleNicknameBlur = async () => {
-    const { value, lower, valid } = normalizeNickname(nickname);
+    const { value, valid } = normalizeNickname(nickname);
     if (!value) return;
     if (!valid) {
       setIsNickDuplicate(false);
@@ -278,10 +275,16 @@ export default function Register() {
       return;
     }
     setCheckingNick(true);
-    const dup = await isNicknameDuplicated(value, lower);
-    setIsNickDuplicate(dup);
-    if (dup) setError("이미 사용 중인 닉네임입니다.");
-    setCheckingNick(false);
+    try {
+      const dup = await isNicknameDuplicated(value);
+      setIsNickDuplicate(dup);
+      if (dup) setError("이미 사용 중인 닉네임입니다.");
+    } catch (checkError) {
+      setIsNickDuplicate(false);
+      setError(checkError?.message || "닉네임 확인에 실패했습니다.");
+    } finally {
+      setCheckingNick(false);
+    }
   };
 
   const handleSubmit = async e => {
@@ -306,9 +309,15 @@ export default function Register() {
     if (!nickValid)   { setError("닉네임은 2~16자, 한글/영문/숫자/공백/밑줄만 가능합니다."); return; }
 
     setCheckingNick(true);
-    const dup = await isNicknameDuplicated(trimmedNick, nickLower);
-    setCheckingNick(false);
-    if (dup) { setIsNickDuplicate(true); setError("이미 사용 중인 닉네임입니다."); return; }
+    try {
+      const dup = await isNicknameDuplicated(trimmedNick);
+      if (dup) { setIsNickDuplicate(true); setError("이미 사용 중인 닉네임입니다."); return; }
+    } catch (checkError) {
+      setError(checkError?.message || "닉네임 확인에 실패했습니다.");
+      return;
+    } finally {
+      setCheckingNick(false);
+    }
 
     setLoading(true);
     try {
@@ -323,6 +332,7 @@ export default function Register() {
         nicknameLower: nickLower,
         phone,
         displayName: displayName.trim(),
+        continueUrl: returnTo,
       });
 
       const uid = user?.uid || auth.currentUser?.uid;
@@ -366,12 +376,17 @@ export default function Register() {
       }
 
       // 이메일 인증 안내로 진행
-      navigate("/verify-email", {
+      const verifyPath = returnTo
+        ? `/verify-email?continueUrl=${encodeURIComponent(returnTo)}`
+        : "/verify-email";
+
+      navigate(verifyPath, {
         state: {
           quizBonusResult,
           quizBonusError,
           welcomeBonusResult,
           welcomeBonusError,
+          from: returnTo || undefined,
         },
       });
     } catch (err) {
