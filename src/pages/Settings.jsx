@@ -33,6 +33,7 @@ import {
   saveMarketingNotificationConsent,
   saveMarketingPushTarget,
 } from "../services/notificationPreferences";
+import { claimMarketingPushGoldBonus } from "../services/quizClient";
 import {
   collectPushDiagnostics,
   sendCurrentDevicePushTest,
@@ -756,6 +757,22 @@ export default function Settings() {
 
         if (!cancelled) {
           setNotificationPrefs(prefs);
+
+          // 기능 출시 전에 이미 금시세·혜택 알림을 정상 설정한 회원도
+          // 설정 화면을 열면 계정당 1회 혜택을 확인합니다.
+          if (
+            prefs?.marketingNotificationsEnabled === true &&
+            prefs?.marketingFcmToken
+          ) {
+            claimMarketingPushGoldBonus().catch(
+              (bonusError) => {
+                console.warn(
+                  "[settings] existing marketing bonus claim failed:",
+                  bonusError
+                );
+              }
+            );
+          }
         }
       } catch (error) {
         if (!cancelled) {

@@ -64,6 +64,67 @@ export async function claimWelcomeGoldBonus() {
   }
 }
 
+export async function claimMarketingPushGoldBonus() {
+  const fn = httpsCallable(
+    functions,
+    "marketingPushClaimGoldBonus"
+  );
+
+  try {
+    const { data } = await fn();
+    return data;
+  } catch (error) {
+    const code = normalizeCallableCode(error);
+
+    if (code === "unauthenticated") {
+      throw new Error("로그인이 필요합니다.");
+    }
+    if (code === "failed-precondition") {
+      throw new Error(
+        callableMessage(
+          error,
+          "금시세·혜택 알림 설정을 다시 확인해 주세요."
+        )
+      );
+    }
+    if (code === "unavailable") {
+      throw new Error(
+        "서버가 혼잡합니다. 잠시 후 다시 시도해 주세요."
+      );
+    }
+
+    throw new Error(
+      callableMessage(
+        error,
+        "알림 설정 순금 적립을 확인하지 못했습니다."
+      )
+    );
+  }
+}
+
+export async function getMemberBonusStatus() {
+  const fn = httpsCallable(
+    functions,
+    "memberBonusGetStatus"
+  );
+
+  try {
+    const { data } = await fn();
+    return data;
+  } catch (error) {
+    const code = normalizeCallableCode(error);
+    if (code === "unauthenticated") {
+      throw new Error("로그인이 필요합니다.");
+    }
+    throw new Error(
+      callableMessage(
+        error,
+        "신규회원 혜택 상태를 확인하지 못했습니다."
+      )
+    );
+  }
+}
+
 export async function claimGoldQuizBonus(payload) {
   const answers = payload?.answers;
   const requiredIds = ["q1", "q2", "q3", "q4", "q5"];

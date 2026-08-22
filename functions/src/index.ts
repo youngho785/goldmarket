@@ -3821,6 +3821,10 @@ const QUIZ_BONUS_CREDIT_G = QUIZ_BONUS_CREDIT_MG / 1000;
 const WELCOME_BONUS_PROMO_ID = "welcome_gold_v1";
 const WELCOME_BONUS_CREDIT_MG = 10;
 const WELCOME_BONUS_CREDIT_G = WELCOME_BONUS_CREDIT_MG / 1000;
+const MARKETING_PUSH_BONUS_PROMO_ID = "marketing_push_bonus_v1";
+const MARKETING_PUSH_BONUS_CREDIT_MG = 10;
+const MARKETING_PUSH_BONUS_CREDIT_G =
+  MARKETING_PUSH_BONUS_CREDIT_MG / 1000;
 
 type QuizBonusState = {
   ok: true;
@@ -3842,6 +3846,148 @@ function bonusBalanceMilliGrams(data: FirebaseFirestore.DocumentData | undefined
   }
   const legacyG = Number(data?.bonusGoldG || 0);
   return Number.isFinite(legacyG) && legacyG > 0 ? Math.round(legacyG * 1000) : 0;
+}
+
+function marketingPushBonusConfigured(
+  data: FirebaseFirestore.DocumentData | undefined,
+  expectedToken = ""
+): boolean {
+  if (!data) return false;
+
+  const token = String(data.marketingFcmToken || "").trim();
+  if (!token || token.length < 20) return false;
+  if (expectedToken && token !== expectedToken) return false;
+
+  const marketingAccepted =
+    data?.consents?.marketing?.accepted === true;
+  const preferences = normalizeNotificationPreferences(
+    data.notificationPreferences
+  );
+
+  if (
+    !marketingAccepted ||
+    preferences.allEnabled === false ||
+    preferences.goldNews === false
+  ) {
+    return false;
+  }
+
+  const fcmTokens = Array.isArray(data.fcmTokens)
+    ? data.fcmTokens.map((value: unknown) => String(value || "").trim())
+    : [];
+
+  if (!fcmTokens.includes(token)) return false;
+
+  const devices = readPushDevices(data.pushDevices);
+  return Object.values(devices).some(
+    (entry) => String(entry?.token || "").trim() === token
+  );
+}
+
+async function resolveMarketingPushBonusState(
+  uid: string,
+  claimToken = ""
+): Promise<QuizBonusState> {
+  const userRef = db().doc(`users/${uid}`);
+  const promoRef = userRef
+    .collection("promotions")
+    .doc(MARKETING_PUSH_BONUS_PROMO_ID);
+  const ledgerRef = userRef
+    .collection("ledger")
+    .doc(`marketing_${MARKETING_PUSH_BONUS_PROMO_ID}`);
+
+  return db().runTransaction(async (tx) => {
+    const [userSnap, promoSnap] = await Promise.all([
+      tx.get(userRef),
+      tx.get(promoRef),
+    ]);
+
+    const userData = userSnap.data();
+    const balanceMg = bonusBalanceMilliGrams(userData);
+
+    if (promoSnap.exists) {
+      const promo = promoSnap.data() || {};
+      const creditedMg = toNonNegativeInteger(
+        promo.creditedMilliGrams,
+        Math.round(
+          Number(
+            promo.creditedG ||
+              MARKETING_PUSH_BONUS_CREDIT_G
+          ) * 1000
+        )
+      );
+
+      return {
+        ok: true,
+        claimed: true,
+        alreadyClaimed: true,
+        claimedNow: false,
+        creditedG: creditedMg / 1000,
+        balanceG: balanceMg / 1000,
+      };
+    }
+
+    if (!claimToken) {
+      return {
+        ok: true,
+        claimed: false,
+        alreadyClaimed: false,
+        claimedNow: false,
+        creditedG: 0,
+        balanceG: balanceMg / 1000,
+      };
+    }
+
+    if (!marketingPushBonusConfigured(userData, claimToken)) {
+      throw new HttpsError(
+        "failed-precondition",
+        "금시세·혜택 알림 수신동의와 현재 기기의 푸시 등록을 먼저 완료해 주세요."
+      );
+    }
+
+    const nextBalanceMg =
+      balanceMg + MARKETING_PUSH_BONUS_CREDIT_MG;
+    const now = FieldValue.serverTimestamp();
+
+    tx.set(
+      userRef,
+      {
+        bonusGoldMilliGrams: nextBalanceMg,
+        bonusGoldG: nextBalanceMg / 1000,
+        bonusGoldUpdatedAt: now,
+      },
+      { merge: true }
+    );
+
+    tx.create(promoRef, {
+      creditedMilliGrams: MARKETING_PUSH_BONUS_CREDIT_MG,
+      creditedG: MARKETING_PUSH_BONUS_CREDIT_G,
+      claimedAt: now,
+      source: MARKETING_PUSH_BONUS_PROMO_ID,
+      marketingFcmTokenHash: createHash("sha256")
+        .update(claimToken)
+        .digest("hex"),
+      balanceApplied: true,
+      balanceAppliedAt: now,
+    });
+
+    tx.create(ledgerRef, {
+      direction: "credit",
+      amountMilliGrams: MARKETING_PUSH_BONUS_CREDIT_MG,
+      amountG: MARKETING_PUSH_BONUS_CREDIT_G,
+      source: MARKETING_PUSH_BONUS_PROMO_ID,
+      createdAt: now,
+    });
+
+    return {
+      ok: true,
+      claimed: true,
+      alreadyClaimed: false,
+      claimedNow: true,
+      creditedG: MARKETING_PUSH_BONUS_CREDIT_G,
+      balanceG: nextBalanceMg / 1000,
+    };
+  });
 }
 
 type WelcomeBonusState = {
@@ -4068,6 +4214,180 @@ export const welcomeClaimGoldBonus = onCall(
       }
     }
     return res;
+  }
+);
+
+export const marketingPushClaimGoldBonus = onCall(
+  {
+    region: "asia-northeast3",
+    enforceAppCheck: ENFORCE_APP_CHECK,
+  },
+  async (req) => {
+    const uid = req.auth?.uid;
+    if (!uid) {
+      throw new HttpsError(
+        "unauthenticated",
+        "로그인이 필요합니다."
+      );
+    }
+
+    // 이미 받은 계정은 알림 설정을 나중에 꺼도 회수하지 않습니다.
+    const existing =
+      await resolveMarketingPushBonusState(uid);
+    if (existing.claimed) return existing;
+
+    const userRef = db().doc(`users/${uid}`);
+    const userSnap = await userRef.get();
+    const userData = userSnap.data();
+    const token = String(
+      userData?.marketingFcmToken || ""
+    ).trim();
+
+    if (!marketingPushBonusConfigured(userData, token)) {
+      throw new HttpsError(
+        "failed-precondition",
+        "금시세·혜택 알림 수신동의와 현재 기기의 푸시 등록을 먼저 완료해 주세요."
+      );
+    }
+
+    // 임의 문자열을 토큰처럼 등록해서 보너스를 받는 것을 줄이기 위해
+    // Firebase Messaging에 실제 등록 가능한 토큰인지 dry-run으로 확인합니다.
+    try {
+      await msg().send(
+        {
+          token,
+          data: {
+            event: "marketing_push_bonus_validation",
+          },
+        },
+        true
+      );
+    } catch (error) {
+      const code = String(
+        (error as { code?: string })?.code || ""
+      );
+      console.warn(
+        "[marketingPushClaimGoldBonus] token validation failed",
+        { uid, code }
+      );
+
+      throw new HttpsError(
+        "failed-precondition",
+        "현재 기기의 알림 등록을 확인하지 못했습니다. 알림을 다시 허용한 뒤 시도해 주세요."
+      );
+    }
+
+    // dry-run 뒤에도 트랜잭션 안에서 같은 토큰/동의 상태를 재확인합니다.
+    const res =
+      await resolveMarketingPushBonusState(uid, token);
+
+    if (res.claimedNow) {
+      try {
+        await addNotificationForUser(uid, {
+          type: "marketing_push_bonus",
+          title: "금시세·혜택 알림 순금 적립",
+          body: `금시세·혜택 알림 설정 혜택 순금 ${res.creditedG.toFixed(2)}g이 적립되었습니다. 골드바 교환 시 사용할 수 있습니다.`,
+          link: "/profile",
+          meta: {
+            event: MARKETING_PUSH_BONUS_PROMO_ID,
+            creditedG: res.creditedG,
+          },
+        });
+      } catch (error) {
+        console.error(
+          "[marketingPushClaimGoldBonus] 지급 알림 생성 실패",
+          error
+        );
+      }
+    }
+
+    return res;
+  }
+);
+
+export const memberBonusGetStatus = onCall(
+  {
+    region: "asia-northeast3",
+    enforceAppCheck: ENFORCE_APP_CHECK,
+  },
+  async (req) => {
+    const uid = req.auth?.uid;
+    if (!uid) {
+      throw new HttpsError(
+        "unauthenticated",
+        "로그인이 필요합니다."
+      );
+    }
+
+    const userRef = db().doc(`users/${uid}`);
+    const [userSnap, welcomeSnap, marketingSnap, quizSnap] =
+      await Promise.all([
+        userRef.get(),
+        userRef
+          .collection("promotions")
+          .doc(WELCOME_BONUS_PROMO_ID)
+          .get(),
+        userRef
+          .collection("promotions")
+          .doc(MARKETING_PUSH_BONUS_PROMO_ID)
+          .get(),
+        userRef
+          .collection("promotions")
+          .doc(QUIZ_BONUS_PROMO_ID)
+          .get(),
+      ]);
+
+    const creditG = (
+      snap: FirebaseFirestore.DocumentSnapshot,
+      fallbackG: number
+    ): number => {
+      if (!snap.exists) return 0;
+      const data = snap.data() || {};
+      const mg = toNonNegativeInteger(
+        data.creditedMilliGrams,
+        Math.round(
+          Number(data.creditedG || fallbackG) * 1000
+        )
+      );
+      return mg / 1000;
+    };
+
+    const welcomeG = creditG(
+      welcomeSnap,
+      WELCOME_BONUS_CREDIT_G
+    );
+    const marketingG = creditG(
+      marketingSnap,
+      MARKETING_PUSH_BONUS_CREDIT_G
+    );
+    const quizG = creditG(
+      quizSnap,
+      QUIZ_BONUS_CREDIT_G
+    );
+
+    return {
+      ok: true,
+      maxG: 0.03,
+      earnedG: roundTo3(
+        welcomeG + marketingG + quizG
+      ),
+      balanceG:
+        bonusBalanceMilliGrams(userSnap.data()) / 1000,
+      rewards: {
+        welcome: {
+          claimed: welcomeSnap.exists,
+          creditedG: welcomeG,
+        },
+        marketingPush: {
+          claimed: marketingSnap.exists,
+          creditedG: marketingG,
+        },
+        quiz: {
+          claimed: quizSnap.exists,
+          creditedG: quizG,
+        },
+      },
+    };
   }
 );
 

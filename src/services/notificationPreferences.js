@@ -1,6 +1,7 @@
 // src/services/notificationPreferences.js
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase/firebase";
+import { claimMarketingPushGoldBonus } from "@/services/quizClient";
 
 // 기존 필드는 다른 코드/기존 회원 데이터와의 호환을 위해 유지합니다.
 // 실제 광고성 알림 발송의 최종 기준은 users/{uid}.consents.marketing.accepted 입니다.
@@ -221,6 +222,24 @@ export async function saveMarketingPushTarget(uid, token, browserName = "") {
     { merge: true }
   );
 
+  let marketingBonusResult = null;
+  let marketingBonusError = "";
+
+  try {
+    marketingBonusResult =
+      await claimMarketingPushGoldBonus();
+  } catch (bonusError) {
+    marketingBonusError =
+      bonusError?.message ||
+      "알림 설정 순금 적립을 확인하지 못했습니다.";
+
+    // 알림 설정 자체는 성공했으므로 보너스 확인 실패로 설정을 되돌리지 않습니다.
+    console.warn(
+      "[notificationPreferences] marketing bonus claim failed:",
+      bonusError
+    );
+  }
+
   return {
     ...withMarketingState(preferences, true, {
       ...data,
@@ -230,5 +249,7 @@ export async function saveMarketingPushTarget(uid, token, browserName = "") {
     marketingFcmToken: normalizedToken,
     marketingFcmBrowser: normalizedBrowser,
     marketingPushConfigured: true,
+    marketingBonusResult,
+    marketingBonusError,
   };
 }
