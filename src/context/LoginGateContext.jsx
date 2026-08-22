@@ -1,7 +1,20 @@
 // src/context/LoginGateContext.jsx
-import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+} from "react";
 import { createPortal } from "react-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useAuthContext } from "@/context/AuthContext";
+import {
+  buildAuthPath,
+  buildVerifyEmailPath,
+  sanitizeAppReturnPath,
+} from "@/lib/authReturn";
 
 const LoginGateCtx = createContext(null);
 
@@ -13,40 +26,65 @@ export function LoginGateProvider({ children }) {
     title: "",
     message: "",
     requireVerified: true,
+    intent: "",
+    next: "/",
   });
 
-  // 대기 중인 액션(로그인/인증 성공 시 재실행)
   const pendingRef = useRef(null);
-  // 현재 요구조건(로그인만, 인증까지 등)
   const requireVerifiedRef = useRef(true);
 
-  const openGate = useCallback(({ title, message, requireVerified = true, intent, afterAuth }) => {
-    setModalProps({ title, message, requireVerified, intent });
-    requireVerifiedRef.current = !!requireVerified;
-    pendingRef.current = typeof afterAuth === "function" ? afterAuth : null;
-    setIsOpen(true);
-  }, []);
+  const openGate = useCallback(
+    ({
+      title,
+      message,
+      requireVerified = true,
+      intent,
+      next,
+      from,
+      afterAuth,
+    }) => {
+      const returnPath = sanitizeAppReturnPath(next || from || "/", "/");
+
+      setModalProps({
+        title,
+        message,
+        requireVerified,
+        intent: intent || "",
+        next: returnPath,
+      });
+      requireVerifiedRef.current = !!requireVerified;
+      pendingRef.current =
+        typeof afterAuth === "function" ? afterAuth : null;
+      setIsOpen(true);
+    },
+    []
+  );
 
   const closeGate = useCallback(() => {
     setIsOpen(false);
-    // 주의: close만으로 pendingRef를 지우진 않음(성공/취소 케이스 구분)
+    pendingRef.current = null;
   }, []);
 
-  // ✅ 로그인/인증 상태 변화를 모니터링해서 조건 충족 시 afterAuth 1회 실행
   useEffect(() => {
     if (!isOpen) return;
 
     const ok =
-      user && (!requireVerifiedRef.current || (requireVerifiedRef.current && isEmailVerified));
+      user &&
+      (!requireVerifiedRef.current ||
+        (requireVerifiedRef.current && isEmailVerified));
 
     if (ok) {
       const fn = pendingRef.current;
-      pendingRef.current = null; // 1회만 실행
+      pendingRef.current = null;
       setIsOpen(false);
+
       if (typeof fn === "function") {
-        // 모달 닫힘 → 다음 틱에 실행 (UI 갱신 후 동작하도록)
         setTimeout(() => {
-          try { fn(); } catch (e) { console.error("afterAuth failed:", e); }
+          try {
+            fn();
+          } catch (e) {
+            console.error("afterAuth failed:", e);
+          }
         }, 0);
       }
     }
@@ -68,15 +106,36 @@ export function LoginGateProvider({ children }) {
 
 export function useLoginGate() {
   const ctx = useContext(LoginGateCtx);
-  if (!ctx) throw new Error("useLoginGate must be used within LoginGateProvider");
+  if (!ctx) {
+    throw new Error("useLoginGate must be used within LoginGateProvider");
+  }
   return ctx;
 }
 
-/** Router 트리 안쪽(예: MainLayout 아래)에서 모달을 실제로 렌더 */
 export function LoginGateMount() {
   const { isOpen, modalProps, closeGate } = useLoginGate();
+  const { user, isEmailVerified } = useAuthContext();
+  const location = useLocation();
 
   if (!isOpen) return null;
+
+  const currentPath =
+    `${location.pathname}${location.search}${location.hash}` || "/";
+  const returnTo = sanitizeAppReturnPath(
+    modalProps.next || currentPath,
+    "/"
+  );
+
+  const needsVerification =
+    !!user && modalProps.requireVerified && !isEmailVerified;
+
+  const actionPath = needsVerification
+    ? buildVerifyEmailPath(returnTo)
+    : buildAuthPath("/login", returnTo);
+
+  const actionLabel = needsVerification
+    ? "이메일 인증 계속하기"
+    : "로그인/회원가입";
 
   const node = (
     <div
@@ -102,15 +161,28 @@ export function LoginGateMount() {
           boxShadow: "0 10px 30px rgba(0,0,0,.18)",
         }}
       >
-        <h2 style={{ margin: 0, fontSize: "1.2rem" }}>{modalProps.title || "로그인이 필요합니다"}</h2>
+        <h2 style={{ margin: 0, fontSize: "1.2rem" }}>
+          {modalProps.title ||
+            (needsVerification
+              ? "이메일 인증이 필요합니다"
+              : "로그인이 필요합니다")}
+        </h2>
+
         <p style={{ margin: "10px 0 16px", color: "#555" }}>
-          {modalProps.message || "계속하려면 로그인/회원가입 해주세요."}
+          {modalProps.message ||
+            (needsVerification
+              ? "인증을 완료한 뒤 원래 화면으로 돌아옵니다."
+              : "계속하려면 로그인 또는 회원가입을 완료해 주세요.")}
         </p>
 
-        {/* 실제 로그인/회원가입 UI로 이동하는 버튼 */}
         <div style={{ display: "grid", gap: 8 }}>
-          <a
-            href="/login"
+          <Link
+            to={actionPath}
+            state={{
+              from: returnTo,
+              intent: modalProps.intent || undefined,
+            }}
+            onClick={closeGate}
             style={{
               display: "inline-block",
               textAlign: "center",
@@ -122,9 +194,11 @@ export function LoginGateMount() {
               textDecoration: "none",
             }}
           >
-            로그인/회원가입
-          </a>
+            {actionLabel}
+          </Link>
+
           <button
+            type="button"
             onClick={closeGate}
             style={{
               padding: "10px 12px",

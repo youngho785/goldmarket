@@ -8,6 +8,11 @@ import {
   completeMfaSignIn,
 } from "../services/mfaService";
 import { sendVerificationEmailIfNeeded } from "../services/authService";
+import {
+  buildAuthPath,
+  buildVerifyEmailPath,
+  getAuthReturnPath,
+} from "@/lib/authReturn";
 
 /* Layout */
 const Container = styled.div`
@@ -178,19 +183,13 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const queryFrom = new URLSearchParams(location.search).get("from");
-  const stateFrom = location.state?.from;
-  const returnTo =
-    stateFrom === "/gold-price" || queryFrom === "gold-price"
-      ? "/gold-price"
-      : "/";
-
-  const registerPath =
-    returnTo === "/gold-price" ? "/register?from=gold-price" : "/register";
-  const registerState =
-    returnTo === "/gold-price"
-      ? { from: "/gold-price", intent: "gold-price-notification" }
-      : { intent: "exchange" };
+  // next > state.from > legacy from 순으로 복귀 경로를 결정합니다.
+  const returnTo = getAuthReturnPath(location, "/");
+  const registerPath = buildAuthPath("/register", returnTo);
+  const registerState = {
+    from: returnTo,
+    intent: location.state?.intent || "auth-return",
+  };
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -294,7 +293,7 @@ export default function Login() {
     setResendMsg("");
     try {
       await sendVerificationEmailIfNeeded(
-        returnTo === "/gold-price" ? "/gold-price" : "/verify-email"
+        buildVerifyEmailPath(returnTo)
       );
       setResendMsg("인증 메일이 재발송되었습니다. 메일함을 확인해 주세요!");
     } catch (err) {

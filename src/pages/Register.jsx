@@ -9,6 +9,10 @@ import { signUp } from "../services/authService";
 import { AgreementsSection } from "../components/AgreementsSection";
 import { claimGoldQuizBonus, claimWelcomeGoldBonus } from "@/services/quizClient";
 import { checkNicknameAvailability } from "@/services/nicknameClient";
+import {
+  buildVerifyEmailPath,
+  getAuthReturnPath,
+} from "@/lib/authReturn";
 
 // Register 폼 복구용 세션 키 (보조 용도)
 const REGISTER_FORM_KEY = "registerFormData";
@@ -217,12 +221,8 @@ export default function Register() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const searchParams = new URLSearchParams(location.search);
-  const fromGoldPrice =
-    searchParams.get("from") === "gold-price" ||
-    location.state?.from === "/gold-price" ||
-    location.state?.intent === "gold-price-notification";
-  const returnTo = fromGoldPrice ? "/gold-price" : "";
+  // 로그인과 동일한 공용 복귀 규칙을 사용합니다.
+  const returnTo = getAuthReturnPath(location, "/");
 
   const [displayName, setDisplayName]         = useState("");
   const [email, setEmail]                     = useState(location.state?.email || "");
@@ -332,7 +332,8 @@ export default function Register() {
         nicknameLower: nickLower,
         phone,
         displayName: displayName.trim(),
-        continueUrl: returnTo,
+        // Firebase 인증 링크도 VerifyEmail을 거쳐 원래 화면으로 복귀합니다.
+        continueUrl: buildVerifyEmailPath(returnTo),
       });
 
       const uid = user?.uid || auth.currentUser?.uid;
@@ -376,9 +377,7 @@ export default function Register() {
       }
 
       // 이메일 인증 안내로 진행
-      const verifyPath = returnTo
-        ? `/verify-email?continueUrl=${encodeURIComponent(returnTo)}`
-        : "/verify-email";
+      const verifyPath = buildVerifyEmailPath(returnTo);
 
       navigate(verifyPath, {
         state: {
