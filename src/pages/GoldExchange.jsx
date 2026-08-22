@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef, useState, useCallback } from "react"
 import styled, { keyframes, css } from "styled-components";
 import { useLocation } from "react-router-dom";
 import { useAuthContext } from "../context/AuthContext";
+import { useLoginGate } from "@/context/LoginGateContext";
 import { db } from "../firebase/firebase";
 import { doc, onSnapshot } from "firebase/firestore";
 import DatePicker from "react-datepicker";
@@ -11,7 +12,6 @@ import { addDays, format } from "date-fns";
 import GoldExchangeTracker from "../components/GoldExchangeTracker";
 import PushPermissionPrompt from "../components/common/PushPermissionPrompt";
 import shopLogo from "@/assets/logo.webp";
-import useGuardAction from "@/hooks/useGuardAction";
 import useReservedSlots from "@/hooks/useReservedSlots"; // ✅ 예약 슬롯 훅
 import useBookingAvailability, { getBookingAvailabilityEntry } from "@/hooks/useBookingAvailability";
 import { nudgeAppInstall } from "@/hooks/useInstallPrompt";
@@ -29,6 +29,13 @@ import {
 
 // ✅ callable 래퍼 사용 (클라 단 로직 최소화)
 import { submitGoldExchangeGroup } from "@/services/exchangeClient";
+import { fetchMyProfile } from "@/services/userService";
+import {
+  clearGoldExchangeDraft,
+  draftDateToLocalDate,
+  readGoldExchangeDraft,
+  saveGoldExchangeDraft,
+} from "@/lib/goldExchangeDraft";
 
 /* ── 매장 정보 ─────────────────────────────────── */
 const STORE_INFO = {
@@ -645,7 +652,6 @@ function CalcStep({
         <Title>스텝 1. 내 금 종류와 무게 입력</Title>
         {error && <ErrorText role="alert">{error}</ErrorText>}
 
-        {/* onCalculate는 guard로 감싼 핸들러 */}
         <form onSubmit={onCalculate}>
           {products.map((p, idx) => (
             <FormGroup key={`row-${idx}`}>
@@ -718,7 +724,6 @@ function CalcStep({
           금의 순도와 무게를 몰라도 괜찮습니다. 매장에서 고객과 함께 확인하고,
           최종 중량과 공임에 동의한 뒤 골드바 교환을 진행합니다.
         </HelpText>
-        {/* guard 적용 */}
         <OutlineButton
           type="button"
           onClick={onGoReserveDirect}
@@ -1036,6 +1041,7 @@ function BarStep({
 
 /* ── Step 3: 예약 ─────────────────────────────── */
 function ReserveStep({
+  user,
   error,
   setError,
   visitDate, setVisitDate,
@@ -1043,6 +1049,7 @@ function ReserveStep({
   name, setName,
   phone, setPhone,
   privacyAccepted, setPrivacyAccepted,
+  onRequireAuth,
   onSubmitReservation,
   loading,
   calculated, setStep,
@@ -1149,10 +1156,12 @@ function ReserveStep({
         가능한 다른 날짜와 시간을 선택해 주세요.
       </HelpText>
 
-      <SectionSeparator />
-      <SubTitle>연락처</SubTitle>
+      {user ? (
+        <>
+          <SectionSeparator />
+          <SubTitle>연락처</SubTitle>
 
-      <form
+          <form
         onSubmit={(e) => {
           if (loading) { e.preventDefault(); return; } // 중복 제출 가드
           onSubmitReservation(e);
@@ -1263,7 +1272,43 @@ function ReserveStep({
             이전
           </GhostButton>
         </div>
-      </form>
+          </form>
+        </>
+      ) : (
+        <>
+          <SectionSeparator />
+          <InfoCard role="note">
+            <p style={{ margin: 0, fontWeight: 850 }}>
+              선택한 일정은 아직 예약된 것이 아닙니다.
+            </p>
+            <p style={{ margin: "8px 0 0" }}>
+              로그인 또는 회원가입 후 성명·전화번호 확인과 개인정보 동의를 거쳐
+              예약요청이 완료됩니다.
+            </p>
+            <p style={{ margin: "8px 0 0" }}>
+              로그인하는 동안 이 시간은 선점되지 않습니다. 돌아오면 실시간 예약 상태를
+              다시 확인하고, 이미 예약된 경우 다른 시간을 선택할 수 있습니다.
+            </p>
+            {dateKey && visitTime && (
+              <p style={{ margin: "10px 0 0", fontWeight: 900 }}>
+                선택 일정: {dateKey} {visitTime}
+              </p>
+            )}
+          </InfoCard>
+
+          <div style={{ display: "grid", gap: 10, marginTop: 14 }}>
+            <Button type="button" onClick={onRequireAuth}>
+              이 일정으로 예약하기
+            </Button>
+            <GhostButton
+              type="button"
+              onClick={() => setStep(calculated ? STEP.BARS : STEP.CALC)}
+            >
+              이전
+            </GhostButton>
+          </div>
+        </>
+      )}
     </Card>
   );
 }
@@ -1377,15 +1422,21 @@ function getInitialProductsFromQuery() {
 
 export default function GoldExchange() {
   const { user } = useAuthContext();
-  const guard = useGuardAction();
+  const { openGate } = useLoginGate();
   const location = useLocation();
   const rebook = location.state?.rebook || null;
+  const resumeRequested =
+    new URLSearchParams(location.search).get("resume") === "reservation";
+  const authDraftRef = useRef(
+    !rebook && resumeRequested ? readGoldExchangeDraft() : null
+  );
+  const authDraft = authDraftRef.current;
   const initialRebookProductsRef = useRef(normalizeRebookProducts(rebook));
   const isRebook = !!rebook;
   const isDirectRebook = isRebook && (rebook?.directReservation === true || initialRebookProductsRef.current.length === 0);
 
   /* 스텝 상태 */
-  const [step, setStep] = useState(isRebook ? STEP.RESERVE : STEP.CALC);
+  const [step, setStep] = useState(isRebook || authDraft ? STEP.RESERVE : STEP.CALC);
   const pageTopRef = useRef(null);
 
   // 같은 라우트 안에서 단계만 바뀌는 경우에도 새 단계의 맨 위부터 보여줍니다.
@@ -1406,18 +1457,30 @@ export default function GoldExchange() {
   const [products, setProducts] = useState(() =>
     initialRebookProductsRef.current.length > 0
       ? initialRebookProductsRef.current
+      : authDraft?.products?.length
+      ? authDraft.products
       : getInitialProductsFromQuery()
   );
-  const [calculated, setCalculated] = useState(isRebook && !isDirectRebook);
+  const [calculated, setCalculated] = useState(
+    isRebook ? !isDirectRebook : !!authDraft?.calculated
+  );
 
   /* 골드바 선택 상태 */
-  const [barGroup, setBarGroup] = useState("don");
-  const [barChoice, setBarChoice] = useState({ idx: 0, qty: 1 });
-  const initializedChoiceRef = useRef(false);
+  const [barGroup, setBarGroup] = useState(
+    authDraft?.barGroup === "grams" ? "grams" : "don"
+  );
+  const [barChoice, setBarChoice] = useState(() =>
+    authDraft?.barChoice || { idx: 0, qty: 1 }
+  );
+  const initializedChoiceRef = useRef(!!authDraft?.calculated);
 
   /* 예약/연락처 */
-  const [visitDate, setVisitDate] = useState(null);
-  const [visitTime, setVisitTime] = useState("");
+  const [visitDate, setVisitDate] = useState(() =>
+    draftDateToLocalDate(authDraft?.visitDate)
+  );
+  const [visitTime, setVisitTime] = useState(
+    String(authDraft?.visitTime || "")
+  );
   const [name, setName] = useState(() => String(rebook?.requester?.name || ""));
   const [phone, setPhone] = useState(() => String(rebook?.requester?.phone || ""));
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
@@ -1485,9 +1548,30 @@ export default function GoldExchange() {
 
   /* 사용자 정보로 기본값 채우기 */
   useEffect(() => {
-    if (!user) return;
+    if (!user?.uid) return undefined;
+
+    let cancelled = false;
+
+    setName((prev) => prev || user.displayName || "");
     setPhone((prev) => prev || user.phoneNumber || "");
-  }, [user]);
+
+    fetchMyProfile(user.uid)
+      .then((profile) => {
+        if (cancelled || !profile) return;
+        setName((prev) => prev || profile.displayName || profile.name || "");
+        setPhone((prev) => prev || profile.phone || "");
+      })
+      .catch((profileError) => {
+        console.warn(
+          "[GoldExchange] profile preload failed:",
+          profileError?.message || profileError
+        );
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.uid, user?.displayName, user?.phoneNumber]);
 
   /* 계산 로직 (UI 표시용) */
   const computeFinalWeight = ({ quantity, inputUnit, goldType, exchangeType }) => {
@@ -1562,18 +1646,52 @@ export default function GoldExchange() {
   // 예상 중량 계산은 로그인 없이 이용할 수 있습니다.
   const onCalculate = onCalculateCore;
 
-  const onGoReserveDirect = guard(() => {
+  // 비회원도 날짜/시간 선택까지 진행할 수 있습니다.
+  const onGoReserveDirect = () => {
     setCalculated(false);
     setStep(STEP.RESERVE);
-  }, {
-    intent: "reserve-direct",
-    requireVerified: false,
-  });
+  };
 
-  const onGoReserve = guard(() => setStep(STEP.RESERVE), {
-    intent: "exchange-reserve",
-    requireVerified: false,
-  });
+  const onGoReserve = () => setStep(STEP.RESERVE);
+
+  const onRequireAuth = (event) => {
+    event?.preventDefault?.();
+    setError("");
+
+    if (!visitDate) {
+      setError("방문 날짜를 선택해주세요.");
+      return;
+    }
+    if (!visitTime) {
+      setError("방문 시간을 선택해주세요.");
+      return;
+    }
+
+    const saved = saveGoldExchangeDraft({
+      products,
+      calculated,
+      barGroup,
+      barChoice,
+      visitDate: format(visitDate, "yyyy-MM-dd"),
+      visitTime,
+    });
+
+    if (!saved) {
+      setError(
+        "예약 진행 정보를 임시 저장하지 못했습니다. 브라우저 설정을 확인한 뒤 다시 시도해 주세요."
+      );
+      return;
+    }
+
+    openGate({
+      title: "로그인 후 예약을 완료해 주세요",
+      message:
+        "선택한 날짜와 시간을 보관했습니다. 로그인 또는 회원가입 후 예약 화면으로 돌아옵니다.",
+      requireVerified: false,
+      intent: "exchange-reservation-final",
+      next: "/gold-exchange?resume=reservation",
+    });
+  };
 
   /* 합계/포맷 */
   const totalGramsRaw = products.reduce((sum, p) => sum + (p.finalWeight || 0), 0);
@@ -1713,6 +1831,7 @@ export default function GoldExchange() {
     try {
       const res = await submitGoldExchangeGroup(payload);
       if (!res?.ok || !res?.groupId) throw new Error("서버 응답이 올바르지 않습니다.");
+      clearGoldExchangeDraft();
       setExchangeId(res.groupId);
       setSubmitted(true);
       setStep(STEP.DONE);
@@ -1746,8 +1865,8 @@ export default function GoldExchange() {
         <PageEyebrow>GOLD EXCHANGE APPLICATION</PageEyebrow>
         <PageTitle>내 금을 999.9 골드바로 교환</PageTitle>
         <PageLead>
-          예상 중량 계산은 로그인 없이 이용할 수 있습니다. 매장 방문 예약은
-          계산 결과와 골드바 조합을 확인한 뒤 진행하세요.
+          예상 중량 계산과 방문 날짜·시간 선택까지 로그인 없이 이용할 수 있습니다.
+          실제 예약요청은 로그인 또는 회원가입 후 완료합니다.
         </PageLead>
         {isRebook && (
           <RebookNotice role="status">
@@ -1800,6 +1919,7 @@ export default function GoldExchange() {
 
       {step === STEP.RESERVE && (
         <ReserveStep
+          user={user}
           error={error}
           setError={setError}
           visitDate={visitDate}
@@ -1812,6 +1932,7 @@ export default function GoldExchange() {
           setPhone={setPhone}
           privacyAccepted={privacyAccepted}
           setPrivacyAccepted={setPrivacyAccepted}
+          onRequireAuth={onRequireAuth}
           onSubmitReservation={onSubmitReservation}
           loading={loading}
           calculated={calculated}
