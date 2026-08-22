@@ -66,6 +66,7 @@ const GoldExchange = lazy(() => import("@/pages/GoldExchange"));
 const MyExchanges = lazy(() => import("@/pages/MyExchanges"));
 const Login = lazy(() => import("@/pages/Login"));
 const Register = lazy(() => import("@/pages/Register"));
+const WelcomeOnboarding = lazy(() => import("@/pages/WelcomeOnboarding"));
 const VerifyEmail = lazy(() => import("@/pages/VerifyEmail"));
 const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
 const AdminDashboard = lazy(() => import("@/pages/AdminDashboard"));
@@ -387,6 +388,13 @@ const router = createBrowserRouter([
       { path: "/terms", element: <Terms /> },
       { path: "/privacy", element: <Privacy /> },
       { path: "/account-delete", element: <AccountDelete /> },
+
+      {
+        element: <ProtectedRoute allowUnverified />,
+        children: [
+          { path: "/welcome", element: <WelcomeOnboarding /> },
+        ],
+      },
 
       {
         element: <ProtectedRoute />,

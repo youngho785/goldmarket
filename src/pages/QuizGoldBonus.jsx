@@ -4,6 +4,7 @@ import styled from "styled-components";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuthContext } from "@/context/AuthContext";
 import { claimGoldQuizBonus, getGoldQuizBonusStatus } from "@/services/quizClient";
+import { sanitizeAppReturnPath } from "@/lib/authReturn";
 
 /* ============================
    UI
@@ -383,6 +384,11 @@ export default function QuizGoldBonus() {
   const navigate = useNavigate();
   const loc = useLocation();
 
+  const nextPath = useMemo(() => {
+    const params = new URLSearchParams(loc.search);
+    return sanitizeAppReturnPath(params.get("next"), "");
+  }, [loc.search]);
+
   const [answers, setAnswers] = useState({});
   const [feedback, setFeedback] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -590,6 +596,13 @@ export default function QuizGoldBonus() {
                 이 이벤트는 계정당 1회만 참여할 수 있어요.
                 지급된 보너스는 <b>{formatBonusG(result.creditedG)}g</b>, 현재 보너스 잔액은 <b>{formatBonusG(result.balanceG ?? result.creditedG)}g</b>입니다.
               </Help>
+              {nextPath && (
+                <Row style={{ marginTop: 10 }}>
+                  <Button onClick={() => navigate(nextPath, { replace: true })}>
+                    혜택 계속하기
+                  </Button>
+                </Row>
+              )}
             </>
           ) : result.ok ? (
             <>
@@ -598,6 +611,13 @@ export default function QuizGoldBonus() {
                 <b>{formatBonusG(result.creditedG || 0.01)}g</b>가 적립되었습니다.
                 현재 보너스 잔액은 <b>{formatBonusG(result.balanceG ?? result.creditedG ?? 0.01)}g</b>입니다.
               </Help>
+              {nextPath && (
+                <Row style={{ marginTop: 10 }}>
+                  <Button onClick={() => navigate(nextPath, { replace: true })}>
+                    혜택 계속하기
+                  </Button>
+                </Row>
+              )}
             </>
           ) : (
             <>

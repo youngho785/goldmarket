@@ -9,6 +9,7 @@ import {
 } from "firebase/auth";
 import { useNavigate, useLocation } from "react-router-dom";
 import { auth } from "../firebase/firebase";
+import { readMemberOnboardingPath } from "@/lib/memberOnboarding";
 
 /* ───────── Styled ───────── */
 const Container = styled.div`
@@ -82,7 +83,8 @@ export default function VerifyEmail() {
     }
   }, [continueUrl]);
 
-  const destination = continuePath || "/";
+  const destination =
+    continuePath || readMemberOnboardingPath("") || "/";
 
   /** 같은 브라우저에서 열렸고 세션에 임시 자격이 있으면 자동 로그인 */
   const tryAutoLogin = async () => {

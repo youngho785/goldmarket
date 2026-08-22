@@ -16,6 +16,7 @@ import {
   claimWelcomeGoldBonus,
   getBonusGoldUsageState,
   getGoldQuizBonusStatus,
+  getMemberBonusStatus,
   requestBonusGoldUsage,
 } from "../services/quizClient";
 
@@ -350,8 +351,13 @@ export default function Profile() {
     loading: true,
     welcomeClaimed: false,
     welcomeG: 0,
+    marketingClaimed: false,
+    marketingG: 0,
+    marketingUnavailable: false,
     quizClaimed: false,
     quizG: 0,
+    earnedG: 0,
+    maxG: 0.03,
     balanceG: 0,
     spendableG: 0,
     usage: null,
@@ -419,8 +425,13 @@ export default function Profile() {
         loading: false,
         welcomeClaimed: false,
         welcomeG: 0,
+        marketingClaimed: false,
+        marketingG: 0,
+        marketingUnavailable: false,
         quizClaimed: false,
         quizG: 0,
+        earnedG: 0,
+        maxG: 0.03,
         balanceG: 0,
         spendableG: 0,
         usage: null,
@@ -451,58 +462,106 @@ export default function Profile() {
         usageUnavailable = true;
       }
 
+      let memberBonus = null;
+      let memberBonusUnavailable = false;
+
       try {
-        const quiz = await getGoldQuizBonusStatus(user.uid);
-        if (!cancelled) {
-          setGoldBonus({
-            loading: false,
-            welcomeClaimed: !!welcome?.claimed,
-            welcomeG: Number(welcome?.creditedG || 0),
-            welcomeUnavailable,
-            quizClaimed: !!quiz?.claimed,
-            quizG: Number(quiz?.creditedG || 0),
-            balanceG: Number(
-              usage?.balanceG ??
-                Math.max(
-                  Number(welcome?.balanceG || 0),
-                  Number(quiz?.balanceG || 0)
-                )
-            ),
-            spendableG: Number(
-              usage?.spendableG ??
-                usage?.balanceG ??
-                Math.max(
-                  Number(welcome?.balanceG || 0),
-                  Number(quiz?.balanceG || 0)
-                )
-            ),
-            usage: usage?.request || null,
-            eligibleGroups: Array.isArray(usage?.eligibleGroups)
-              ? usage.eligibleGroups
-              : [],
-            usageUnavailable,
-          });
-        }
+        memberBonus = await getMemberBonusStatus();
       } catch {
-        if (!cancelled) {
-          setGoldBonus((current) => ({
-            ...current,
-            loading: false,
-            welcomeClaimed: !!welcome?.claimed,
-            welcomeG: Number(welcome?.creditedG || 0),
-            welcomeUnavailable,
-            quizUnavailable: true,
-            balanceG: Number(usage?.balanceG ?? welcome?.balanceG ?? 0),
-            spendableG: Number(
-              usage?.spendableG ?? usage?.balanceG ?? welcome?.balanceG ?? 0
-            ),
-            usage: usage?.request || null,
-            eligibleGroups: Array.isArray(usage?.eligibleGroups)
-              ? usage.eligibleGroups
-              : [],
-            usageUnavailable,
-          }));
+        memberBonusUnavailable = true;
+      }
+
+      let quiz = null;
+      let quizUnavailable = false;
+
+      // 새 통합 혜택 조회가 일시적으로 실패하더라도
+      // 기존 퀵퀴즈 상태는 계속 보여줄 수 있게 폴백합니다.
+      if (!memberBonus) {
+        try {
+          quiz = await getGoldQuizBonusStatus(user.uid);
+        } catch {
+          quizUnavailable = true;
         }
+      }
+
+      if (!cancelled) {
+        const rewards = memberBonus?.rewards || {};
+        const welcomeReward = rewards.welcome || {};
+        const marketingReward = rewards.marketingPush || {};
+        const quizReward = rewards.quiz || {};
+
+        const welcomeClaimed =
+          memberBonus
+            ? !!welcomeReward.claimed
+            : !!welcome?.claimed;
+        const welcomeG = Number(
+          memberBonus
+            ? welcomeReward.creditedG || 0
+            : welcome?.creditedG || 0
+        );
+
+        const marketingClaimed =
+          !!marketingReward.claimed;
+        const marketingG = Number(
+          marketingReward.creditedG || 0
+        );
+
+        const quizClaimed =
+          memberBonus
+            ? !!quizReward.claimed
+            : !!quiz?.claimed;
+        const quizG = Number(
+          memberBonus
+            ? quizReward.creditedG || 0
+            : quiz?.creditedG || 0
+        );
+
+        const earnedG = Number(
+          memberBonus?.earnedG ??
+            welcomeG + marketingG + quizG
+        );
+        const maxG = Number(
+          memberBonus?.maxG ?? 0.03
+        );
+
+        const fallbackBalance = Math.max(
+          Number(memberBonus?.balanceG || 0),
+          Number(welcome?.balanceG || 0),
+          Number(quiz?.balanceG || 0)
+        );
+
+        setGoldBonus({
+          loading: false,
+          welcomeClaimed,
+          welcomeG,
+          welcomeUnavailable:
+            welcomeUnavailable && !memberBonus,
+          marketingClaimed,
+          marketingG,
+          marketingUnavailable:
+            memberBonusUnavailable,
+          quizClaimed,
+          quizG,
+          quizUnavailable:
+            quizUnavailable && !memberBonus,
+          earnedG,
+          maxG,
+          balanceG: Number(
+            usage?.balanceG ?? fallbackBalance
+          ),
+          spendableG: Number(
+            usage?.spendableG ??
+              usage?.balanceG ??
+              fallbackBalance
+          ),
+          usage: usage?.request || null,
+          eligibleGroups: Array.isArray(
+            usage?.eligibleGroups
+          )
+            ? usage.eligibleGroups
+            : [],
+          usageUnavailable,
+        });
       }
     })();
 
@@ -752,6 +811,17 @@ export default function Profile() {
               </RewardRow>
 
               <RewardRow>
+                <span>금시세·혜택 알림</span>
+                {goldBonus.marketingClaimed ? (
+                  <b>{goldBonus.marketingG.toFixed(2)}g 적립</b>
+                ) : goldBonus.marketingUnavailable ? (
+                  <b>조회 필요</b>
+                ) : (
+                  <Link to="/settings">0.01g 받기</Link>
+                )}
+              </RewardRow>
+
+              <RewardRow>
                 <span>퀵퀴즈 순금</span>
                 {goldBonus.quizClaimed ? (
                   <b>{goldBonus.quizG.toFixed(2)}g 적립</b>
@@ -761,6 +831,17 @@ export default function Profile() {
                   <Link to="/quiz/gold-bonus">0.01g 받기</Link>
                 )}
               </RewardRow>
+
+              <RewardTotal>
+                <span>신규회원 혜택</span>
+                <b>
+                  {goldBonus.earnedG.toFixed(2)}g /{" "}
+                  {goldBonus.maxG.toFixed(2)}g
+                  {goldBonus.earnedG + 0.000001 >= goldBonus.maxG
+                    ? " 달성 🎉"
+                    : ""}
+                </b>
+              </RewardTotal>
 
               <RewardTotal>
                 <span>지금 사용 가능한 적립 순금</span>
@@ -881,9 +962,10 @@ export default function Profile() {
               )}
 
               <RewardNote>
-                웰컴 순금과 퀵퀴즈 적립 순금은 골드바 교환 시 중량으로
-                더해집니다. 현금 환급·양도는 불가하며, 매장에서 본인과
-                최종 인정 중량을 확인한 뒤 사용이 확정됩니다.
+                회원가입·금시세/혜택 알림·퀵퀴즈로 적립한 순금은
+                골드바 교환 시 중량으로 더해집니다. 현금 환급·양도는
+                불가하며, 매장에서 본인과 최종 인정 중량을 확인한 뒤
+                사용이 확정됩니다.
               </RewardNote>
             </>
           )}

@@ -13,6 +13,7 @@ import {
   buildVerifyEmailPath,
   getAuthReturnPath,
 } from "@/lib/authReturn";
+import { readMemberOnboardingPath } from "@/lib/memberOnboarding";
 
 /* Layout */
 const Container = styled.div`
@@ -191,6 +192,9 @@ export default function Login() {
     intent: location.state?.intent || "auth-return",
   };
 
+  const resolvePostLoginPath = () =>
+    readMemberOnboardingPath("") || returnTo;
+
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showResend, setShowResend] = useState(false);
@@ -230,7 +234,7 @@ export default function Login() {
         setError("이메일 인증이 필요합니다. 메일함에서 인증을 완료해 주세요.");
         setShowResend(true);
       } else {
-        navigate(returnTo, { replace: true });
+        navigate(resolvePostLoginPath(), { replace: true });
       }
     } catch (err) {
       const key = err?.type || err?.code;
@@ -276,7 +280,7 @@ export default function Login() {
         setError("이메일 인증이 필요합니다. 메일함에서 인증을 완료해 주세요.");
         setShowResend(true);
       } else {
-        navigate(returnTo, { replace: true });
+        navigate(resolvePostLoginPath(), { replace: true });
       }
     } catch (err) {
       setError(
@@ -293,7 +297,7 @@ export default function Login() {
     setResendMsg("");
     try {
       await sendVerificationEmailIfNeeded(
-        buildVerifyEmailPath(returnTo)
+        buildVerifyEmailPath(readMemberOnboardingPath("") || returnTo)
       );
       setResendMsg("인증 메일이 재발송되었습니다. 메일함을 확인해 주세요!");
     } catch (err) {

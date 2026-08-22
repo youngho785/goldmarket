@@ -13,6 +13,10 @@ import {
   buildVerifyEmailPath,
   getAuthReturnPath,
 } from "@/lib/authReturn";
+import {
+  buildMemberOnboardingPath,
+  markMemberOnboardingPending,
+} from "@/lib/memberOnboarding";
 
 // Register 폼 복구용 세션 키 (보조 용도)
 const REGISTER_FORM_KEY = "registerFormData";
@@ -223,6 +227,7 @@ export default function Register() {
 
   // 로그인과 동일한 공용 복귀 규칙을 사용합니다.
   const returnTo = getAuthReturnPath(location, "/");
+  const onboardingPath = buildMemberOnboardingPath(returnTo);
 
   const [displayName, setDisplayName]         = useState("");
   const [email, setEmail]                     = useState(location.state?.email || "");
@@ -333,8 +338,10 @@ export default function Register() {
         phone,
         displayName: displayName.trim(),
         // Firebase 인증 링크도 VerifyEmail을 거쳐 원래 화면으로 복귀합니다.
-        continueUrl: buildVerifyEmailPath(returnTo),
+        continueUrl: buildVerifyEmailPath(onboardingPath),
       });
+
+      markMemberOnboardingPending(returnTo);
 
       const uid = user?.uid || auth.currentUser?.uid;
       if (uid) {
@@ -376,10 +383,9 @@ export default function Register() {
         quizBonusError = bonusError?.message || "퀵퀴즈 보너스 적립을 다시 확인해 주세요.";
       }
 
-      // 이메일 인증 안내로 진행
-      const verifyPath = buildVerifyEmailPath(returnTo);
-
-      navigate(verifyPath, {
+      // 가입 직후에는 이메일 인증보다 먼저 신규회원 혜택을 안내합니다.
+      // 인증 메일 링크는 onboardingPath로 다시 돌아오도록 이미 발송되었습니다.
+      navigate(onboardingPath, {
         state: {
           quizBonusResult,
           quizBonusError,
@@ -406,7 +412,7 @@ export default function Register() {
         <NoticeBox role="note" aria-live="polite">
           <ul style={{ margin: "0 0 0 16px", padding: 0 }}>
             <li>
-              <strong>회원가입 즉시 웰컴 순금 0.01g이 적립되며, 골드바 교환 시 사용할 수 있습니다.</strong>
+              <strong>회원가입 0.01g + 금시세·혜택 알림 0.01g + 퀵퀴즈 0.01g, 신규회원 최대 순금 0.03g 혜택을 받을 수 있습니다.</strong>
             </li>
             <li><strong>인증메일이 스팸함/프로모션함으로 분류될 수 있습니다. 메일함 전체를 확인해 주세요.</strong></li>
             <li style={{ marginTop: 6 }}>
