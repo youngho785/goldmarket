@@ -1171,12 +1171,15 @@ export default function LandingPage() {
       {/* 부가 참여 요소 */}
       <QuizBanner aria-labelledby="quiz-title">
         <div>
-          <small>TODAY&apos;S QUICK QUIZ · 1 ACCOUNT, 1 TIME</small>
-          <h2 id="quiz-title">금 상식 퀴즈 풀고 순금 0.01g 받기</h2>
-          <p>5문항을 모두 맞히면 골드바 교환 시 사용할 수 있는 순금 0.01g을 적립합니다.</p>
+          <small>NEW MEMBER BENEFIT · EACH REWARD ONCE PER ACCOUNT</small>
+          <h2 id="quiz-title">신규회원 최대 순금 0.03g 혜택</h2>
+          <p>
+            회원가입 0.01g + 금시세·혜택 알림 설정(선택) 0.01g +
+            금 교환 기초 가이드 완료 0.01g. 적립한 순금은 골드바 교환 시 사용할 수 있습니다.
+          </p>
         </div>
-        <QuizLink to="/quiz/gold-bonus">
-          퀵퀴즈 시작
+        <QuizLink to="/register">
+          신규회원 혜택 시작
           <Sparkles size={17} aria-hidden />
         </QuizLink>
       </QuizBanner>

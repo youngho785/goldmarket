@@ -59,6 +59,7 @@ const safeLazy = (importer, namedKey) =>
   );
 
 const LandingPage = lazy(() => import("@/pages/LandingPage"));
+const AppHome = lazy(() => import("@/pages/AppHome"));
 const GoldPrice = lazy(() => import("@/pages/GoldPrice"));
 const Profile = lazy(() => import("@/pages/Profile"));
 const Settings = lazy(() => import("@/pages/Settings"));
@@ -209,6 +210,146 @@ function clearPendingNativePushLink() {
 function AuthActionBridge() {
   const location = useLocation();
   return <Navigate to={`/verify-email${location.search}`} replace />;
+}
+
+function parseFirebaseEmailActionUrl(rawUrl) {
+  const raw = String(rawUrl || "").trim();
+  if (!raw) return null;
+
+  let current = raw;
+
+  // Firebase Hosting 링크는 /__/auth/links?link=<실제 action URL> 형태일 수 있습니다.
+  // 직접 action URL이 들어오는 경우까지 함께 처리합니다.
+  for (let depth = 0; depth < 3; depth += 1) {
+    let url;
+    try {
+      url = new URL(current);
+    } catch {
+      try {
+        url = new URL(decodeURIComponent(current));
+      } catch {
+        return null;
+      }
+    }
+
+    const mode = url.searchParams.get("mode") || "";
+    const oobCode = url.searchParams.get("oobCode") || "";
+
+    if (mode && oobCode) {
+      return {
+        mode,
+        oobCode,
+        continueUrl: url.searchParams.get("continueUrl") || "",
+        lang: url.searchParams.get("lang") || "",
+      };
+    }
+
+    const nested = url.searchParams.get("link");
+    if (!nested || nested === current) break;
+    current = nested;
+  }
+
+  return null;
+}
+
+function buildKgmVerifyReturnRoute(rawUrl) {
+  const raw = String(rawUrl || "").trim();
+  if (!raw) return "";
+
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== "koreagoldmarket:" || url.hostname !== "verify-email") {
+      return "";
+    }
+
+    const continuePath = normalizeInternalPushLink(url.searchParams.get("path") || "/");
+    const params = new URLSearchParams();
+    params.set("fromWeb", "1");
+    params.set("continueUrl", continuePath);
+    return `/verify-email?${params.toString()}`;
+  } catch {
+    return "";
+  }
+}
+
+function buildNativeEmailActionRoute(rawUrl) {
+  // 커스텀 웹 인증페이지에서 인증을 끝낸 뒤 앱으로 돌아오는 전용 스킴
+  const webReturnRoute = buildKgmVerifyReturnRoute(rawUrl);
+  if (webReturnRoute) return webReturnRoute;
+
+  const action = parseFirebaseEmailActionUrl(rawUrl);
+  if (!action) return "";
+
+  const params = new URLSearchParams();
+  params.set("mode", action.mode);
+  params.set("oobCode", action.oobCode);
+  if (action.continueUrl) params.set("continueUrl", action.continueUrl);
+  if (action.lang) params.set("lang", action.lang);
+
+  if (action.mode === "verifyEmail") {
+    return `/verify-email?${params.toString()}`;
+  }
+
+  if (action.mode === "resetPassword") {
+    return `/reset-password?${params.toString()}`;
+  }
+
+  return "";
+}
+
+/**
+ * Firebase Hosting App Link로 앱이 열렸을 때 인증 액션을 React Router로 넘깁니다.
+ * - 실행 중 앱: appUrlOpen
+ * - 완전히 종료된 앱: getLaunchUrl
+ */
+function NativeAuthActionNavigationBridge() {
+  const navigate = useNavigate();
+  const lastHandledUrlRef = useRef("");
+
+  useEffect(() => {
+    if (!isAndroid) return undefined;
+
+    let cancelled = false;
+    let urlHandle = null;
+
+    const handleUrl = (rawUrl) => {
+      if (cancelled) return;
+
+      const value = String(rawUrl || "").trim();
+      if (!value || lastHandledUrlRef.current === value) return;
+
+      const route = buildNativeEmailActionRoute(value);
+      if (!route) return;
+
+      lastHandledUrlRef.current = value;
+      navigate(route, { replace: true });
+    };
+
+    const register = async () => {
+      try {
+        urlHandle = await CapacitorApp.addListener("appUrlOpen", ({ url }) => {
+          handleUrl(url);
+        });
+
+        const launch = await CapacitorApp.getLaunchUrl();
+        handleUrl(launch?.url);
+      } catch (error) {
+        console.error(
+          "[Email Auth Link] App Link 처리 등록 실패:",
+          error?.message || error
+        );
+      }
+    };
+
+    register();
+
+    return () => {
+      cancelled = true;
+      urlHandle?.remove?.();
+    };
+  }, [navigate]);
+
+  return null;
 }
 
 /**
@@ -362,10 +503,15 @@ function AndroidBackButtonBridge() {
   return null;
 }
 
+function PlatformHome() {
+  return isAndroid ? <AppHome /> : <LandingPage />;
+}
+
 function RootShell() {
   return (
     <>
       <SwBridge />
+      <NativeAuthActionNavigationBridge />
       <NativePushNavigationBridge />
       <AndroidBackButtonBridge />
       <MainLayout />
@@ -378,7 +524,7 @@ const router = createBrowserRouter([
     element: <RootShell />,
     errorElement: <RouteError />,
     children: [
-      { path: "/", element: <LandingPage /> },
+      { path: "/", element: <PlatformHome /> },
       { path: "/gold-price", element: <GoldPrice /> },
       { path: "/goldbar-fee", element: <GoldbarFee /> },
       { path: "/stores", element: <Stores /> },

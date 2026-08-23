@@ -10,7 +10,6 @@ import { AgreementsSection } from "../components/AgreementsSection";
 import { claimGoldQuizBonus, claimWelcomeGoldBonus } from "@/services/quizClient";
 import { checkNicknameAvailability } from "@/services/nicknameClient";
 import {
-  buildVerifyEmailPath,
   getAuthReturnPath,
 } from "@/lib/authReturn";
 import {
@@ -337,8 +336,8 @@ export default function Register() {
         nicknameLower: nickLower,
         phone,
         displayName: displayName.trim(),
-        // Firebase 인증 링크도 VerifyEmail을 거쳐 원래 화면으로 복귀합니다.
-        continueUrl: buildVerifyEmailPath(onboardingPath),
+        // Firebase 메일의 action handler는 /verify-email이며, continueUrl은 인증 후 복귀 경로입니다.
+        continueUrl: onboardingPath,
       });
 
       markMemberOnboardingPending(returnTo);
@@ -412,7 +411,11 @@ export default function Register() {
         <NoticeBox role="note" aria-live="polite">
           <ul style={{ margin: "0 0 0 16px", padding: 0 }}>
             <li>
-              <strong>회원가입 0.01g + 금시세·혜택 알림 0.01g + 퀵퀴즈 0.01g, 신규회원 최대 순금 0.03g 혜택을 받을 수 있습니다.</strong>
+              <strong>신규회원은 최대 순금 0.03g 혜택을 받을 수 있습니다.</strong>
+              <span>
+                회원가입 0.01g + 금시세·혜택 알림 설정(선택) 0.01g +
+                금 교환 기초 가이드 완료 0.01g
+              </span>
             </li>
             <li><strong>인증메일이 스팸함/프로모션함으로 분류될 수 있습니다. 메일함 전체를 확인해 주세요.</strong></li>
             <li style={{ marginTop: 6 }}>

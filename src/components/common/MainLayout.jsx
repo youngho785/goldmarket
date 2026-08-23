@@ -5,6 +5,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import styled from "styled-components";
 
 import Navbar from "./Navbar";
+import AndroidAppHeader from "./AndroidAppHeader";
 import ScrollRestoration from "./ScrollRestoration";
 import FCMNotifications from "./FCMNotifications";
 import OfficialAppBanner from "@/components/OfficialAppBanner";
@@ -15,16 +16,29 @@ import { Container } from "./Container";
 
 import { LoginGateMount } from "@/context/LoginGateContext";
 import { useAuthContext } from "@/context/AuthContext";
+import { isAndroid } from "@/platform/runtime";
 
 const MainContent = styled.main`
   width: 100%;
   flex: 1 0 auto;
-  padding-bottom: ${({ $hideBottomNav }) =>
-    $hideBottomNav ? "72px" : "132px"};
+  padding-bottom: ${({ $hideBottomNav, $android }) =>
+    $android
+      ? $hideBottomNav
+        ? "30px"
+        : "calc(92px + env(safe-area-inset-bottom, 0px))"
+      : $hideBottomNav
+        ? "72px"
+        : "132px"};
 
   @media (max-width: 768px) {
-    padding-bottom: ${({ $hideBottomNav }) =>
-      $hideBottomNav ? "56px" : "116px"};
+    padding-bottom: ${({ $hideBottomNav, $android }) =>
+      $android
+        ? $hideBottomNav
+          ? "24px"
+          : "calc(88px + env(safe-area-inset-bottom, 0px))"
+        : $hideBottomNav
+          ? "56px"
+          : "116px"};
   }
 `;
 
@@ -124,7 +138,7 @@ export default function MainLayout() {
   const { pathname } = useLocation();
   const { isAdmin = false } = useAuthContext() || {};
 
-  const noBottomPadding = pathname === "/";
+  const noBottomPadding = pathname === "/" || isAndroid;
   const isAdminPath = pathname.startsWith("/admin");
   const showAdminBottomNav = isAdminPath && isAdmin;
 
@@ -146,7 +160,7 @@ export default function MainLayout() {
         본문으로 건너뛰기
       </a>
 
-      <Navbar />
+      {isAndroid && !isAdminPath ? <AndroidAppHeader /> : <Navbar />}
       <ScrollRestoration />
 
       {typeof window !== "undefined" && (
@@ -155,7 +169,7 @@ export default function MainLayout() {
             <FCMNotifications />
           </MiniBoundary>
 
-          {!isAdminPath && !hideBottomNav && (
+          {!isAndroid && !isAdminPath && !hideBottomNav && (
             <MiniBoundary name="OfficialAppBanner">
               <OfficialAppBanner />
             </MiniBoundary>
@@ -168,6 +182,7 @@ export default function MainLayout() {
         role="main"
         aria-label="메인 콘텐츠"
         $hideBottomNav={hideBottomNav}
+        $android={isAndroid}
       >
         <Container noBottomPadding={noBottomPadding}>
           <Suspense fallback={<RouteSkeleton />}>
@@ -188,7 +203,7 @@ export default function MainLayout() {
         </div>
       ) : null}
 
-      <Footer />
+      {!isAndroid && <Footer />}
     </>
   );
 }

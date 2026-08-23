@@ -1,380 +1,470 @@
 // src/pages/QuizGoldBonus.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import styled from "styled-components";
-import { useNavigate, useLocation, Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import {
+  Check,
+  CheckCircle2,
+  ChevronRight,
+  Gift,
+  RotateCcw,
+  ShieldCheck,
+} from "lucide-react";
+
 import { useAuthContext } from "@/context/AuthContext";
-import { claimGoldQuizBonus, getGoldQuizBonusStatus } from "@/services/quizClient";
+import {
+  claimGoldQuizBonus,
+  getGoldQuizBonusStatus,
+} from "@/services/quizClient";
 import { sanitizeAppReturnPath } from "@/lib/authReturn";
 
 /* ============================
-   UI
-   ============================ */
-const Page = styled.main`
-  --quiz-gold: ${({ theme }) => theme.colors.gold};
-  --quiz-gold-deep: ${({ theme }) => theme.colors.secondaryDark};
-  --quiz-navy: ${({ theme }) => theme.colors.primary};
-
-  position: relative;
-  isolation: isolate;
-  max-width: 960px;
-  min-height: 70vh;
-  margin: 0 auto;
-  padding: 30px 0 64px;
-  color: ${({ theme }) => theme.colors.text};
-  font-family: ${({ theme }) => theme.fonts?.body || "inherit"};
-  counter-reset: quiz-question;
-
-  &::before {
-    content: "";
-    position: absolute;
-    z-index: -1;
-    top: 8px;
-    right: 10%;
-    width: min(320px, 54vw);
-    height: min(320px, 54vw);
-    border-radius: 50%;
-    background: radial-gradient(circle, color-mix(in srgb, var(--quiz-gold) 15%, transparent), transparent 68%);
-    pointer-events: none;
-  }
-`;
-const Kicker = styled.p`
-  margin: 0 0 9px;
-  color: var(--quiz-gold-deep);
-  font-family: ${({ theme }) => theme.fonts.numeric};
-  font-size: .7rem;
-  font-weight: 850;
-  letter-spacing: .15em;
-`;
-const Title = styled.h1`
-  margin: 0 0 12px;
-  font-family: ${({ theme }) => theme.fonts?.heading || "inherit"};
-  font-size: clamp(2rem, 5vw, 3.45rem);
-  line-height: 1.22;
-  letter-spacing: -0.035em;
-  font-weight: 700;
-  color: ${({ theme }) => theme.colors.primary};
-  text-wrap: balance;
-  word-break: keep-all;
-
-  @media (max-width: 560px) {
-    font-size: 27px;
-    letter-spacing: -0.045em;
-  }
-
-  &::after {
-    content: "";
-    display: block;
-    width: 48px;
-    height: 3px;
-    margin-top: 16px;
-    border-radius: 0;
-    background: linear-gradient(90deg, var(--quiz-gold-deep), var(--quiz-gold));
-  }
-`;
-const Lead = styled.p`
-  max-width: 700px;
-  margin: 0 0 18px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: clamp(15px, 2vw, 17px);
-  line-height: 1.75;
-
-  b { color: ${({ theme }) => theme.colors.text}; }
-`;
-const Card = styled.section`
-  position: relative;
-  overflow: hidden;
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 0;
-  padding: clamp(18px, 4vw, 28px);
-  box-shadow: ${({ theme }) => theme.shadows.card};
-
-  &::before {
-    content: "";
-    position: absolute;
-    inset: 0 0 auto;
-    height: 3px;
-    background: linear-gradient(90deg, var(--quiz-gold-deep), var(--quiz-gold), ${({ theme }) => theme.colors.primary});
-  }
-`;
-const QCard = styled.div`
-  counter-increment: quiz-question;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 0;
-  padding: clamp(16px, 3vw, 20px);
-  margin: 14px 0;
-  background: ${({ theme }) => theme.colors.surface};
-  box-shadow: ${({ theme }) => theme.shadows.xs};
-  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
-
-  &:focus-within {
-    border-color: ${({ theme }) => theme.colors.primary};
-    box-shadow: ${({ theme }) => theme.focus.ring};
-  }
-`;
-const QuestionTitle = styled.h3`
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  margin: 0 0 14px;
-  font-size: clamp(16px, 2vw, 18px);
-  line-height: 1.45;
-  font-weight: 850;
-  letter-spacing: -0.015em;
-  color: ${({ theme }) => theme.colors.text};
-
-  &::before {
-    content: counter(quiz-question);
-    flex: 0 0 32px;
-    width: 32px;
-    height: 32px;
-    display: inline-grid;
-    place-items: center;
-    border-radius: 0;
-    background: ${({ theme }) => theme.gradients.primary};
-    color: ${({ theme }) => theme.colors.goldLight};
-    font-size: 14px;
-    font-weight: 900;
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, ${({ theme }) => theme.on.primary} 12%, transparent);
-  }
-`;
-
-/* ← 라디오 앞정렬(왼쪽 고정 22px) + 텍스트 상단 정렬 */
-const Choice = styled.label`
-  display: grid;
-  grid-template-columns: 24px 1fr;
-  gap: 10px;
-  align-items: center;
-  min-height: 48px;
-  margin-top: 8px;
-  padding: 11px 13px;
-  border-radius: 0;
-  cursor: pointer;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.text};
-  line-height: 1.45;
-  transition: background 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
-
-  &:hover {
-    border-color: ${({ theme }) => theme.colors.primary};
-    background: ${({ theme }) => theme.colors.primaryLight};
-    transform: translateY(-1px);
-  }
-  &.wrong {
-    background: ${({ theme }) => theme.semantic.alertErrorBg};
-    border-color: ${({ theme }) => theme.colors.error};
-    box-shadow: inset 3px 0 0 ${({ theme }) => theme.colors.error};
-  }
-  &.correct {
-    background: ${({ theme }) => theme.semantic.alertSuccessBg};
-    border-color: ${({ theme }) => theme.colors.success};
-    box-shadow: inset 3px 0 0 ${({ theme }) => theme.colors.success};
-  }
-
-  input[type="radio"]{
-    margin: 0;
-    inline-size: 19px;
-    block-size: 19px;
-    accent-color: ${({ theme }) => theme.colors.primary};
-  }
-  /* 키보드 포커스 접근성 */
-  input[type="radio"]:focus-visible + span{
-    outline: 2px solid ${({ theme }) => theme.focus?.outline || theme.colors.primary};
-    outline-offset: 4px;
-    border-radius: 6px;
-  }
-`;
-
-const Row = styled.div`
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  flex-wrap: wrap;
-
-  @media (max-width: 560px) {
-    & > * { flex: 1 1 100%; }
-  }
-`;
-const Button = styled.button`
-  min-height: 48px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px 18px;
-  border: 1px solid transparent;
-  border-radius: 0;
-  font: inherit;
-  font-weight: 850;
-  letter-spacing: -0.01em;
-  cursor: pointer;
-  text-decoration: none;
-  background: ${({ theme }) => theme.gradients.primary};
-  color: ${({ theme }) => theme.on.primary};
-  box-shadow: ${({ theme }) => theme.shadows.card};
-  transition: transform 150ms ease, box-shadow 150ms ease, filter 150ms ease;
-
-  &:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: ${({ theme }) => theme.shadows.hover};
-    filter: saturate(0.94);
-  }
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.focus?.outline || theme.colors.primary};
-    outline-offset: 3px;
-  }
-  &:disabled {
-    background: ${({ theme }) => theme.colors.disabled};
-    color: ${({ theme }) => theme.on.primary};
-    box-shadow: none;
-    cursor: not-allowed;
-    opacity: 0.72;
-  }
-`;
-const Ghost = styled(Button)`
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.primary};
-  border-color: ${({ theme }) => theme.colors.primary};
-  box-shadow: none;
-
-  &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.semantic?.buttonAltBg || theme.colors.surface};
-    box-shadow: ${({ theme }) => theme.shadows.card};
-  }
-`;
-const Help = styled.p`
-  color: ${({ theme }) => theme.colors.textSecondary};
-  margin: 9px 0 0;
-  line-height: 1.7;
-`;
-const Banner = styled.div`
-  display: grid;
-  gap: 7px;
-  padding: 17px 18px;
-  border-radius: 0;
-  margin: 18px 0 22px;
-  background: ${({ theme }) => theme.gradients.recommendation};
-  border: 1px solid ${({ theme }) => theme.colors.gold};
-  box-shadow: inset 4px 0 0 var(--quiz-gold);
-  color: ${({ theme }) => theme.colors.text};
-  line-height: 1.6;
-
-  &::before {
-    content: "참여 혜택";
-    color: var(--quiz-gold-deep);
-    font-size: 12px;
-    font-weight: 900;
-    letter-spacing: 0.08em;
-  }
-`;
-const ProgressWrap = styled.div`
-  height: 9px;
-  background: ${({ theme }) => theme.colors.border};
-  border-radius: 999px;
-  overflow: hidden;
-  margin: 2px 0 22px;
-  box-shadow: inset ${({ theme }) => theme.shadows.xs};
-`;
-const ProgressBar = styled.div`
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, var(--quiz-gold-deep), var(--quiz-gold), ${({ theme }) => theme.colors.primary});
-  width: ${({ $w }) => $w}%;
-  transition: width 300ms ease;
-`;
-const ErrorText = styled.p`
-  margin: 16px 0 0;
-  padding: 11px 13px;
-  border-radius: 0;
-  color: ${({ theme }) => theme.semantic.alertErrorText};
-  background: ${({ theme }) => theme.semantic.alertErrorBg};
-  font-weight: 750;
-  line-height: 1.55;
-`;
-const Success = styled.p`
-  display: inline-flex;
-  align-items: center;
-  margin: 0;
-  padding: 6px 10px;
-  border-radius: 999px;
-  color: ${({ theme }) => theme.semantic.alertSuccessText};
-  background: ${({ theme }) => theme.semantic.alertSuccessBg};
-  font-weight: 850;
-`;
-
-const HintBox = styled.div`
-  margin: 10px 0 0;
-  padding: 11px 13px;
-  border-radius: 0;
-  font-size: 0.94rem;
-  line-height: 1.55;
-
-  &.wrong {
-    background: ${({ theme }) => theme.semantic.alertErrorBg};
-    border: 1px solid ${({ theme }) => theme.colors.error};
-    color: ${({ theme }) => theme.semantic.alertErrorText};
-  }
-  &.correct {
-    background: ${({ theme }) => theme.semantic.alertSuccessBg};
-    border: 1px solid ${({ theme }) => theme.colors.success};
-    color: ${({ theme }) => theme.semantic.alertSuccessText};
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    &, * { transition: none !important; }
-  }
-`;
-
-/* ============================
-   Quiz Data
+   Session keys
    ============================ */
 const PASS_KEY = "quiz_gold_bonus_passed";
 const PASS_SCORE_KEY = "quiz_gold_bonus_score";
 const PASS_ANSWERS_KEY = "quiz_gold_bonus_answers";
 
+/* ============================
+   Quiz data
+   - 일반 금 지식과 서비스 자체 기준을 화면에서 명확히 구분합니다.
+   ============================ */
 const QUIZ = [
-  { id: "q1", q: "1돈(g) 단위는 몇 g일까요?", choices: ["3.75g", "5g", "10g", "37.5g"], answer: 0 },
-  { id: "q2", q: "999.9 골드바의 의미로 맞는 것은?", choices: ["순도 99.99%", "무게 99.99g", "가격 할인 9.999%", "세공 수수료 포함"], answer: 0 },
-  { id: "q3", q: "14K 금의 대략적 순도(%)는?", choices: ["41.7%", "58.5%", "75.0%", "99.9%"], answer: 1 },
+  {
+    id: "q1",
+    category: "금 기본 지식",
+    q: "1돈은 몇 g일까요?",
+    choices: ["3.75g", "5g", "10g", "37.5g"],
+    answer: 0,
+    explanation:
+      "1돈은 3.75g입니다. 국내 귀금속 거래에서 사용하는 전통적인 중량 단위이며, 한국골드마켓 계산에서도 1돈을 3.75g으로 계산합니다.",
+    hint:
+      "1냥이 37.5g이고, 1돈은 1냥의 10분의 1이라는 점을 떠올려 보세요.",
+  },
+  {
+    id: "q2",
+    category: "금 기본 지식",
+    q: "999.9 골드바의 의미로 맞는 것은 무엇일까요?",
+    choices: ["순도 99.99%", "무게 99.99g", "가격 할인 9.999%", "세공 수수료 포함"],
+    answer: 0,
+    explanation:
+      "999.9는 천분율 순도 표기로, 순도 99.99%를 의미합니다. 골드바의 무게나 가격 할인율을 뜻하는 숫자가 아닙니다.",
+    hint:
+      "999.9라는 숫자가 골드바에서 '무게'가 아니라 무엇을 표시하는지 생각해 보세요.",
+  },
+  {
+    id: "q3",
+    category: "금 기본 지식",
+    q: "18K 제품의 ‘750’ 표기는 약 몇 %의 금 함량을 의미할까요?",
+    choices: ["58.5%", "75.0%", "91.6%", "99.9%"],
+    answer: 1,
+    explanation:
+      "‘750’은 금 함량이 약 75.0%라는 뜻입니다. 18K는 24분율 기준으로 18/24 = 75%이며, 귀금속 제품에서는 750 표기가 널리 사용됩니다.",
+    hint:
+      "제품에 표시된 750이라는 숫자를 천분율로 바꾸면 몇 %인지 생각해 보세요.",
+  },
   {
     id: "q4",
-    q: "한국골드마켓에서 금 교환을 신청하기 전에 확인할 수 있는 것은 무엇일까요?",
+    category: "한국골드마켓 이용 안내",
+    q: "금 교환 신청 전에 한국골드마켓에서 미리 확인할 수 있는 것은 무엇일까요?",
     choices: [
-      "교환 가능한 금의 양과 제작 공임",
+      "예상 순금 중량·골드바 조합·제작 공임",
       "미래의 금 시세",
       "대출 가능 금액",
-      "보석의 감정 등급"
+      "보석의 감정 등급",
     ],
-    answer: 0
+    answer: 0,
+    explanation:
+      "한국골드마켓에서는 신청 전에 예상 순금 중량과 골드바 조합, 제작 공임을 먼저 확인할 수 있습니다. 실제 교환은 매장에서 순도와 중량을 확인한 뒤 최종 결정합니다.",
+    hint:
+      "방문 전에 미리 계산하거나 확인할 수 있도록 제공하는 정보가 무엇인지 생각해 보세요.",
   },
-  { id: "q5", q: "교환 수수료는 어떻게 되나요?", choices: ["수수료 없음, 제작 공임만", "수수료 5% 고정", "부가세만 부과", "수수료+공임 모두 부과"], answer: 0 },
+  {
+    id: "q5",
+    category: "한국골드마켓 운영 기준",
+    q: "현재 한국골드마켓의 금 교환 비용 안내로 맞는 것은 무엇일까요?",
+    choices: [
+      "별도의 교환 수수료 없이 골드바 제작 공임을 안내",
+      "교환 금액의 5%를 수수료로 부과",
+      "부가세만 별도로 부과",
+      "교환 수수료와 제작 공임을 모두 부과",
+    ],
+    answer: 0,
+    explanation:
+      "현재 한국골드마켓은 별도의 교환 수수료 없이 골드바 제작 공임을 안내하는 방식입니다. 신청 전에 공임을 확인하고, 매장에서 실제 순도·중량을 확인한 뒤 결정할 수 있습니다.",
+    hint:
+      "한국골드마켓에서 교환 비용을 설명할 때 ‘교환 수수료’와 ‘골드바 제작 공임’을 어떻게 구분하는지 떠올려 보세요.",
+  },
 ];
 
-const EXPLAINS = {
-  q1: {
-    hint: "힌트: 전통 단위에서 1냥=37.5g, 1돈은 1냥의 1/10이에요.",
-    correct: "정답: 1돈은 3.75g입니다. (1냥 37.5g의 1/10)"
-  },
-  q2: {
-    hint: "힌트: 999.9는 숫자 그대로 '순도'를 뜻해요.",
-    correct: "정답: 999.9는 순도 99.99%를 의미합니다."
-  },
-  q3: {
-    hint: "힌트: K 수치는 24분율 기준이에요. 14K는 14/24 ≈ ?",
-    correct: "정답: 14K ≈ 58.5%입니다. (14/24×100)"
-  },
-  q4: {
-    hint: "힌트: 한국골드마켓에서는 교환 신청 전에 받을 수 있는 금의 양과 부담할 비용을 미리 확인할 수 있어요.",
-    correct: "정답: 한국골드마켓에서는 금 교환 전에 교환 가능한 금의 양과 골드바 제작 공임을 확인할 수 있습니다."
-  },
-  q5: {
-    hint: "힌트: 우리 서비스는 ‘교환 수수료’ 대신 무엇만 받을까요?",
-    correct: "정답: 교환 수수료 없음, 골드바 제작 공임만 부담합니다."
-  }
-};
-
-const PASS_THRESHOLD = QUIZ.length; // 5문항 전부 정답
+const TOTAL = QUIZ.length;
 const formatBonusG = (value) => Number(value || 0).toFixed(2);
+
+/* ============================
+   UI
+   ============================ */
+const Page = styled.main`
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 18px 0 58px;
+  color: ${({ theme }) => theme.colors.text};
+`;
+
+const Intro = styled.header`
+  padding: clamp(24px, 5vw, 36px);
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.large};
+  background: ${({ theme }) => theme.colors.surface};
+  box-shadow: ${({ theme }) => theme.shadows.card};
+`;
+
+const Eyebrow = styled.p`
+  margin: 0 0 8px;
+  color: ${({ theme }) => theme.colors.secondaryDark};
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.09em;
+`;
+
+const Title = styled.h1`
+  margin: 0;
+  color: ${({ theme }) => theme.colors.primary};
+  font-size: clamp(1.85rem, 5vw, 2.65rem);
+  line-height: 1.2;
+  letter-spacing: -0.035em;
+  word-break: keep-all;
+`;
+
+const IntroText = styled.p`
+  margin: 14px 0 0;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 0.98rem;
+  line-height: 1.75;
+  word-break: keep-all;
+
+  strong {
+    color: ${({ theme }) => theme.colors.text};
+  }
+`;
+
+const MetaRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+`;
+
+const MetaBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 5px 10px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 999px;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 0.82rem;
+  font-weight: 750;
+
+  &[data-gold="true"] {
+    border-color: ${({ theme }) => theme.colors.gold};
+    background: ${({ theme }) => theme.semantic.badgeGoldBg};
+    color: ${({ theme }) => theme.colors.primary};
+  }
+`;
+
+const ProgressArea = styled.div`
+  margin-top: 22px;
+`;
+
+const ProgressText = styled.div`
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 0.86rem;
+
+  b {
+    color: ${({ theme }) => theme.colors.primary};
+  }
+`;
+
+const ProgressTrack = styled.div`
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: ${({ theme }) => theme.colors.border};
+`;
+
+const ProgressBar = styled.div`
+  width: ${({ $value }) => `${$value}%`};
+  height: 100%;
+  border-radius: inherit;
+  background: ${({ theme }) => theme.gradients.gold};
+  transition: width 220ms ease;
+`;
+
+const QuestionCard = styled.section`
+  margin-top: 16px;
+  padding: clamp(22px, 5vw, 34px);
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.large};
+  background: ${({ theme }) => theme.colors.surface};
+  box-shadow: ${({ theme }) => theme.shadows.card};
+`;
+
+const Category = styled.span`
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 4px 9px;
+  border: 1px solid ${({ theme }) => theme.colors.borderStrong};
+  border-radius: 999px;
+  color: ${({ theme }) => theme.colors.primary};
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+  font-size: 0.78rem;
+  font-weight: 850;
+`;
+
+const QuestionNumber = styled.p`
+  margin: 16px 0 6px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 0.83rem;
+  font-weight: 800;
+`;
+
+const QuestionTitle = styled.h2`
+  margin: 0;
+  color: ${({ theme }) => theme.colors.text};
+  font-size: clamp(1.25rem, 4vw, 1.65rem);
+  line-height: 1.45;
+  letter-spacing: -0.025em;
+  word-break: keep-all;
+`;
+
+const Choices = styled.div`
+  display: grid;
+  gap: 10px;
+  margin-top: 22px;
+`;
+
+const Choice = styled.button`
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  min-height: 54px;
+  padding: 11px 14px;
+  border: 1px solid
+    ${({ $selected, $correct, $wrong, theme }) => {
+      if ($correct) return theme.colors.success;
+      if ($wrong) return theme.colors.error;
+      if ($selected) return theme.colors.primary;
+      return theme.colors.border;
+    }};
+  border-radius: 11px;
+  background: ${({ $correct, $wrong, $selected, theme }) => {
+    if ($correct) return theme.semantic.alertSuccessBg;
+    if ($wrong) return theme.semantic.alertErrorBg;
+    if ($selected) return theme.colors.surfaceAlt;
+    return theme.colors.background;
+  }};
+  color: ${({ theme }) => theme.colors.text};
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: default;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.primary};
+    outline-offset: 2px;
+  }
+`;
+
+const ChoiceMark = styled.span`
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid
+    ${({ $selected, $correct, $wrong, theme }) => {
+      if ($correct) return theme.colors.success;
+      if ($wrong) return theme.colors.error;
+      if ($selected) return theme.colors.primary;
+      return theme.colors.borderStrong;
+    }};
+  border-radius: 50%;
+  color: ${({ $selected, $correct, $wrong, theme }) =>
+    $selected || $correct || $wrong
+      ? theme.colors.primary
+      : theme.colors.textSecondary};
+  font-size: 0.8rem;
+  font-weight: 900;
+`;
+
+const Feedback = styled.div`
+  margin-top: 18px;
+  padding: 15px 16px;
+  border: 1px solid
+    ${({ $wrong, theme }) =>
+      $wrong ? theme.colors.error : theme.colors.success};
+  border-radius: 11px;
+  background: ${({ $wrong, theme }) =>
+    $wrong
+      ? theme.semantic.alertErrorBg
+      : theme.semantic.alertSuccessBg};
+  color: ${({ $wrong, theme }) =>
+    $wrong
+      ? theme.semantic.alertErrorText
+      : theme.semantic.alertSuccessText};
+  line-height: 1.65;
+
+  strong {
+    display: block;
+    margin-bottom: 5px;
+    color: ${({ theme }) => theme.colors.text};
+  }
+`;
+
+const ActionRow = styled.div`
+  display: grid;
+  gap: 9px;
+  margin-top: 18px;
+
+  @media (min-width: 560px) {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+  }
+`;
+
+const PrimaryButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 48px;
+  padding: 11px 17px;
+  border: 1px solid ${({ theme }) => theme.colors.primary};
+  border-radius: 10px;
+  background: ${({ theme }) => theme.gradients.primary};
+  color: ${({ theme }) => theme.on.primary};
+  font: inherit;
+  font-weight: 850;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  svg {
+    width: 17px;
+    height: 17px;
+  }
+`;
+
+const SecondaryButton = styled(PrimaryButton)`
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.primary};
+`;
+
+const ErrorText = styled.p`
+  margin: 16px 0 0;
+  padding: 11px 13px;
+  border-radius: 10px;
+  color: ${({ theme }) => theme.semantic.alertErrorText};
+  background: ${({ theme }) => theme.semantic.alertErrorBg};
+  line-height: 1.55;
+`;
+
+const ResultCard = styled.section`
+  margin-top: 16px;
+  padding: clamp(24px, 5vw, 36px);
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.large};
+  background: ${({ theme }) => theme.colors.surface};
+  box-shadow: ${({ theme }) => theme.shadows.card};
+  text-align: center;
+`;
+
+const ResultIcon = styled.div`
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  background: ${({ theme }) => theme.semantic.alertSuccessBg};
+  color: ${({ theme }) => theme.colors.primary};
+
+  svg {
+    width: 28px;
+    height: 28px;
+  }
+`;
+
+const ResultTitle = styled.h2`
+  margin: 0;
+  color: ${({ theme }) => theme.colors.primary};
+  font-size: clamp(1.45rem, 4vw, 1.9rem);
+  letter-spacing: -0.025em;
+`;
+
+const ResultText = styled.p`
+  margin: 12px auto 0;
+  max-width: 560px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  line-height: 1.7;
+
+  b {
+    color: ${({ theme }) => theme.colors.text};
+  }
+`;
+
+const ResultActions = styled.div`
+  display: grid;
+  gap: 9px;
+  margin-top: 22px;
+
+  @media (min-width: 560px) {
+    grid-template-columns: 1fr 1fr;
+  }
+`;
+
+const TrustNote = styled.aside`
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 11px;
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 12px;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 0.84rem;
+  line-height: 1.65;
+
+  svg {
+    width: 22px;
+    height: 22px;
+    color: ${({ theme }) => theme.colors.primary};
+  }
+
+  strong {
+    display: block;
+    margin-bottom: 3px;
+    color: ${({ theme }) => theme.colors.text};
+  }
+`;
+
+const LoadingCard = styled(QuestionCard)`
+  text-align: center;
+  color: ${({ theme }) => theme.colors.textSecondary};
+`;
 
 /* ============================
    Component
@@ -389,38 +479,60 @@ export default function QuizGoldBonus() {
     return sanitizeAppReturnPath(params.get("next"), "");
   }, [loc.search]);
 
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [feedback, setFeedback] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [statusLoading, setStatusLoading] = useState(true);
   const [error, setError] = useState("");
-  const [result, setResult] = useState(null); // { ok, alreadyClaimed?, creditedG?, needSignup?, failedDueToScore?, score? }
+  const [result, setResult] = useState(null);
 
-  // 로그인 사용자는 먼저 수령 상태를 확인하고, 로그인/가입 복귀 건만 자동 적립합니다.
+  const currentQuestion = QUIZ[currentIndex];
+  const selected = answers[currentQuestion?.id];
+  const currentFeedback = feedback[currentQuestion?.id] || "";
+  const completedCount =
+    currentIndex + (currentFeedback === "correct" ? 1 : 0);
+  const progress = Math.round((completedCount / TOTAL) * 100);
+
   useEffect(() => {
     let cancelled = false;
+
     if (!user?.uid) {
       setStatusLoading(false);
-      return () => { cancelled = true; };
+      return () => {
+        cancelled = true;
+      };
     }
 
     const passedFlag = sessionStorage.getItem(PASS_KEY) === "1";
     let storedAnswers = null;
+
     try {
-      storedAnswers = JSON.parse(sessionStorage.getItem(PASS_ANSWERS_KEY) || "null");
+      storedAnswers = JSON.parse(
+        sessionStorage.getItem(PASS_ANSWERS_KEY) || "null"
+      );
     } catch {
       storedAnswers = null;
     }
-    const hasAllAnswers = QUIZ.every((question) =>
-      Number.isInteger(Number(storedAnswers?.[question.id]))
+
+    const hasAllAnswers = QUIZ.every(
+      (question) =>
+        Number(storedAnswers?.[question.id]) === question.answer
     );
 
     (async () => {
       setStatusLoading(true);
+
       try {
         if (passedFlag && hasAllAnswers) {
-          const res = await claimGoldQuizBonus({ answers: storedAnswers });
-          if (!cancelled) setResult(res);
+          const res = await claimGoldQuizBonus({
+            answers: storedAnswers,
+          });
+
+          if (!cancelled) {
+            setResult(res);
+          }
+
           sessionStorage.removeItem(PASS_KEY);
           sessionStorage.removeItem(PASS_SCORE_KEY);
           sessionStorage.removeItem(PASS_ANSWERS_KEY);
@@ -430,60 +542,111 @@ export default function QuizGoldBonus() {
             sessionStorage.removeItem(PASS_SCORE_KEY);
             sessionStorage.removeItem(PASS_ANSWERS_KEY);
           }
+
           const status = await getGoldQuizBonusStatus(user.uid);
+
           if (!cancelled && status?.claimed) {
-            setResult({ ...status, ok: true, alreadyClaimed: true });
+            setResult({
+              ...status,
+              ok: true,
+              alreadyClaimed: true,
+            });
           }
         }
-      } catch (e) {
+      } catch (loadError) {
         if (!cancelled) {
-          setError((e && typeof e === "object" && "message" in e) ? e.message : "보너스 상태 확인 중 오류가 발생했습니다.");
+          setError(
+            loadError?.message ||
+              "퀵퀴즈 혜택 상태를 확인하지 못했습니다."
+          );
         }
       } finally {
-        if (!cancelled) setStatusLoading(false);
+        if (!cancelled) {
+          setStatusLoading(false);
+        }
       }
     })();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [user?.uid]);
 
-  const total = QUIZ.length;
-  const doneCount = useMemo(() => Object.keys(answers).length, [answers]);
-  const progress = Math.round((doneCount / total) * 100);
+  const onChoice = (qid, index) => {
+    if (feedback[qid] === "correct") return;
 
-  const onChoice = (qid, idx) => {
-    setAnswers((p) => ({ ...p, [qid]: idx }));
-    const q = QUIZ.find((x) => x.id === qid);
-    if (!q) return;
-    setFeedback((f) => ({ ...f, [qid]: idx === q.answer ? "correct" : "wrong" }));
+    setAnswers((current) => ({
+      ...current,
+      [qid]: index,
+    }));
+    setFeedback((current) => ({
+      ...current,
+      [qid]: "",
+    }));
+    setError("");
+  };
+
+  const handleCheck = () => {
+    if (!currentQuestion) return;
+
+    if (!Number.isInteger(selected)) {
+      setError("답을 하나 선택해 주세요.");
+      return;
+    }
+
+    const correct = selected === currentQuestion.answer;
+
+    setFeedback((current) => ({
+      ...current,
+      [currentQuestion.id]: correct ? "correct" : "wrong",
+    }));
+
+    if (!correct) {
+      setError("");
+    }
+  };
+
+  const handleNext = () => {
+    if (currentFeedback !== "correct") return;
+    if (currentIndex >= TOTAL - 1) return;
+
+    setCurrentIndex((index) => index + 1);
+    setError("");
+    window.scrollTo?.({ top: 0, behavior: "smooth" });
   };
 
   const resetQuiz = () => {
+    setCurrentIndex(0);
     setAnswers({});
     setFeedback({});
     setError("");
     setResult(null);
   };
 
-  const handleSubmit = async () => {
+  const finishQuiz = async () => {
     if (submitting) return;
-    setError("");
 
-    if (doneCount < total) {
-      setError("모든 문항을 선택해 주세요. (오답이면 힌트를 참고해 정답으로 바꿀 수 있어요!)");
+    const allCorrect = QUIZ.every(
+      (question) =>
+        Number(answers[question.id]) === question.answer
+    );
+
+    if (!allCorrect) {
+      setError(
+        "5가지 내용을 모두 정확히 확인한 뒤 완료할 수 있습니다."
+      );
       return;
     }
 
     setSubmitting(true);
+    setError("");
+
     try {
-      const score = QUIZ.reduce((s, q) => s + (answers[q.id] === q.answer ? 1 : 0), 0);
-      const passed = score === PASS_THRESHOLD;
-
-      if (window?.gtag) window.gtag("event", "quiz_gold_bonus_submit", { score, passed });
-
-      if (!passed) {
-        setResult({ ok: false, failedDueToScore: true, score });
-        return;
+      if (window?.gtag) {
+        window.gtag("event", "quiz_gold_bonus_submit", {
+          score: TOTAL,
+          passed: true,
+        });
       }
 
       if (user) {
@@ -491,142 +654,322 @@ export default function QuizGoldBonus() {
         setResult(res);
       } else {
         sessionStorage.setItem(PASS_KEY, "1");
-        sessionStorage.setItem(PASS_SCORE_KEY, String(score));
-        sessionStorage.setItem(PASS_ANSWERS_KEY, JSON.stringify(answers));
-        setResult({ ok: true, needSignup: true, score });
+        sessionStorage.setItem(PASS_SCORE_KEY, String(TOTAL));
+        sessionStorage.setItem(
+          PASS_ANSWERS_KEY,
+          JSON.stringify(answers)
+        );
+
+        setResult({
+          ok: true,
+          needSignup: true,
+          score: TOTAL,
+        });
       }
-    } catch (e) {
-      const msg = (e && typeof e === "object" && "message" in e) ? e.message : "제출 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
-      setError(String(msg));
+    } catch (submitError) {
+      setError(
+        submitError?.message ||
+          "혜택 적립 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."
+      );
     } finally {
       setSubmitting(false);
     }
   };
 
+  const showQuiz =
+    !statusLoading &&
+    !result?.alreadyClaimed &&
+    !result?.ok &&
+    !result?.needSignup;
+
   return (
     <Page>
-      <Kicker>GOLD KNOWLEDGE QUICK QUIZ</Kicker>
-      <Title>금 퀵퀴즈 — 0.01g 보너스</Title>
-      <Lead>
-        퀵퀴즈 <b>{total}문항</b>을 <b>모두 정답</b>하면 <b>순금 0.01g</b>를 적립해 드립니다. (1인 1회, 운영 정책 위반 시 취소될 수 있습니다.)
-      </Lead>
-      <Banner>
-          <div><b>혜택:</b> 적립된 순금 0.01g은 골드바 교환 시 사용할 수 있습니다.</div>
-        
-      </Banner>
+      <Intro>
+        <Eyebrow>GOLD EXCHANGE BASIC GUIDE</Eyebrow>
+        <Title>금 교환 전에 꼭 알아둘 5가지</Title>
+        <IntroText>
+          1돈의 무게부터 14K 순도, 999.9 골드바까지
+          <strong> 실제 금 교환에 필요한 기본 내용</strong>을
+          약 1분 동안 확인해 보세요. 모든 내용을 확인하면 참여
+          혜택으로 순금 0.01g을 적립해 드립니다.
+        </IntroText>
+
+        <MetaRow>
+          <MetaBadge>약 1분</MetaBadge>
+          <MetaBadge>5가지 기본 내용</MetaBadge>
+          <MetaBadge data-gold="true">완료 혜택 순금 0.01g</MetaBadge>
+        </MetaRow>
+
+        <ProgressArea>
+          <ProgressText>
+            <span>기초 가이드 진행</span>
+            <b>
+              {Math.min(completedCount, TOTAL)} / {TOTAL}
+            </b>
+          </ProgressText>
+          <ProgressTrack>
+            <ProgressBar $value={progress} />
+          </ProgressTrack>
+        </ProgressArea>
+      </Intro>
 
       {statusLoading && (
-        <Card>
-          <Help aria-live="polite">퀵퀴즈 보너스 수령 여부를 확인하고 있습니다…</Help>
-        </Card>
+        <LoadingCard>
+          순금 혜택 수령 여부를 확인하고 있습니다…
+        </LoadingCard>
       )}
 
-      {!statusLoading && !result?.alreadyClaimed && <Card>
-        <ProgressWrap aria-label={`진행률 ${progress}%`}><ProgressBar $w={progress} /></ProgressWrap>
+      {showQuiz && currentQuestion && (
+        <QuestionCard>
+          <Category>{currentQuestion.category}</Category>
+          <QuestionNumber>
+            {String(currentIndex + 1).padStart(2, "0")} /{" "}
+            {String(TOTAL).padStart(2, "0")}
+          </QuestionNumber>
+          <QuestionTitle>{currentQuestion.q}</QuestionTitle>
 
-        {QUIZ.map((q) => {
-          const selected = answers[q.id];
-          const state = selected == null ? "idle" : (selected === q.answer ? "correct" : "wrong");
+          <Choices>
+            {currentQuestion.choices.map((choice, index) => {
+              const isSelected = selected === index;
+              const isCorrectChoice =
+                currentFeedback === "correct" &&
+                index === currentQuestion.answer;
+              const isWrongChoice =
+                currentFeedback === "wrong" && isSelected;
 
-          return (
-            <QCard key={q.id}>
-              <QuestionTitle>{q.q}</QuestionTitle>
-              {q.choices.map((c, idx) => (
+              return (
                 <Choice
-                  key={`${q.id}-${idx}`}
-                  className={selected === idx ? state : "idle"}
+                  key={`${currentQuestion.id}-${index}`}
+                  type="button"
+                  onClick={() =>
+                    onChoice(currentQuestion.id, index)
+                  }
+                  disabled={currentFeedback === "correct"}
+                  $selected={isSelected}
+                  $correct={isCorrectChoice}
+                  $wrong={isWrongChoice}
+                  aria-pressed={isSelected}
                 >
-                  <input
-                    type="radio"
-                    name={q.id}
-                    checked={selected === idx}
-                    onChange={() => onChoice(q.id, idx)}
-                    aria-invalid={state === "wrong" && selected === idx}
-                  />
-                  <span>{c}</span>
+                  <ChoiceMark
+                    $selected={isSelected}
+                    $correct={isCorrectChoice}
+                    $wrong={isWrongChoice}
+                  >
+                    {isCorrectChoice ? (
+                      <Check size={15} />
+                    ) : (
+                      String.fromCharCode(65 + index)
+                    )}
+                  </ChoiceMark>
+                  <span>{choice}</span>
                 </Choice>
-              ))}
+              );
+            })}
+          </Choices>
 
-              {/* 즉시 피드백 */}
-              {feedback[q.id] === "wrong" && (
-                <HintBox className="wrong">아쉽어요. {EXPLAINS[q.id].hint} <b>정답을 다시 선택해 보세요!</b></HintBox>
-              )}
-              {feedback[q.id] === "correct" && (
-                <HintBox className="correct">정답! {EXPLAINS[q.id].correct}</HintBox>
-              )}
-            </QCard>
-          );
-        })}
+          {currentFeedback === "wrong" && (
+            <Feedback $wrong>
+              <strong>다시 확인해 보세요</strong>
+              {currentQuestion.hint}
+            </Feedback>
+          )}
 
-        {error && <ErrorText role="alert">{error}</ErrorText>}
+          {currentFeedback === "correct" && (
+            <Feedback>
+              <strong>✓ 확인했습니다</strong>
+              {currentQuestion.explanation}
+            </Feedback>
+          )}
 
-        <Row style={{ marginTop: 10 }}>
-          <Button onClick={handleSubmit} disabled={submitting}>퀴즈 제출하고 0.01g 받기</Button>
-          <Ghost onClick={() => navigate("/gold-exchange")}>교환 계산기로 가기</Ghost>
-          {(result?.failedDueToScore || doneCount === total) && <Ghost onClick={resetQuiz}>다시 풀기</Ghost>}
-        </Row>
-      </Card>}
+          {error && <ErrorText role="alert">{error}</ErrorText>}
+
+          <ActionRow>
+            {currentFeedback !== "correct" ? (
+              <PrimaryButton
+                type="button"
+                onClick={handleCheck}
+                disabled={!Number.isInteger(selected)}
+              >
+                정답 확인
+              </PrimaryButton>
+            ) : currentIndex < TOTAL - 1 ? (
+              <PrimaryButton type="button" onClick={handleNext}>
+                다음 내용
+                <ChevronRight />
+              </PrimaryButton>
+            ) : (
+              <PrimaryButton
+                type="button"
+                onClick={finishQuiz}
+                disabled={submitting}
+              >
+                <Gift />
+                {submitting
+                  ? "혜택 확인 중…"
+                  : "5가지 확인 완료하고 0.01g 받기"}
+              </PrimaryButton>
+            )}
+
+            {currentIndex > 0 && currentFeedback !== "correct" && (
+              <SecondaryButton
+                type="button"
+                onClick={() =>
+                  setCurrentIndex((index) =>
+                    Math.max(0, index - 1)
+                  )
+                }
+              >
+                이전
+              </SecondaryButton>
+            )}
+          </ActionRow>
+        </QuestionCard>
+      )}
 
       {result && (
-        <Card style={{ marginTop: 12 }}>
-          {result.failedDueToScore ? (
+        <ResultCard>
+          <ResultIcon>
+            {result.needSignup ? (
+              <Gift />
+            ) : (
+              <CheckCircle2 />
+            )}
+          </ResultIcon>
+
+          {result.needSignup ? (
             <>
-              <h3 style={{ margin: 0 }}>아직이에요! 😥</h3>
-              <Help>점수: <b>{result.score}/{total}</b>. 모든 문항이 <b>정답</b>이어야 통과해요. 힌트를 참고해 수정한 뒤 다시 제출해 보세요!</Help>
-              <Row style={{ marginTop: 10 }}>
-                <Button onClick={() => setResult(null)}>문항 수정하기</Button>
-                <Ghost as={Link} to="/">홈으로</Ghost>
-              </Row>
-            </>
-          ) : ("needSignup" in result && result.needSignup) ? (
-            <>
-              <Success>축하해요! 전 문항 정답입니다 🎉</Success>
-              <Help>지금 <b>회원가입</b>하면 0.01g를 즉시 적립해 드립니다.</Help>
-              <Row style={{ marginTop: 10 }}>
-                <Button as={Link} to={`/register?next=${encodeURIComponent(loc.pathname + loc.search)}`}>
-                  회원가입하고 순금 0.01g 받기
-                </Button>
-                <Ghost as={Link} to="/">나중에 할게요</Ghost>
-              </Row>
+              <ResultTitle>금 교환 기초 확인 완료</ResultTitle>
+              <ResultText>
+                5가지 기본 내용을 모두 확인했습니다.
+                지금 회원가입하면 퀵퀴즈 참여 혜택
+                <b> 순금 0.01g</b>을 받을 수 있습니다.
+              </ResultText>
+
+              <ResultActions>
+                <PrimaryButton
+                  as={Link}
+                  to={`/register?next=${encodeURIComponent(
+                    loc.pathname + loc.search
+                  )}`}
+                >
+                  회원가입하고 0.01g 받기
+                  <ChevronRight />
+                </PrimaryButton>
+                <SecondaryButton as={Link} to="/">
+                  나중에 하기
+                </SecondaryButton>
+              </ResultActions>
             </>
           ) : result.alreadyClaimed ? (
             <>
-              <h3 style={{ margin: 0 }}>이미 보너스를 받으셨습니다</h3>
-              <Help>
-                이 이벤트는 계정당 1회만 참여할 수 있어요.
-                지급된 보너스는 <b>{formatBonusG(result.creditedG)}g</b>, 현재 보너스 잔액은 <b>{formatBonusG(result.balanceG ?? result.creditedG)}g</b>입니다.
-              </Help>
-              {nextPath && (
-                <Row style={{ marginTop: 10 }}>
-                  <Button onClick={() => navigate(nextPath, { replace: true })}>
+              <ResultTitle>이미 완료한 기초 가이드입니다</ResultTitle>
+              <ResultText>
+                이 혜택은 계정당 1회 제공됩니다.
+                지급된 퀵퀴즈 혜택은
+                <b> {formatBonusG(result.creditedG)}g</b>입니다.
+              </ResultText>
+
+              <ResultActions>
+                {nextPath ? (
+                  <PrimaryButton
+                    type="button"
+                    onClick={() =>
+                      navigate(nextPath, { replace: true })
+                    }
+                  >
                     혜택 계속하기
-                  </Button>
-                </Row>
-              )}
+                    <ChevronRight />
+                  </PrimaryButton>
+                ) : (
+                  <PrimaryButton as={Link} to="/profile">
+                    내 적립 순금 확인
+                    <ChevronRight />
+                  </PrimaryButton>
+                )}
+
+                <SecondaryButton as={Link} to="/gold-exchange">
+                  금교환 계산해보기
+                </SecondaryButton>
+              </ResultActions>
             </>
           ) : result.ok ? (
             <>
-              <h3 style={{ margin: 0 }}>적립 완료!</h3>
-              <Help>
-                <b>{formatBonusG(result.creditedG || 0.01)}g</b>가 적립되었습니다.
-                현재 보너스 잔액은 <b>{formatBonusG(result.balanceG ?? result.creditedG ?? 0.01)}g</b>입니다.
-              </Help>
-              {nextPath && (
-                <Row style={{ marginTop: 10 }}>
-                  <Button onClick={() => navigate(nextPath, { replace: true })}>
+              <ResultTitle>금 교환 기초 확인 완료</ResultTitle>
+              <ResultText>
+                5가지 기본 내용을 모두 확인했습니다.
+                참여 혜택
+                <b>
+                  {" "}
+                  순금 {formatBonusG(result.creditedG || 0.01)}g
+                </b>
+                이 적립되었습니다.
+                현재 적립 순금 잔액은
+                <b>
+                  {" "}
+                  {formatBonusG(
+                    result.balanceG ??
+                      result.creditedG ??
+                      0.01
+                  )}
+                  g
+                </b>
+                입니다.
+              </ResultText>
+
+              <ResultActions>
+                {nextPath ? (
+                  <PrimaryButton
+                    type="button"
+                    onClick={() =>
+                      navigate(nextPath, { replace: true })
+                    }
+                  >
                     혜택 계속하기
-                  </Button>
-                </Row>
-              )}
+                    <ChevronRight />
+                  </PrimaryButton>
+                ) : (
+                  <PrimaryButton as={Link} to="/profile">
+                    내 적립 순금 확인
+                    <ChevronRight />
+                  </PrimaryButton>
+                )}
+
+                <SecondaryButton as={Link} to="/gold-exchange">
+                  금교환 계산해보기
+                </SecondaryButton>
+              </ResultActions>
             </>
           ) : (
             <>
-              <h3 style={{ margin: 0 }}>처리 실패</h3>
-              <Help>잠시 후 다시 시도해 주세요.</Help>
+              <ResultTitle>혜택 확인이 필요합니다</ResultTitle>
+              <ResultText>
+                잠시 후 다시 시도해 주세요.
+              </ResultText>
+              <ResultActions>
+                <PrimaryButton type="button" onClick={resetQuiz}>
+                  <RotateCcw />
+                  다시 확인하기
+                </PrimaryButton>
+              </ResultActions>
             </>
           )}
-        </Card>
+        </ResultCard>
       )}
+
+      {!statusLoading && error && !showQuiz && (
+        <ErrorText role="alert">{error}</ErrorText>
+      )}
+
+      <TrustNote>
+        <ShieldCheck />
+        <div>
+          <strong>확인하고 결정하는 금 교환</strong>
+          일반 금 지식과 한국골드마켓 자체 이용·운영 기준을 구분해
+          안내합니다. 온라인 계산 결과는 예상값이며, 실제 교환은
+          매장에서 순도와 중량, 제작 공임을 확인한 뒤 고객이 최종
+          결정합니다.
+        </div>
+      </TrustNote>
     </Page>
   );
 }

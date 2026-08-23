@@ -31,6 +31,49 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!--
+              Firebase Authentication 이메일 인증/비밀번호 재설정 Hosting App Link.
+              새 메일은 한국골드마켓 커스텀 도메인으로 발송합니다.
+              수신 예: https://koreagoldmarket.com/__/auth/links?...
+            -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data
+                    android:scheme="https"
+                    android:host="koreagoldmarket.com"
+                    android:pathPrefix="/__/auth/links" />
+            </intent-filter>
+
+            <!-- 이미 발송된 Firebase 기본 Hosting 도메인 링크도 계속 지원합니다. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data
+                    android:scheme="https"
+                    android:host="goldmarket-0.firebaseapp.com"
+                    android:pathPrefix="/__/auth/links" />
+            </intent-filter>
+
+            <!--
+              브라우저의 한국골드마켓 전용 인증페이지에서 인증 완료 후
+              설치된 앱으로 돌아오기 위한 전용 딥링크.
+              예: koreagoldmarket://verify-email?path=%2Fgold-price
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data
+                    android:scheme="koreagoldmarket"
+                    android:host="verify-email" />
+            </intent-filter>
+
         </activity>
 
         <provider

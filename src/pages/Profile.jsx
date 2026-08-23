@@ -789,10 +789,10 @@ export default function Profile() {
       <Section>
         <Title>내 프로필</Title>
 
-        <RewardPanel aria-label="순금 보너스 적립 내역">
+        <RewardPanel aria-label="신규회원 순금 혜택 적립 내역">
           <RewardTitle>
             <span aria-hidden="true">✨</span>
-            순금 보너스
+            신규회원 순금 혜택
           </RewardTitle>
 
           {goldBonus.loading ? (
@@ -800,7 +800,7 @@ export default function Profile() {
           ) : (
             <>
               <RewardRow>
-                <span>회원가입 웰컴 순금</span>
+                <span>회원가입 혜택</span>
                 <b>
                   {goldBonus.welcomeClaimed
                     ? `${goldBonus.welcomeG.toFixed(2)}g 적립`
@@ -822,7 +822,7 @@ export default function Profile() {
               </RewardRow>
 
               <RewardRow>
-                <span>퀵퀴즈 순금</span>
+                <span>금 교환 기초 가이드</span>
                 {goldBonus.quizClaimed ? (
                   <b>{goldBonus.quizG.toFixed(2)}g 적립</b>
                 ) : goldBonus.quizUnavailable ? (
@@ -962,9 +962,10 @@ export default function Profile() {
               )}
 
               <RewardNote>
-                회원가입·금시세/혜택 알림·퀵퀴즈로 적립한 순금은
-                골드바 교환 시 중량으로 더해집니다. 현금 환급·양도는
-                불가하며, 매장에서 본인과 최종 인정 중량을 확인한 뒤
+                신규회원 혜택은 회원가입·금시세/혜택 알림 설정·금 교환
+                기초 가이드로 각 계정당 1회 제공됩니다. 적립한 순금은
+                골드바 교환 시 중량으로 더해지며 현금 환급·양도는
+                불가합니다. 매장에서 본인과 최종 인정 중량을 확인한 뒤
                 사용이 확정됩니다.
               </RewardNote>
             </>

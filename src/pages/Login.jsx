@@ -319,10 +319,10 @@ export default function Login() {
           <LuxuryCta
             to={registerPath}
             state={registerState}
-            aria-label="회원가입하러 가기 - 회원가입 즉시 웰컴 순금 0.01g 적립"
+            aria-label="회원가입하기 - 신규회원 최대 순금 0.03g 혜택"
           >
-            <CtaLineMain>회원가입하러가기</CtaLineMain>
-            <CtaLineSub>회원가입 즉시 웰컴 순금 0.01g 적립 · 골드바 교환 시 사용 가능</CtaLineSub>
+            <CtaLineMain>신규회원 혜택 시작하기</CtaLineMain>
+            <CtaLineSub>회원가입 · 알림 설정(선택) · 금 교환 기초 가이드로 최대 순금 0.03g</CtaLineSub>
           </LuxuryCta>
         </TopCtaWrap>
 

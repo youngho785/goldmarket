@@ -12,7 +12,6 @@ import React, {
 import {
   onIdTokenChanged,
   getIdTokenResult,
-  sendEmailVerification,
 } from "firebase/auth";
 
 import {
@@ -23,6 +22,7 @@ import {
   // ⬇️ 서비스 레이어 함수들
   updateAuthProfileFields as authUpdateProfile,
   signUp as authSignUp,
+  sendVerificationEmailIfNeeded as authSendVerificationEmailIfNeeded,
 } from "../services/authService";
 
 import { auth } from "../firebase/firebase";
@@ -276,6 +276,7 @@ export const AuthProvider = ({ children }) => {
       displayName,
       nickname,
       phone,
+      continueUrl = "",
     }) => {
       const user = await authSignUp({
         email,
@@ -283,6 +284,7 @@ export const AuthProvider = ({ children }) => {
         displayName,
         nickname,
         phone,
+        continueUrl,
       });
 
       // 기존 화면과의 호환 위해 유사한 형태로 반환
@@ -314,23 +316,8 @@ export const AuthProvider = ({ children }) => {
      * 이메일 인증 재전송
      * 기존 API 유지
      */
-    const sendEmailVerificationLink = () => {
-      if (!auth.currentUser) {
-        return Promise.reject(
-          new Error(
-            "로그인된 사용자가 없습니다."
-          )
-        );
-      }
-
-      return sendEmailVerification(
-        auth.currentUser,
-        {
-          url: `${window.location.origin}/verify-email`,
-          handleCodeInApp: true,
-        }
-      );
-    };
+    const sendEmailVerificationLink = (continueUrl = "") =>
+      authSendVerificationEmailIfNeeded(continueUrl || "/");
 
     /*
      * 커스텀 클레임 최신화 헬퍼

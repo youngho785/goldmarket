@@ -2398,23 +2398,22 @@ export default function Settings() {
           <Row>
             <RowText>
               <strong>
-                금시세·혜택 알림
+                내 금의 가치 변화·혜택 알림
               </strong>
 
               <small>
-                금시세 업데이트, 주요 소식,
-                이벤트·혜택을 선택해서
-                받아봅니다.
+                금시세 주요 변동과 한국골드마켓
+                소식·혜택을 선택해서 받아봅니다.
               </small>
 
               <em>
-                광고성 정보 수신동의
+                선택 동의 · 신규회원은 설정 완료 시 계정당 1회 순금 0.01g 혜택
               </em>
             </RowText>
 
             <Switch
               role="group"
-              aria-label="금시세·혜택 알림 설정"
+              aria-label="내 금의 가치 변화·혜택 알림 설정"
             >
               <SwitchOption
                 type="button"
