@@ -43,6 +43,47 @@ function requireSuperAdmin(token: Record<string, unknown> | undefined): void {
   }
 }
 
+/**
+ * 예약/보너스처럼 중요한 상태 변경은 Firebase Auth의 현재 계정 상태를 직접 확인합니다.
+ * 이메일 인증은 회원가입 시 한 번만 하면 되며, 이후 호출에서는 저장된 인증 완료 상태만 확인합니다.
+ */
+async function requireVerifiedUser(uid: string | undefined): Promise<string> {
+  if (!uid) {
+    throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+  }
+
+  try {
+    const userRecord = await getAuth().getUser(uid);
+
+    if (userRecord.disabled) {
+      throw new HttpsError("permission-denied", "사용이 중지된 계정입니다.");
+    }
+
+    if (!userRecord.emailVerified) {
+      throw new HttpsError(
+        "failed-precondition",
+        "이메일 인증을 완료한 회원만 이용할 수 있습니다."
+      );
+    }
+
+    return uid;
+  } catch (error) {
+    if (error instanceof HttpsError) throw error;
+
+    const code = String((error as { code?: string })?.code || "");
+    console.error("[requireVerifiedUser] 사용자 확인 실패", { uid, code });
+
+    if (code === "auth/user-not-found") {
+      throw new HttpsError("unauthenticated", "계정 정보를 확인할 수 없습니다. 다시 로그인해 주세요.");
+    }
+
+    throw new HttpsError(
+      "unavailable",
+      "회원 인증 상태를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요."
+    );
+  }
+}
+
 /* ── 공통 상수/유틸 */
 const DON_TO_GRAMS = goldRatesDefaults.donToGrams;
 const DEFAULT_PURITY: Record<string, number> = goldRatesDefaults.purity;
@@ -796,8 +837,7 @@ export const requestGoldExchangeGroup = onCall<{
   }>;
   barsPlan?: Record<string, unknown> | null;
 }>({ region: "asia-northeast3", enforceAppCheck: ENFORCE_APP_CHECK }, async (req) => {
-  const uid = req.auth?.uid;
-  if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+  const uid = await requireVerifiedUser(req.auth?.uid);
 
   const {
     visitDate,
@@ -1094,8 +1134,7 @@ export const rescheduleGoldExchangeGroup = onCall<{
 }>(
   { region: "asia-northeast3", enforceAppCheck: ENFORCE_APP_CHECK },
   async (req) => {
-    const uid = req.auth?.uid;
-    if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+    const uid = await requireVerifiedUser(req.auth?.uid);
 
     const groupId = String(req.data?.groupId || "").trim();
     const visitDate = String(req.data?.visitDate || "").trim();
@@ -4081,22 +4120,55 @@ async function resolveWelcomeBonusState(uid: string): Promise<WelcomeBonusState>
   });
 }
 
-async function resolveQuizBonusState(
+async function getQuizBonusState(uid: string): Promise<QuizBonusState> {
+  const userRef = db().doc(`users/${uid}`);
+  const promoRef = userRef.collection("promotions").doc(QUIZ_BONUS_PROMO_ID);
+  const [userSnap, promoSnap] = await Promise.all([userRef.get(), promoRef.get()]);
+
+  const balanceMg = bonusBalanceMilliGrams(userSnap.data());
+
+  if (!promoSnap.exists) {
+    return {
+      ok: true,
+      claimed: false,
+      alreadyClaimed: false,
+      claimedNow: false,
+      creditedG: 0,
+      balanceG: balanceMg / 1000,
+    };
+  }
+
+  const promo = promoSnap.data() || {};
+  const creditedMg = toNonNegativeInteger(
+    promo.creditedMilliGrams,
+    Math.round(Number(promo.creditedG || QUIZ_BONUS_CREDIT_G) * 1000)
+  );
+
+  return {
+    ok: true,
+    claimed: true,
+    alreadyClaimed: true,
+    claimedNow: false,
+    creditedG: creditedMg / 1000,
+    balanceG: balanceMg / 1000,
+  };
+}
+
+async function claimQuizBonusState(
   uid: string,
-  claim?: { score: number; attemptId: string }
+  claim: { score: number; attemptId: string }
 ): Promise<QuizBonusState> {
   const userRef = db().doc(`users/${uid}`);
   const promoRef = userRef.collection("promotions").doc(QUIZ_BONUS_PROMO_ID);
   const ledgerRef = userRef.collection("ledger").doc(`quiz_${QUIZ_BONUS_PROMO_ID}`);
 
   return db().runTransaction(async (tx) => {
-    const [userSnap, promoSnap, ledgerSnap] = await Promise.all([
+    const [userSnap, promoSnap] = await Promise.all([
       tx.get(userRef),
       tx.get(promoRef),
-      tx.get(ledgerRef),
     ]);
 
-    let balanceMg = bonusBalanceMilliGrams(userSnap.data());
+    const balanceMg = bonusBalanceMilliGrams(userSnap.data());
 
     if (promoSnap.exists) {
       const promo = promoSnap.data() || {};
@@ -4104,37 +4176,6 @@ async function resolveQuizBonusState(
         promo.creditedMilliGrams,
         Math.round(Number(promo.creditedG || QUIZ_BONUS_CREDIT_G) * 1000)
       );
-
-      // 예전 구현은 수령 문서만 만들었으므로, 원장이 없는 경우 한 번만 잔액을 보정합니다.
-      if (!ledgerSnap.exists) {
-        balanceMg += creditedMg;
-        tx.set(userRef, {
-          bonusGoldMilliGrams: balanceMg,
-          bonusGoldG: balanceMg / 1000,
-          bonusGoldUpdatedAt: FieldValue.serverTimestamp(),
-        }, { merge: true });
-        tx.set(ledgerRef, {
-          direction: "credit",
-          amountMilliGrams: creditedMg,
-          amountG: creditedMg / 1000,
-          source: QUIZ_BONUS_PROMO_ID,
-          createdAt: FieldValue.serverTimestamp(),
-          migratedFromLegacyClaim: true,
-        });
-      }
-
-      if (
-        promo.balanceApplied !== true ||
-        promo.creditedMilliGrams !== creditedMg ||
-        promo.creditedG !== creditedMg / 1000
-      ) {
-        tx.set(promoRef, {
-          creditedMilliGrams: creditedMg,
-          creditedG: creditedMg / 1000,
-          balanceApplied: true,
-          balanceAppliedAt: FieldValue.serverTimestamp(),
-        }, { merge: true });
-      }
 
       return {
         ok: true,
@@ -4146,24 +4187,18 @@ async function resolveQuizBonusState(
       };
     }
 
-    if (!claim) {
-      return {
-        ok: true,
-        claimed: false,
-        alreadyClaimed: false,
-        claimedNow: false,
-        creditedG: 0,
-        balanceG: balanceMg / 1000,
-      };
-    }
-
-    balanceMg += QUIZ_BONUS_CREDIT_MG;
+    const nextBalanceMg = balanceMg + QUIZ_BONUS_CREDIT_MG;
     const now = FieldValue.serverTimestamp();
-    tx.set(userRef, {
-      bonusGoldMilliGrams: balanceMg,
-      bonusGoldG: balanceMg / 1000,
-      bonusGoldUpdatedAt: now,
-    }, { merge: true });
+
+    tx.set(
+      userRef,
+      {
+        bonusGoldMilliGrams: nextBalanceMg,
+        bonusGoldG: nextBalanceMg / 1000,
+        bonusGoldUpdatedAt: now,
+      },
+      { merge: true }
+    );
     tx.create(promoRef, {
       creditedMilliGrams: QUIZ_BONUS_CREDIT_MG,
       creditedG: QUIZ_BONUS_CREDIT_G,
@@ -4188,7 +4223,7 @@ async function resolveQuizBonusState(
       alreadyClaimed: false,
       claimedNow: true,
       creditedG: QUIZ_BONUS_CREDIT_G,
-      balanceG: balanceMg / 1000,
+      balanceG: nextBalanceMg / 1000,
     };
   });
 }
@@ -4196,8 +4231,7 @@ async function resolveQuizBonusState(
 export const welcomeClaimGoldBonus = onCall(
   { region: "asia-northeast3", enforceAppCheck: ENFORCE_APP_CHECK },
   async (req) => {
-    const uid = req.auth?.uid;
-    if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+    const uid = await requireVerifiedUser(req.auth?.uid);
 
     const res = await resolveWelcomeBonusState(uid);
     if (res.claimedNow) {
@@ -4223,13 +4257,7 @@ export const marketingPushClaimGoldBonus = onCall(
     enforceAppCheck: ENFORCE_APP_CHECK,
   },
   async (req) => {
-    const uid = req.auth?.uid;
-    if (!uid) {
-      throw new HttpsError(
-        "unauthenticated",
-        "로그인이 필요합니다."
-      );
-    }
+    const uid = await requireVerifiedUser(req.auth?.uid);
 
     // 이미 받은 계정은 알림 설정을 나중에 꺼도 회수하지 않습니다.
     const existing =
@@ -4396,7 +4424,7 @@ export const quizGetGoldBonusStatus = onCall(
   async (req) => {
     const uid = req.auth?.uid;
     if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
-    return resolveQuizBonusState(uid);
+    return getQuizBonusState(uid);
   }
 );
 
@@ -4406,8 +4434,7 @@ export const quizClaimGoldBonus = onCall<{
 }>(
   { region: "asia-northeast3", enforceAppCheck: ENFORCE_APP_CHECK },
   async (req) => {
-    const uid = req.auth?.uid;
-    if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+    const uid = await requireVerifiedUser(req.auth?.uid);
 
     const answerKey: Record<string, number> = { q1: 0, q2: 0, q3: 1, q4: 0, q5: 0 };
     const answers = req.data?.answers;
@@ -4432,7 +4459,7 @@ export const quizClaimGoldBonus = onCall<{
       throw new HttpsError("failed-precondition", "아쉽지만 기준 점수 미달입니다.");
     }
 
-    const res = await resolveQuizBonusState(uid, { score, attemptId });
+    const res = await claimQuizBonusState(uid, { score, attemptId });
 
     // 이미 수령한 계정에는 중복 알림을 만들지 않습니다.
     if (res.claimedNow) {
@@ -4543,8 +4570,7 @@ export const bonusGetGoldUsageState = onCall(
 export const bonusRequestGoldUsage = onCall<{ groupId: string }>(
   { region: "asia-northeast3", enforceAppCheck: ENFORCE_APP_CHECK },
   async (req) => {
-    const uid = req.auth?.uid;
-    if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+    const uid = await requireVerifiedUser(req.auth?.uid);
 
     const groupId = cleanGroupId(req.data?.groupId);
     if (!groupId) {

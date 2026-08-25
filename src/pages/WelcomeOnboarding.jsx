@@ -9,6 +9,7 @@ import { registerForPush } from "@/firebase/firebase";
 import { isAndroid } from "@/platform/runtime";
 import { requestNativePushPermission } from "@/push/nativePush";
 import {
+  claimGoldQuizBonus,
   claimWelcomeGoldBonus,
   getMemberBonusStatus,
 } from "@/services/quizClient";
@@ -23,6 +24,10 @@ import {
 import {
   clearMemberOnboardingPending,
 } from "@/lib/memberOnboarding";
+import {
+  clearPendingQuizBonus,
+  readPendingQuizBonus,
+} from "@/lib/quizPendingBonus";
 
 const Page = styled.main`
   max-width: 760px;
@@ -341,15 +346,30 @@ export default function WelcomeOnboarding() {
   const refreshStatus = useCallback(async () => {
     if (!user?.uid) return null;
 
-    try {
-      // 가입 직후 네트워크가 잠깐 끊겼던 경우에도 웰컴 적립을 보정합니다.
-      await claimWelcomeGoldBonus();
-    } catch {}
+    if (isEmailVerified) {
+      try {
+        // 웰컴 순금은 이메일 인증이 끝난 뒤 계정당 1회만 서버에서 지급합니다.
+        await claimWelcomeGoldBonus();
+      } catch (claimError) {
+        console.warn("[WelcomeOnboarding] welcome bonus claim failed:", claimError);
+      }
+
+      const pendingQuiz = readPendingQuizBonus();
+      if (pendingQuiz?.answers) {
+        try {
+          // 인증 전에 완료한 퀴즈가 있으면 서버에서 답안을 다시 검증해 지급합니다.
+          await claimGoldQuizBonus({ answers: pendingQuiz.answers });
+          clearPendingQuizBonus();
+        } catch (claimError) {
+          console.warn("[WelcomeOnboarding] pending quiz bonus claim failed:", claimError);
+        }
+      }
+    }
 
     const next = await getMemberBonusStatus();
     setStatus(rewardStatus(next));
     return next;
-  }, [user?.uid]);
+  }, [user?.uid, isEmailVerified]);
 
   useEffect(() => {
     let cancelled = false;
@@ -387,6 +407,11 @@ export default function WelcomeOnboarding() {
 
   const handleMarketingReward = async () => {
     if (!user?.uid || marketingBusy || status.marketingPush.claimed) return;
+
+    if (!isEmailVerified) {
+      navigate(buildVerifyEmailPath(welcomePath));
+      return;
+    }
 
     setMarketingBusy(true);
     setMessage("");
@@ -571,7 +596,9 @@ export default function WelcomeOnboarding() {
                   <BellRing />
                   {marketingBusy
                     ? "알림 설정 중…"
-                    : "알림에 동의하고 0.01g 더 받기"}
+                    : !isEmailVerified
+                      ? "이메일 인증 후 알림 설정"
+                      : "알림에 동의하고 0.01g 더 받기"}
                 </ActionButton>
                 <ConsentNote>
                   선택 사항입니다. 버튼을 누르면 금시세·혜택 등 광고성
@@ -620,9 +647,9 @@ export default function WelcomeOnboarding() {
         <VerifyCard>
           <h2>서비스 이용 전 이메일 인증을 완료해 주세요</h2>
           <p>
-            가입하신 이메일로 인증 링크를 보내드렸습니다. 혜택은 먼저
-            확인할 수 있지만 예약·내정보 등 회원 기능을 계속 이용하려면
-            이메일 인증이 필요합니다.
+            가입하신 이메일로 인증 링크를 보내드렸습니다. 이메일 인증은
+            회원가입 때 한 번만 하면 되며, 인증 완료 후 웰컴 순금과 알림·퀴즈
+            혜택을 안전하게 적립하고 예약 기능을 이용할 수 있습니다.
           </p>
           <OutlineButton
             type="button"

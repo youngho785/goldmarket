@@ -162,7 +162,12 @@ export async function claimGoldQuizBonus(payload) {
     const code = normalizeCallableCode(error);
 
     if (code === "failed-precondition") {
-      throw new Error("아쉽지만 기준 점수 미달입니다.");
+      throw new Error(
+        callableMessage(
+          error,
+          "현재 상태에서는 퀵퀴즈 혜택을 적립할 수 없습니다."
+        )
+      );
     }
     if (code === "unauthenticated") {
       throw new Error("로그인이 필요합니다.");

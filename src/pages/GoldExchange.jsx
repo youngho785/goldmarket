@@ -1042,6 +1042,7 @@ function BarStep({
 /* ── Step 3: 예약 ─────────────────────────────── */
 function ReserveStep({
   user,
+  isEmailVerified,
   error,
   setError,
   visitDate, setVisitDate,
@@ -1156,7 +1157,7 @@ function ReserveStep({
         가능한 다른 날짜와 시간을 선택해 주세요.
       </HelpText>
 
-      {user ? (
+      {user && isEmailVerified ? (
         <>
           <SectionSeparator />
           <SubTitle>연락처</SubTitle>
@@ -1282,11 +1283,12 @@ function ReserveStep({
               선택한 일정은 아직 예약된 것이 아닙니다.
             </p>
             <p style={{ margin: "8px 0 0" }}>
-              로그인 또는 회원가입 후 성명·전화번호 확인과 개인정보 동의를 거쳐
-              예약요청이 완료됩니다.
+              {user
+                ? "회원가입 때 받은 이메일 인증을 한 번 완료한 뒤 성명·전화번호 확인과 개인정보 동의를 거쳐 예약요청이 완료됩니다."
+                : "로그인 또는 회원가입 후 이메일 인증을 완료하고, 성명·전화번호 확인과 개인정보 동의를 거쳐 예약요청이 완료됩니다."}
             </p>
             <p style={{ margin: "8px 0 0" }}>
-              로그인하는 동안 이 시간은 선점되지 않습니다. 돌아오면 실시간 예약 상태를
+              인증을 진행하는 동안 이 시간은 선점되지 않습니다. 돌아오면 실시간 예약 상태를
               다시 확인하고, 이미 예약된 경우 다른 시간을 선택할 수 있습니다.
             </p>
             {dateKey && visitTime && (
@@ -1298,7 +1300,7 @@ function ReserveStep({
 
           <div style={{ display: "grid", gap: 10, marginTop: 14 }}>
             <Button type="button" onClick={onRequireAuth}>
-              이 일정으로 예약하기
+              {user ? "이메일 인증하고 예약하기" : "이 일정으로 예약하기"}
             </Button>
             <GhostButton
               type="button"
@@ -1421,7 +1423,7 @@ function getInitialProductsFromQuery() {
 }
 
 export default function GoldExchange() {
-  const { user } = useAuthContext();
+  const { user, isEmailVerified } = useAuthContext();
   const { openGate } = useLoginGate();
   const location = useLocation();
   const rebook = location.state?.rebook || null;
@@ -1684,10 +1686,13 @@ export default function GoldExchange() {
     }
 
     openGate({
-      title: "로그인 후 예약을 완료해 주세요",
-      message:
-        "선택한 날짜와 시간을 보관했습니다. 로그인 또는 회원가입 후 예약 화면으로 돌아옵니다.",
-      requireVerified: false,
+      title: user
+        ? "이메일 인증 후 예약을 완료해 주세요"
+        : "로그인 후 예약을 완료해 주세요",
+      message: user
+        ? "선택한 날짜와 시간을 보관했습니다. 회원가입 때 받은 이메일 인증을 완료하면 예약 화면으로 돌아옵니다."
+        : "선택한 날짜와 시간을 보관했습니다. 로그인 또는 회원가입과 이메일 인증을 완료하면 예약 화면으로 돌아옵니다.",
+      requireVerified: true,
       intent: "exchange-reservation-final",
       next: "/gold-exchange?resume=reservation",
     });
@@ -1768,6 +1773,11 @@ export default function GoldExchange() {
 
     if (!user) {
       setError("로그인이 필요합니다.");
+      return;
+    }
+    if (!isEmailVerified) {
+      setError("이메일 인증을 완료한 회원만 예약할 수 있습니다.");
+      onRequireAuth();
       return;
     }
     const nameTrim = (name || "").trim();
@@ -1920,6 +1930,7 @@ export default function GoldExchange() {
       {step === STEP.RESERVE && (
         <ReserveStep
           user={user}
+          isEmailVerified={isEmailVerified}
           error={error}
           setError={setError}
           visitDate={visitDate}

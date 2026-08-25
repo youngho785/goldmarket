@@ -7,7 +7,6 @@ import { FiEye, FiEyeOff } from "react-icons/fi";
 import { db, auth } from "../firebase/firebase";
 import { signUp } from "../services/authService";
 import { AgreementsSection } from "../components/AgreementsSection";
-import { claimGoldQuizBonus, claimWelcomeGoldBonus } from "@/services/quizClient";
 import { checkNicknameAvailability } from "@/services/nicknameClient";
 import {
   getAuthReturnPath,
@@ -21,11 +20,6 @@ import {
 const REGISTER_FORM_KEY = "registerFormData";
 // 현재 약관 버전 (Terms.jsx와 동일하게 유지)
 const CURRENT_TERMS_VERSION = "v1.1";
-
-// ✅ 퀴즈 세션 키 (Quiz 페이지와 동일하게 유지)
-const PASS_KEY = "quiz_gold_bonus_passed";
-const PASS_SCORE_KEY = "quiz_gold_bonus_score";
-const PASS_ANSWERS_KEY = "quiz_gold_bonus_answers";
 
 /* ───────────── Styled ───────────── */
 const Container = styled.div`
@@ -325,10 +319,6 @@ export default function Register() {
 
     setLoading(true);
     try {
-      let quizBonusResult = null;
-      let quizBonusError = "";
-      let welcomeBonusResult = null;
-      let welcomeBonusError = "";
       const user = await signUp({
         email: normalizedEmail,
         password,
@@ -360,36 +350,13 @@ export default function Register() {
         );
       }
 
-      try {
-        welcomeBonusResult = await claimWelcomeGoldBonus();
-      } catch (bonusError) {
-        welcomeBonusError =
-          bonusError?.message || "웰컴 순금 적립을 내 프로필에서 다시 확인해 주세요.";
-      }
+      // 보너스 지급은 이메일 인증 완료 후 WelcomeOnboarding에서 처리합니다.
+      // 퀴즈를 먼저 풀었다면 결과는 localStorage(24시간)에 보존되어 인증 후 서버가 다시 검증합니다.
 
-      // ✅ 퀴즈 통과 플래그가 있으면 즉시 보너스 적립 호출
-      try {
-        const passed = sessionStorage.getItem(PASS_KEY) === "1";
-        const answers = JSON.parse(sessionStorage.getItem(PASS_ANSWERS_KEY) || "null");
-        if (passed) {
-          quizBonusResult = await claimGoldQuizBonus({ answers });
-          sessionStorage.removeItem(PASS_KEY);
-          sessionStorage.removeItem(PASS_SCORE_KEY);
-          sessionStorage.removeItem(PASS_ANSWERS_KEY);
-        }
-      } catch (bonusError) {
-        // 가입은 유지하되 퀴즈 플래그를 남겨 다음 방문에서 다시 적립할 수 있게 합니다.
-        quizBonusError = bonusError?.message || "퀵퀴즈 보너스 적립을 다시 확인해 주세요.";
-      }
-
-      // 가입 직후에는 이메일 인증보다 먼저 신규회원 혜택을 안내합니다.
+      // 가입 직후에는 혜택 안내 화면으로 이동하되, 실제 적립은 이메일 인증 완료 후 진행합니다.
       // 인증 메일 링크는 onboardingPath로 다시 돌아오도록 이미 발송되었습니다.
       navigate(onboardingPath, {
         state: {
-          quizBonusResult,
-          quizBonusError,
-          welcomeBonusResult,
-          welcomeBonusError,
           from: returnTo || undefined,
         },
       });

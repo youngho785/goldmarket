@@ -16,14 +16,12 @@ import {
   claimGoldQuizBonus,
   getGoldQuizBonusStatus,
 } from "@/services/quizClient";
-import { sanitizeAppReturnPath } from "@/lib/authReturn";
-
-/* ============================
-   Session keys
-   ============================ */
-const PASS_KEY = "quiz_gold_bonus_passed";
-const PASS_SCORE_KEY = "quiz_gold_bonus_score";
-const PASS_ANSWERS_KEY = "quiz_gold_bonus_answers";
+import { buildVerifyEmailPath, sanitizeAppReturnPath } from "@/lib/authReturn";
+import {
+  clearPendingQuizBonus,
+  readPendingQuizBonus,
+  savePendingQuizBonus,
+} from "@/lib/quizPendingBonus";
 
 /* ============================
    Quiz data
@@ -470,7 +468,7 @@ const LoadingCard = styled(QuestionCard)`
    Component
    ============================ */
 export default function QuizGoldBonus() {
-  const { user } = useAuthContext();
+  const { user, isEmailVerified } = useAuthContext();
   const navigate = useNavigate();
   const loc = useLocation();
 
@@ -504,54 +502,47 @@ export default function QuizGoldBonus() {
       };
     }
 
-    const passedFlag = sessionStorage.getItem(PASS_KEY) === "1";
-    let storedAnswers = null;
-
-    try {
-      storedAnswers = JSON.parse(
-        sessionStorage.getItem(PASS_ANSWERS_KEY) || "null"
-      );
-    } catch {
-      storedAnswers = null;
-    }
-
-    const hasAllAnswers = QUIZ.every(
-      (question) =>
-        Number(storedAnswers?.[question.id]) === question.answer
-    );
+    const pending = readPendingQuizBonus();
 
     (async () => {
       setStatusLoading(true);
+      setError("");
 
       try {
-        if (passedFlag && hasAllAnswers) {
+        // 이메일 인증이 끝난 뒤에만 서버 지급 함수를 호출합니다.
+        // 답안은 서버가 다시 채점하므로 localStorage 값 자체를 신뢰하지 않습니다.
+        if (isEmailVerified && pending?.answers) {
           const res = await claimGoldQuizBonus({
-            answers: storedAnswers,
+            answers: pending.answers,
           });
 
           if (!cancelled) {
             setResult(res);
           }
+          clearPendingQuizBonus();
+          return;
+        }
 
-          sessionStorage.removeItem(PASS_KEY);
-          sessionStorage.removeItem(PASS_SCORE_KEY);
-          sessionStorage.removeItem(PASS_ANSWERS_KEY);
-        } else {
-          if (passedFlag) {
-            sessionStorage.removeItem(PASS_KEY);
-            sessionStorage.removeItem(PASS_SCORE_KEY);
-            sessionStorage.removeItem(PASS_ANSWERS_KEY);
-          }
+        const status = await getGoldQuizBonusStatus(user.uid);
 
-          const status = await getGoldQuizBonusStatus(user.uid);
+        if (cancelled) return;
 
-          if (!cancelled && status?.claimed) {
-            setResult({
-              ...status,
-              ok: true,
-              alreadyClaimed: true,
-            });
-          }
+        if (status?.claimed) {
+          clearPendingQuizBonus();
+          setResult({
+            ...status,
+            ok: true,
+            alreadyClaimed: true,
+          });
+          return;
+        }
+
+        if (!isEmailVerified && pending?.answers) {
+          setResult({
+            ok: false,
+            needVerification: true,
+            score: pending.score || TOTAL,
+          });
         }
       } catch (loadError) {
         if (!cancelled) {
@@ -570,7 +561,7 @@ export default function QuizGoldBonus() {
     return () => {
       cancelled = true;
     };
-  }, [user?.uid]);
+  }, [user?.uid, isEmailVerified]);
 
   const onChoice = (qid, index) => {
     if (feedback[qid] === "correct") return;
@@ -649,16 +640,27 @@ export default function QuizGoldBonus() {
         });
       }
 
-      if (user) {
+      if (user && isEmailVerified) {
         const res = await claimGoldQuizBonus({ answers });
+        clearPendingQuizBonus();
         setResult(res);
       } else {
-        sessionStorage.setItem(PASS_KEY, "1");
-        sessionStorage.setItem(PASS_SCORE_KEY, String(TOTAL));
-        sessionStorage.setItem(
-          PASS_ANSWERS_KEY,
-          JSON.stringify(answers)
-        );
+        const saved = savePendingQuizBonus(answers, TOTAL);
+        if (!saved) {
+          throw new Error(
+            "퀴즈 결과를 임시 저장하지 못했습니다. 브라우저 저장소 설정을 확인한 뒤 다시 시도해 주세요."
+          );
+        }
+
+        if (user) {
+          // 로그인은 되어 있지만 이메일이 미인증이면 답안을 보존한 뒤 인증 화면으로 이동합니다.
+          const returnAfterVerification =
+            nextPath || `${loc.pathname}${loc.search}`;
+          navigate(buildVerifyEmailPath(returnAfterVerification), {
+            state: { from: returnAfterVerification },
+          });
+          return;
+        }
 
         setResult({
           ok: true,
@@ -680,7 +682,8 @@ export default function QuizGoldBonus() {
     !statusLoading &&
     !result?.alreadyClaimed &&
     !result?.ok &&
-    !result?.needSignup;
+    !result?.needSignup &&
+    !result?.needVerification;
 
   return (
     <Page>
@@ -853,6 +856,34 @@ export default function QuizGoldBonus() {
                   )}`}
                 >
                   회원가입하고 0.01g 받기
+                  <ChevronRight />
+                </PrimaryButton>
+                <SecondaryButton as={Link} to="/">
+                  나중에 하기
+                </SecondaryButton>
+              </ResultActions>
+            </>
+          ) : result.needVerification ? (
+            <>
+              <ResultTitle>이메일 인증 후 혜택을 받을 수 있습니다</ResultTitle>
+              <ResultText>
+                퀴즈 결과는 24시간 동안 보관됩니다. 회원가입 때 받은 인증메일을
+                한 번 확인하면, 인증 완료 후 서버가 답안을 다시 검증해 순금 0.01g을
+                적립합니다.
+              </ResultText>
+
+              <ResultActions>
+                <PrimaryButton
+                  type="button"
+                  onClick={() => {
+                    const returnAfterVerification =
+                      nextPath || `${loc.pathname}${loc.search}`;
+                    navigate(buildVerifyEmailPath(returnAfterVerification), {
+                      state: { from: returnAfterVerification },
+                    });
+                  }}
+                >
+                  이메일 인증 계속하기
                   <ChevronRight />
                 </PrimaryButton>
                 <SecondaryButton as={Link} to="/">

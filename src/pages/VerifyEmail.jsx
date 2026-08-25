@@ -77,7 +77,15 @@ async function reloadUserWithRetry(user) {
 
     try {
       await user.reload();
-      return { ok: true, verified: Boolean(user.emailVerified), error: null };
+      const verified = Boolean(user.emailVerified);
+
+      // 인증 직후 기존 ID 토큰에 email_verified=false가 남지 않도록 즉시 재발급합니다.
+      // onIdTokenChanged/AuthContext도 이 갱신을 통해 최신 인증 상태를 빠르게 반영합니다.
+      if (verified) {
+        await user.getIdToken(true);
+      }
+
+      return { ok: true, verified, error: null };
     } catch (err) {
       lastError = err;
       if (!isNetworkRequestFailed(err)) throw err;
@@ -345,10 +353,10 @@ export default function VerifyEmail() {
       checkingNow = true;
 
       try {
-        await user.reload();
+        const refreshed = await reloadUserWithRetry(user);
         if (stopped) return;
 
-        if (user.emailVerified) {
+        if (refreshed.verified) {
           moveAfterVerified();
         }
       } catch (e) {
