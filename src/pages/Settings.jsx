@@ -2185,10 +2185,18 @@ export default function Settings() {
             deletePwd
           );
 
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+          throw new Error("로그인 상태를 확인할 수 없습니다. 다시 로그인해 주세요.");
+        }
+
         await reauthenticateWithCredential(
-          auth.currentUser,
+          currentUser,
           credential
         );
+
+        // 재인증된 auth_time이 포함된 최신 ID 토큰을 callable이 사용하도록 강제합니다.
+        await currentUser.getIdToken(true);
 
         /*
          * Web/PWA는 기존 Web Push 구독 정리
@@ -2268,19 +2276,34 @@ export default function Settings() {
           });
         }, 1000);
       } catch (error) {
+        const errorCode = String(
+          error?.code || ""
+        );
+        const functionsCode =
+          errorCode.startsWith("functions/")
+            ? errorCode.slice("functions/".length)
+            : errorCode;
+
         if (
-          error?.code ===
-          "auth/wrong-password"
+          errorCode === "auth/wrong-password" ||
+          errorCode === "auth/invalid-credential"
         ) {
           setDeleteErr(
             "현재 비밀번호가 올바르지 않습니다."
           );
         } else if (
-          error?.code ===
+          errorCode ===
           "auth/too-many-requests"
         ) {
           setDeleteErr(
             "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요."
+          );
+        } else if (
+          functionsCode ===
+          "failed-precondition"
+        ) {
+          setDeleteErr(
+            "보안을 위해 비밀번호를 다시 확인해 주세요."
           );
         } else {
           setDeleteErr(

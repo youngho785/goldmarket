@@ -28,4 +28,5 @@ jobs:
       - run: npm --prefix functions run lint
       - run: npm --prefix functions run build
       - run: node functions/scripts/test-booking-policy.mjs
+      - run: npm --prefix functions run test:account-deletion
       - run: npx firebase-tools emulators:exec --only firestore "npm --prefix tests/rules test"

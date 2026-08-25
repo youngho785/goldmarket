@@ -10,6 +10,12 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { defineSecret } from "firebase-functions/params";
 import { createHash, randomInt } from "node:crypto";
+import {
+  cleanupExchangeGroupForDeletion,
+  deleteCustomerNotificationCopies,
+  isRecentAuthentication,
+  runRequiredDeletionStages,
+} from "./accountDeletionSafety.js";
 import goldRatesDefaults from "./goldRates.defaults.json" with { type: "json" };
 import {
   bookingBlockReason,
@@ -40,6 +46,29 @@ function requireAdmin(token: Record<string, unknown> | undefined): void {
 function requireSuperAdmin(token: Record<string, unknown> | undefined): void {
   if (token?.superAdmin !== true) {
     throw new HttpsError("permission-denied", "최고 관리자 권한이 필요합니다.");
+  }
+}
+
+const RECENT_AUTH_MAX_AGE_SECONDS = 5 * 60;
+
+/**
+ * 계정 영구 삭제는 로그인 여부만으로 허용하지 않고,
+ * Firebase ID 토큰의 auth_time이 최근 재인증 시각인지 서버에서 다시 검증합니다.
+ */
+function requireRecentAuthentication(
+  token: Record<string, unknown> | undefined
+): void {
+  if (
+    !isRecentAuthentication(
+      token?.auth_time,
+      Math.floor(Date.now() / 1000),
+      RECENT_AUTH_MAX_AGE_SECONDS
+    )
+  ) {
+    throw new HttpsError(
+      "failed-precondition",
+      "보안을 위해 비밀번호를 다시 확인한 뒤 계정 탈퇴를 진행해 주세요."
+    );
   }
 }
 
@@ -3347,11 +3376,11 @@ export const changeNickname = onCall<{ newNickname: string }>(
 
 /* ─────────────────────────────────────────────────────────────
  * 9) 계정 탈퇴
- * - 클라이언트에서 재인증 후 호출
- * - 진행 중 예약 슬롯 해제
+ * - 서버에서 최근 재인증(auth_time)을 다시 검증
+ * - 활성 예약은 그룹/교환 문서/예약 슬롯을 그룹별 트랜잭션으로 함께 정리
  * - 보존이 필요한 거래/문의 기록은 식별정보만 제거
- * - 알림·프로필 이미지·보너스 보조문서 정리
- * - 마지막 단계에서 Firebase Auth 계정 삭제
+ * - 필수 Firestore/Storage 정리 실패 시 Auth 계정은 삭제하지 않음
+ * - 모든 정리가 성공한 뒤 마지막 단계에서 Firebase Auth 계정 삭제
  * ───────────────────────────────────────────────────────────── */
 async function deleteCollectionInBatches(
   colRef: FirebaseFirestore.CollectionReference,
@@ -3415,14 +3444,25 @@ async function deleteStoragePrefix(prefix: string): Promise<number> {
 
     for (let i = 0; i < files.length; i += 100) {
       const chunk = files.slice(i, i + 100);
-      await Promise.all(
-        chunk.map((file) =>
-          file.delete({ ignoreNotFound: true }).catch((error: unknown) => {
-            console.warn("[deleteMyAccount] storage delete failed", file.name, error);
-          })
-        )
+      const settled = await Promise.allSettled(
+        chunk.map((file) => file.delete({ ignoreNotFound: true }))
       );
-      deleted += chunk.length;
+
+      const failures = settled.flatMap((result, index) =>
+        result.status === "rejected"
+          ? [{ fileName: chunk[index].name, error: result.reason }]
+          : []
+      );
+
+      deleted += settled.filter((result) => result.status === "fulfilled").length;
+
+      if (failures.length > 0) {
+        console.error("[deleteMyAccount] storage delete failed", {
+          prefix,
+          failures,
+        });
+        throw new Error(`Storage 정리에 실패했습니다: ${prefix}`);
+      }
     }
 
     const nextPageToken = (
@@ -3451,13 +3491,31 @@ export const deleteMyAccount = onCall<unknown>(
     const uid = req.auth?.uid;
     if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
 
+    // 반드시 어떤 데이터 변경보다 먼저 최근 재인증을 확인합니다.
+    requireRecentAuthentication(
+      (req.auth?.token || {}) as Record<string, unknown>
+    );
+
     const startedAt = Date.now();
     const userRef = db().doc(`users/${uid}`);
     const profileRef = db().doc(`profiles/${uid}`);
     const slotsRef = db().doc("appConfig/reservedSlots");
     const exchanges = db().collection("goldExchanges");
 
+    let exchangeUpdates = 0;
+    let groupUpdates = 0;
+    let supportUpdates = 0;
+    let confirmationUpdates = 0;
+    let reviewClaimUpdates = 0;
+    let customerNotificationCopiesDeleted = 0;
+    let notificationItemsDeleted = 0;
+    let ledgerDeleted = 0;
+    let promotionsDeleted = 0;
+    let profilePhotosDeleted = 0;
+    let legacyProfilesDeleted = 0;
+
     try {
+      // 읽기만 먼저 수행합니다. auth_time 검사는 이미 끝난 상태입니다.
       const [profileSnap, exchangeSnap] = await Promise.all([
         profileRef.get(),
         exchanges.where("userId", "==", uid).get(),
@@ -3466,261 +3524,239 @@ export const deleteMyAccount = onCall<unknown>(
       const previousNicknameLower = profileSnap.exists
         ? String(profileSnap.get("nicknameLower") || "").trim()
         : "";
-
-      const activeSchedules = new Map<string, { visitDate: string; visitTime: string }>();
-      const ownedGroupIds = new Set<string>();
-
-      exchangeSnap.docs.forEach((document) => {
-        const row = document.data() || {};
-        const groupId = String(row.groupId || document.id);
-        ownedGroupIds.add(groupId);
-
-        const visitDate = String(row.visitDate || "");
-        const visitTime = String(row.visitTime || "");
-        if (
-          isActiveExchangeStatus(row.status) &&
-          visitDate &&
-          visitTime
-        ) {
-          activeSchedules.set(`${visitDate}|${visitTime}`, {
-            visitDate,
-            visitTime,
-          });
-        }
-      });
-
-      // 진행 중 예약 슬롯 해제
-      await db().runTransaction(async (tx) => {
-        const slotsSnap = await tx.get(slotsRef);
-        let slots = slotsSnap.exists
-          ? (slotsSnap.data() as Record<string, unknown>)
-          : {};
-
-        activeSchedules.forEach(({ visitDate, visitTime }) => {
-          slots = setReservedTime(slots, visitDate, visitTime, false);
-        });
-
-        if (activeSchedules.size > 0) {
-          tx.set(slotsRef, slots);
-        }
-      });
-
+      const ownedGroupIds: string[] = [
+        ...new Set<string>(
+          exchangeSnap.docs.map((document) => {
+            const row = document.data() || {};
+            return String(row.groupId || document.id);
+          })
+        ),
+      ];
       const anonymizedAt = FieldValue.serverTimestamp();
 
-      // 금교환 문서는 거래 증빙을 위해 유지하되 직접 식별정보를 제거합니다.
-      const exchangeBatchSize = 200;
-      for (let i = 0; i < exchangeSnap.docs.length; i += exchangeBatchSize) {
-        const chunk = exchangeSnap.docs.slice(i, i + exchangeBatchSize);
-        const batch = db().batch();
+      await runRequiredDeletionStages(
+        [
+          {
+            name: "exchangeGroups",
+            run: async () => {
+              for (const groupId of ownedGroupIds) {
+                const result = await cleanupExchangeGroupForDeletion({
+                  firestore: db(),
+                  uid,
+                  groupId,
+                  exchanges,
+                  slotsRef,
+                  isActiveExchangeStatus,
+                  setReservedTime,
+                });
+                exchangeUpdates += result.exchangeUpdates;
+                groupUpdates += result.groupUpdates;
+              }
+              return { exchangeUpdates, groupUpdates };
+            },
+          },
+          {
+            name: "supportTickets",
+            run: async () => {
+              supportUpdates = await updateQueryInBatches(
+                () => db().collection("supportTickets").where("authorId", "==", uid),
+                () => ({
+                  authorId: "",
+                  authorNickname: "탈퇴한 사용자",
+                  authorDeleted: true,
+                  anonymizedAt,
+                  updatedAt: anonymizedAt,
+                })
+              );
+              return supportUpdates;
+            },
+          },
+          {
+            name: "exchangeConfirmations",
+            run: async () => {
+              confirmationUpdates = await updateQueryInBatches(
+                () => db().collection("exchangeConfirmations").where("customerUid", "==", uid),
+                () => ({
+                  customerUid: "",
+                  customerName: "탈퇴한 사용자",
+                  name: "탈퇴한 사용자",
+                  phone: "",
+                  email: "",
+                  address: "",
+                  customerPhone: "",
+                  customerEmail: "",
+                  customerAddress: "",
+                  customerDeleted: true,
+                  anonymizedAt,
+                  updatedAt: anonymizedAt,
+                })
+              );
+              return confirmationUpdates;
+            },
+          },
+          {
+            name: "reviewClaims",
+            run: async () => {
+              reviewClaimUpdates = await updateQueryInBatches(
+                () => db().collection("goldExchangeReviewClaims").where("ownerUid", "==", uid),
+                () => ({
+                  ownerUid: "",
+                  ownerDeleted: true,
+                  anonymizedAt,
+                })
+              );
+              return reviewClaimUpdates;
+            },
+          },
+          {
+            name: "customerNotificationCopies",
+            run: async () => {
+              customerNotificationCopiesDeleted =
+                await deleteCustomerNotificationCopies(db(), uid);
+              return customerNotificationCopiesDeleted;
+            },
+          },
+          {
+            name: "bonusGoldRedemptionRequest",
+            run: async () => {
+              await db().doc(`bonusGoldRedemptionRequests/${uid}`).delete();
+              return true;
+            },
+          },
+          {
+            name: "notificationItems",
+            run: async () => {
+              notificationItemsDeleted = await deleteCollectionInBatches(
+                db().collection(`notifications/${uid}/items`)
+              );
+              return notificationItemsDeleted;
+            },
+          },
+          {
+            name: "ledger",
+            run: async () => {
+              ledgerDeleted = await deleteCollectionInBatches(
+                db().collection(`users/${uid}/ledger`)
+              );
+              return ledgerDeleted;
+            },
+          },
+          {
+            name: "promotions",
+            run: async () => {
+              promotionsDeleted = await deleteCollectionInBatches(
+                db().collection(`users/${uid}/promotions`)
+              );
+              return promotionsDeleted;
+            },
+          },
+          {
+            name: "notificationsParent",
+            run: async () => {
+              await db().doc(`notifications/${uid}`).delete();
+              return true;
+            },
+          },
+          {
+            name: "pushTestRateLimit",
+            run: async () => {
+              await db().doc(`pushTestRateLimits/${uid}`).delete();
+              return true;
+            },
+          },
+          {
+            name: "profileAndNickname",
+            run: async () => {
+              await db().runTransaction(async (tx) => {
+                let nicknameRef: FirebaseFirestore.DocumentReference | null = null;
+                let nicknameSnap: FirebaseFirestore.DocumentSnapshot | null = null;
 
-        chunk.forEach((document) => {
-          const row = document.data() || {};
-          const nextStatus = isActiveExchangeStatus(row.status)
-            ? "canceled"
-            : String(row.status || "requested");
-
-          batch.update(document.ref, {
-            userId: "",
-            participants: FieldValue.arrayRemove(uid),
-            name: "탈퇴한 사용자",
-            requesterName: "탈퇴한 사용자",
-            phone: "",
-            email: "",
-            address: "",
-            customerName: "탈퇴한 사용자",
-            customerPhone: "",
-            customerEmail: "",
-            customerAddress: "",
-            ownerDeleted: true,
-            anonymizedAt,
-            anonymizedReason: "account_deleted",
-            status: nextStatus,
-            ...(isActiveExchangeStatus(row.status)
-              ? {
-                  canceledAt: anonymizedAt,
-                  cancellationReason: "회원 탈퇴",
-                  scheduleChangeType: "canceled",
+                if (previousNicknameLower) {
+                  nicknameRef = db().doc(`nicknames/${previousNicknameLower}`);
+                  nicknameSnap = await tx.get(nicknameRef);
                 }
-              : {}),
-            updatedAt: anonymizedAt,
-          } as FirebaseFirestore.UpdateData<FirebaseFirestore.DocumentData>);
-        });
 
-        await batch.commit();
-      }
+                tx.set(
+                  userRef,
+                  {
+                    displayName: "(탈퇴한 사용자)",
+                    email: "",
+                    phone: "",
+                    profileImage: "",
+                    photoURL: "",
+                    fcmTokens: [],
+                    nativeFcmTokens: [],
+                    pushDevices: {},
+                    marketingFcmToken: null,
+                    marketingFcmBrowser: "",
+                    marketingFcmTokenUpdatedAt: FieldValue.serverTimestamp(),
+                    deleted: true,
+                    deletedAt: anonymizedAt,
+                    anonymizedAt,
+                  } as FirebaseFirestore.DocumentData,
+                  { merge: true }
+                );
 
-      // 그룹 요약에서 회원 식별자 및 보너스 신청 식별자를 제거합니다.
-      let groupUpdates = 0;
-      for (const groupId of ownedGroupIds) {
-        const groupRef = db().doc(`goldExchangeGroups/${groupId}`);
-        const groupSnap = await groupRef.get();
-        if (!groupSnap.exists) continue;
+                tx.set(
+                  profileRef,
+                  {
+                    displayName: "탈퇴한 사용자",
+                    photoURL: "",
+                    profileImage: "",
+                    nickname: FieldValue.delete(),
+                    nicknameLower: FieldValue.delete(),
+                    nicknameUpdatedAt: FieldValue.delete(),
+                    deleted: true,
+                    deletedAt: anonymizedAt,
+                  } as FirebaseFirestore.DocumentData,
+                  { merge: true }
+                );
 
-        const groupData = groupSnap.data() || {};
-        const groupStatus = String(groupData.repStatus || "requested");
-        const nextStatus = isActiveExchangeStatus(groupStatus)
-          ? "canceled"
-          : groupStatus;
-
-        await groupRef.set(
-          {
-            ownerUid: null,
-            customerUid: null,
-            bonusGoldRequestUid: FieldValue.delete(),
-            ownerDeleted: true,
-            anonymizedAt,
-            anonymizedReason: "account_deleted",
-            repStatus: nextStatus,
-            ...(isActiveExchangeStatus(groupStatus)
-              ? {
-                  canceledAt: anonymizedAt,
-                  cancellationReason: "회원 탈퇴",
+                if (
+                  nicknameRef &&
+                  nicknameSnap?.exists &&
+                  String(nicknameSnap.get("ownerUid") || "") === uid
+                ) {
+                  tx.delete(nicknameRef);
                 }
-              : {}),
-            updatedAt: anonymizedAt,
-          } as FirebaseFirestore.DocumentData,
-          { merge: true }
-        );
-        groupUpdates += 1;
-      }
-
-      // 문의 기록은 법정·분쟁 보존 가능성을 위해 본문은 유지하고 작성자 식별자만 제거합니다.
-      const supportUpdates = await updateQueryInBatches(
-        () => db().collection("supportTickets").where("authorId", "==", uid),
-        () => ({
-          authorId: "",
-          authorNickname: "탈퇴한 사용자",
-          authorDeleted: true,
-          anonymizedAt,
-          updatedAt: anonymizedAt,
-        })
-      );
-
-      // 교환 확인서의 고객 식별정보 제거
-      const confirmationUpdates = await updateQueryInBatches(
-        () => db().collection("exchangeConfirmations").where("customerUid", "==", uid),
-        () => ({
-          customerUid: "",
-          customerName: "탈퇴한 사용자",
-          name: "탈퇴한 사용자",
-          phone: "",
-          email: "",
-          address: "",
-          customerPhone: "",
-          customerEmail: "",
-          customerAddress: "",
-          customerDeleted: true,
-          anonymizedAt,
-          updatedAt: anonymizedAt,
-        })
-      );
-
-      // 후기 작성 권리 문서는 거래 연결을 보존하되 소유자 식별자를 제거합니다.
-      const reviewClaimUpdates = await updateQueryInBatches(
-        () => db().collection("goldExchangeReviewClaims").where("ownerUid", "==", uid),
-        () => ({
-          ownerUid: "",
-          ownerDeleted: true,
-          anonymizedAt,
-        })
-      );
-
-      // 적립 순금 신청 문서 ID가 uid이므로 삭제합니다.
-      await db()
-        .doc(`bonusGoldRedemptionRequests/${uid}`)
-        .delete()
-        .catch(() => {});
-
-      // 알림 및 보너스 보조 컬렉션 삭제
-      const [notificationItemsDeleted, ledgerDeleted, promotionsDeleted] =
-        await Promise.all([
-          deleteCollectionInBatches(
-            db().collection(`notifications/${uid}/items`)
-          ),
-          deleteCollectionInBatches(db().collection(`users/${uid}/ledger`)),
-          deleteCollectionInBatches(
-            db().collection(`users/${uid}/promotions`)
-          ),
-        ]);
-
-      await db().doc(`notifications/${uid}`).delete().catch(() => {});
-
-      // 닉네임 반납 및 공개 프로필/사용자 문서 비식별화
-      await db().runTransaction(async (tx) => {
-        let nicknameRef: FirebaseFirestore.DocumentReference | null = null;
-        let nicknameSnap: FirebaseFirestore.DocumentSnapshot | null = null;
-
-        if (previousNicknameLower) {
-          nicknameRef = db().doc(`nicknames/${previousNicknameLower}`);
-          nicknameSnap = await tx.get(nicknameRef);
-        }
-
-        tx.set(
-          userRef,
+              });
+              return true;
+            },
+          },
           {
-            displayName: "(탈퇴한 사용자)",
-            email: "",
-            phone: "",
-            profileImage: "",
-            photoURL: "",
-            fcmTokens: [],
-            nativeFcmTokens: [],
-            pushDevices: {},
-            marketingFcmToken: null,
-            marketingFcmBrowser: "",
-            marketingFcmTokenUpdatedAt: FieldValue.serverTimestamp(),
-            deleted: true,
-            deletedAt: anonymizedAt,
-            anonymizedAt,
-          } as FirebaseFirestore.DocumentData,
-          { merge: true }
-        );
-
-        tx.set(
-          profileRef,
+            name: "profilePhotosStorage",
+            run: async () => {
+              profilePhotosDeleted = await deleteStoragePrefix(`profilePhotos/${uid}/`);
+              return profilePhotosDeleted;
+            },
+          },
           {
-            displayName: "탈퇴한 사용자",
-            photoURL: "",
-            profileImage: "",
-            nickname: FieldValue.delete(),
-            nicknameLower: FieldValue.delete(),
-            nicknameUpdatedAt: FieldValue.delete(),
-            deleted: true,
-            deletedAt: anonymizedAt,
-          } as FirebaseFirestore.DocumentData,
-          { merge: true }
-        );
-
-        if (
-          nicknameRef &&
-          nicknameSnap?.exists &&
-          String(nicknameSnap.get("ownerUid") || "") === uid
-        ) {
-          tx.delete(nicknameRef);
+            name: "legacyProfilesStorage",
+            run: async () => {
+              legacyProfilesDeleted = await deleteStoragePrefix(`profiles/${uid}/`);
+              return legacyProfilesDeleted;
+            },
+          },
+        ],
+        async () => {
+          // 모든 필수 정리가 성공한 경우에만, 그리고 항상 마지막에 Auth 계정을 삭제합니다.
+          await getAuth()
+            .deleteUser(uid)
+            .catch((error: { code?: string }) => {
+              if (error?.code !== "auth/user-not-found") throw error;
+            });
         }
-      });
-
-      // 프로필 이미지 삭제. Admin SDK는 Storage Rules와 관계없이 실행됩니다.
-      const [profilePhotosDeleted, legacyProfilesDeleted] = await Promise.all([
-        deleteStoragePrefix(`profilePhotos/${uid}/`),
-        deleteStoragePrefix(`profiles/${uid}/`),
-      ]);
-
-      // 서버 정리가 끝난 뒤 Auth 계정을 마지막에 삭제합니다.
-      await getAuth()
-        .deleteUser(uid)
-        .catch((error: { code?: string }) => {
-          if (error?.code !== "auth/user-not-found") throw error;
-        });
+      );
 
       console.info("[deleteMyAccount] completed", {
         uid,
         durationMs: Date.now() - startedAt,
-        exchanges: exchangeSnap.size,
+        exchanges: exchangeUpdates,
         groups: groupUpdates,
         supportTickets: supportUpdates,
         confirmations: confirmationUpdates,
         reviewClaims: reviewClaimUpdates,
+        customerNotificationCopiesDeleted,
         notificationItemsDeleted,
         ledgerDeleted,
         promotionsDeleted,
@@ -3731,7 +3767,7 @@ export const deleteMyAccount = onCall<unknown>(
       return {
         ok: true,
         authDeleted: true,
-        anonymizedExchanges: exchangeSnap.size,
+        anonymizedExchanges: exchangeUpdates,
         anonymizedGroups: groupUpdates,
       };
     } catch (error) {

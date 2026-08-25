@@ -22,7 +22,8 @@
     "start": "npm run shell",
     "deploy": "npm run build && firebase deploy --only functions",
     "logs": "firebase functions:log",
-    "test:policy": "npm run build && node scripts/test-booking-policy.mjs"
+    "test:policy": "npm run build && node scripts/test-booking-policy.mjs",
+    "test:account-deletion": "npm run build && npx --yes firebase-tools@15.28.1 --config ../firebase.json --project demo-goldmarket emulators:exec --only firestore \"node scripts/test-account-deletion-security.mjs\""
   },
   "dependencies": {
     "firebase-admin": "^14.3.0",
