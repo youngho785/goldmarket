@@ -26,6 +26,7 @@ import {
 } from "../services/authService";
 
 import { auth } from "../firebase/firebase";
+import { claimNickname } from "../services/nicknameClient";
 
 // ⬇️ Firestore 접근용
 import {
@@ -120,29 +121,40 @@ export const AuthProvider = ({ children }) => {
               const snap = await getDoc(userDocRef);
 
               if (!snap.exists()) {
-                const nickname =
+                const pendingNickname =
                   localStorage.getItem(
                     `pending_nickname_${currentUser.uid}`
-                  ) ||
-                  currentUser.displayName ||
-                  "";
+                  ) || "";
 
                 const phone =
                   localStorage.getItem(
                     `pending_phone_${currentUser.uid}`
                   ) || "";
 
+                let nicknameClaimed = !pendingNickname;
+                if (pendingNickname) {
+                  try {
+                    await claimNickname(pendingNickname);
+                    nicknameClaimed = true;
+                  } catch (nicknameError) {
+                    console.warn(
+                      "보류 닉네임 서버 선점 실패:",
+                      nicknameError?.message || nicknameError
+                    );
+                  }
+                }
+
                 await setDoc(userDocRef, {
-                  nickname,
                   phone,
                   email: currentUser.email,
                   createdAt: serverTimestamp(),
-                });
+                }, { merge: true });
 
-                localStorage.removeItem(
-                  `pending_nickname_${currentUser.uid}`
-                );
-
+                if (nicknameClaimed) {
+                  localStorage.removeItem(
+                    `pending_nickname_${currentUser.uid}`
+                  );
+                }
                 localStorage.removeItem(
                   `pending_phone_${currentUser.uid}`
                 );

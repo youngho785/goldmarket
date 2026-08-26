@@ -39,12 +39,32 @@ export async function updateUserProfile(uid, values = {}) {
 
   const profileRef = doc(db, "profiles", uid);
   const userRef = doc(db, "users", uid);
-  const profileSnapshot = await getDoc(profileRef);
-  const existingNickname = String(profileSnapshot.data()?.nickname || "").trim();
+  const [profileSnapshot, userSnapshot] = await Promise.all([
+    getDoc(profileRef),
+    getDoc(userRef),
+  ]);
+
+  const profileNickname = String(profileSnapshot.data()?.nickname || "").trim();
+  const userNickname = String(userSnapshot.data()?.nickname || "").trim();
+  const existingNickname = profileNickname || userNickname;
   const requestedNickname = String(values.nickname || "").trim();
 
-  if (!profileSnapshot.exists() && requestedNickname) {
+  if (
+    existingNickname &&
+    requestedNickname &&
+    existingNickname.toLocaleLowerCase() !== requestedNickname.toLocaleLowerCase()
+  ) {
+    throw new Error("닉네임은 가입 시 최초 1회 설정되며 변경할 수 없습니다.");
+  }
+
+  if (!existingNickname && requestedNickname) {
     await claimNickname(requestedNickname);
+  } else if (
+    existingNickname &&
+    (!profileNickname || !userNickname || profileNickname !== userNickname)
+  ) {
+    // 레거시/부분 저장 상태는 같은 닉네임의 멱등 선점으로 서버에서 복구합니다.
+    await claimNickname(existingNickname);
   }
 
   const batch = writeBatch(db);
@@ -63,9 +83,6 @@ export async function updateUserProfile(uid, values = {}) {
       email: String(values.email || "").trim(),
       phone: String(values.phone || "").trim(),
       profileImage: String(values.profileImage || values.photoURL || "").trim(),
-      ...(existingNickname || requestedNickname
-        ? { nickname: existingNickname || requestedNickname }
-        : {}),
       updatedAt: serverTimestamp(),
     },
     { merge: true }
@@ -75,12 +92,13 @@ export async function updateUserProfile(uid, values = {}) {
 
 export async function ensureUserProfileOnSignup(authUser, formValues = {}) {
   if (!authUser?.uid) throw new Error("가입 사용자 정보가 없습니다.");
-  const nickname = String(formValues.nickname || "").trim();
   const displayName = String(
-    formValues.displayName || formValues.name || authUser.displayName || nickname
+    formValues.displayName || formValues.name || authUser.displayName || ""
   ).trim();
   const photoURL = String(authUser.photoURL || "").trim();
 
+  // nickname은 claimNickname 서버 함수가 이미 users/profiles/nicknames에 동기화합니다.
+  // 클라이언트에서는 nickname을 직접 생성/수정하지 않습니다.
   await Promise.all([
     setDoc(
       doc(db, "profiles", authUser.uid),
@@ -95,7 +113,6 @@ export async function ensureUserProfileOnSignup(authUser, formValues = {}) {
       {
         displayName,
         name: displayName,
-        nickname,
         email: String(authUser.email || formValues.email || "").trim(),
         phone: String(formValues.phone || "").trim(),
         profileImage: photoURL,

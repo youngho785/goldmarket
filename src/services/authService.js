@@ -46,11 +46,53 @@ export async function login(email, password) {
 }
 
 /**
+ * 이전 회원가입 시 Firebase Auth 계정만 남아 있고 이메일 인증이 끝나지 않은 경우
+ * 같은 이메일/비밀번호로 그 UID의 가입 절차를 이어가기 위한 헬퍼입니다.
+ * - 현재 동일 미인증 세션이면 그대로 반환
+ * - 세션이 사라졌다면 비밀번호 로그인을 시도
+ * - 이미 인증 완료된 정상 계정은 회원가입 재개 대상으로 취급하지 않음
+ */
+export async function tryResumeUnverifiedSignup(email, password) {
+  const emailTrim = normalizeEmail(email);
+  const current = auth.currentUser;
+
+  if (current) {
+    if (
+      !current.emailVerified &&
+      normalizeEmail(current.email) === emailTrim
+    ) {
+      return current;
+    }
+    return null;
+  }
+
+  try {
+    const { user } = await signInWithEmailAndPassword(auth, emailTrim, password);
+    if (user.emailVerified) {
+      // 회원가입 화면에서 기존 정상 계정의 세션을 바꾸지 않도록 되돌립니다.
+      await signOut(auth);
+      return null;
+    }
+    return user;
+  } catch (error) {
+    if (
+      error?.code === "auth/invalid-credential" ||
+      error?.code === "auth/user-not-found" ||
+      error?.code === "auth/wrong-password" ||
+      error?.code === "auth/invalid-email"
+    ) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+/**
  * 회원가입
- * 1) Auth 계정 생성
+ * 1) 신규 Auth 계정 생성 또는 동일 미인증 계정 재개
  * 2) Auth.displayName 설정 + 인증메일 발송
- * 3) 인증메일 단계 실패 시 신규 Auth 계정 자동 롤백
- * 4) 서버에서 닉네임 원자 선점
+ * 3) 신규 계정의 인증메일 단계 실패 시 Auth 자동 롤백
+ * 4) 서버에서 닉네임 원자 선점/멱등 복구
  * 5) Firestore profiles/users 생성
  */
 export async function signUp({
@@ -63,49 +105,74 @@ export async function signUp({
   // nicknameLower 등 추가 파라미터가 와도 무시(하위호환)
 }) {
   const emailTrim = normalizeEmail(email);
-
-  // 1) 계정 생성
-  const { user } = await createUserWithEmailAndPassword(
-    auth,
-    emailTrim,
-    password
-  );
-
   const safeName = (displayName || "").trim();
+  let user = null;
+  let createdNow = false;
 
-  // 2) Auth 프로필 + 3) 인증메일 발송
-  // 중요: Firestore/닉네임 문서를 만들기 전에 인증메일부터 발송합니다.
-  // 이 단계에서 실패하면 방금 만든 Auth 계정을 즉시 지워
-  // 다음 재시도에서 auth/email-already-in-use가 남지 않도록 합니다.
+  const current = auth.currentUser;
+  if (
+    current &&
+    !current.emailVerified &&
+    normalizeEmail(current.email) === emailTrim
+  ) {
+    user = current;
+  } else {
+    try {
+      const created = await createUserWithEmailAndPassword(
+        auth,
+        emailTrim,
+        password
+      );
+      user = created.user;
+      createdNow = true;
+    } catch (createError) {
+      if (createError?.code !== "auth/email-already-in-use") {
+        throw createError;
+      }
+
+      const resumed = await tryResumeUnverifiedSignup(emailTrim, password);
+      if (!resumed) throw createError;
+      user = resumed;
+    }
+  }
+
+  // Auth 프로필 + 인증메일.
+  // 신규 Auth를 방금 만든 경우에만 setup 실패 시 Auth를 롤백합니다.
   try {
     await _updateAuthProfile(user, { displayName: safeName });
-    await sendEmailVerification(user, buildEmailActionSettings(continueUrl));
+    if (!user.emailVerified) {
+      await sendEmailVerification(user, buildEmailActionSettings(continueUrl));
+    }
   } catch (setupError) {
-    try {
-      await deleteUser(user);
-    } catch (rollbackError) {
-      console.error("신규 Auth 계정 롤백 실패:", rollbackError);
+    if (createdNow) {
+      try {
+        await deleteUser(user);
+      } catch (rollbackError) {
+        console.error("신규 Auth 계정 롤백 실패:", rollbackError);
+      }
     }
     throw setupError;
   }
 
-  // 4) 닉네임을 서버 트랜잭션으로 최종 선점합니다.
-  // 사전 중복 확인과 가입 클릭 사이에 다른 회원이 같은 닉네임을 가져가는 경쟁 조건을 막습니다.
+  // 닉네임은 서버 트랜잭션으로 최초 1회 선점합니다.
+  // 재개된 동일 UID + 동일 닉네임이면 멱등 성공합니다.
   try {
     const claim = httpsCallable(functions, "claimNickname");
     await claim({ nickname: (nickname || "").trim() });
   } catch (claimError) {
-    // claimNickname 트랜잭션이 실패하면 Firestore 쓰기는 롤백됩니다.
-    // 이미 발송된 인증메일은 이 Auth 계정이 삭제되므로 사용 불가가 됩니다.
-    try {
-      await deleteUser(user);
-    } catch (rollbackError) {
-      console.error("닉네임 선점 실패 후 Auth 롤백 실패:", rollbackError);
+    // 신규 Auth를 이번 요청에서 만들었고 닉네임 선점이 실패했다면 계정만 롤백합니다.
+    // claimNickname 자체는 트랜잭션이므로 실패 시 부분 nickname 쓰기가 남지 않습니다.
+    if (createdNow) {
+      try {
+        await deleteUser(user);
+      } catch (rollbackError) {
+        console.error("닉네임 선점 실패 후 Auth 롤백 실패:", rollbackError);
+      }
     }
     throw claimError;
   }
 
-  // 5) Firestore 문서 보장(이름/닉네임 분리 저장) — 실패해도 가입/인증은 계속
+  // Firestore 문서 보장 — nickname 자체는 서버 claimNickname만 기록합니다.
   try {
     await ensureUserProfileOnSignup(user, {
       displayName: safeName,

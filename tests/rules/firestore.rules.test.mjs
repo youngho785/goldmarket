@@ -7,6 +7,7 @@ import {
   initializeTestEnvironment,
 } from "@firebase/rules-unit-testing";
 import {
+  deleteField,
   doc,
   getDoc,
   serverTimestamp,
@@ -34,6 +35,7 @@ beforeEach(async () => {
     const db = context.firestore();
     await setDoc(doc(db, "users", "owner"), {
       displayName: "고객",
+      nickname: "골드고객",
       bonusGoldMilliGrams: 10,
     });
     await setDoc(doc(db, "adminAuditLogs", "log-1"), {
@@ -172,4 +174,40 @@ test("회원은 임의의 사용자 필드를 추가할 수 없다", async () =>
   const ownerDb = env.authenticatedContext("owner").firestore();
   await assertFails(updateDoc(doc(ownerDb, "users", "owner"), { arbitraryFlag: true }));
   await assertSucceeds(updateDoc(doc(ownerDb, "users", "owner"), { phone: "010-0000-0000" }));
+});
+
+
+test("회원은 users 닉네임을 직접 생성할 수 없다", async () => {
+  const db = env.authenticatedContext("new-owner").firestore();
+  await assertFails(
+    setDoc(doc(db, "users", "new-owner"), {
+      displayName: "신규회원",
+      nickname: "직접닉",
+      email: "new@example.com",
+      createdAt: serverTimestamp(),
+    })
+  );
+});
+
+test("회원은 users 닉네임을 직접 변경하거나 삭제할 수 없다", async () => {
+  const db = env.authenticatedContext("owner").firestore();
+  await assertFails(updateDoc(doc(db, "users", "owner"), { nickname: "변경닉" }));
+  await assertFails(updateDoc(doc(db, "users", "owner"), { nickname: deleteField() }));
+  await assertSucceeds(updateDoc(doc(db, "users", "owner"), { phone: "010-1111-2222" }));
+});
+
+test("회원은 profiles 닉네임과 nicknames 인덱스를 직접 쓸 수 없다", async () => {
+  await env.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), "profiles", "owner"), {
+      displayName: "고객",
+      nickname: "골드고객",
+      nicknameLower: "골드고객",
+      photoURL: "",
+    });
+  });
+  const db = env.authenticatedContext("owner").firestore();
+  await assertFails(updateDoc(doc(db, "profiles", "owner"), { nickname: "위조닉" }));
+  await assertFails(
+    setDoc(doc(db, "nicknames", "위조닉"), { ownerUid: "owner", original: "위조닉" })
+  );
 });

@@ -18,13 +18,14 @@ service cloud.firestore {
     function protectedUserFieldsUnchanged() {
       return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
         'role', 'admin', 'superAdmin', 'bonus', 'bonusGoldMilliGrams',
-        'bonusGoldG', 'bonusGoldUpdatedAt', 'roleUpdatedAt', 'roleUpdatedBy'
+        'bonusGoldG', 'bonusGoldUpdatedAt', 'roleUpdatedAt', 'roleUpdatedBy',
+        'nickname'
       ]);
     }
 
     function userClientFieldsOnly() {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-        'displayName', 'name', 'nickname', 'email', 'phone', 'profileImage',
+        'displayName', 'name', 'email', 'phone', 'profileImage',
         'createdAt', 'updatedAt', 'consents',
         'notificationPreferences', 'notificationPreferencesUpdatedAt',
         'marketingFcmToken', 'marketingFcmBrowser', 'marketingFcmTokenUpdatedAt',
@@ -35,7 +36,7 @@ service cloud.firestore {
 
     function allowedUserCreateFieldsOnly() {
       return request.resource.data.keys().hasOnly([
-        'displayName', 'name', 'nickname', 'email', 'phone', 'profileImage',
+        'displayName', 'name', 'email', 'phone', 'profileImage',
         'createdAt', 'updatedAt', 'consents',
         'notificationPreferences', 'notificationPreferencesUpdatedAt',
         'marketingFcmToken', 'marketingFcmBrowser', 'marketingFcmTokenUpdatedAt',

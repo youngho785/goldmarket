@@ -5,9 +5,10 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import { db, auth } from "../firebase/firebase";
-import { signUp } from "../services/authService";
+import { signUp, tryResumeUnverifiedSignup } from "../services/authService";
 import { AgreementsSection } from "../components/AgreementsSection";
-import { checkNicknameAvailability } from "@/services/nicknameClient";
+import { checkNicknameAvailability, claimNickname } from "@/services/nicknameClient";
+import { ensureUserProfileOnSignup } from "../services/userService";
 import {
   getAuthReturnPath,
 } from "@/lib/authReturn";
@@ -308,8 +309,27 @@ export default function Register() {
 
     setCheckingNick(true);
     try {
-      const dup = await isNicknameDuplicated(trimmedNick);
-      if (dup) { setIsNickDuplicate(true); setError("이미 사용 중인 닉네임입니다."); return; }
+      let dup = await isNicknameDuplicated(trimmedNick);
+
+      if (dup) {
+        // 이전 가입 시도의 Auth 계정이 살아 있지만 로컬 세션이 사라진 경우,
+        // 사용자가 입력한 동일 이메일/비밀번호로 미인증 계정을 재개한 뒤
+        // 같은 UID 소유 닉네임인지 다시 확인합니다.
+        const resumed = await tryResumeUnverifiedSignup(
+          normalizedEmail,
+          password
+        );
+        if (resumed) {
+          dup = await isNicknameDuplicated(trimmedNick);
+        }
+      }
+
+      if (dup) {
+        setIsNickDuplicate(true);
+        setError("이미 사용 중인 닉네임입니다.");
+        return;
+      }
+      setIsNickDuplicate(false);
     } catch (checkError) {
       setError(checkError?.message || "닉네임 확인에 실패했습니다.");
       return;
@@ -319,16 +339,36 @@ export default function Register() {
 
     setLoading(true);
     try {
-      const user = await signUp({
-        email: normalizedEmail,
-        password,
-        nickname: trimmedNick,
-        nicknameLower: nickLower,
-        phone,
-        displayName: displayName.trim(),
-        // Firebase 메일의 action handler는 /verify-email이며, continueUrl은 인증 후 복귀 경로입니다.
-        continueUrl: onboardingPath,
-      });
+      let user;
+      const currentUser = auth.currentUser;
+      const canResumePendingSignup =
+        !!currentUser &&
+        !currentUser.emailVerified &&
+        String(currentUser.email || "").trim().toLowerCase() === normalizedEmail;
+
+      if (canResumePendingSignup) {
+        // 앞선 가입 시도에서 Auth/닉네임 선점까지 완료된 경우
+        // 새 Auth 계정을 만들지 않고 동일 UID의 가입 절차를 이어갑니다.
+        await claimNickname(trimmedNick);
+        await ensureUserProfileOnSignup(currentUser, {
+          displayName: displayName.trim(),
+          nickname: trimmedNick,
+          phone,
+          email: normalizedEmail,
+        });
+        user = currentUser;
+      } else {
+        user = await signUp({
+          email: normalizedEmail,
+          password,
+          nickname: trimmedNick,
+          nicknameLower: nickLower,
+          phone,
+          displayName: displayName.trim(),
+          // Firebase 메일의 action handler는 /verify-email이며, continueUrl은 인증 후 복귀 경로입니다.
+          continueUrl: onboardingPath,
+        });
+      }
 
       markMemberOnboardingPending(returnTo);
 

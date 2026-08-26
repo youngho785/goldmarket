@@ -8,6 +8,7 @@ import { getMessaging, type BatchResponse, type SendResponse } from "firebase-ad
 import { onDocumentCreated, onDocumentWritten } from "firebase-functions/v2/firestore";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
+import * as functionsV1 from "firebase-functions/v1";
 import { defineSecret } from "firebase-functions/params";
 import { createHash, randomInt } from "node:crypto";
 import {
@@ -16,6 +17,11 @@ import {
   isRecentAuthentication,
   runRequiredDeletionStages,
 } from "./accountDeletionSafety.js";
+import {
+  checkNicknameAvailabilityForRequest,
+  claimNicknameForUser,
+  releaseNicknameOwnershipForDeletedUid,
+} from "./nicknameSecurity.js";
 import goldRatesDefaults from "./goldRates.defaults.json" with { type: "json" };
 import {
   bookingBlockReason,
@@ -3225,154 +3231,66 @@ const normalizeNickname = (raw: string): { lower: string; original: string } => 
   return { lower, original };
 };
 
-/** 가입 화면용 닉네임 사용 가능 여부 확인 */
+/** 가입 화면용 닉네임 사용 가능 여부 확인
+ * - 비로그인 사용자는 전체 중복 여부만 확인
+ * - 가입 도중 재시도 중인 동일 UID가 이미 같은 닉네임을 선점했다면 사용 가능으로 처리
+ */
 export const checkNicknameAvailability = onCall<{ nickname: string }>(
   { region: "asia-northeast3", enforceAppCheck: ENFORCE_APP_CHECK },
   async (req) => {
-    const { lower, original } = normalizeNickname(req.data?.nickname || "");
-    const [indexSnap, lowerSnap, exactSnap] = await Promise.all([
-      db().doc(`nicknames/${lower}`).get(),
-      db().collection("profiles").where("nicknameLower", "==", lower).limit(1).get(),
-      db().collection("profiles").where("nickname", "==", original).limit(1).get(),
-    ]);
-    return {
-      ok: true,
-      available: !indexSnap.exists && lowerSnap.empty && exactSnap.empty,
-    };
+    const normalized = normalizeNickname(req.data?.nickname || "");
+    const result = await checkNicknameAvailabilityForRequest(
+      db(),
+      req.auth?.uid,
+      normalized
+    );
+    return { ok: true, ...result };
   }
 );
 
-/** 회원가입 직후 닉네임 선점 */
+/** 회원가입 직후 닉네임 최초 1회 선점
+ * - nicknames/profiles/users를 하나의 트랜잭션으로 동기화
+ * - 동일 UID + 동일 닉네임 재호출은 멱등 성공
+ * - 동일 UID의 다른 닉네임 추가 선점은 거부
+ */
 export const claimNickname = onCall<{ nickname: string }>(
   { region: "asia-northeast3", enforceAppCheck: ENFORCE_APP_CHECK },
   async (req) => {
     const uid = req.auth?.uid;
     if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
 
-    const { lower, original } = normalizeNickname(req.data?.nickname || "");
-    const nickRef = db().doc(`nicknames/${lower}`);
-    const profileRef = db().doc(`profiles/${uid}`);
-    const userRef = db().doc(`users/${uid}`);
-
-    await db().runTransaction(async (tx) => {
-      const [nickSnap, lowerSnap, exactSnap] = await Promise.all([
-        tx.get(nickRef),
-        tx.get(db().collection("profiles").where("nicknameLower", "==", lower).limit(2)),
-        tx.get(db().collection("profiles").where("nickname", "==", original).limit(2)),
-      ]);
-
-      const legacyConflict = [...lowerSnap.docs, ...exactSnap.docs].some((doc) => doc.id !== uid);
-      if (legacyConflict) {
-        throw new HttpsError("already-exists", "이미 사용 중인 닉네임입니다.");
-      }
-
-      if (nickSnap.exists) {
-        const owner = (nickSnap.data() || {}).ownerUid as string | undefined;
-        if (owner && owner !== uid) {
-          throw new HttpsError("already-exists", "이미 사용 중인 닉네임입니다.");
-        }
-      } else {
-        tx.set(nickRef, {
-          ownerUid: uid,
-          original,
-          createdAt: FieldValue.serverTimestamp(),
-        } as FirebaseFirestore.DocumentData);
-      }
-
-      // 프로필 동기화
-      tx.set(
-        profileRef,
-        {
-          nickname: original,
-          nicknameLower: lower,
-          nicknameUpdatedAt: FieldValue.serverTimestamp(),
-        } as FirebaseFirestore.DocumentData,
-        { merge: true }
-      );
-      tx.set(
-        userRef,
-        { nickname: original, updatedAt: FieldValue.serverTimestamp() },
-        { merge: true }
-      );
-    });
-
-    return { ok: true, nickname: original };
+    const normalized = normalizeNickname(req.data?.nickname || "");
+    const result = await claimNicknameForUser(db(), uid, normalized);
+    return { ok: true, ...result };
   }
 );
 
-/** 닉네임 변경 */
+/** 닉네임 변경
+ * 현재 정책: 가입 시 최초 1회 설정 후 변경 불가.
+ * 이미 배포된 callable 이름은 남겨 두되 직접 호출도 항상 거부합니다.
+ */
 export const changeNickname = onCall<{ newNickname: string }>(
   { region: "asia-northeast3", enforceAppCheck: ENFORCE_APP_CHECK },
   async (req) => {
     const uid = req.auth?.uid;
     if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
-
-    const { lower: newLower, original: newOriginal } = normalizeNickname(req.data?.newNickname || "");
-    const profileRef = db().doc(`profiles/${uid}`);
-    const userRef = db().doc(`users/${uid}`);
-    const newNickRef = db().doc(`nicknames/${newLower}`);
-
-    await db().runTransaction(async (tx) => {
-      // ---- READ FIRST ----
-      const pSnap = await tx.get(profileRef);
-      const prevLower =
-        (pSnap.exists ? (pSnap.get("nicknameLower") as string | undefined) : undefined) || undefined;
-
-      const newSnap = await tx.get(newNickRef);
-
-      let prevRef: FirebaseFirestore.DocumentReference | null = null;
-      let prevSnap: FirebaseFirestore.DocumentSnapshot | null = null;
-      if (prevLower && prevLower !== newLower) {
-        prevRef = db().doc(`nicknames/${prevLower}`);
-        prevSnap = await tx.get(prevRef);
-      }
-
-      // 점유 가능 검사
-      if (newSnap.exists) {
-        const owner = (newSnap.data() || {}).ownerUid as string | undefined;
-        if (owner && owner !== uid) {
-          throw new HttpsError("already-exists", "이미 사용 중인 닉네임입니다.");
-        }
-      }
-
-      // ---- WRITE ONLY AFTER ALL READS ----
-      tx.set(
-        newNickRef,
-        {
-          ownerUid: uid,
-          original: newOriginal,
-          createdAt: FieldValue.serverTimestamp(),
-        } as FirebaseFirestore.DocumentData,
-        { merge: true }
-      );
-
-      tx.set(
-        profileRef,
-        {
-          nickname: newOriginal,
-          nicknameLower: newLower,
-          nicknameUpdatedAt: FieldValue.serverTimestamp(),
-        } as FirebaseFirestore.DocumentData,
-        { merge: true }
-      );
-
-      tx.set(
-        userRef,
-        { nickname: newOriginal, updatedAt: FieldValue.serverTimestamp() },
-        { merge: true }
-      );
-
-      if (prevLower && prevLower !== newLower && prevRef && prevSnap?.exists) {
-        const prevOwner = (prevSnap.data() || {}).ownerUid as string | undefined;
-        if (prevOwner === uid) {
-          tx.delete(prevRef);
-        }
-      }
-    });
-
-    return { ok: true, nickname: newOriginal };
+    throw new HttpsError(
+      "failed-precondition",
+      "닉네임은 가입 시 최초 1회 설정되며 변경할 수 없습니다."
+    );
   }
 );
+
+/** Firebase Auth 계정 삭제 후 고아 닉네임 자동 해제
+ * Auth 자체가 삭제된 UID만 대상으로 nickname 관련 필드/인덱스만 제거합니다.
+ * 다른 회원/예약/문의/보너스 데이터는 건드리지 않습니다.
+ */
+export const cleanupNicknameAfterAuthDelete = functionsV1
+  .region("asia-northeast3")
+  .auth.user()
+  .onDelete(async (user) => {
+    await releaseNicknameOwnershipForDeletedUid(db(), user.uid);
+  });
 
 /* ─────────────────────────────────────────────────────────────
  * 9) 계정 탈퇴
