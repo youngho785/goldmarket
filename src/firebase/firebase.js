@@ -27,6 +27,7 @@ import {
 } from "firebase/messaging";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import firebaseConfig from "./firebaseConfig.js";
+import { createFirebaseServiceWorkerUrl } from "./serviceWorkerConfig.js";
 
 /* ────────────────────────────────────────────────────────────
  * App init (모듈러 SDK만 사용)
@@ -132,20 +133,27 @@ async function ensureFcmServiceWorker() {
     return null;
   }
 
-  try {
-    const reg = await navigator.serviceWorker.getRegistration("/sw.js");
+  let serviceWorkerUrl = "";
 
-    if (reg) {
-      return reg;
-    }
-  } catch {
-    // 기존 등록 조회 실패 시 아래에서 다시 등록합니다.
+  try {
+    serviceWorkerUrl =
+      createFirebaseServiceWorkerUrl(firebaseConfig);
+  } catch (error) {
+    console.error(
+      "[FCM] Service Worker Firebase 설정 생성 실패:",
+      error
+    );
+    return null;
   }
 
   try {
-    const reg = await navigator.serviceWorker.register("/sw.js", {
-      scope: "/",
-    });
+    // 매번 현재 빌드의 Firebase 설정이 포함된 동일 URL로 register 합니다.
+    // 운영/스테이징이 서로 다른 설정으로 빌드되면 Service Worker도
+    // 해당 환경의 Firebase 프로젝트를 사용하게 됩니다.
+    const reg = await navigator.serviceWorker.register(
+      serviceWorkerUrl,
+      { scope: "/" }
+    );
 
     return reg;
   } catch (error) {
