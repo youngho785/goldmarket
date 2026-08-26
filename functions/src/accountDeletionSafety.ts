@@ -61,6 +61,13 @@ export type AccountDeletionGroupResult = {
   groupUpdates: number;
 };
 
+export class ActiveExchangeBlocksDeletionError extends Error {
+  constructor() {
+    super("진행 중인 예약·교환이 있어 계정을 삭제할 수 없습니다.");
+    this.name = "ActiveExchangeBlocksDeletionError";
+  }
+}
+
 const USER_TRACE_FIELDS = [
   "scheduleChangeRequestedBy",
   "cancellationRequestedBy",
@@ -85,10 +92,11 @@ function uidOwnedFieldDeletes(
 }
 
 /**
- * 한 예약 그룹의 교환 문서, 그룹 요약, 예약 슬롯을 하나의 Firestore
- * 트랜잭션에서 함께 변경합니다.
+ * 한 예약 그룹의 교환 문서와 그룹 요약을 하나의 Firestore 트랜잭션에서
+ * 함께 비식별 처리합니다.
  *
- * - 트랜잭션 실패 시 세 영역 모두 부분 반영되지 않습니다.
+ * - 진행 중 예약·교환은 회원탈퇴로 자동 취소하지 않고 탈퇴를 차단합니다.
+ * - 트랜잭션 실패 시 교환/그룹 모두 부분 반영되지 않습니다.
  * - 고객 UID가 실제 값으로 남은 변경/취소/보너스 이력 필드만 삭제하고
  *   관리자 UID는 보존합니다.
  * - 이미 정리된 그룹은 no-op이므로 재시도에 안전합니다.
@@ -114,9 +122,7 @@ export async function cleanupExchangeGroupForDeletion(params: {
     uid,
     groupId,
     exchanges,
-    slotsRef,
     isActiveExchangeStatus,
-    setReservedTime,
     beforeCommit,
   } = params;
   const groupRef = firestore.doc(`goldExchangeGroups/${groupId}`);
@@ -142,46 +148,27 @@ export async function cleanupExchangeGroupForDeletion(params: {
     }
 
     // Firestore 트랜잭션 규칙상 모든 읽기를 쓰기보다 먼저 끝냅니다.
-    const [groupSnap, slotsSnap] = await Promise.all([
-      tx.get(groupRef),
-      tx.get(slotsRef),
-    ]);
+    const groupSnap = await tx.get(groupRef);
+    const groupData = groupSnap.exists
+      ? ((groupSnap.data() || {}) as Record<string, unknown>)
+      : {};
+    const groupStatus = String(groupData.repStatus || "requested");
+    const hasActiveOwnedExchange = ownedDocs.some((document) =>
+      isActiveExchangeStatus(document.get("status"))
+    );
+    const groupActive =
+      groupSnap.exists && isActiveExchangeStatus(groupStatus);
+
+    // 약관 정책: 진행 중 예약·교환은 탈퇴로 자동 취소하지 않습니다.
+    // 완료 또는 정상 취소 후에만 계정 비식별 정리를 진행합니다.
+    if (hasActiveOwnedExchange || groupActive) {
+      throw new ActiveExchangeBlocksDeletionError();
+    }
 
     const anonymizedAt = FieldValue.serverTimestamp();
-    let slots = slotsSnap.exists
-      ? (slotsSnap.data() as Record<string, unknown>)
-      : {};
-    const activeSchedules = new Map<
-      string,
-      { visitDate: string; visitTime: string }
-    >();
 
     ownedDocs.forEach((document) => {
       const row = (document.data() || {}) as Record<string, unknown>;
-      const visitDate = String(row.visitDate || "");
-      const visitTime = String(row.visitTime || "");
-      if (
-        isActiveExchangeStatus(row.status) &&
-        visitDate &&
-        visitTime
-      ) {
-        activeSchedules.set(`${visitDate}|${visitTime}`, {
-          visitDate,
-          visitTime,
-        });
-      }
-    });
-
-    activeSchedules.forEach(({ visitDate, visitTime }) => {
-      slots = setReservedTime(slots, visitDate, visitTime, false);
-    });
-
-    ownedDocs.forEach((document) => {
-      const row = (document.data() || {}) as Record<string, unknown>;
-      const active = isActiveExchangeStatus(row.status);
-      const nextStatus = active
-        ? "canceled"
-        : String(row.status || "requested");
 
       tx.update(document.ref, {
         userId: "",
@@ -198,25 +185,14 @@ export async function cleanupExchangeGroupForDeletion(params: {
         ownerDeleted: true,
         anonymizedAt,
         anonymizedReason: "account_deleted",
-        status: nextStatus,
+        status: String(row.status || "requested"),
         ...uidOwnedFieldDeletes(row, uid),
-        ...(active
-          ? {
-              canceledAt: anonymizedAt,
-              cancellationReason: "회원 탈퇴",
-              scheduleChangeType: "canceled",
-            }
-          : {}),
         updatedAt: anonymizedAt,
       } as UpdateData<DocumentData>);
     });
 
     let groupUpdates = 0;
     if (groupSnap.exists) {
-      const groupData = (groupSnap.data() || {}) as Record<string, unknown>;
-      const groupStatus = String(groupData.repStatus || "requested");
-      const groupActive = isActiveExchangeStatus(groupStatus);
-
       tx.set(
         groupRef,
         {
@@ -226,23 +202,13 @@ export async function cleanupExchangeGroupForDeletion(params: {
           ownerDeleted: true,
           anonymizedAt,
           anonymizedReason: "account_deleted",
-          repStatus: groupActive ? "canceled" : groupStatus,
+          repStatus: groupStatus,
           ...uidOwnedFieldDeletes(groupData, uid),
-          ...(groupActive
-            ? {
-                canceledAt: anonymizedAt,
-                cancellationReason: "회원 탈퇴",
-              }
-            : {}),
           updatedAt: anonymizedAt,
         } as DocumentData,
         { merge: true }
       );
       groupUpdates = 1;
-    }
-
-    if (activeSchedules.size > 0) {
-      tx.set(slotsRef, slots);
     }
 
     // 콜백이 예외를 던지면 Firestore는 위 쓰기들을 커밋하지 않습니다.

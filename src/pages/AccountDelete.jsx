@@ -174,6 +174,11 @@ export default function AccountDelete() {
             웹에서 로그인할 수 있다면 <TextLink to="/settings">설정 페이지</TextLink>
             로 이동해 직접 탈퇴할 수 있습니다.
           </p>
+          <Notice>
+            진행 중인 예약·교환 또는 미완료 처리가 있는 경우에는 즉시 탈퇴할 수
+            없습니다. 해당 건을 완료하거나 정상 취소한 뒤 탈퇴를 진행해 주세요.
+            회원탈퇴만으로 진행 중인 예약·교환이 자동 취소되지는 않습니다.
+          </Notice>
         </Section>
 
         <Section>
@@ -183,6 +188,12 @@ export default function AccountDelete() {
             하기 위해 가능하면 <strong>한국골드마켓에 가입한 이메일 주소</strong>
             에서 요청을 보내주세요.
           </p>
+
+          <Notice>
+            이메일로 삭제를 요청하는 경우에도 진행 중인 예약·교환 또는 미완료
+            처리가 있으면 해당 건의 완료 또는 정상 취소를 확인한 뒤 탈퇴를
+            처리합니다.
+          </Notice>
 
           <Actions>
             <PrimaryAction href={mailto}>계정 삭제 요청 이메일 보내기</PrimaryAction>
@@ -207,13 +218,16 @@ export default function AccountDelete() {
         </Section>
 
         <Section>
-          <h2>3. 삭제되는 정보</h2>
+          <h2>3. 삭제 또는 비식별 처리되는 정보</h2>
           <ul>
             <li>Firebase Authentication 회원 계정</li>
             <li>이름, 닉네임, 이메일, 휴대전화번호 등 회원 프로필 정보</li>
             <li>FCM 푸시 토큰 및 계정에 연결된 기기·알림 정보</li>
             <li>프로필 이미지 등 계정에 연결된 파일</li>
-            <li>진행 중인 방문예약 및 계정에 연결된 예약 정보</li>
+            <li>
+              예약·교환 기록의 계정 식별정보
+              (진행 중인 건은 탈퇴 전에 완료 또는 정상 취소 필요)
+            </li>
             <li>
               그 밖에 계정 식별자와 직접 연결되어 더 이상 보관할 필요가 없는
               서비스 데이터
@@ -239,7 +253,8 @@ export default function AccountDelete() {
           <ol>
             <li>삭제 요청 접수</li>
             <li>가입 이메일 등 필요한 범위에서 본인 확인</li>
-            <li>계정 및 관련 개인정보 삭제 처리</li>
+            <li>진행 중인 예약·교환 또는 미완료 처리 여부 확인</li>
+            <li>계정 및 관련 개인정보 삭제·비식별 처리</li>
             <li>필요한 경우 처리 결과 안내</li>
           </ol>
           <p>

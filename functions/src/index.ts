@@ -12,6 +12,7 @@ import * as functionsV1 from "firebase-functions/v1";
 import { defineSecret } from "firebase-functions/params";
 import { createHash, randomInt } from "node:crypto";
 import {
+  ActiveExchangeBlocksDeletionError,
   cleanupExchangeGroupForDeletion,
   deleteCustomerNotificationCopies,
   isRecentAuthentication,
@@ -3439,6 +3440,20 @@ export const deleteMyAccount = onCall<unknown>(
         exchanges.where("userId", "==", uid).get(),
       ]);
 
+      const activeExchangeCount = exchangeSnap.docs.filter((document) =>
+        isActiveExchangeStatus(document.get("status"))
+      ).length;
+      if (activeExchangeCount > 0) {
+        throw new HttpsError(
+          "failed-precondition",
+          "진행 중인 예약·교환이 있습니다. 해당 건을 완료하거나 정상 취소한 뒤 계정 탈퇴를 진행해 주세요.",
+          {
+            reason: "active-exchange",
+            activeExchangeCount,
+          }
+        );
+      }
+
       const previousNicknameLower = profileSnap.exists
         ? String(profileSnap.get("nicknameLower") || "").trim()
         : "";
@@ -3450,6 +3465,28 @@ export const deleteMyAccount = onCall<unknown>(
           })
         ),
       ];
+
+      const groupRefs = ownedGroupIds.map((groupId) =>
+        db().doc(`goldExchangeGroups/${groupId}`)
+      );
+      const groupSnapshots =
+        groupRefs.length > 0 ? await db().getAll(...groupRefs) : [];
+      const activeGroupCount = groupSnapshots.filter(
+        (snapshot) =>
+          snapshot.exists &&
+          isActiveExchangeStatus(snapshot.get("repStatus"))
+      ).length;
+      if (activeGroupCount > 0) {
+        throw new HttpsError(
+          "failed-precondition",
+          "진행 중인 예약·교환이 있습니다. 해당 건을 완료하거나 정상 취소한 뒤 계정 탈퇴를 진행해 주세요.",
+          {
+            reason: "active-exchange",
+            activeGroupCount,
+          }
+        );
+      }
+
       const anonymizedAt = FieldValue.serverTimestamp();
 
       await runRequiredDeletionStages(
@@ -3696,6 +3733,13 @@ export const deleteMyAccount = onCall<unknown>(
         error,
       });
 
+      if (error instanceof ActiveExchangeBlocksDeletionError) {
+        throw new HttpsError(
+          "failed-precondition",
+          "진행 중인 예약·교환이 있습니다. 해당 건을 완료하거나 정상 취소한 뒤 계정 탈퇴를 진행해 주세요.",
+          { reason: "active-exchange" }
+        );
+      }
       if (error instanceof HttpsError) throw error;
       throw new HttpsError(
         "internal",

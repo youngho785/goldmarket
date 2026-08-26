@@ -2199,20 +2199,10 @@ export default function Settings() {
         await currentUser.getIdToken(true);
 
         /*
-         * Web/PWA는 기존 Web Push 구독 정리
-         *
-         * Android는 계정 탈퇴 서버가
-         * users/{uid}.fcmTokens를 비우므로
-         * Web unregisterPush()를 호출하지 않습니다.
+         * 계정 삭제 가능 여부는 서버가 먼저 판정합니다.
+         * 진행 중 예약·교환으로 탈퇴가 차단되는 경우
+         * 푸시 구독 등 현재 계정 상태를 먼저 변경하지 않습니다.
          */
-        if (!isAndroid) {
-          try {
-            await unregisterPush(
-              user.uid
-            );
-          } catch {}
-        }
-
         const result =
           await callDeleteMyAccount();
 
@@ -2283,6 +2273,9 @@ export default function Settings() {
           errorCode.startsWith("functions/")
             ? errorCode.slice("functions/".length)
             : errorCode;
+        const errorReason = String(
+          error?.details?.reason || ""
+        );
 
         if (
           errorCode === "auth/wrong-password" ||
@@ -2297,6 +2290,15 @@ export default function Settings() {
         ) {
           setDeleteErr(
             "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요."
+          );
+        } else if (
+          functionsCode ===
+            "failed-precondition" &&
+          errorReason ===
+            "active-exchange"
+        ) {
+          setDeleteErr(
+            "진행 중인 예약·교환이 있어 탈퇴할 수 없습니다. 해당 건을 완료하거나 정상 취소한 뒤 다시 시도해 주세요."
           );
         } else if (
           functionsCode ===
@@ -3196,8 +3198,11 @@ export default function Settings() {
           <DetailsBody>
             <DangerNote>
               탈퇴 시 Firebase 인증 계정,
-              알림, 프로필 사진은 삭제되고
-              진행 중인 방문예약은 취소됩니다.
+              알림, 프로필 사진은 삭제됩니다.
+              진행 중인 예약·교환 또는 미완료
+              처리가 있는 경우에는 탈퇴할 수
+              없으며, 해당 건을 완료하거나 정상
+              취소한 뒤 다시 진행해야 합니다.
               완료된 교환 및 고객문의 기록은
               관련 법령과 분쟁 대응을 위해
               필요한 기간 동안 식별정보를

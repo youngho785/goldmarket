@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import { initializeApp, deleteApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import {
+  ActiveExchangeBlocksDeletionError,
   cleanupExchangeGroupForDeletion,
   deleteCustomerNotificationCopies,
   isRecentAuthentication,
@@ -81,6 +82,8 @@ async function seedDeletionGroup({
   exchangeId,
   visitDate,
   visitTime,
+  status = "requested",
+  repStatus = status,
   customerOwnedBonusFields = true,
 }) {
   const exchangeRef = firestore.doc(`goldExchanges/${exchangeId}`);
@@ -92,7 +95,7 @@ async function seedDeletionGroup({
       groupId,
       userId: uid,
       participants: [uid],
-      status: "requested",
+      status,
       visitDate,
       visitTime,
       name: "삭제 대상",
@@ -112,7 +115,7 @@ async function seedDeletionGroup({
       ownerUid: uid,
       customerUid: uid,
       bonusGoldRequestUid: uid,
-      repStatus: "requested",
+      repStatus,
       visitDate,
       visitTime,
       scheduleChangeRequestedBy: uid,
@@ -196,7 +199,47 @@ test("Storage/필수 Firestore 실패 시 Auth 삭제를 호출하지 않는다"
   }
 });
 
-test("그룹 트랜잭션 실패 시 그룹·교환·슬롯이 모두 롤백된다", async () => {
+test("진행 중 예약·교환이 있으면 탈퇴 정리를 시작하지 않는다", async () => {
+  const uid = unique("active-block-user");
+  const groupId = unique("active-block-group");
+  const exchangeId = unique("active-block-exchange");
+  const visitDate = "2026-09-10";
+  const visitTime = "11:00";
+  const { exchangeRef, groupRef, slotsRef } = await seedDeletionGroup({
+    uid,
+    groupId,
+    exchangeId,
+    visitDate,
+    visitTime,
+  });
+
+  await assert.rejects(
+    cleanupExchangeGroupForDeletion({
+      firestore,
+      uid,
+      groupId,
+      exchanges: firestore.collection("goldExchanges"),
+      slotsRef,
+      isActiveExchangeStatus: isActiveExchangeStatusForTest,
+      setReservedTime: setReservedTimeForTest,
+    }),
+    (error) => error instanceof ActiveExchangeBlocksDeletionError
+  );
+
+  const [exchangeSnap, groupSnap, slotsSnap] = await Promise.all([
+    exchangeRef.get(),
+    groupRef.get(),
+    slotsRef.get(),
+  ]);
+
+  assert.equal(exchangeSnap.get("userId"), uid);
+  assert.equal(exchangeSnap.get("status"), "requested");
+  assert.equal(groupSnap.get("ownerUid"), uid);
+  assert.equal(groupSnap.get("repStatus"), "requested");
+  assert.equal(slotsSnap.get(`${visitDate}.${visitTime}`), true);
+});
+
+test("완료된 그룹 트랜잭션 실패 시 그룹·교환이 모두 롤백된다", async () => {
   const uid = unique("rollback-user");
   const groupId = unique("rollback-group");
   const exchangeId = unique("rollback-exchange");
@@ -208,6 +251,8 @@ test("그룹 트랜잭션 실패 시 그룹·교환·슬롯이 모두 롤백된�
     exchangeId,
     visitDate,
     visitTime,
+    status: "completed",
+    repStatus: "completed",
   });
 
   let authDeleteCalls = 0;
@@ -247,7 +292,7 @@ test("그룹 트랜잭션 실패 시 그룹·교환·슬롯이 모두 롤백된�
   ]);
 
   assert.equal(exchangeSnap.get("userId"), uid);
-  assert.equal(exchangeSnap.get("status"), "requested");
+  assert.equal(exchangeSnap.get("status"), "completed");
   assert.equal(exchangeSnap.get("scheduleChangeRequestedBy"), uid);
   assert.equal(groupSnap.get("ownerUid"), uid);
   assert.equal(groupSnap.get("customerUid"), uid);
@@ -255,7 +300,7 @@ test("그룹 트랜잭션 실패 시 그룹·교환·슬롯이 모두 롤백된�
   assert.equal(slotsSnap.get(`${visitDate}.${visitTime}`), true);
 });
 
-test("실제 그룹 정리는 고객 UID 이력만 제거하고 관리자 UID는 보존한다", async () => {
+test("완료·취소된 그룹 정리는 고객 UID 이력만 제거하고 관리자 UID는 보존한다", async () => {
   const uid = unique("trace-user");
   const groupId = unique("trace-group");
   const exchangeId = unique("trace-exchange");
@@ -267,6 +312,8 @@ test("실제 그룹 정리는 고객 UID 이력만 제거하고 관리자 UID는
     exchangeId,
     visitDate,
     visitTime,
+    status: "completed",
+    repStatus: "completed",
   });
   const alternateExchangeRef = firestore.doc(
     `goldExchanges/${unique("trace-exchange-alt")}`
@@ -302,7 +349,7 @@ test("실제 그룹 정리는 고객 UID 이력만 제거하고 관리자 UID는
   ]);
 
   assert.equal(exchangeSnap.get("userId"), "");
-  assert.equal(exchangeSnap.get("status"), "canceled");
+  assert.equal(exchangeSnap.get("status"), "completed");
   assert.equal(exchangeSnap.get("scheduleChangeRequestedBy"), undefined);
   assert.equal(exchangeSnap.get("cancellationRequestedBy"), undefined);
   assert.equal(exchangeSnap.get("lastStatusChangedBy"), undefined);
@@ -321,7 +368,8 @@ test("실제 그룹 정리는 고객 UID 이력만 제거하고 관리자 UID는
   assert.equal(groupSnap.get("lastStatusChangedBy"), undefined);
   assert.equal(groupSnap.get("bonusGoldRestoredBy"), undefined);
   assert.equal(groupSnap.get("bonusGoldCanceledBy"), "admin-preserve");
-  assert.equal(slotsSnap.get(`${visitDate}.${visitTime}`), undefined);
+  assert.equal(groupSnap.get("repStatus"), "completed");
+  assert.equal(slotsSnap.get(`${visitDate}.${visitTime}`), true);
 });
 
 test("일부 그룹 성공 후 실패해도 재실행으로 남은 그룹을 실제 정리한다", async () => {
@@ -338,6 +386,8 @@ test("일부 그룹 성공 후 실패해도 재실행으로 남은 그룹을 실
     exchangeId: exchangeA,
     visitDate: "2026-09-13",
     visitTime: "13:00",
+    status: "completed",
+    repStatus: "completed",
   });
   await seedDeletionGroup({
     uid,
@@ -345,6 +395,8 @@ test("일부 그룹 성공 후 실패해도 재실행으로 남은 그룹을 실
     exchangeId: exchangeB,
     visitDate: "2026-09-14",
     visitTime: "14:00",
+    status: "completed",
+    repStatus: "completed",
   });
 
   const common = {
@@ -490,10 +542,17 @@ test("계정삭제 호출 순서·필수 경로·로컬/CI 명령의 회귀를 �
   const deleteCallIndex = settingsSource.indexOf("await callDeleteMyAccount", forceRefreshIndex);
   assert.ok(reauthIndex >= 0);
   assert.ok(forceRefreshIndex > reauthIndex);
-  assert.ok(unregisterIndex > forceRefreshIndex);
+  assert.equal(unregisterIndex, -1);
   assert.ok(deleteCallIndex > forceRefreshIndex);
   assert.match(settingsSource, /auth\/invalid-credential/);
   assert.match(settingsSource, /failed-precondition/);
+  assert.match(settingsSource, /active-exchange/);
+  assert.match(deleteBlock, /active-exchange/);
+  assert.match(deletionSafetySource, /ActiveExchangeBlocksDeletionError/);
+  assert.doesNotMatch(
+    deletionSafetySource,
+    /cancellationReason:\s*"회원 탈퇴"/
+  );
 
   const functionsPackage = JSON.parse(packageText);
   assert.match(
