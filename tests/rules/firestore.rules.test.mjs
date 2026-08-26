@@ -196,6 +196,126 @@ test("회원은 users 닉네임을 직접 변경하거나 삭제할 수 없다",
   await assertSucceeds(updateDoc(doc(db, "users", "owner"), { phone: "010-1111-2222" }));
 });
 
+test("회원은 users 이메일을 Firebase Auth 이메일과 일치하게만 기록할 수 있다", async () => {
+  const initialDb = env
+    .authenticatedContext("owner", {
+      email: "owner@example.com",
+      email_verified: false,
+    })
+    .firestore();
+  const ref = doc(initialDb, "users", "owner");
+
+  // 가입 직후 미인증 상태에서도 Auth에 등록된 자기 이메일의 최초 기록은 허용합니다.
+  await assertSucceeds(updateDoc(ref, { email: "owner@example.com" }));
+  await assertFails(updateDoc(ref, { email: "forged@example.com" }));
+
+  // Firebase Auth에서 새 이메일 확인이 끝난 뒤의 인증 토큰만 이메일 변경을 허용합니다.
+  const changedDb = env
+    .authenticatedContext("owner", {
+      email: "new-owner@example.com",
+      email_verified: true,
+    })
+    .firestore();
+  const changedRef = doc(changedDb, "users", "owner");
+  await assertSucceeds(updateDoc(changedRef, { email: "new-owner@example.com" }));
+  await assertFails(updateDoc(changedRef, { email: "other@example.com" }));
+  await assertFails(updateDoc(changedRef, { email: deleteField() }));
+});
+
+test("신규 users 문서의 이메일도 Firebase Auth 이메일과 일치해야 한다", async () => {
+  const validDb = env
+    .authenticatedContext("email-new", {
+      email: "email-new@example.com",
+      email_verified: false,
+    })
+    .firestore();
+
+  await assertSucceeds(
+    setDoc(doc(validDb, "users", "email-new"), {
+      displayName: "신규회원",
+      email: "email-new@example.com",
+      createdAt: serverTimestamp(),
+    })
+  );
+
+  const forgedDb = env
+    .authenticatedContext("email-forged", {
+      email: "real@example.com",
+      email_verified: false,
+    })
+    .firestore();
+
+  await assertFails(
+    setDoc(doc(forgedDb, "users", "email-forged"), {
+      displayName: "신규회원",
+      email: "forged@example.com",
+      createdAt: serverTimestamp(),
+    })
+  );
+});
+
+test("회원은 users createdAt을 최초 1회 서버시각으로만 설정할 수 있다", async () => {
+  const db = env.authenticatedContext("owner").firestore();
+  const ref = doc(db, "users", "owner");
+
+  await assertSucceeds(updateDoc(ref, { createdAt: serverTimestamp() }));
+  await assertFails(updateDoc(ref, { createdAt: serverTimestamp() }));
+  await assertFails(updateDoc(ref, { createdAt: deleteField() }));
+});
+
+test("회원은 가입 동의 원본을 최초 1회만 기록하고 필수 동의는 바꿀 수 없다", async () => {
+  const db = env.authenticatedContext("owner").firestore();
+  const ref = doc(db, "users", "owner");
+
+  await assertSucceeds(
+    updateDoc(ref, {
+      consents: {
+        version: "v1.1",
+        age14: { accepted: true, at: serverTimestamp() },
+        tos: { accepted: true, at: serverTimestamp() },
+        privacy: { accepted: true, at: serverTimestamp() },
+        marketing: { accepted: false, at: serverTimestamp() },
+      },
+    })
+  );
+
+  await assertFails(
+    updateDoc(ref, {
+      "consents.tos": { accepted: false, at: serverTimestamp() },
+    })
+  );
+  await assertFails(updateDoc(ref, { "consents.version": "forged-v9" }));
+  await assertFails(updateDoc(ref, { "consents.privacy": deleteField() }));
+});
+
+test("회원은 마케팅 동의만 서버시각과 함께 변경할 수 있다", async () => {
+  const db = env.authenticatedContext("owner").firestore();
+  const ref = doc(db, "users", "owner");
+
+  await assertSucceeds(
+    updateDoc(ref, {
+      consents: {
+        version: "v1.1",
+        age14: { accepted: true, at: serverTimestamp() },
+        tos: { accepted: true, at: serverTimestamp() },
+        privacy: { accepted: true, at: serverTimestamp() },
+        marketing: { accepted: false, at: serverTimestamp() },
+      },
+    })
+  );
+
+  await assertSucceeds(
+    updateDoc(ref, {
+      "consents.marketing": { accepted: true, at: serverTimestamp() },
+    })
+  );
+  await assertFails(
+    updateDoc(ref, {
+      "consents.marketing": { accepted: true, at: new Date("2026-01-01T00:00:00Z") },
+    })
+  );
+});
+
 test("회원은 profiles 닉네임과 nicknames 인덱스를 직접 쓸 수 없다", async () => {
   await env.withSecurityRulesDisabled(async (context) => {
     await setDoc(doc(context.firestore(), "profiles", "owner"), {

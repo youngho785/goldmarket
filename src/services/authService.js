@@ -11,6 +11,8 @@ import {
   signInAnonymously,
   linkWithCredential,
   EmailAuthProvider,
+  reauthenticateWithCredential,
+  verifyBeforeUpdateEmail,
   deleteUser,
   // 필요시 setPersistence, browserLocalPersistence, browserSessionPersistence 추가 가능
 } from "firebase/auth";
@@ -210,6 +212,51 @@ export async function changePassword(newPassword) {
   await u.reload();
   await u.getIdToken(true);
   return true;
+}
+
+/**
+ * 이메일 변경 확인 메일 발송
+ * - 현재 비밀번호로 재인증
+ * - 새 이메일 소유 확인 링크 발송
+ * - 링크 확인 전에는 Auth/Firestore 이메일을 바꾸지 않음
+ * - 링크 확인 후 Firebase Auth가 이메일을 변경하며 AuthContext가 users.email을 동기화
+ */
+export async function requestEmailChange(
+  newEmail,
+  currentPassword,
+  continueUrl = "/profile"
+) {
+  const u = requireAuthUser();
+  const currentEmail = normalizeEmail(u.email);
+  const nextEmail = normalizeEmail(newEmail);
+  const password = String(currentPassword || "");
+
+  if (!currentEmail) {
+    throw new Error("현재 로그인 이메일을 확인할 수 없습니다.");
+  }
+  if (!nextEmail) {
+    throw new Error("새 이메일을 입력해 주세요.");
+  }
+  if (nextEmail === currentEmail) {
+    throw new Error("현재 이메일과 다른 이메일을 입력해 주세요.");
+  }
+  if (!password) {
+    throw new Error("보안을 위해 현재 비밀번호를 입력해 주세요.");
+  }
+
+  const credential = EmailAuthProvider.credential(currentEmail, password);
+  await reauthenticateWithCredential(u, credential);
+
+  await verifyBeforeUpdateEmail(
+    u,
+    nextEmail,
+    buildEmailActionSettings(continueUrl || "/profile")
+  );
+
+  return {
+    currentEmail,
+    pendingEmail: nextEmail,
+  };
 }
 
 /** (선택) Auth 프로필 필드만 수정 (displayName, photoURL 등) */

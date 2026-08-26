@@ -286,7 +286,10 @@ function buildNativeEmailActionRoute(rawUrl) {
   if (action.continueUrl) params.set("continueUrl", action.continueUrl);
   if (action.lang) params.set("lang", action.lang);
 
-  if (action.mode === "verifyEmail") {
+  if (
+    action.mode === "verifyEmail" ||
+    action.mode === "verifyAndChangeEmail"
+  ) {
     return `/verify-email?${params.toString()}`;
   }
 

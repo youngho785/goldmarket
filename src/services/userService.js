@@ -80,7 +80,6 @@ export async function updateUserProfile(uid, values = {}) {
     userRef,
     {
       displayName: String(values.displayName || "").trim(),
-      email: String(values.email || "").trim(),
       phone: String(values.phone || "").trim(),
       profileImage: String(values.profileImage || values.photoURL || "").trim(),
       updatedAt: serverTimestamp(),

@@ -3598,6 +3598,7 @@ export const deleteMyAccount = onCall<unknown>(
                   userRef,
                   {
                     displayName: "(탈퇴한 사용자)",
+                    name: "(탈퇴한 사용자)",
                     email: "",
                     phone: "",
                     profileImage: "",

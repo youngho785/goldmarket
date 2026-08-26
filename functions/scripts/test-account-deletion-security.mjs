@@ -454,6 +454,10 @@ test("계정삭제 호출 순서·필수 경로·로컬/CI 명령의 회귀를 �
   assert.match(deleteBlock, /pushTestRateLimits\/\$\{uid\}/);
   assert.match(deleteBlock, /bonusGoldRedemptionRequests\/\$\{uid\}/);
   assert.match(deleteBlock, /notifications\/\$\{uid\}/);
+  assert.match(
+    deleteBlock,
+    /displayName:\s*"\(탈퇴한 사용자\)",[\s\S]{0,160}name:\s*"\(탈퇴한 사용자\)"/
+  );
   assert.doesNotMatch(
     deleteBlock,
     /bonusGoldRedemptionRequests\/\$\{uid\}`\)\.delete\(\)\.catch/

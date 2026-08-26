@@ -158,6 +158,26 @@ export const AuthProvider = ({ children }) => {
                 localStorage.removeItem(
                   `pending_phone_${currentUser.uid}`
                 );
+              } else {
+                const storedEmail = String(
+                  snap.data()?.email || ""
+                ).trim().toLowerCase();
+                const authEmail = String(
+                  currentUser.email || ""
+                ).trim();
+
+                // 이메일 변경 확인 링크 처리 뒤 Firebase Auth가 새 이메일로 바뀌면
+                // Firestore users.email도 인증된 Auth 이메일에 맞춰 자동 동기화합니다.
+                if (authEmail && storedEmail !== authEmail.toLowerCase()) {
+                  await setDoc(
+                    userDocRef,
+                    {
+                      email: authEmail,
+                      updatedAt: serverTimestamp(),
+                    },
+                    { merge: true }
+                  );
+                }
               }
             } catch (e) {
               console.warn(

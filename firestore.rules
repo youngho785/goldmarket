@@ -34,6 +34,75 @@ service cloud.firestore {
       ]);
     }
 
+    function validRequiredConsent(value) {
+      return value is map &&
+        value.keys().hasOnly(['accepted', 'at']) &&
+        value.accepted == true &&
+        value.at == request.time;
+    }
+
+    function validMarketingConsent(value) {
+      return value is map &&
+        value.keys().hasOnly(['accepted', 'at']) &&
+        value.accepted is bool &&
+        value.at == request.time;
+    }
+
+    function validInitialConsents(value) {
+      return value is map &&
+        value.keys().hasOnly(['version', 'age14', 'tos', 'privacy', 'marketing']) &&
+        value.version is string &&
+        value.version.size() > 0 &&
+        value.version.size() <= 50 &&
+        validRequiredConsent(value.age14) &&
+        validRequiredConsent(value.tos) &&
+        validRequiredConsent(value.privacy) &&
+        validMarketingConsent(value.marketing);
+    }
+
+    function userCreatedAtUpdateAllowed() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['createdAt']) ||
+        (!('createdAt' in resource.data) &&
+          request.resource.data.createdAt == request.time);
+    }
+
+    function authEmailMatchesRequestedEmail() {
+      return signedIn() &&
+        ('email' in request.auth.token) &&
+        request.auth.token.email is string &&
+        request.resource.data.email == request.auth.token.email;
+    }
+
+    function userEmailUpdateAllowed() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['email']) ||
+        (!('email' in resource.data) &&
+          authEmailMatchesRequestedEmail()) ||
+        (('email' in resource.data) &&
+          ('email_verified' in request.auth.token) &&
+          request.auth.token.email_verified == true &&
+          authEmailMatchesRequestedEmail());
+    }
+
+    function userConsentsUpdateAllowed() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['consents']) ||
+        (!('consents' in resource.data) &&
+          validInitialConsents(request.resource.data.consents)) ||
+        (('consents' in resource.data) &&
+          resource.data.consents is map &&
+          request.resource.data.consents is map &&
+          request.resource.data.consents.diff(resource.data.consents).affectedKeys().hasOnly(['marketing']) &&
+          validMarketingConsent(request.resource.data.consents.marketing));
+    }
+
+    function validUserCreateMetadata() {
+      return (!('createdAt' in request.resource.data) ||
+          request.resource.data.createdAt == request.time) &&
+        (!('email' in request.resource.data) ||
+          authEmailMatchesRequestedEmail()) &&
+        (!('consents' in request.resource.data) ||
+          validInitialConsents(request.resource.data.consents));
+    }
+
     function allowedUserCreateFieldsOnly() {
       return request.resource.data.keys().hasOnly([
         'displayName', 'name', 'email', 'phone', 'profileImage',
@@ -121,8 +190,13 @@ service cloud.firestore {
 
     match /users/{uid} {
       allow read: if isOwner(uid) || isAdmin();
-      allow create: if isOwner(uid) && allowedUserCreateFieldsOnly();
-      allow update: if isOwner(uid) && protectedUserFieldsUnchanged() && userClientFieldsOnly();
+      allow create: if isOwner(uid) && allowedUserCreateFieldsOnly() && validUserCreateMetadata();
+      allow update: if isOwner(uid) &&
+        protectedUserFieldsUnchanged() &&
+        userClientFieldsOnly() &&
+        userCreatedAtUpdateAllowed() &&
+        userEmailUpdateAllowed() &&
+        userConsentsUpdateAllowed();
       allow delete: if false;
 
       match /ledger/{entryId} {

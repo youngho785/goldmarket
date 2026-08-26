@@ -50,3 +50,6 @@ Thumbs.db
 functions/lib/
 backup-*/
 .env.production
+
+# Local repository review snapshot
+goldmarket-current.xml

@@ -7,7 +7,11 @@ import {
 } from "firebase/auth";
 import { useNavigate, useLocation } from "react-router-dom";
 import { auth } from "../firebase/firebase";
-import { sendVerificationEmailIfNeeded } from "../services/authService";
+import {
+  normalizeEmail,
+  requestEmailChange,
+  sendVerificationEmailIfNeeded,
+} from "../services/authService";
 import { readMemberOnboardingPath } from "@/lib/memberOnboarding";
 import { isNative } from "@/platform/runtime";
 import { KGM_APP_RETURN_PARAM, KGM_PUBLIC_WEB_ORIGIN } from "@/lib/emailActionUrl";
@@ -53,6 +57,44 @@ const SecondaryButton = styled(Button)`
   background: transparent;
   color: ${({ theme }) => theme.colors.text};
   border-color: ${({ theme }) => theme.colors.border};
+`;
+
+const CorrectionPanel = styled.form`
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+  padding: 16px;
+  text-align: left;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 12px;
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+`;
+
+const CorrectionLabel = styled.label`
+  display: grid;
+  gap: 6px;
+  color: ${({ theme }) => theme.colors.text};
+  font-weight: 700;
+`;
+
+const CorrectionInput = styled.input`
+  min-height: 44px;
+  padding: 9px 11px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.small};
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
+  font-size: 1rem;
+`;
+
+const CorrectionActions = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  ${Button}, ${SecondaryButton} {
+    margin: 0;
+  }
 `;
 
 /* 자동 이동 지연 */
@@ -110,6 +152,11 @@ export default function VerifyEmail() {
   const [checking, setChecking] = useState(false);
   const [processingLink, setProcessingLink] = useState(true);
   const [resending, setResending] = useState(false);
+  const [emailCorrectionOpen, setEmailCorrectionOpen] = useState(false);
+  const [correctedEmail, setCorrectedEmail] = useState("");
+  const [correctionPassword, setCorrectionPassword] = useState("");
+  const [changingEmail, setChangingEmail] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState("");
   const [appReturnReady, setAppReturnReady] = useState(false);
   const [appReturnHint, setAppReturnHint] = useState("");
   const appReturnAttemptedRef = useRef(false);
@@ -180,12 +227,20 @@ export default function VerifyEmail() {
       navigate(`/reset-password?oobCode=${encodeURIComponent(oobCode)}`, { replace: true });
       return;
     }
-    if (!oobCode || mode !== "verifyEmail") {
+    const isEmailAction =
+      mode === "verifyEmail" || mode === "verifyAndChangeEmail";
+
+    if (!oobCode || !isEmailAction) {
       setProcessingLink(false);
       return;
     }
 
-    const moveAfterVerified = (successMessage) => {
+    const emailActionSuccessMessage =
+      mode === "verifyAndChangeEmail"
+        ? "✅ 이메일 주소 변경과 인증이 완료되었습니다! 잠시 후 이동합니다."
+        : "✅ 이메일 인증이 완료되었습니다! 잠시 후 이동합니다.";
+
+    const moveAfterVerified = (successMessage = emailActionSuccessMessage) => {
       if (cancelled) return;
       setMessage(successMessage);
 
@@ -219,16 +274,18 @@ export default function VerifyEmail() {
           if (cancelled) return;
 
           if (auth.currentUser.emailVerified) {
-            moveAfterVerified("✅ 이메일 인증이 완료되었습니다! 잠시 후 이동합니다.");
+            moveAfterVerified();
             return;
           }
 
           // applyActionCode는 성공했지만 앱 전환 직후 reload 네트워크가 잠깐 실패할 수 있음.
           // 오류로 끝내지 않고 아래 폴링이 계속 최신 상태를 확인하도록 둔다.
           setMessage(
-            refreshed.ok
-              ? "✅ 이메일 인증이 완료되었습니다. 회원 상태를 갱신하는 중입니다…"
-              : "✅ 이메일 인증이 완료되었습니다. 네트워크 연결을 확인하며 회원 상태를 다시 불러오는 중입니다…"
+            mode === "verifyAndChangeEmail"
+              ? "✅ 새 이메일 확인이 완료되었습니다. 회원 정보를 갱신하는 중입니다…"
+              : refreshed.ok
+                ? "✅ 이메일 인증이 완료되었습니다. 회원 상태를 갱신하는 중입니다…"
+                : "✅ 이메일 인증이 완료되었습니다. 네트워크 연결을 확인하며 회원 상태를 다시 불러오는 중입니다…"
           );
           return;
         }
@@ -237,24 +294,40 @@ export default function VerifyEmail() {
         // actionCode 적용 성공 자체로 이메일 소유 확인은 완료되며,
         // 앱에서 시작한 흐름이면 인증된 상태만 가지고 앱으로 돌아갑니다.
         if (!isNative && appReturnRequested && isAndroidBrowser) {
-          moveAfterVerified("✅ 이메일 인증이 완료되었습니다. 한국골드마켓 앱으로 돌아갑니다.");
+          moveAfterVerified(
+            mode === "verifyAndChangeEmail"
+              ? "✅ 새 이메일 확인이 완료되었습니다. 한국골드마켓 앱으로 돌아갑니다."
+              : "✅ 이메일 인증이 완료되었습니다. 한국골드마켓 앱으로 돌아갑니다."
+          );
           return;
         }
 
         // 다른 기기/브라우저에서 연 일반 웹 흐름은 안전하게 로그인만 안내합니다.
-        setMessage("✅ 이메일 인증이 완료되었습니다. 로그인 후 계속 이용해 주세요.");
+        setMessage(
+          mode === "verifyAndChangeEmail"
+            ? "✅ 이메일 변경과 새 주소 확인이 완료되었습니다. 로그인 후 계속 이용해 주세요."
+            : "✅ 이메일 인증이 완료되었습니다. 로그인 후 계속 이용해 주세요."
+        );
       } catch (err) {
         const code = err?.code || "";
         const msg = (err?.message || "").toLowerCase();
 
         // 인증 적용 뒤의 일시적 네트워크 오류는 인증 실패로 표시하지 않는다.
         if (actionApplied && isNetworkRequestFailed(err)) {
-          setMessage("✅ 이메일 인증이 완료되었습니다. 네트워크 연결을 확인하며 회원 상태를 다시 불러오는 중입니다…");
+          setMessage(
+            mode === "verifyAndChangeEmail"
+              ? "✅ 새 이메일 확인이 완료되었습니다. 네트워크 연결을 확인하며 회원 상태를 다시 불러오는 중입니다…"
+              : "✅ 이메일 인증이 완료되었습니다. 네트워크 연결을 확인하며 회원 상태를 다시 불러오는 중입니다…"
+          );
           if (!isNative && appReturnRequested && isAndroidBrowser) setAppReturnReady(true);
           return;
         }
 
-        if (code === "auth/invalid-action-code" && auth.currentUser) {
+        if (
+          code === "auth/invalid-action-code" &&
+          mode === "verifyEmail" &&
+          auth.currentUser
+        ) {
           try {
             await reloadUserWithRetry(auth.currentUser);
             if (cancelled) return;
@@ -266,9 +339,17 @@ export default function VerifyEmail() {
         }
 
         if (code === "auth/invalid-action-code") {
-          setMessage("❌ 유효하지 않은 인증 링크입니다. 이미 사용되었거나 잘못된 프로젝트일 수 있어요.");
+          setMessage(
+            mode === "verifyAndChangeEmail"
+              ? "❌ 유효하지 않은 이메일 변경 링크입니다. 이미 사용되었거나 새로 발급된 링크가 있을 수 있습니다."
+              : "❌ 유효하지 않은 인증 링크입니다. 이미 사용되었거나 잘못된 프로젝트일 수 있어요."
+          );
         } else if (code === "auth/expired-action-code") {
-          setMessage("❌ 인증 링크가 만료되었습니다. 아래 ‘인증메일 재전송’으로 다시 받아주세요.");
+          setMessage(
+            mode === "verifyAndChangeEmail"
+              ? "❌ 이메일 변경 링크가 만료되었습니다. 프로필 또는 이 화면에서 다시 변경 요청해 주세요."
+              : "❌ 인증 링크가 만료되었습니다. 아래 ‘인증메일 재전송’으로 다시 받아주세요."
+          );
         } else if (code === "auth/network-request-failed") {
           setMessage("네트워크 연결이 잠시 불안정합니다. 연결이 복구되면 인증 상태를 자동으로 다시 확인합니다.");
         } else if (msg.includes("continue url") || code === "auth/invalid-continue-uri" || code === "auth/argument-error") {
@@ -357,6 +438,15 @@ export default function VerifyEmail() {
         if (stopped) return;
 
         if (refreshed.verified) {
+          if (
+            pendingEmail &&
+            normalizeEmail(user.email) !== normalizeEmail(pendingEmail)
+          ) {
+            setMessage(
+              `새 이메일 ${pendingEmail}의 확인을 기다리고 있습니다. 새 주소로 받은 메일의 확인 링크를 눌러주세요.`
+            );
+            return;
+          }
           moveAfterVerified();
         }
       } catch (e) {
@@ -395,7 +485,7 @@ export default function VerifyEmail() {
       document.removeEventListener("visibilitychange", handleVisibility);
       setChecking(false);
     };
-  }, [processingLink, destination, navigate, contextUser]);
+  }, [processingLink, destination, navigate, contextUser, pendingEmail]);
 
   /* 4) 재전송 */
   const handleResend = async () => {
@@ -418,6 +508,51 @@ export default function VerifyEmail() {
       }
     } finally {
       setResending(false);
+    }
+  };
+
+  const handleEmailCorrection = async (event) => {
+    event.preventDefault();
+    if (changingEmail) return;
+
+    setChangingEmail(true);
+    setMessage("");
+
+    try {
+      const result = await requestEmailChange(
+        correctedEmail,
+        correctionPassword,
+        continuePath || destination || "/"
+      );
+
+      setPendingEmail(result.pendingEmail);
+      setCorrectedEmail("");
+      setCorrectionPassword("");
+      setEmailCorrectionOpen(false);
+      setMessage(
+        `📧 ${result.pendingEmail}로 이메일 변경 확인 메일을 보냈습니다. ` +
+          "새 메일의 확인 링크를 눌러주세요. 기존 주소로 인증메일을 다시 보내지 않아도 됩니다."
+      );
+    } catch (err) {
+      switch (err?.code) {
+        case "auth/invalid-credential":
+        case "auth/wrong-password":
+          setMessage("❌ 현재 비밀번호가 올바르지 않습니다.");
+          break;
+        case "auth/email-already-in-use":
+          setMessage("❌ 이미 다른 계정에서 사용 중인 이메일입니다.");
+          break;
+        case "auth/invalid-email":
+          setMessage("❌ 새 이메일 주소 형식을 확인해 주세요.");
+          break;
+        case "auth/too-many-requests":
+          setMessage("잠시 후 다시 시도해 주세요. 요청이 너무 많습니다.");
+          break;
+        default:
+          setMessage(`❌ 이메일 수정 요청 실패: ${err?.message || "알 수 없는 오류"}`);
+      }
+    } finally {
+      setChangingEmail(false);
     }
   };
 
@@ -480,9 +615,72 @@ export default function VerifyEmail() {
                     링크 클릭 또는 아래 버튼으로 재전송 후 인증해 주세요.
                   </Message>
                   <Message $color="var(--gm-info)"><strong>{displayUser.email}</strong></Message>
-                  <Button onClick={handleResend} disabled={checking || resending}>
-                    {resending ? "재전송 중…" : "인증메일 재전송"}
-                  </Button>
+
+                  {pendingEmail ? (
+                    <Message $color="var(--gm-info)">
+                      새 이메일 <strong>{pendingEmail}</strong>로 변경 확인 메일을 보냈습니다.
+                    </Message>
+                  ) : (
+                    <Button onClick={handleResend} disabled={checking || resending}>
+                      {resending ? "재전송 중…" : "인증메일 재전송"}
+                    </Button>
+                  )}
+
+                  <SecondaryButton
+                    type="button"
+                    disabled={changingEmail}
+                    onClick={() => {
+                      setEmailCorrectionOpen((open) => !open);
+                      setCorrectedEmail("");
+                      setCorrectionPassword("");
+                      setMessage("");
+                    }}
+                  >
+                    이메일을 잘못 입력했어요
+                  </SecondaryButton>
+
+                  {emailCorrectionOpen && (
+                    <CorrectionPanel onSubmit={handleEmailCorrection} autoComplete="on">
+                      <Message style={{ margin: 0 }}>
+                        새 이메일 주소와 가입할 때 사용한 현재 비밀번호를 입력해 주세요.
+                      </Message>
+                      <CorrectionLabel htmlFor="correctedSignupEmail">
+                        새 이메일
+                        <CorrectionInput
+                          id="correctedSignupEmail"
+                          type="email"
+                          value={correctedEmail}
+                          onChange={(event) => setCorrectedEmail(event.target.value)}
+                          autoComplete="email"
+                          required
+                        />
+                      </CorrectionLabel>
+                      <CorrectionLabel htmlFor="correctedSignupPassword">
+                        현재 비밀번호
+                        <CorrectionInput
+                          id="correctedSignupPassword"
+                          type="password"
+                          value={correctionPassword}
+                          onChange={(event) => setCorrectionPassword(event.target.value)}
+                          autoComplete="current-password"
+                          required
+                        />
+                      </CorrectionLabel>
+                      <CorrectionActions>
+                        <Button type="submit" disabled={changingEmail}>
+                          {changingEmail ? "발송 중…" : "새 이메일로 확인 메일 보내기"}
+                        </Button>
+                        <SecondaryButton
+                          type="button"
+                          disabled={changingEmail}
+                          onClick={() => setEmailCorrectionOpen(false)}
+                        >
+                          취소
+                        </SecondaryButton>
+                      </CorrectionActions>
+                    </CorrectionPanel>
+                  )}
+
                   {checking && <Message $color="var(--gm-success)">인증 상태 확인 중...</Message>}
                   {message && (
                     <Message $color={message.startsWith("✅") ? "var(--gm-success)" : message.startsWith("❌") ? "var(--gm-error)" : "var(--gm-text-secondary)"}>

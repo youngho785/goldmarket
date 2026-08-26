@@ -8,6 +8,7 @@ import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 
 import { useAuthContext } from "../context/AuthContext";
 import { fetchMyProfile, updateUserProfile } from "../services/userService";
+import { requestEmailChange } from "../services/authService";
 import { storage } from "../firebase/firebase";
 import Loader from "../components/common/Loader";
 import { compressImage } from "../utils/imageCompression";
@@ -146,6 +147,23 @@ const ProfileDetails = styled.div`
 
   p {
     margin: 8px 0;
+    line-height: 1.55;
+  }
+`;
+
+const EmailChangePanel = styled.div`
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 12px;
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+
+  p {
+    margin: 0;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: 0.9rem;
     line-height: 1.55;
   }
 `;
@@ -319,6 +337,24 @@ function validatePhone(phone) {
   return /^01[016789]-\d{3,4}-\d{4}$/.test(phone);
 }
 
+function emailChangeErrorMessage(error) {
+  switch (error?.code) {
+    case "auth/invalid-credential":
+    case "auth/wrong-password":
+      return "현재 비밀번호가 올바르지 않습니다.";
+    case "auth/email-already-in-use":
+      return "이미 다른 계정에서 사용 중인 이메일입니다.";
+    case "auth/invalid-email":
+      return "새 이메일 주소 형식을 확인해 주세요.";
+    case "auth/too-many-requests":
+      return "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.";
+    case "auth/requires-recent-login":
+      return "보안을 위해 다시 로그인한 뒤 이메일 변경을 시도해 주세요.";
+    default:
+      return error?.message || "이메일 변경 요청 중 오류가 발생했습니다.";
+  }
+}
+
 function mimeToExt(type) {
   if (!type) return "bin";
   if (type === "image/webp") return "webp";
@@ -346,6 +382,10 @@ export default function Profile() {
   const [error, setError] = useState("");
   const [uploadPct, setUploadPct] = useState(0);
   const [initialNickname, setInitialNickname] = useState("");
+  const [emailChangeOpen, setEmailChangeOpen] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [emailPassword, setEmailPassword] = useState("");
+  const [changingEmail, setChangingEmail] = useState(false);
 
   const [goldBonus, setGoldBonus] = useState({
     loading: true,
@@ -384,7 +424,7 @@ export default function Profile() {
         const next = {
           displayName: mergedDisplayName,
           nickname: data?.nickname || "",
-          email: data?.email || user.email || "",
+          email: user.email || data?.email || "",
           phone: data?.phone || "",
           profileImage: data?.photoURL || data?.profileImage || "",
         };
@@ -731,7 +771,6 @@ export default function Profile() {
         nickname: canSetNicknameFirstTime
           ? profile.nickname || ""
           : initialNickname,
-        email: profile.email || user.email || "",
         phone: profile.phone || "",
         photoURL: profile.profileImage || "",
         profileImage: profile.profileImage || "",
@@ -757,6 +796,35 @@ export default function Profile() {
       setMessage("");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleEmailChangeRequest = async (event) => {
+    event.preventDefault();
+    if (!user?.uid || changingEmail) return;
+
+    setError("");
+    setMessage("");
+    setChangingEmail(true);
+
+    try {
+      const result = await requestEmailChange(
+        newEmail,
+        emailPassword,
+        "/profile"
+      );
+
+      setMessage(
+        `${result.pendingEmail}로 이메일 변경 확인 메일을 보냈습니다. ` +
+          "메일의 확인 링크를 눌러야 로그인 이메일이 실제로 변경됩니다."
+      );
+      setNewEmail("");
+      setEmailPassword("");
+      setEmailChangeOpen(false);
+    } catch (changeError) {
+      setError(emailChangeErrorMessage(changeError));
+    } finally {
+      setChangingEmail(false);
     }
   };
 
@@ -1042,11 +1110,15 @@ export default function Profile() {
               <Input
                 id="profileEmail"
                 name="email"
-                value={profile.email}
-                onChange={handleInputChange}
+                value={user.email || profile.email || ""}
                 type="email"
                 autoComplete="email"
+                disabled
+                readOnly
               />
+              <small style={{ marginTop: 6, color: "var(--gm-text-light)" }}>
+                로그인 이메일은 아래 ‘이메일 변경’에서 본인 확인 후 변경할 수 있습니다.
+              </small>
             </FormGroup>
 
             <FormGroup>
@@ -1088,7 +1160,7 @@ export default function Profile() {
               <strong>닉네임:</strong> {profile.nickname || "미등록"}
             </p>
             <p>
-              <strong>이메일:</strong> {profile.email}
+              <strong>이메일:</strong> {user.email || profile.email || "미등록"}
             </p>
             <p>
               <strong>전화번호:</strong> {profile.phone || "미등록"}
@@ -1101,6 +1173,74 @@ export default function Profile() {
             </ButtonRow>
           </ProfileDetails>
         )}
+
+        <EmailChangePanel aria-label="로그인 이메일 변경">
+          <div>
+            <strong>로그인 이메일</strong>
+            <p>
+              현재 비밀번호로 본인 확인 후 새 이메일로 확인 메일을 보냅니다.
+              확인 링크를 누르기 전까지는 기존 이메일이 유지됩니다.
+            </p>
+          </div>
+
+          {!emailChangeOpen ? (
+            <ButtonRow>
+              <SecondaryButton
+                type="button"
+                onClick={() => {
+                  setEmailChangeOpen(true);
+                  setNewEmail("");
+                  setEmailPassword("");
+                  setError("");
+                  setMessage("");
+                }}
+              >
+                이메일 변경
+              </SecondaryButton>
+            </ButtonRow>
+          ) : (
+            <Form onSubmit={handleEmailChangeRequest} autoComplete="on">
+              <FormGroup>
+                <Label htmlFor="newProfileEmail">새 이메일</Label>
+                <Input
+                  id="newProfileEmail"
+                  type="email"
+                  value={newEmail}
+                  onChange={(event) => setNewEmail(event.target.value)}
+                  autoComplete="email"
+                  required
+                />
+              </FormGroup>
+              <FormGroup>
+                <Label htmlFor="emailChangePassword">현재 비밀번호</Label>
+                <Input
+                  id="emailChangePassword"
+                  type="password"
+                  value={emailPassword}
+                  onChange={(event) => setEmailPassword(event.target.value)}
+                  autoComplete="current-password"
+                  required
+                />
+              </FormGroup>
+              <ButtonRow>
+                <Button type="submit" disabled={changingEmail}>
+                  {changingEmail ? "확인 메일 발송 중…" : "새 이메일로 확인 메일 보내기"}
+                </Button>
+                <SecondaryButton
+                  type="button"
+                  disabled={changingEmail}
+                  onClick={() => {
+                    setEmailChangeOpen(false);
+                    setNewEmail("");
+                    setEmailPassword("");
+                  }}
+                >
+                  취소
+                </SecondaryButton>
+              </ButtonRow>
+            </Form>
+          )}
+        </EmailChangePanel>
 
         <SettingsShortcut to="/settings">
           <span>
