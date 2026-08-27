@@ -12,7 +12,8 @@ service cloud.firestore {
 
     function isAdmin() {
       return signedIn() &&
-        (request.auth.token.admin == true || request.auth.token.superAdmin == true);
+        (request.auth.token.get('admin', false) == true ||
+          request.auth.token.get('superAdmin', false) == true);
     }
 
     function protectedUserFieldsUnchanged() {
@@ -68,6 +69,8 @@ service cloud.firestore {
 
     function authEmailMatchesRequestedEmail() {
       return signedIn() &&
+        ('email' in request.resource.data) &&
+        request.resource.data.email is string &&
         ('email' in request.auth.token) &&
         request.auth.token.email is string &&
         request.resource.data.email == request.auth.token.email;

@@ -12,7 +12,8 @@ service firebase.storage {
 
     function isAdmin() {
       return signedIn() &&
-        (request.auth.token.admin == true || request.auth.token.superAdmin == true);
+        (request.auth.token.get('admin', false) == true ||
+          request.auth.token.get('superAdmin', false) == true);
     }
 
     function validImage() {
@@ -22,13 +23,18 @@ service firebase.storage {
     }
 
     match /profilePhotos/{uid}/{allPaths=**} {
-      allow read: if true;
+      // 회원 프로필은 공개 디렉터리가 아니므로 파일도 본인/관리자만 직접 조회합니다.
+      allow get: if isOwner(uid) || isAdmin();
+      // 클라이언트 디렉터리 열람은 막아 UID 단위 파일 열거를 방지합니다.
+      allow list: if false;
       allow create, update: if isOwner(uid) && validImage();
       allow delete: if isOwner(uid) || isAdmin();
     }
 
     match /profiles/{uid}/{allPaths=**} {
-      allow read: if true;
+      // 레거시 경로도 현재 프로필 사진과 같은 비공개 정책을 적용합니다.
+      allow get: if isOwner(uid) || isAdmin();
+      allow list: if false;
       allow create, update: if isOwner(uid) && validImage();
       allow delete: if isOwner(uid) || isAdmin();
     }

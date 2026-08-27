@@ -702,7 +702,7 @@ export default function Profile() {
       const storageRef = ref(storage, path);
       const task = uploadBytesResumable(storageRef, uploadFile, {
         contentType: uploadFile.type,
-        cacheControl: "public,max-age=31536000,immutable",
+        cacheControl: "private,max-age=31536000,immutable",
       });
 
       task.on("state_changed", (snapshot) => {
