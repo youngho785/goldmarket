@@ -6,27 +6,17 @@ import ErrorBoundary from "./components/common/ErrorBoundary.jsx";
 import AppProviders from "./context/AppProviders.jsx";
 import { requestIdle, cancelIdle } from "./utils/idle";
 import { isWeb } from "./platform/runtime";
-import firebaseConfig from "./firebase/firebaseConfig.js";
-import { createFirebaseServiceWorkerUrl } from "./firebase/serviceWorkerConfig.js";
 
 // Service Worker는 웹/PWA 환경에서만 등록
 // Capacitor Android 앱에서는 Native Push를 사용하므로 등록하지 않음
 if (isWeb && "serviceWorker" in navigator) {
-  try {
-    const serviceWorkerUrl =
-      createFirebaseServiceWorkerUrl(firebaseConfig);
-
-    window.__swReadyPromise = navigator.serviceWorker
-      .register(serviceWorkerUrl, { scope: "/" })
-      .then(() => navigator.serviceWorker.ready)
-      .catch((error) => {
-        console.error("SW register failed:", error);
-        return null;
-      });
-  } catch (error) {
-    console.error("SW Firebase config failed:", error);
-    window.__swReadyPromise = Promise.resolve(null);
-  }
+  window.__swReadyPromise = navigator.serviceWorker
+    .register("/sw.js", { scope: "/" })
+    .then(() => navigator.serviceWorker.ready)
+    .catch((error) => {
+      console.error("SW register failed:", error);
+      return null;
+    });
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(

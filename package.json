@@ -14,7 +14,6 @@
     "prebuild": "node scripts/generate-sitemap.mjs",
     "gen:sitemap": "node scripts/generate-sitemap.mjs",
     "test:rules": "firebase emulators:exec --only firestore \"npm --prefix tests/rules test\"",
-    "test:sw-config": "node scripts/test-service-worker-config.mjs",
     "deploy": "npm run build && firebase deploy --only hosting",
     "android:prepare": "npm run build && npx cap sync android"
   },

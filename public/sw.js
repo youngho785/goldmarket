@@ -114,73 +114,24 @@ self.addEventListener("notificationclick", (event) => {
 importScripts("https://www.gstatic.com/firebasejs/10.12.3/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/10.12.3/firebase-messaging-compat.js");
 
-const FIREBASE_SW_CONFIG_KEYS = [
-  "apiKey",
-  "authDomain",
-  "projectId",
-  "storageBucket",
-  "messagingSenderId",
-  "appId",
-  "measurementId",
-  "databaseURL",
-];
-
-const REQUIRED_FIREBASE_SW_CONFIG_KEYS = [
-  "apiKey",
-  "projectId",
-  "messagingSenderId",
-  "appId",
-];
-
-function readFirebaseConfigFromWorkerUrl() {
-  try {
-    const params = new URL(self.location.href).searchParams;
-    const config = {};
-
-    for (const key of FIREBASE_SW_CONFIG_KEYS) {
-      const value = String(params.get(key) || "").trim();
-      if (value) {
-        config[key] = value;
-      }
-    }
-
-    const missing = REQUIRED_FIREBASE_SW_CONFIG_KEYS.filter(
-      (key) => !config[key]
-    );
-
-    if (missing.length > 0) {
-      console.error(
-        "[sw] Firebase 설정이 부족합니다:",
-        missing.join(", ")
-      );
-      return null;
-    }
-
-    return config;
-  } catch (error) {
-    console.error("[sw] Firebase 설정을 읽지 못했습니다:", error);
-    return null;
-  }
-}
-
-const firebaseConfig = readFirebaseConfigFromWorkerUrl();
+const firebaseConfig = {
+  apiKey: "AIzaSyAvjsOmLSZ9sTPOn38LYMbESEYV1qJ914M",
+  authDomain: "goldmarket-0.firebaseapp.com",
+  projectId: "goldmarket-0",
+  storageBucket: "goldmarket-0.appspot.com",
+  messagingSenderId: "598933990716",
+  appId: "1:598933990716:web:ac87a6fe3ea7f956260239",
+  measurementId: "G-M2V18ZN6TL",
+};
 
 try {
-  if (firebaseConfig && !firebase.apps?.length) {
-    firebase.initializeApp(firebaseConfig);
-  }
-} catch (error) {
-  console.error("[sw] Firebase 초기화 실패:", error);
-}
+  if (!firebase.apps?.length) firebase.initializeApp(firebaseConfig);
+} catch {}
 
 let messaging = null;
 try {
-  if (firebaseConfig) {
-    messaging = firebase.messaging();
-  }
-} catch (error) {
-  console.error("[sw] Firebase Messaging 초기화 실패:", error);
-}
+  messaging = firebase.messaging();
+} catch {}
 
 if (messaging?.onBackgroundMessage) {
   messaging.onBackgroundMessage(async (payload) => {
