@@ -16,6 +16,7 @@ dist-ssr
 .env
 .env.*
 !.env.example
+!functions/.env.example
 
 # Firebase local state and emulator data
 .firebase/
