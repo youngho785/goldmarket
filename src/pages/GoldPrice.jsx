@@ -499,11 +499,10 @@ export default function GoldPrice() {
 
           <CtaCopy>
             <h2 id="gold-price-alert-title">
-              매일 달라지는 금시세, 알림으로 확인하세요.
+              금시세 알림을 받아보세요.
             </h2>
             <p>
-              회원가입 후 금시세·혜택 알림을 선택하면 지정한 브라우저 한 곳에서
-              금시세 업데이트와 주요 소식을 받을 수 있습니다.
+              주요 시세 변동과 혜택을 현재 기기로 알려드립니다.
             </p>
           </CtaCopy>
         </CtaTop>
@@ -515,11 +514,11 @@ export default function GoldPrice() {
           </Benefit>
           <Benefit>
             <BellRing size={16} aria-hidden />
-            금시세·소식·혜택 알림
+            주요 금시세 변동 알림
           </Benefit>
           <Benefit>
             <ShieldCheck size={16} aria-hidden />
-            본인 계정에만 알림 등록
+            신규회원 알림 설정 시 순금 0.01g 추가 혜택
           </Benefit>
         </Benefits>
 
@@ -534,7 +533,7 @@ export default function GoldPrice() {
                   intent: "gold-price-notification",
                 }}
               >
-                무료 회원가입하고 금시세 알림 설정하기
+                회원가입하고 순금 0.01g 받기
                 <ArrowRight size={18} aria-hidden />
               </MainButton>
 
@@ -546,7 +545,8 @@ export default function GoldPrice() {
                 이미 회원이라면 로그인
               </SecondaryLink>
             </>
-          ) : pushStatus === "active" ? (
+          ) : pushStatus === "active" ||
+              (isEmailVerified && marketingAccepted && marketingNotificationsEnabled) ? (
             <>
               <MainButton type="button" disabled>
                 <CheckCircle2 size={18} aria-hidden />
@@ -554,8 +554,13 @@ export default function GoldPrice() {
               </MainButton>
               <Status>
                 {message ||
-                  `현재 ${currentBrowserName}에서 금시세·소식·혜택 알림을 받고 있습니다.`}
+                  (marketingFcmBrowser
+                    ? `${marketingFcmBrowser}에서 금시세 알림을 받고 있습니다.`
+                    : "금시세 알림이 켜져 있습니다.")}
               </Status>
+              <SecondaryLink to="/settings">
+                알림 설정 관리
+              </SecondaryLink>
             </>
           ) : (
             <>
@@ -581,10 +586,9 @@ export default function GoldPrice() {
                         onChange={(event) => setConsentChecked(event.target.checked)}
                       />
                       <span>
-                        <strong>금시세·혜택 알림 받기</strong>
+                        <strong>금시세 알림 받기</strong>
                         <small>
-                          금시세 업데이트, 주요 소식, 이벤트·혜택을 푸시로 받아봅니다.
-                          광고성 정보 수신동의(선택)
+                          주요 시세 변동·혜택 알림 · 광고성 정보 수신동의(선택)
                         </small>
                       </span>
                     </ConsentLabel>
@@ -606,9 +610,7 @@ export default function GoldPrice() {
                     ? "알림 설정 중…"
                     : !isEmailVerified
                       ? "이메일 인증 후 금시세 알림 받기"
-                      : marketingAccepted && marketingNotificationsEnabled
-                        ? `이 브라우저(${currentBrowserName})로 알림 받기`
-                        : "금시세 알림 받기"}
+                      : "금시세 알림 받고 순금 0.01g 더 받기"}
               </MainButton>
 
               {pushStatus === "denied" && (

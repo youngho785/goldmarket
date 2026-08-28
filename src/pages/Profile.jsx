@@ -879,24 +879,24 @@ export default function Profile() {
               </RewardRow>
 
               <RewardRow>
-                <span>금시세·혜택 알림</span>
+                <span>금시세 알림</span>
                 {goldBonus.marketingClaimed ? (
                   <b>{goldBonus.marketingG.toFixed(2)}g 적립</b>
                 ) : goldBonus.marketingUnavailable ? (
                   <b>조회 필요</b>
                 ) : (
-                  <Link to="/settings">0.01g 받기</Link>
+                  <Link to="/settings">순금 0.01g 더 받기</Link>
                 )}
               </RewardRow>
 
               <RewardRow>
-                <span>금 교환 기초 가이드</span>
+                <span>금 상식 퀵퀴즈</span>
                 {goldBonus.quizClaimed ? (
                   <b>{goldBonus.quizG.toFixed(2)}g 적립</b>
                 ) : goldBonus.quizUnavailable ? (
                   <b>조회 필요</b>
                 ) : (
-                  <Link to="/quiz/gold-bonus">0.01g 받기</Link>
+                  <Link to="/quiz/gold-bonus">순금 0.01g 더 받기</Link>
                 )}
               </RewardRow>
 
@@ -1030,11 +1030,8 @@ export default function Profile() {
               )}
 
               <RewardNote>
-                신규회원 혜택은 회원가입·금시세/혜택 알림 설정·금 교환
-                기초 가이드로 각 계정당 1회 제공됩니다. 적립한 순금은
-                골드바 교환 시 중량으로 더해지며 현금 환급·양도는
-                불가합니다. 매장에서 본인과 최종 인정 중량을 확인한 뒤
-                사용이 확정됩니다.
+                각 혜택은 계정당 1회 제공됩니다. 적립 순금은 골드바 교환 시
+                사용할 수 있으며 현금 환급·양도는 불가합니다.
               </RewardNote>
             </>
           )}

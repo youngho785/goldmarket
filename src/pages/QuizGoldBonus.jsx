@@ -688,24 +688,22 @@ export default function QuizGoldBonus() {
   return (
     <Page>
       <Intro>
-        <Eyebrow>GOLD EXCHANGE BASIC GUIDE</Eyebrow>
-        <Title>금 교환 전에 꼭 알아둘 5가지</Title>
+        <Eyebrow>GOLD QUICK QUIZ</Eyebrow>
+        <Title>금 상식 퀵퀴즈 5문제</Title>
         <IntroText>
-          1돈의 무게부터 14K 순도, 999.9 골드바까지
-          <strong> 실제 금 교환에 필요한 기본 내용</strong>을
-          약 1분 동안 확인해 보세요. 모든 내용을 확인하면 참여
-          혜택으로 순금 0.01g을 적립해 드립니다.
+          금교환에 필요한 5문제를 모두 맞히고
+          <strong> 순금 0.01g</strong>을 받아보세요.
         </IntroText>
 
         <MetaRow>
           <MetaBadge>약 1분</MetaBadge>
-          <MetaBadge>5가지 기본 내용</MetaBadge>
-          <MetaBadge data-gold="true">완료 혜택 순금 0.01g</MetaBadge>
+          <MetaBadge>5문제</MetaBadge>
+          <MetaBadge data-gold="true">순금 0.01g 받기</MetaBadge>
         </MetaRow>
 
         <ProgressArea>
           <ProgressText>
-            <span>기초 가이드 진행</span>
+            <span>퀵퀴즈 진행</span>
             <b>
               {Math.min(completedCount, TOTAL)} / {TOTAL}
             </b>
@@ -809,7 +807,7 @@ export default function QuizGoldBonus() {
                 <Gift />
                 {submitting
                   ? "혜택 확인 중…"
-                  : "5가지 확인 완료하고 0.01g 받기"}
+                  : "퀵퀴즈 완료하고 순금 0.01g 받기"}
               </PrimaryButton>
             )}
 
@@ -841,10 +839,9 @@ export default function QuizGoldBonus() {
 
           {result.needSignup ? (
             <>
-              <ResultTitle>금 교환 기초 확인 완료</ResultTitle>
+              <ResultTitle>퀵퀴즈 완료</ResultTitle>
               <ResultText>
-                5가지 기본 내용을 모두 확인했습니다.
-                지금 회원가입하면 퀵퀴즈 참여 혜택
+                회원가입하면 퀵퀴즈 혜택
                 <b> 순금 0.01g</b>을 받을 수 있습니다.
               </ResultText>
 
@@ -855,7 +852,7 @@ export default function QuizGoldBonus() {
                     loc.pathname + loc.search
                   )}`}
                 >
-                  회원가입하고 0.01g 받기
+                  회원가입하고 순금 0.01g 받기
                   <ChevronRight />
                 </PrimaryButton>
                 <SecondaryButton as={Link} to="/">
@@ -865,11 +862,10 @@ export default function QuizGoldBonus() {
             </>
           ) : result.needVerification ? (
             <>
-              <ResultTitle>이메일 인증 후 혜택을 받을 수 있습니다</ResultTitle>
+              <ResultTitle>이메일 인증하고 순금 0.01g 받기</ResultTitle>
               <ResultText>
-                퀴즈 결과는 24시간 동안 보관됩니다. 회원가입 때 받은 인증메일을
-                한 번 확인하면, 인증 완료 후 서버가 답안을 다시 검증해 순금 0.01g을
-                적립합니다.
+                가입하신 이메일의 인증 링크를 누르면
+                퀵퀴즈 혜택 순금 0.01g을 받을 수 있습니다.
               </ResultText>
 
               <ResultActions>
@@ -883,7 +879,7 @@ export default function QuizGoldBonus() {
                     });
                   }}
                 >
-                  이메일 인증 계속하기
+                  이메일 인증하기
                   <ChevronRight />
                 </PrimaryButton>
                 <SecondaryButton as={Link} to="/">
@@ -893,7 +889,7 @@ export default function QuizGoldBonus() {
             </>
           ) : result.alreadyClaimed ? (
             <>
-              <ResultTitle>이미 완료한 기초 가이드입니다</ResultTitle>
+              <ResultTitle>이미 완료한 퀵퀴즈입니다</ResultTitle>
               <ResultText>
                 이 혜택은 계정당 1회 제공됩니다.
                 지급된 퀵퀴즈 혜택은
@@ -925,16 +921,9 @@ export default function QuizGoldBonus() {
             </>
           ) : result.ok ? (
             <>
-              <ResultTitle>금 교환 기초 확인 완료</ResultTitle>
+              <ResultTitle>순금 0.01g을 받았습니다 🎉</ResultTitle>
               <ResultText>
-                5가지 기본 내용을 모두 확인했습니다.
-                참여 혜택
-                <b>
-                  {" "}
-                  순금 {formatBonusG(result.creditedG || 0.01)}g
-                </b>
-                이 적립되었습니다.
-                현재 적립 순금 잔액은
+                현재 적립 순금은
                 <b>
                   {" "}
                   {formatBonusG(

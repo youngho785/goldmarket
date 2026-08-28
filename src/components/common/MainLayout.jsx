@@ -69,66 +69,57 @@ class MiniBoundary extends React.Component {
 }
 
 function RouteSkeleton() {
+  const [showIndicator, setShowIndicator] = React.useState(false);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setShowIndicator(true), 220);
+    return () => window.clearTimeout(timer);
+  }, []);
+
   return (
     <div
       aria-hidden="true"
       style={{
         minHeight: "calc(100svh - 144px)",
-        padding: "16px 0",
+        position: "relative",
+        overflow: "hidden",
       }}
     >
-      <div style={{ maxWidth: 980, margin: "0 auto", padding: "0 16px" }}>
+      {showIndicator && (
         <div
+          className="gm-route-loading-track"
           style={{
-            height: 18,
-            width: "38%",
-            borderRadius: 8,
-            background:
-              "linear-gradient(90deg, var(--gm-surface-alt) 25%, var(--gm-border) 37%, var(--gm-surface-alt) 63%)",
-            backgroundSize: "400% 100%",
-            animation: "sk 1.2s ease-in-out infinite",
-            marginBottom: 14,
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 2,
+            overflow: "hidden",
+            background: "rgba(182, 138, 58, 0.10)",
           }}
-        />
-        <div
-          style={{
-            height: 48,
-            width: "100%",
-            borderRadius: 12,
-            background:
-              "linear-gradient(90deg, var(--gm-surface-alt) 25%, var(--gm-border) 37%, var(--gm-surface-alt) 63%)",
-            backgroundSize: "400% 100%",
-            animation: "sk 1.2s ease-in-out infinite",
-            marginBottom: 10,
-          }}
-        />
-        <div
-          style={{
-            height: 160,
-            width: "100%",
-            borderRadius: 12,
-            background:
-              "linear-gradient(90deg, var(--gm-surface-alt) 25%, var(--gm-border) 37%, var(--gm-surface-alt) 63%)",
-            backgroundSize: "400% 100%",
-            animation: "sk 1.2s ease-in-out infinite",
-            marginBottom: 10,
-          }}
-        />
-        <div
-          style={{
-            height: 160,
-            width: "100%",
-            borderRadius: 12,
-            background:
-              "linear-gradient(90deg, var(--gm-surface-alt) 25%, var(--gm-border) 37%, var(--gm-surface-alt) 63%)",
-            backgroundSize: "400% 100%",
-            animation: "sk 1.2s ease-in-out infinite",
-            marginBottom: 10,
-          }}
-        />
-      </div>
+        >
+          <div
+            className="gm-route-loading-bar"
+            style={{
+              width: "32%",
+              height: "100%",
+              borderRadius: 999,
+              background: "#b68a3a",
+              animation: "gm-route-loading 1.05s ease-in-out infinite",
+            }}
+          />
+        </div>
+      )}
+
       <style>
-        {`@keyframes sk { 0%{background-position: 100% 0} 100%{background-position: 0 0} }`}
+        {`@keyframes gm-route-loading {
+          0% { transform: translateX(-115%); opacity: .35; }
+          45% { opacity: 1; }
+          100% { transform: translateX(420%); opacity: .35; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .gm-route-loading-bar { animation: none !important; }
+        }`}
       </style>
     </div>
   );

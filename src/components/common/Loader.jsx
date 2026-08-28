@@ -1,11 +1,20 @@
 import React from "react";
-import SplashScreen from "./SplashScreen";
 
 export default function Loader() {
   return (
-    <SplashScreen
-      title="한국골드마켓에 오신 것을 환영합니다."
-      message="곧 시작됩니다."
-    />
+    <div
+      role="status"
+      aria-live="polite"
+      style={{
+        minHeight: 72,
+        display: "grid",
+        placeItems: "center",
+        padding: 16,
+        color: "var(--gm-text-secondary)",
+        fontSize: "0.9rem",
+      }}
+    >
+      불러오는 중…
+    </div>
   );
 }

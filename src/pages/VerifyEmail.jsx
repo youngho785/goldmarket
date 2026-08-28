@@ -565,13 +565,13 @@ export default function VerifyEmail() {
       {quizBonusResult && (
         <Message $color="var(--gm-success)">
           {quizBonusResult.alreadyClaimed
-            ? "퀵퀴즈 보너스는 이미 지급된 계정입니다."
-            : `퀵퀴즈 보너스 ${Number(quizBonusResult.creditedG || 0.01).toFixed(2)}g 적립이 완료되었습니다.`}
+            ? "퀵퀴즈 혜택은 이미 받은 계정입니다."
+            : `퀵퀴즈 완료 · 순금 ${Number(quizBonusResult.creditedG || 0.01).toFixed(2)}g을 받았습니다.`}
         </Message>
       )}
       {quizBonusError && (
         <Message $color="var(--gm-warning)">
-          회원가입은 완료됐지만 퀵퀴즈 보너스 확인이 필요합니다. 이메일 인증 후 퀵퀴즈 페이지에서 다시 확인해 주세요.
+          이메일 인증 후 퀵퀴즈 혜택을 다시 확인해 주세요.
         </Message>
       )}
 
@@ -612,7 +612,7 @@ export default function VerifyEmail() {
                   <Message>
                     가입하신 이메일로 인증 링크가 발송되었습니다.
                     <br />
-                    링크 클릭 또는 아래 버튼으로 재전송 후 인증해 주세요.
+                    메일의 링크를 눌러 인증을 완료해 주세요.
                   </Message>
                   <Message $color="var(--gm-info)"><strong>{displayUser.email}</strong></Message>
 

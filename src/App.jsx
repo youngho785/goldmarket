@@ -27,11 +27,12 @@ import { darkTheme } from "@/theme.dark";
 import MainLayout from "@/components/common/MainLayout.jsx";
 import ProtectedRoute from "@/components/common/ProtectedRoute.jsx";
 import AdminRoute from "@/components/common/AdminRoute.jsx";
-import Loader from "@/components/common/Loader.jsx";
 import NotFound from "@/pages/NotFound.jsx";
 import SwBridge from "@/components/common/SwBridge.jsx";
 import { auth } from "@/firebase/firebase";
 import { isAndroid } from "@/platform/runtime";
+import LandingPage from "@/pages/LandingPage";
+import AppHome from "@/pages/AppHome";
 
 function RouteError() {
   return (
@@ -58,8 +59,6 @@ const safeLazy = (importer, namedKey) =>
     })
   );
 
-const LandingPage = lazy(() => import("@/pages/LandingPage"));
-const AppHome = lazy(() => import("@/pages/AppHome"));
 const GoldPrice = lazy(() => import("@/pages/GoldPrice"));
 const Profile = lazy(() => import("@/pages/Profile"));
 const Settings = lazy(() => import("@/pages/Settings"));
@@ -655,7 +654,7 @@ export default function App() {
     <ColorSchemeContext.Provider value={contextValue}>
       <ThemeProvider theme={isDark ? darkTheme : lightTheme}>
         <GlobalStyle />
-        <Suspense fallback={<Loader />}>
+        <Suspense fallback={null}>
           <RouterProvider router={router} />
         </Suspense>
       </ThemeProvider>

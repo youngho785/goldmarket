@@ -26,6 +26,7 @@ import {
 import { getAuth, signOut } from "firebase/auth";
 
 import { useAuthContext } from "@/context/AuthContext";
+import { useNotificationContext } from "@/context/NotificationContext";
 
 const Header = styled.header`
   position: sticky;
@@ -43,7 +44,7 @@ const Header = styled.header`
 
 const Bar = styled.div`
   display: grid;
-  grid-template-columns: 46px minmax(0, 1fr) 46px;
+  grid-template-columns: 84px minmax(0, 1fr) 84px;
   align-items: center;
   min-height: 58px;
   padding: 0 10px;
@@ -71,6 +72,53 @@ const IconButton = styled.button`
     outline: 2px solid ${({ theme }) => theme.colors.secondary};
     outline-offset: 2px;
   }
+`;
+
+const HeaderActions = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0;
+`;
+
+const NotificationLink = styled(Link)`
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  color: ${({ theme }) => theme.colors.primary};
+  text-decoration: none;
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.secondary};
+    outline-offset: 2px;
+  }
+`;
+
+const NotificationBadge = styled.span`
+  position: absolute;
+  top: 5px;
+  right: 3px;
+  display: grid;
+  place-items: center;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border: 2px solid ${({ theme }) => theme.colors.surface};
+  border-radius: 999px;
+  background: ${({ theme }) => theme.colors.error};
+  color: ${({ theme }) => theme.on.error};
+  font-family: ${({ theme }) => theme.fonts.numeric};
+  font-size: 0.52rem;
+  font-weight: 900;
+  line-height: 1;
 `;
 
 const BrandMark = styled(Link)`
@@ -367,6 +415,7 @@ export default function AndroidAppHeader() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { user } = useAuthContext() || {};
+  const { unreadNotifications = 0 } = useNotificationContext() || {};
   const [menuOpen, setMenuOpen] = useState(false);
 
   const isTopLevel = TOP_LEVEL_PATHS.has(pathname);
@@ -453,11 +502,8 @@ export default function AndroidAppHeader() {
               {!user ? (
                 <AccountPanel>
                   <AccountCopy>
-                    <strong>신규회원 최대 순금 0.03g</strong>
-                    <p>
-                      퀵퀴즈 0.01g + 회원가입 0.01g + 금시세·혜택 알림
-                      설정(선택) 0.01g
-                    </p>
+                    <strong>회원가입하고 순금 0.01g 받기</strong>
+                    <p>퀵퀴즈와 금시세 알림으로 최대 순금 0.03g까지 받을 수 있어요.</p>
                   </AccountCopy>
 
                   <AccountActions>
@@ -467,7 +513,7 @@ export default function AndroidAppHeader() {
                     </AccountLink>
                     <AccountLink to="/register" $primary>
                       <UserPlus aria-hidden />
-                      회원가입
+                      순금 0.01g 받기
                     </AccountLink>
                   </AccountActions>
                 </AccountPanel>
@@ -475,7 +521,7 @@ export default function AndroidAppHeader() {
                 <AccountPanel>
                   <AccountCopy>
                     <strong>회원 메뉴</strong>
-                    <p>혜택, 알림, 예약·교환 내역을 한곳에서 확인하세요.</p>
+                    <p>내 순금 혜택과 예약·교환 내역을 확인하세요.</p>
                   </AccountCopy>
 
                   <AccountActions>
@@ -512,7 +558,7 @@ export default function AndroidAppHeader() {
                       </span>
                       <div>
                         <strong>알림 설정</strong>
-                        <small>금시세·혜택 알림을 선택해서 관리</small>
+                        <small>금시세 알림 받기·해제</small>
                       </div>
                       <ChevronRight aria-hidden />
                     </MenuLink>
@@ -622,15 +668,35 @@ export default function AndroidAppHeader() {
             {pathname === "/" && <small>GOLD TO GOLD</small>}
           </Center>
 
-          <IconButton
-            type="button"
-            onClick={() => setMenuOpen(true)}
-            aria-label="전체 메뉴 열기"
-            aria-expanded={menuOpen}
-            aria-controls="android-app-menu"
-          >
-            <Menu aria-hidden />
-          </IconButton>
+          <HeaderActions>
+            {user && (
+              <NotificationLink
+                to="/notifications"
+                aria-label={
+                  unreadNotifications > 0
+                    ? `알림함, 읽지 않은 알림 ${unreadNotifications}개`
+                    : "알림함"
+                }
+              >
+                <BellRing aria-hidden />
+                {unreadNotifications > 0 && (
+                  <NotificationBadge aria-hidden>
+                    {unreadNotifications > 99 ? "99+" : unreadNotifications}
+                  </NotificationBadge>
+                )}
+              </NotificationLink>
+            )}
+
+            <IconButton
+              type="button"
+              onClick={() => setMenuOpen(true)}
+              aria-label="전체 메뉴 열기"
+              aria-expanded={menuOpen}
+              aria-controls="android-app-menu"
+            >
+              <Menu aria-hidden />
+            </IconButton>
+          </HeaderActions>
         </Bar>
       </Header>
 

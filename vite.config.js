@@ -83,6 +83,16 @@ export default defineConfig(({ mode }) => {
 
     // 개발 시 의존성 사전 번들
     optimizeDeps: {
+      // Android/Gradle build report HTML까지 엔트리로 스캔하지 않도록
+      // 실제 Vite 앱 엔트리만 대상으로 제한합니다.
+      entries: ['index.html'],
+      // dependency scanner는 top-level esbuild 옵션과 별도로 동작하므로
+      // src/*.js 안의 JSX도 JSX로 해석하도록 명시합니다.
+      esbuildOptions: {
+        loader: {
+          '.js': 'jsx',
+        },
+      },
       include: [
         'react',
         'react-dom',

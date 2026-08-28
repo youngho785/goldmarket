@@ -133,10 +133,10 @@ export default function TapTeasers() {
                 {/* ✅ 2) 이벤트: 퀵퀴즈 0.01g 보너스 — 공개 참여 (경로 수정) */}
         <Card
           onClick={() => go("/quiz/gold-bonus", "teaser-quiz-bonus", false)}
-          aria-label="금 퀵퀴즈 풀고 0.01g 받기(바로 시작)"
+          aria-label="금 퀵퀴즈 풀고 순금 0.01g 받기(바로 시작)"
         >
           <Eyebrow>이벤트</Eyebrow>
-          <Headline>퀵퀴즈 풀고 <b>0.01g</b> 받기</Headline>
+          <Headline>퀵퀴즈 풀고 <b>순금 0.01g</b> 받기</Headline>
           <Preview>
             <MiniRow>
               <Pill>5문항</Pill>
@@ -148,8 +148,8 @@ export default function TapTeasers() {
             </MiniRow>
           </Preview>
           <CTA>
-            <CtaText>퀵퀴즈 시작 →</CtaText>
-            <Pill>보너스 0.01g</Pill>
+            <CtaText>순금 0.01g 받기 →</CtaText>
+            <Pill>순금 0.01g 혜택</Pill>
           </CTA>
         </Card>
 

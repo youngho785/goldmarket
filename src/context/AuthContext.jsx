@@ -42,9 +42,6 @@ import { db } from "../firebase/firebase";
 import { isAndroid } from "../platform/runtime";
 import { initializeNativePush } from "../push/nativePush";
 
-// ✅ 스플래시(Loader) 임포트
-import Loader from "../components/common/Loader";
-
 const AuthContext = createContext({
   user: null,
   loading: true,
@@ -402,11 +399,6 @@ export const AuthProvider = ({ children }) => {
     isSuperAdmin,
     isEmailVerified,
   ]);
-
-  // ✅ 로딩 구간: 스플래시 표시
-  if (loading) {
-    return <Loader />;
-  }
 
   return (
     <AuthContext.Provider value={ctxValue}>

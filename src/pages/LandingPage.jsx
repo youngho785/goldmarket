@@ -327,6 +327,96 @@ const ProofRow = styled.div`
   }
 `;
 
+
+/* ───────────────────── QUICK JOURNEY ───────────────────── */
+
+const JourneySection = styled(Section)`
+  padding-top: clamp(34px, 4.5vw, 54px);
+  padding-bottom: clamp(28px, 4vw, 46px);
+`;
+
+const JourneyGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 24px;
+
+  @media (max-width: 760px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const JourneyCard = styled(Link)`
+  position: relative;
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) 22px;
+  gap: 14px;
+  align-items: start;
+  min-height: 146px;
+  padding: 22px 20px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
+  text-decoration: none;
+  transition:
+    transform ${({ theme }) => theme.transitions.base},
+    box-shadow ${({ theme }) => theme.transitions.base},
+    border-color ${({ theme }) => theme.transitions.base};
+
+  &:hover {
+    transform: translateY(-3px);
+    border-color: ${({ theme }) => theme.colors.secondary};
+    box-shadow: ${({ theme }) => theme.shadows.card};
+  }
+
+  > span:first-child {
+    display: grid;
+    place-items: center;
+    width: 46px;
+    height: 46px;
+    border: 1px solid ${({ theme }) => theme.colors.border};
+    background: ${({ theme }) => theme.semantic.badgeGoldBg};
+    color: ${({ theme }) => theme.colors.secondaryDark};
+  }
+
+  > span:first-child svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  small {
+    display: block;
+    margin-bottom: 5px;
+    color: ${({ theme }) => theme.colors.secondaryDark};
+    font-family: ${({ theme }) => theme.fonts.numeric};
+    font-size: .63rem;
+    font-weight: 850;
+    letter-spacing: .11em;
+  }
+
+  strong {
+    display: block;
+    color: ${({ theme }) => theme.colors.primary};
+    font-size: 1rem;
+    line-height: 1.4;
+  }
+
+  p {
+    margin: 6px 0 0;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: .78rem;
+    line-height: 1.52;
+    word-break: keep-all;
+  }
+
+  > svg {
+    align-self: center;
+    width: 18px;
+    height: 18px;
+    color: ${({ theme }) => theme.colors.textLight};
+  }
+`;
+
 /* ───────────────────── CORE COMPARISON ───────────────────── */
 
 const CompareSection = styled(Section)`
@@ -335,7 +425,7 @@ const CompareSection = styled(Section)`
 
 const CompareGrid = styled.div`
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 86px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 2fr) 44px minmax(0, 3fr);
   align-items: stretch;
   margin-top: 26px;
   border: 1px solid ${({ theme }) => theme.colors.border};
@@ -396,22 +486,50 @@ const CompareNote = styled.p`
 `;
 
 const CompareArrow = styled.div`
+  position: relative;
   display: grid;
   place-items: center;
-  background: ${({ theme }) => theme.colors.primary};
-  color: ${({ theme }) => theme.colors.white};
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.secondaryDark};
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 1px;
+    background: ${({ theme }) => theme.colors.secondary};
+    opacity: .6;
+    transform: translateX(-50%);
+  }
 
   span {
+    position: relative;
+    z-index: 1;
     display: grid;
     place-items: center;
-    width: 40px;
-    height: 40px;
+    width: 34px;
+    height: 34px;
     border: 1px solid ${({ theme }) => theme.colors.secondary};
     border-radius: 50%;
+    background: ${({ theme }) => theme.colors.surface};
+    color: ${({ theme }) => theme.colors.secondaryDark};
+    box-shadow: 0 0 0 6px ${({ theme }) => theme.colors.surface};
   }
 
   @media (max-width: 760px) {
-    min-height: 58px;
+    min-height: 54px;
+
+    &::before {
+      top: 50%;
+      right: 0;
+      bottom: auto;
+      left: 0;
+      width: auto;
+      height: 1px;
+      transform: translateY(-50%);
+    }
 
     svg {
       transform: rotate(90deg);
@@ -887,13 +1005,13 @@ export default function LandingPage() {
       <Hero aria-labelledby="landing-title">
         <HeroCopy>
           <HeroQuestion>
-            한국골드마켓이 제안하는 <GoldToGoldHero>GOLD TO GOLD</GoldToGoldHero>
+            금을 현금화하기 전에 확인하는 새로운 방법 · <GoldToGoldHero>GOLD TO GOLD</GoldToGoldHero>
           </HeroQuestion>
 
           <HeroTitle id="landing-title">
-            금, 팔았다
+            가지고 있는 금,
             <br />
-            <span>다시 사지 마세요.</span>
+            <span>팔지 말고</span>
             <br />
             999.9 골드바로 바꾸세요
           </HeroTitle>
@@ -906,12 +1024,12 @@ export default function LandingPage() {
 
           <HeroActions>
             <PrimaryLink to="/gold-exchange">
-              내 금으로 받을 골드바 계산
+              내 금 계산하기
               <ArrowRight size={18} aria-hidden />
             </PrimaryLink>
 
             <TextLink as="a" href="#why-gold-to-gold" onClick={scrollToCompare}>
-              왜 교환해야 하는지 보기
+              교환방법 알아보기
             </TextLink>
           </HeroActions>
 
@@ -927,28 +1045,28 @@ export default function LandingPage() {
             <small>
               KOREA GOLD MARKET · <GoldToGoldText>GOLD TO GOLD</GoldToGoldText>
             </small>
-            <strong>금에서 금으로,<br />가치를 이어가는 방식</strong>
+            <strong>오늘 바로 확인하고,<br />매장에서 최종 결정하세요.</strong>
           </HeroProofTop>
           <HeroProofBody>
             <ProofRow>
               <span>01</span>
               <div>
-                <strong>14K · 18K · 순금</strong>
-                <p>종류가 달라도 각각의 순금 함량으로 계산합니다.</p>
+                <strong>오늘 금시세 확인</strong>
+                <p>순금·18K·14K의 공개 시세와 변동을 확인합니다.</p>
               </div>
             </ProofRow>
             <ProofRow>
               <span>02</span>
               <div>
-                <strong>순금 가치로 통합</strong>
-                <p>순도와 중량을 기준으로 교환 가능 중량을 확인합니다.</p>
+                <strong>내 금 예상 계산</strong>
+                <p>종류와 중량을 입력해 예상 순금 중량과 골드바 조합을 봅니다.</p>
               </div>
             </ProofRow>
             <ProofRow>
               <span>03</span>
               <div>
-                <strong>999.9 골드바</strong>
-                <p>원하는 골드바 조합과 잔여 중량을 확인합니다.</p>
+                <strong>방문 실측 후 확정</strong>
+                <p>순도·중량·제작 공임을 고객 앞에서 확인한 뒤 결정합니다.</p>
               </div>
             </ProofRow>
           </HeroProofBody>
@@ -958,7 +1076,87 @@ export default function LandingPage() {
       {/* 02. 금시세 */}
       <GoldPriceBoard />
 
-      {/* 03. 핵심 비교 */}
+      {/* 신규회원 혜택 · 퀵퀴즈를 첫 화면 가까이 노출 */}
+      <QuizBanner aria-labelledby="quiz-title">
+        <div>
+          <small>WELCOME GOLD · NEW MEMBER BENEFIT</small>
+          <h2 id="quiz-title">퀵퀴즈 풀고 순금 0.01g 받기</h2>
+          <p>
+            회원가입 전에도 먼저 풀 수 있어요. 퀵퀴즈 · 회원가입 · 금시세 알림 설정으로
+            각각 순금 0.01g
+          </p>
+        </div>
+        <QuizLink to="/quiz/gold-bonus">
+          퀵퀴즈 풀고 순금 0.01g 받기
+          <Sparkles size={17} aria-hidden />
+        </QuizLink>
+      </QuizBanner>
+
+      {/* 03. 핵심 동선 */}
+      <JourneySection aria-labelledby="journey-title">
+        <Kicker>CHECK · CALCULATE · RESERVE</Kicker>
+        <SectionTitle id="journey-title">복잡하지 않게, 세 단계만 확인하세요.</SectionTitle>
+        <SectionLead>
+          오늘 시세를 확인하고 내 금의 예상 교환 결과를 계산한 뒤,
+          실제 매장에서 실측 결과와 비용을 보고 최종 결정합니다.
+        </SectionLead>
+
+        <JourneyGrid>
+          <JourneyCard to="/gold-price">
+            <span><Scale aria-hidden /></span>
+            <div>
+              <small>01 · GOLD PRICE</small>
+              <strong>오늘 금시세</strong>
+              <p>순금·18K·14K 공개 시세와 전일 변동을 먼저 확인합니다.</p>
+            </div>
+            <ArrowRight aria-hidden />
+          </JourneyCard>
+
+          <JourneyCard to="/gold-exchange">
+            <span><FileCheck2 aria-hidden /></span>
+            <div>
+              <small>02 · CALCULATE</small>
+              <strong>내 금 계산</strong>
+              <p>14K·18K·순금의 예상 순금 중량과 골드바 조합을 확인합니다.</p>
+            </div>
+            <ArrowRight aria-hidden />
+          </JourneyCard>
+
+          <JourneyCard to="/gold-exchange?reserve=1">
+            <span><MapPin aria-hidden /></span>
+            <div>
+              <small>03 · RESERVE</small>
+              <strong>방문 예약</strong>
+              <p>방문할 날짜와 시간을 선택해 예약합니다.</p>
+            </div>
+            <ArrowRight aria-hidden />
+          </JourneyCard>
+        </JourneyGrid>
+      </JourneySection>
+
+      {/* 04. 즉시 체험 */}
+      <CalculatorSection aria-labelledby="calculator-title">
+        <CalculatorHead>
+          <div>
+            <Kicker>TRY IT NOW</Kicker>
+            <SectionTitle id="calculator-title">내 금은 어떤 골드바가 될까요?</SectionTitle>
+            <SectionLead>
+              금의 종류와 중량을 입력하면 내 금이 어떤 999.9 골드바 조합으로
+              바뀌는지 로그인 없이 먼저 확인할 수 있습니다.
+            </SectionLead>
+          </div>
+          <TextLink to="/goldbar-fee">
+            제작 공임 먼저 보기
+            <ArrowRight size={14} aria-hidden />
+          </TextLink>
+        </CalculatorHead>
+
+        <CalculatorWrap>
+          <LiteCalcFromGX showCombo />
+        </CalculatorWrap>
+      </CalculatorSection>
+
+      {/* 05. 핵심 비교 */}
       <CompareSection id="why-gold-to-gold" aria-labelledby="compare-title">
         <Kicker>
           SELL & BUY vs <GoldToGoldText>GOLD TO GOLD</GoldToGoldText>
@@ -1022,13 +1220,16 @@ export default function LandingPage() {
         </FeeBar>
       </CompareSection>
 
-      {/* 04. 자기 상황 대입 */}
+      {/* 06. 자기 상황 대입 */}
       <DrawerSection>
         <Kicker>YOUR GOLD, ONE VALUE</Kicker>
         <SectionTitle>서랍 속에 이런 금이 있지 않으세요?</SectionTitle>
         <SectionLead>
           오래된 주얼리든, 끊어진 제품이든, 보관만 하던 순금이든
           각각 팔 필요 없이 순금 가치로 모아볼 수 있습니다.
+          <br />
+          한동안 착용하지 않은 금, 유행이 지나 손이 가지 않는 금, 한쪽만 남은 귀걸이도 마찬가지입니다.
+          지금 사용하지 않아도 금의 가치는 그대로 남아 있습니다.
         </SectionLead>
 
         <GoldTypes>
@@ -1056,29 +1257,7 @@ export default function LandingPage() {
         </MergeResult>
       </DrawerSection>
 
-      {/* 05. 즉시 체험 */}
-      <CalculatorSection aria-labelledby="calculator-title">
-        <CalculatorHead>
-          <div>
-            <Kicker>TRY IT NOW</Kicker>
-            <SectionTitle id="calculator-title">내 금은 어떤 골드바가 될까요?</SectionTitle>
-            <SectionLead>
-              금의 종류와 중량을 입력하면 내 금이 어떤 999.9 골드바 조합으로
-              바뀌는지 로그인 없이 먼저 확인할 수 있습니다.
-            </SectionLead>
-          </div>
-          <TextLink to="/goldbar-fee">
-            제작 공임 먼저 보기
-            <ArrowRight size={14} aria-hidden />
-          </TextLink>
-        </CalculatorHead>
-
-        <CalculatorWrap>
-          <LiteCalcFromGX showCombo />
-        </CalculatorWrap>
-      </CalculatorSection>
-
-      {/* 06. 위험 제거 */}
+      {/* 07. 위험 제거 */}
       <Section aria-labelledby="trust-title">
         <Kicker>TRANSPARENT PROCESS</Kicker>
         <SectionTitle id="trust-title">확인하고, 그다음 결정하세요.</SectionTitle>
@@ -1102,7 +1281,7 @@ export default function LandingPage() {
         </TrustGrid>
       </Section>
 
-      {/* 07. 실제 매장 */}
+      {/* 08. 실제 매장 */}
       <Verification aria-labelledby="verification-title">
         <VerificationImage>
           <img
@@ -1135,7 +1314,7 @@ export default function LandingPage() {
         </VerificationCopy>
       </Verification>
 
-      {/* 08. 절차 */}
+      {/* 09. 절차 */}
       <Section aria-labelledby="process-title">
         <Kicker>3 SIMPLE STEPS</Kicker>
         <SectionTitle id="process-title">금교환은 세 단계입니다.</SectionTitle>
@@ -1159,7 +1338,7 @@ export default function LandingPage() {
         </ProcessGrid>
       </Section>
 
-      {/* 09. 사회적 증거 */}
+      {/* 10. 사회적 증거 */}
       <Section aria-labelledby="reviews-title">
         <SimpleHead>
           <Kicker>VERIFIED EXCHANGE REVIEWS</Kicker>
@@ -1168,23 +1347,7 @@ export default function LandingPage() {
         <GoldExchangeReviewList limitCount={6} />
       </Section>
 
-      {/* 부가 참여 요소 */}
-      <QuizBanner aria-labelledby="quiz-title">
-        <div>
-          <small>NEW MEMBER BENEFIT · EACH REWARD ONCE PER ACCOUNT</small>
-          <h2 id="quiz-title">신규회원 최대 순금 0.03g 혜택</h2>
-          <p>
-            회원가입 0.01g + 금시세·혜택 알림 설정(선택) 0.01g +
-            금 교환 기초 가이드 완료 0.01g. 적립한 순금은 골드바 교환 시 사용할 수 있습니다.
-          </p>
-        </div>
-        <QuizLink to="/register">
-          신규회원 혜택 시작
-          <Sparkles size={17} aria-hidden />
-        </QuizLink>
-      </QuizBanner>
-
-      {/* 10. FAQ */}
+      {/* 11. FAQ */}
       <Section aria-labelledby="faq-title">
         <SimpleHead>
           <Kicker>FREQUENTLY ASKED QUESTIONS</Kicker>
@@ -1224,7 +1387,7 @@ export default function LandingPage() {
         </FAQGrid>
       </Section>
 
-      {/* 11. 마지막 행동 */}
+      {/* 12. 마지막 행동 */}
       <FinalCTA>
         <div>
           <Kicker>

@@ -116,8 +116,7 @@ export function AgreementsSection({ value = {}, onChange, onOpen }) {
           <Badge style={{ opacity: .85 }}>선택</Badge>
           금시세·혜택 알림 받기
           <Detail>
-            금시세 업데이트, 주요 소식, 이벤트·혜택 등을 이메일/푸시로 받아봅니다.
-            <br />광고성 정보 수신동의(선택)
+            광고성 정보 수신동의(선택) · 언제든 설정에서 해제할 수 있습니다.
           </Detail>
         </Text>
         <IconBtn

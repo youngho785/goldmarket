@@ -470,7 +470,7 @@ export default function WelcomeOnboarding() {
         );
       } else {
         setMessage(
-          "금시세·혜택 알림 설정이 완료되어 순금 0.01g이 추가 적립되었습니다."
+          "알림 설정 완료 · 순금 0.01g이 더 적립되었습니다."
         );
       }
     } catch (actionError) {
@@ -525,14 +525,12 @@ export default function WelcomeOnboarding() {
         <Kicker>WELCOME TO KOREA GOLD MARKET</Kicker>
         <Title>
           {allRewardsClaimed
-            ? "신규회원 혜택 0.03g 달성 🎉"
+            ? "신규회원 혜택 순금 0.03g 달성 🎉"
             : "회원가입을 축하합니다 🎉"}
         </Title>
         <Lead>
-          회원가입 웰컴 순금 <strong>0.01g</strong>부터 시작해
-          알림과 퀵퀴즈 참여로 최대 <strong>0.03g</strong>까지
-          적립할 수 있습니다. 적립된 순금은 골드바 교환 시 사용할 수
-          있습니다.
+          이메일 인증 후 <strong>순금 0.01g</strong>이 적립됩니다.
+          퀵퀴즈와 금시세 알림으로 <strong>순금 0.01g씩 더</strong> 받을 수 있습니다.
         </Lead>
 
         <ProgressText>
@@ -553,16 +551,15 @@ export default function WelcomeOnboarding() {
           </StepIcon>
           <StepBody>
             <StepTop>
-              <h2>1. 회원가입 웰컴 순금</h2>
+              <h2>1. 회원가입하고 순금 0.01g 받기</h2>
               <b>
                 {status.welcome.claimed
                   ? `${status.welcome.creditedG.toFixed(2)}g 적립`
-                  : "0.01g"}
+                  : "순금 0.01g"}
               </b>
             </StepTop>
             <StepDescription>
-              회원가입 완료 혜택입니다. 골드바 교환 시 적립 순금으로
-              사용할 수 있습니다.
+              이메일 인증 완료 후 자동 적립됩니다.
             </StepDescription>
           </StepBody>
         </StepCard>
@@ -573,17 +570,15 @@ export default function WelcomeOnboarding() {
           </StepIcon>
           <StepBody>
             <StepTop>
-              <h2>2. 내 금의 가치 변화 알림</h2>
+              <h2>2. 금시세 알림 받고 순금 0.01g 더 받기</h2>
               <b>
                 {status.marketingPush.claimed
                   ? `${status.marketingPush.creditedG.toFixed(2)}g 적립`
-                  : "+0.01g"}
+                  : "순금 0.01g"}
               </b>
             </StepTop>
             <StepDescription>
-              금시세의 주요 변동과 한국골드마켓 혜택을 알림으로
-              받아보세요. 현재 기기를 대표 알림 수신 기기로
-              등록합니다.
+              금시세 주요 변동과 혜택을 현재 기기로 받아보세요.
             </StepDescription>
 
             {!status.marketingPush.claimed && (
@@ -598,7 +593,7 @@ export default function WelcomeOnboarding() {
                     ? "알림 설정 중…"
                     : !isEmailVerified
                       ? "이메일 인증 후 알림 설정"
-                      : "알림에 동의하고 0.01g 더 받기"}
+                      : "알림 설정하고 순금 0.01g 더 받기"}
                 </ActionButton>
                 <ConsentNote>
                   선택 사항입니다. 버튼을 누르면 금시세·혜택 등 광고성
@@ -617,16 +612,15 @@ export default function WelcomeOnboarding() {
           </StepIcon>
           <StepBody>
             <StepTop>
-              <h2>3. 금 상식 퀵퀴즈 5문제</h2>
+              <h2>3. 퀵퀴즈 풀고 순금 0.01g 더 받기</h2>
               <b>
                 {status.quiz.claimed
                   ? `${status.quiz.creditedG.toFixed(2)}g 적립`
-                  : "+0.01g"}
+                  : "순금 0.01g"}
               </b>
             </StepTop>
             <StepDescription>
-              5문제를 모두 맞히면 마지막 순금 0.01g을 추가로 받을 수
-              있습니다.
+              금 상식 5문제를 모두 맞히면 적립됩니다.
             </StepDescription>
 
             {!status.quiz.claimed && (
@@ -635,7 +629,7 @@ export default function WelcomeOnboarding() {
                 onClick={handleQuiz}
                 disabled={loading}
               >
-                퀴즈 풀고 0.01g 받기
+                퀵퀴즈 풀고 순금 0.01g 더 받기
                 <ChevronRight />
               </OutlineButton>
             )}
@@ -645,19 +639,15 @@ export default function WelcomeOnboarding() {
 
       {!isEmailVerified && (
         <VerifyCard>
-          <h2>서비스 이용 전 이메일 인증을 완료해 주세요</h2>
-          <p>
-            가입하신 이메일로 인증 링크를 보내드렸습니다. 이메일 인증은
-            회원가입 때 한 번만 하면 되며, 인증 완료 후 웰컴 순금과 알림·퀴즈
-            혜택을 안전하게 적립하고 예약 기능을 이용할 수 있습니다.
-          </p>
+          <h2>이메일 인증이 필요합니다</h2>
+          <p>가입하신 이메일의 인증 링크를 눌러주세요.</p>
           <OutlineButton
             type="button"
             onClick={() =>
               navigate(buildVerifyEmailPath(welcomePath))
             }
           >
-            이메일 인증 확인하기
+            이메일 인증하기
             <ChevronRight />
           </OutlineButton>
         </VerifyCard>

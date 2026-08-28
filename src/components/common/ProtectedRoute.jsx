@@ -84,11 +84,13 @@ export default function ProtectedRoute({
       <>
         {!isOpen && (
           <div style={{ maxWidth: 520, margin: "48px auto", padding: 20, textAlign: "center" }}>
-            <h2 style={{ marginBottom: 8 }}>신규회원 최대 순금 0.03g 혜택</h2>
+            <h2 style={{ marginBottom: 8 }}>
+              {user ? "이메일 인증이 필요합니다" : "회원가입하고 순금 0.01g 받기"}
+            </h2>
             <p style={{ color: "var(--gm-text-secondary)" }}>
-              회원가입 0.01g, 알림 설정(선택) 0.01g, 금 교환 기초 가이드
-              완료 0.01g을 계정당 1회 받을 수 있습니다. 아래 버튼으로
-              로그인 또는 회원가입 페이지로 이동해 주세요.
+              {user
+                ? "이메일 인증을 완료하면 바로 계속할 수 있습니다."
+                : "이메일 인증 완료 후 순금 0.01g이 적립됩니다. 퀵퀴즈와 금시세 알림으로 최대 순금 0.03g까지 받을 수 있습니다."}
             </p>
             <div style={{ marginTop: 16, display: "flex", gap: 8, justifyContent: "center" }}>
               <Link

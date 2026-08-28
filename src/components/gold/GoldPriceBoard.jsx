@@ -342,6 +342,23 @@ function formatDateKey(value) {
   return `${text.slice(0, 4)}.${text.slice(4, 6)}.${text.slice(6, 8)}`;
 }
 
+function getKoreaTodayDateKey() {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+
+  const values = Object.fromEntries(
+    parts
+      .filter((part) => part.type !== "literal")
+      .map((part) => [part.type, part.value])
+  );
+
+  return `${values.year}${values.month}${values.day}`;
+}
+
 function compactDate(value) {
   return String(value || "").replace(/-/g, "");
 }
@@ -501,7 +518,7 @@ export default function GoldPriceBoard() {
           <Title>한국골드마켓 금시세</Title>
           {data && (
             <SourceDate>
-              기준일 <strong>{formatDateKey(data.sourceDate)}</strong>
+              기준일 <strong>{formatDateKey(getKoreaTodayDateKey())}</strong>
             </SourceDate>
           )}
         </HeadTitle>

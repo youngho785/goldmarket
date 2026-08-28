@@ -416,19 +416,11 @@ export default function Register() {
         <Title>회원가입</Title>
 
         <NoticeBox role="note" aria-live="polite">
-          <ul style={{ margin: "0 0 0 16px", padding: 0 }}>
-            <li>
-              <strong>신규회원은 최대 순금 0.03g 혜택을 받을 수 있습니다.</strong>
-              <span>
-                회원가입 0.01g + 금시세·혜택 알림 설정(선택) 0.01g +
-                금 교환 기초 가이드 완료 0.01g
-              </span>
-            </li>
-            <li><strong>인증메일이 스팸함/프로모션함으로 분류될 수 있습니다. 메일함 전체를 확인해 주세요.</strong></li>
-            <li style={{ marginTop: 6 }}>
-              모바일 메일앱에서 링크가 잘 열리지 않으면, 링크를 복사해 브라우저(크롬/사파리)로 열어주세요.
-            </li>
-          </ul>
+          <strong>회원가입하고 순금 0.01g 받기</strong>
+          <div>
+            이메일 인증을 완료하면 계정당 1회 적립됩니다.
+            퀵퀴즈와 금시세 알림으로 최대 순금 0.03g까지 받을 수 있습니다.
+          </div>
         </NoticeBox>
 
         {error && <ErrorText role="alert" aria-live="assertive">{error}</ErrorText>}
@@ -490,9 +482,7 @@ export default function Register() {
               required
               disabled={isDisabled}
               autoComplete="new-password"
-              aria-describedby="pw-help"
             />
-            <SmallText id="pw-help">보안을 위해 다른 사이트와 다른 비밀번호를 사용하세요.</SmallText>
             <ToggleButton
               type="button"
               onClick={() => setShowPassword(v => !v)}
@@ -584,7 +574,7 @@ export default function Register() {
               !agreements.privacy
             }
           >
-            {loading ? "가입 중..." : "회원가입"}
+            {loading ? "가입 중..." : "회원가입하고 순금 0.01g 받기"}
           </Button>
         </Form>
       </Card>

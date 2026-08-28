@@ -1427,8 +1427,9 @@ export default function GoldExchange() {
   const { openGate } = useLoginGate();
   const location = useLocation();
   const rebook = location.state?.rebook || null;
-  const resumeRequested =
-    new URLSearchParams(location.search).get("resume") === "reservation";
+  const searchParams = new URLSearchParams(location.search);
+  const resumeRequested = searchParams.get("resume") === "reservation";
+  const directReservationRequested = searchParams.get("reserve") === "1";
   const authDraftRef = useRef(
     !rebook && resumeRequested ? readGoldExchangeDraft() : null
   );
@@ -1438,7 +1439,9 @@ export default function GoldExchange() {
   const isDirectRebook = isRebook && (rebook?.directReservation === true || initialRebookProductsRef.current.length === 0);
 
   /* 스텝 상태 */
-  const [step, setStep] = useState(isRebook || authDraft ? STEP.RESERVE : STEP.CALC);
+  const [step, setStep] = useState(
+    isRebook || authDraft || directReservationRequested ? STEP.RESERVE : STEP.CALC
+  );
   const pageTopRef = useRef(null);
 
   // 같은 라우트 안에서 단계만 바뀌는 경우에도 새 단계의 맨 위부터 보여줍니다.

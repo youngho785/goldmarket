@@ -321,8 +321,8 @@ export default function Login() {
             state={registerState}
             aria-label="회원가입하기 - 신규회원 최대 순금 0.03g 혜택"
           >
-            <CtaLineMain>신규회원 혜택 시작하기</CtaLineMain>
-            <CtaLineSub>회원가입 · 알림 설정(선택) · 금 교환 기초 가이드로 최대 순금 0.03g</CtaLineSub>
+            <CtaLineMain>회원가입하고 순금 0.01g 받기</CtaLineMain>
+            <CtaLineSub>퀵퀴즈와 금시세 알림으로 최대 순금 0.03g까지</CtaLineSub>
           </LuxuryCta>
         </TopCtaWrap>
 

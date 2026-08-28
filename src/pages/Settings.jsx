@@ -2382,7 +2382,7 @@ export default function Settings() {
         <Title>설정</Title>
 
         <Intro>
-          알림, 앱, 보안과 계정 설정을 한곳에서 관리합니다.
+          필요한 설정만 간단히 관리합니다.
         </Intro>
       </PageHeader>
 
@@ -2393,7 +2393,7 @@ export default function Settings() {
         </SectionTitle>
 
         <SectionDescription>
-          꼭 필요한 서비스 안내와 선택한 금시세·혜택 알림을 관리합니다.
+          예약 안내와 금시세 알림을 관리합니다.
         </SectionDescription>
 
         <Rows
@@ -2423,22 +2423,21 @@ export default function Settings() {
           <Row>
             <RowText>
               <strong>
-                내 금의 가치 변화·혜택 알림
+                금시세 알림
               </strong>
 
               <small>
-                금시세 주요 변동과 한국골드마켓
-                소식·혜택을 선택해서 받아봅니다.
+                주요 시세 변동과 혜택을 받아봅니다.
               </small>
 
               <em>
-                선택 동의 · 신규회원은 설정 완료 시 계정당 1회 순금 0.01g 혜택
+                선택 동의 · 신규회원은 설정 완료 시 순금 0.01g 더 받기
               </em>
             </RowText>
 
             <Switch
               role="group"
-              aria-label="내 금의 가치 변화·혜택 알림 설정"
+              aria-label="금시세 알림 설정"
             >
               <SwitchOption
                 type="button"
