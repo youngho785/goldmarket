@@ -54,3 +54,6 @@ backup-*/
 
 # Local repository review snapshot
 goldmarket-current.xml
+
+# Local patch backups
+_patch_backups/
