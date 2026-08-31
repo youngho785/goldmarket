@@ -187,45 +187,6 @@ const RewardTitle = styled.strong`
   font-size: 1.02rem;
 `;
 
-const RewardToggle = styled.button`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  width: 100%;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-
-  svg {
-    width: 18px;
-    height: 18px;
-    flex: 0 0 auto;
-    color: ${({ theme }) => theme.colors.textSecondary};
-    transform: rotate(${({ $open }) => ($open ? "90deg" : "0deg")});
-    transition: transform 160ms ease;
-  }
-`;
-
-const RewardSummary = styled.span`
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: 0.88rem;
-  font-weight: 700;
-  white-space: nowrap;
-`;
-
-const RewardDetails = styled.div`
-  display: grid;
-  gap: 10px;
-`;
-
 const RewardRow = styled.div`
   display: flex;
   align-items: center;
@@ -420,9 +381,6 @@ export default function Profile() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [uploadPct, setUploadPct] = useState(0);
-  const [photoBusy, setPhotoBusy] = useState(false);
-  const [photoPreviewUrl, setPhotoPreviewUrl] = useState("");
-  const [photoStatus, setPhotoStatus] = useState("");
   const [initialNickname, setInitialNickname] = useState("");
   const [emailChangeOpen, setEmailChangeOpen] = useState(false);
   const [newEmail, setNewEmail] = useState("");
@@ -446,19 +404,10 @@ export default function Profile() {
     eligibleGroups: [],
     usageUnavailable: false,
   });
-  const [rewardDetailsOpen, setRewardDetailsOpen] = useState(false);
   const [bonusUsageOpen, setBonusUsageOpen] = useState(false);
   const [selectedBonusGroupId, setSelectedBonusGroupId] = useState("");
   const [bonusActionBusy, setBonusActionBusy] = useState(false);
   const [bonusActionError, setBonusActionError] = useState("");
-
-  useEffect(() => {
-    return () => {
-      if (photoPreviewUrl) {
-        URL.revokeObjectURL(photoPreviewUrl);
-      }
-    };
-  }, [photoPreviewUrl]);
 
   useEffect(() => {
     if (!user?.uid) return undefined;
@@ -726,59 +675,25 @@ export default function Profile() {
   };
 
   const handlePhotoChange = async (event) => {
-    const input = event.currentTarget;
-    const file = input.files?.[0];
-    if (!file || !user?.uid || photoBusy) return;
-
-    if (!String(file.type || "").startsWith("image/")) {
-      setError("이미지 파일을 선택해 주세요.");
-      setMessage("");
-      input.value = "";
-      return;
-    }
-
-    const MAX_PROFILE_FILE_BYTES = 10 * 1024 * 1024;
-    if (file.size > MAX_PROFILE_FILE_BYTES) {
-      setError("프로필 사진은 10MB 이하의 이미지를 선택해 주세요.");
-      setMessage("");
-      input.value = "";
-      return;
-    }
-
-    const previewUrl = URL.createObjectURL(file);
-    setPhotoPreviewUrl(previewUrl);
-    setPhotoBusy(true);
-    setUploadPct(0);
-    setPhotoStatus("선택한 사진을 준비하고 있습니다.");
-    setMessage("");
-    setError("");
+    const file = event.target.files?.[0];
+    if (!file || !user?.uid) return;
 
     try {
       let uploadFile = file;
-
-      // 작은 이미지는 압축 시간을 쓰지 않고 바로 업로드합니다.
-      // 큰 이미지만 프로필 용도에 맞게 가볍게 최적화합니다.
-      const DIRECT_UPLOAD_MAX_BYTES = 2_500_000;
-      if (file.size > DIRECT_UPLOAD_MAX_BYTES) {
-        setPhotoStatus("프로필 사진에 맞게 이미지를 최적화하고 있습니다.");
-        try {
-          uploadFile = await compressImage(file, {
-            maxW: 1024,
-            maxH: 1024,
-            targetMaxBytes: 700_000,
-            quality: 0.86,
-            preferMime: "image/webp",
-          });
-        } catch (compressError) {
-          console.warn(
-            "[profile] 이미지 최적화 실패, 원본 업로드로 폴백:",
-            compressError
-          );
-          uploadFile = file;
-        }
+      try {
+        uploadFile = await compressImage(file, {
+          maxW: 1600,
+          maxH: 1600,
+          targetMaxBytes: 1_200_000,
+          quality: 0.88,
+          preferMime: "image/webp",
+        });
+      } catch (compressError) {
+        console.warn(
+          "[profile] 이미지 압축 실패, 원본 업로드로 폴백:",
+          compressError
+        );
       }
-
-      setPhotoStatus("프로필 사진을 업로드하고 있습니다.");
 
       const extFromName = (uploadFile.name.split(".").pop() || "").toLowerCase();
       const safeExt = extFromName || mimeToExt(uploadFile.type);
@@ -792,35 +707,23 @@ export default function Profile() {
 
       task.on("state_changed", (snapshot) => {
         if (snapshot.totalBytes > 0) {
-          const pct = Math.round(
-            (snapshot.bytesTransferred / snapshot.totalBytes) * 100
+          setUploadPct(
+            Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100)
           );
-          setUploadPct(pct);
-          setPhotoStatus(`프로필 사진 업로드 중 · ${pct}%`);
         }
       });
 
       await task;
       const url = await getDownloadURL(task.snapshot.ref);
       setProfile((current) => ({ ...current, profileImage: url }));
-      setPhotoPreviewUrl("");
-      setPhotoStatus("새 프로필 사진이 준비되었습니다. 저장을 눌러 적용해 주세요.");
-      setMessage("");
+      setMessage("프로필 사진이 업로드되었습니다.");
       setError("");
     } catch (uploadError) {
       console.error(uploadError);
-      setPhotoPreviewUrl("");
-      setPhotoStatus("");
-      setError(
-        uploadError?.code
-          ? `프로필 사진 업로드에 실패했습니다. (${uploadError.code})`
-          : "프로필 사진 업로드에 실패했습니다."
-      );
+      setError("프로필 사진 업로드에 실패했습니다.");
       setMessage("");
     } finally {
       setUploadPct(0);
-      setPhotoBusy(false);
-      input.value = "";
     }
   };
 
@@ -936,12 +839,6 @@ export default function Profile() {
   const canRequestBonus =
     goldBonus.balanceG > 0 && goldBonus.usage?.status !== "requested";
 
-  const rewardSummaryText = goldBonus.loading
-    ? "확인 중"
-    : goldBonus.usage?.status === "requested"
-      ? `사용 신청 중 · 순금 ${Number(goldBonus.usage.amountG || 0).toFixed(2)}g`
-      : `사용 가능 순금 ${goldBonus.spendableG.toFixed(2)}g`;
-
   if (!user) {
     return (
       <Container>
@@ -960,35 +857,21 @@ export default function Profile() {
       <Section>
         <Title>내 프로필</Title>
 
-        <RewardPanel aria-label="순금 적립 내역">
-          <RewardToggle
-            type="button"
-            onClick={() => setRewardDetailsOpen((open) => !open)}
-            aria-expanded={rewardDetailsOpen}
-            aria-controls="profile-gold-reward-details"
-            $open={rewardDetailsOpen}
-          >
-            <RewardTitle>
-              <span aria-hidden="true">✨</span>
-              순금 적립 내역
-            </RewardTitle>
-            <RewardSummary>
-              {rewardSummaryText}
-              <ChevronRight aria-hidden="true" />
-            </RewardSummary>
-          </RewardToggle>
+        <RewardPanel aria-label="신규회원 순금 혜택 적립 내역">
+          <RewardTitle>
+            <span aria-hidden="true">✨</span>
+            신규회원 순금 혜택
+          </RewardTitle>
 
-          {rewardDetailsOpen && (
-            <RewardDetails id="profile-gold-reward-details">
-              {goldBonus.loading ? (
-                <span>적립 내역을 확인하고 있습니다.</span>
-              ) : (
-                <>
+          {goldBonus.loading ? (
+            <span>적립 내역을 확인하고 있습니다.</span>
+          ) : (
+            <>
               <RewardRow>
                 <span>회원가입 혜택</span>
                 <b>
                   {goldBonus.welcomeClaimed
-                    ? `순금 ${goldBonus.welcomeG.toFixed(2)}g 적립`
+                    ? `${goldBonus.welcomeG.toFixed(2)}g 적립`
                     : goldBonus.welcomeUnavailable
                       ? "조회 필요"
                       : "적립 확인 중"}
@@ -998,7 +881,7 @@ export default function Profile() {
               <RewardRow>
                 <span>금시세 알림</span>
                 {goldBonus.marketingClaimed ? (
-                  <b>순금 {goldBonus.marketingG.toFixed(2)}g 적립</b>
+                  <b>{goldBonus.marketingG.toFixed(2)}g 적립</b>
                 ) : goldBonus.marketingUnavailable ? (
                   <b>조회 필요</b>
                 ) : (
@@ -1009,7 +892,7 @@ export default function Profile() {
               <RewardRow>
                 <span>금 상식 퀵퀴즈</span>
                 {goldBonus.quizClaimed ? (
-                  <b>순금 {goldBonus.quizG.toFixed(2)}g 적립</b>
+                  <b>{goldBonus.quizG.toFixed(2)}g 적립</b>
                 ) : goldBonus.quizUnavailable ? (
                   <b>조회 필요</b>
                 ) : (
@@ -1018,10 +901,10 @@ export default function Profile() {
               </RewardRow>
 
               <RewardTotal>
-                <span>총 적립 혜택</span>
+                <span>신규회원 혜택</span>
                 <b>
-                  순금 {goldBonus.earnedG.toFixed(2)}g /{" "}
-                  최대 순금 {goldBonus.maxG.toFixed(2)}g
+                  {goldBonus.earnedG.toFixed(2)}g /{" "}
+                  {goldBonus.maxG.toFixed(2)}g
                   {goldBonus.earnedG + 0.000001 >= goldBonus.maxG
                     ? " 달성 🎉"
                     : ""}
@@ -1030,14 +913,14 @@ export default function Profile() {
 
               <RewardTotal>
                 <span>지금 사용 가능한 적립 순금</span>
-                <b>순금 {goldBonus.spendableG.toFixed(2)}g</b>
+                <b>{goldBonus.spendableG.toFixed(2)}g</b>
               </RewardTotal>
 
               {goldBonus.usage && (
                 <RewardUsagePanel aria-live="polite">
                   <b>적립 순금 사용 상태 · {usageStatusLabel}</b>
                   <span>
-                    신청 중량 순금 {Number(goldBonus.usage.amountG || 0).toFixed(2)}g
+                    신청 중량 {Number(goldBonus.usage.amountG || 0).toFixed(2)}g
                     {goldBonus.usage.visitDate
                       ? ` · ${goldBonus.usage.visitDate} ${
                           goldBonus.usage.visitTime || ""
@@ -1085,7 +968,7 @@ export default function Profile() {
                     onClick={() => setBonusUsageOpen((open) => !open)}
                     aria-expanded={bonusUsageOpen}
                   >
-                    {bonusUsageOpen ? "사용 신청 닫기" : "적립 순금 사용 신청"}
+                    적립 순금 사용 신청
                   </RewardAction>
 
                   {bonusUsageOpen &&
@@ -1127,7 +1010,7 @@ export default function Profile() {
                         >
                           {bonusActionBusy
                             ? "신청 중…"
-                            : `순금 ${goldBonus.balanceG.toFixed(2)}g 사용 신청`}
+                            : `${goldBonus.balanceG.toFixed(2)}g 사용 신청`}
                         </RewardAction>
                       </RewardUsagePanel>
                     )}
@@ -1146,13 +1029,11 @@ export default function Profile() {
                 <RewardError role="alert">{bonusActionError}</RewardError>
               )}
 
-                  <RewardNote>
-                    각 혜택은 계정당 1회 제공됩니다. 적립 순금은 골드바 교환 시
-                    사용할 수 있으며 현금 환급·양도는 불가합니다.
-                  </RewardNote>
-                </>
-              )}
-            </RewardDetails>
+              <RewardNote>
+                각 혜택은 계정당 1회 제공됩니다. 적립 순금은 골드바 교환 시
+                사용할 수 있으며 현금 환급·양도는 불가합니다.
+              </RewardNote>
+            </>
           )}
         </RewardPanel>
 
@@ -1168,18 +1049,14 @@ export default function Profile() {
                 type="file"
                 accept="image/*"
                 onChange={handlePhotoChange}
-                disabled={photoBusy}
               />
 
-              {photoStatus && (
-                <MessageText aria-live="polite">{photoStatus}</MessageText>
+              {!!uploadPct && uploadPct > 0 && (
+                <MessageText>{`업로드 ${uploadPct}%`}</MessageText>
               )}
 
-              {(photoPreviewUrl || profile.profileImage) && (
-                <ImgPreview
-                  src={photoPreviewUrl || profile.profileImage}
-                  alt="프로필"
-                />
+              {profile.profileImage && (
+                <ImgPreview src={profile.profileImage} alt="프로필" />
               )}
             </FormGroup>
 
@@ -1256,16 +1133,11 @@ export default function Profile() {
             </FormGroup>
 
             <ButtonRow>
-              <Button type="submit" disabled={submitting || photoBusy}>
-                {photoBusy
-                  ? "사진 처리 중..."
-                  : submitting
-                    ? "저장중..."
-                    : "저장"}
+              <Button type="submit" disabled={submitting}>
+                {submitting ? "저장중..." : "저장"}
               </Button>
               <SecondaryButton
                 type="button"
-                disabled={photoBusy}
                 onClick={() => setEditing(false)}
               >
                 취소

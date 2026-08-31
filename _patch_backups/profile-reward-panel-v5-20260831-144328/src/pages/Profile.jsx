@@ -187,45 +187,6 @@ const RewardTitle = styled.strong`
   font-size: 1.02rem;
 `;
 
-const RewardToggle = styled.button`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  width: 100%;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-
-  svg {
-    width: 18px;
-    height: 18px;
-    flex: 0 0 auto;
-    color: ${({ theme }) => theme.colors.textSecondary};
-    transform: rotate(${({ $open }) => ($open ? "90deg" : "0deg")});
-    transition: transform 160ms ease;
-  }
-`;
-
-const RewardSummary = styled.span`
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: 0.88rem;
-  font-weight: 700;
-  white-space: nowrap;
-`;
-
-const RewardDetails = styled.div`
-  display: grid;
-  gap: 10px;
-`;
-
 const RewardRow = styled.div`
   display: flex;
   align-items: center;
@@ -446,7 +407,6 @@ export default function Profile() {
     eligibleGroups: [],
     usageUnavailable: false,
   });
-  const [rewardDetailsOpen, setRewardDetailsOpen] = useState(false);
   const [bonusUsageOpen, setBonusUsageOpen] = useState(false);
   const [selectedBonusGroupId, setSelectedBonusGroupId] = useState("");
   const [bonusActionBusy, setBonusActionBusy] = useState(false);
@@ -936,12 +896,6 @@ export default function Profile() {
   const canRequestBonus =
     goldBonus.balanceG > 0 && goldBonus.usage?.status !== "requested";
 
-  const rewardSummaryText = goldBonus.loading
-    ? "확인 중"
-    : goldBonus.usage?.status === "requested"
-      ? `사용 신청 중 · 순금 ${Number(goldBonus.usage.amountG || 0).toFixed(2)}g`
-      : `사용 가능 순금 ${goldBonus.spendableG.toFixed(2)}g`;
-
   if (!user) {
     return (
       <Container>
@@ -960,35 +914,21 @@ export default function Profile() {
       <Section>
         <Title>내 프로필</Title>
 
-        <RewardPanel aria-label="순금 적립 내역">
-          <RewardToggle
-            type="button"
-            onClick={() => setRewardDetailsOpen((open) => !open)}
-            aria-expanded={rewardDetailsOpen}
-            aria-controls="profile-gold-reward-details"
-            $open={rewardDetailsOpen}
-          >
-            <RewardTitle>
-              <span aria-hidden="true">✨</span>
-              순금 적립 내역
-            </RewardTitle>
-            <RewardSummary>
-              {rewardSummaryText}
-              <ChevronRight aria-hidden="true" />
-            </RewardSummary>
-          </RewardToggle>
+        <RewardPanel aria-label="신규회원 순금 혜택 적립 내역">
+          <RewardTitle>
+            <span aria-hidden="true">✨</span>
+            신규회원 순금 혜택
+          </RewardTitle>
 
-          {rewardDetailsOpen && (
-            <RewardDetails id="profile-gold-reward-details">
-              {goldBonus.loading ? (
-                <span>적립 내역을 확인하고 있습니다.</span>
-              ) : (
-                <>
+          {goldBonus.loading ? (
+            <span>적립 내역을 확인하고 있습니다.</span>
+          ) : (
+            <>
               <RewardRow>
                 <span>회원가입 혜택</span>
                 <b>
                   {goldBonus.welcomeClaimed
-                    ? `순금 ${goldBonus.welcomeG.toFixed(2)}g 적립`
+                    ? `${goldBonus.welcomeG.toFixed(2)}g 적립`
                     : goldBonus.welcomeUnavailable
                       ? "조회 필요"
                       : "적립 확인 중"}
@@ -998,7 +938,7 @@ export default function Profile() {
               <RewardRow>
                 <span>금시세 알림</span>
                 {goldBonus.marketingClaimed ? (
-                  <b>순금 {goldBonus.marketingG.toFixed(2)}g 적립</b>
+                  <b>{goldBonus.marketingG.toFixed(2)}g 적립</b>
                 ) : goldBonus.marketingUnavailable ? (
                   <b>조회 필요</b>
                 ) : (
@@ -1009,7 +949,7 @@ export default function Profile() {
               <RewardRow>
                 <span>금 상식 퀵퀴즈</span>
                 {goldBonus.quizClaimed ? (
-                  <b>순금 {goldBonus.quizG.toFixed(2)}g 적립</b>
+                  <b>{goldBonus.quizG.toFixed(2)}g 적립</b>
                 ) : goldBonus.quizUnavailable ? (
                   <b>조회 필요</b>
                 ) : (
@@ -1018,10 +958,10 @@ export default function Profile() {
               </RewardRow>
 
               <RewardTotal>
-                <span>총 적립 혜택</span>
+                <span>신규회원 혜택</span>
                 <b>
-                  순금 {goldBonus.earnedG.toFixed(2)}g /{" "}
-                  최대 순금 {goldBonus.maxG.toFixed(2)}g
+                  {goldBonus.earnedG.toFixed(2)}g /{" "}
+                  {goldBonus.maxG.toFixed(2)}g
                   {goldBonus.earnedG + 0.000001 >= goldBonus.maxG
                     ? " 달성 🎉"
                     : ""}
@@ -1030,14 +970,14 @@ export default function Profile() {
 
               <RewardTotal>
                 <span>지금 사용 가능한 적립 순금</span>
-                <b>순금 {goldBonus.spendableG.toFixed(2)}g</b>
+                <b>{goldBonus.spendableG.toFixed(2)}g</b>
               </RewardTotal>
 
               {goldBonus.usage && (
                 <RewardUsagePanel aria-live="polite">
                   <b>적립 순금 사용 상태 · {usageStatusLabel}</b>
                   <span>
-                    신청 중량 순금 {Number(goldBonus.usage.amountG || 0).toFixed(2)}g
+                    신청 중량 {Number(goldBonus.usage.amountG || 0).toFixed(2)}g
                     {goldBonus.usage.visitDate
                       ? ` · ${goldBonus.usage.visitDate} ${
                           goldBonus.usage.visitTime || ""
@@ -1085,7 +1025,7 @@ export default function Profile() {
                     onClick={() => setBonusUsageOpen((open) => !open)}
                     aria-expanded={bonusUsageOpen}
                   >
-                    {bonusUsageOpen ? "사용 신청 닫기" : "적립 순금 사용 신청"}
+                    적립 순금 사용 신청
                   </RewardAction>
 
                   {bonusUsageOpen &&
@@ -1127,7 +1067,7 @@ export default function Profile() {
                         >
                           {bonusActionBusy
                             ? "신청 중…"
-                            : `순금 ${goldBonus.balanceG.toFixed(2)}g 사용 신청`}
+                            : `${goldBonus.balanceG.toFixed(2)}g 사용 신청`}
                         </RewardAction>
                       </RewardUsagePanel>
                     )}
@@ -1146,13 +1086,11 @@ export default function Profile() {
                 <RewardError role="alert">{bonusActionError}</RewardError>
               )}
 
-                  <RewardNote>
-                    각 혜택은 계정당 1회 제공됩니다. 적립 순금은 골드바 교환 시
-                    사용할 수 있으며 현금 환급·양도는 불가합니다.
-                  </RewardNote>
-                </>
-              )}
-            </RewardDetails>
+              <RewardNote>
+                각 혜택은 계정당 1회 제공됩니다. 적립 순금은 골드바 교환 시
+                사용할 수 있으며 현금 환급·양도는 불가합니다.
+              </RewardNote>
+            </>
           )}
         </RewardPanel>
 
