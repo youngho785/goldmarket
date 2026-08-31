@@ -148,30 +148,18 @@ const ExchangeAction = styled(Link)`
 const ExchangeLearnLink = styled(Link)`
   position: relative;
   z-index: 1;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-height: 42px;
-  margin-top: 8px;
-  padding: 9px 11px;
-  border: 1px solid
-    color-mix(in srgb, ${({ theme }) => theme.colors.gold} 24%, ${({ theme }) => theme.colors.border});
-  border-radius: 12px;
-  background: color-mix(in srgb, ${({ theme }) => theme.colors.surface} 72%, transparent);
+  gap: 5px;
+  margin-top: 11px;
   color: ${({ theme }) => theme.colors.secondaryDark};
-  font-size: 0.72rem;
+  font-size: 0.69rem;
   font-weight: 850;
   text-decoration: none;
 
-  &:active {
-    background: ${({ theme }) => theme.colors.surface};
-  }
-
   svg {
-    flex: 0 0 auto;
-    width: 15px;
-    height: 15px;
+    width: 14px;
+    height: 14px;
   }
 `;
 
@@ -707,9 +695,9 @@ export default function AppHome() {
 
         {allBenefitsCompleted && (
           <BenefitHistoryLink to="/profile">
-            <span>순금 적립 내역</span>
+            <span>받은 혜택은 순금 적립 내역에서 확인하세요.</span>
             <strong>
-              보기 <ChevronRight aria-hidden />
+              적립 내역 보기 <ChevronRight aria-hidden />
             </strong>
           </BenefitHistoryLink>
         )}

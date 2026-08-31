@@ -26,15 +26,15 @@ const Page = styled.div`
 `;
 
 const Section = styled.section`
-  padding: clamp(34px, 4.1vw, 50px) 0;
+  padding: clamp(46px, 5.5vw, 68px) 0;
 
   @media (max-width: 540px) {
-    padding: 28px 0;
+    padding: 36px 0;
   }
 `;
 
 const Kicker = styled.p`
-  margin: 0 0 7px;
+  margin: 0 0 9px;
   color: ${({ theme }) => theme.colors.secondaryDark};
   font-family: ${({ theme }) => theme.fonts.numeric};
   font-size: .68rem;
@@ -46,18 +46,18 @@ const SectionTitle = styled.h2`
   max-width: 780px;
   margin: 0;
   color: ${({ theme }) => theme.colors.primary};
-  font-size: clamp(1.6rem, 2.7vw, 2.35rem);
-  line-height: 1.22;
+  font-size: clamp(1.7rem, 3.1vw, 2.65rem);
+  line-height: 1.24;
   letter-spacing: -.025em;
   word-break: keep-all;
 `;
 
 const SectionLead = styled.p`
   max-width: 720px;
-  margin: 10px 0 0;
+  margin: 12px 0 0;
   color: ${({ theme }) => theme.colors.textSecondary};
   font-size: .95rem;
-  line-height: 1.64;
+  line-height: 1.72;
   word-break: keep-all;
 
   strong {
@@ -331,15 +331,15 @@ const ProofRow = styled.div`
 /* ───────────────────── QUICK JOURNEY ───────────────────── */
 
 const JourneySection = styled(Section)`
-  padding-top: clamp(28px, 3.2vw, 38px);
-  padding-bottom: clamp(22px, 2.8vw, 32px);
+  padding-top: clamp(34px, 4.5vw, 54px);
+  padding-bottom: clamp(28px, 4vw, 46px);
 `;
 
 const JourneyGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 18px;
+  gap: 12px;
+  margin-top: 24px;
 
   @media (max-width: 760px) {
     grid-template-columns: 1fr;
@@ -349,11 +349,11 @@ const JourneyGrid = styled.div`
 const JourneyCard = styled(Link)`
   position: relative;
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) 20px;
-  gap: 12px;
+  grid-template-columns: 46px minmax(0, 1fr) 22px;
+  gap: 14px;
   align-items: start;
-  min-height: 118px;
-  padding: 17px 16px;
+  min-height: 146px;
+  padding: 22px 20px;
   border: 1px solid ${({ theme }) => theme.colors.border};
   background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.text};
@@ -372,16 +372,16 @@ const JourneyCard = styled(Link)`
   > span:first-child {
     display: grid;
     place-items: center;
-    width: 40px;
-    height: 40px;
+    width: 46px;
+    height: 46px;
     border: 1px solid ${({ theme }) => theme.colors.border};
     background: ${({ theme }) => theme.semantic.badgeGoldBg};
     color: ${({ theme }) => theme.colors.secondaryDark};
   }
 
   > span:first-child svg {
-    width: 19px;
-    height: 19px;
+    width: 22px;
+    height: 22px;
   }
 
   small {
@@ -420,14 +420,14 @@ const JourneyCard = styled(Link)`
 /* ───────────────────── CORE COMPARISON ───────────────────── */
 
 const CompareSection = styled(Section)`
-  padding-top: clamp(42px, 5vw, 60px);
+  padding-top: clamp(52px, 6.5vw, 80px);
 `;
 
 const CompareGrid = styled.div`
   display: grid;
   grid-template-columns: minmax(0, 2fr) 44px minmax(0, 3fr);
   align-items: stretch;
-  margin-top: 22px;
+  margin-top: 26px;
   border: 1px solid ${({ theme }) => theme.colors.border};
   background: ${({ theme }) => theme.colors.surface};
 
@@ -437,7 +437,7 @@ const CompareGrid = styled.div`
 `;
 
 const CompareCard = styled.article`
-  padding: clamp(22px, 2.6vw, 30px);
+  padding: clamp(24px, 3.2vw, 36px);
 
   small {
     display: block;
@@ -459,14 +459,14 @@ const CompareCard = styled.article`
 
 const Flow = styled.div`
   display: grid;
-  gap: 8px;
+  gap: 9px;
 `;
 
 const FlowItem = styled.div`
   display: flex;
   align-items: center;
-  min-height: 44px;
-  padding: 10px 13px;
+  min-height: 48px;
+  padding: 11px 14px;
   border: 1px solid ${({ theme }) => theme.colors.border};
   background: ${({ theme }) => theme.colors.surfaceAlt};
   color: ${({ theme }) => theme.colors.primary};
@@ -475,7 +475,7 @@ const FlowItem = styled.div`
 `;
 
 const CompareNote = styled.p`
-  margin: 14px 0 0;
+  margin: 18px 0 0;
   color: ${({ theme }) => theme.colors.textSecondary};
   font-size: .88rem;
   line-height: 1.62;
@@ -542,8 +542,8 @@ const FeeBar = styled.div`
   grid-template-columns: 1fr auto;
   align-items: center;
   gap: 18px;
-  margin-top: 14px;
-  padding: 14px 18px;
+  margin-top: 16px;
+  padding: 18px 22px;
   border: 1px solid ${({ theme }) => theme.colors.border};
   background: ${({ theme }) => theme.colors.surfaceAlt};
 
@@ -563,184 +563,91 @@ const FeeBar = styled.div`
   }
 `;
 
-/* ───────────────────── BRAND STORY / SELF-RELEVANCE ───────────────────── */
+/* ───────────────────── SELF-RELEVANCE ───────────────────── */
 
 const DrawerSection = styled(Section)`
-  position: relative;
-  margin: clamp(20px, 2.6vw, 30px) 0;
-  padding: clamp(34px, 4vw, 44px) clamp(20px, 3vw, 34px);
-  border-top: 1px solid ${({ theme }) => theme.colors.border};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-  background: ${({ theme }) => theme.colors.surfaceAlt};
+  text-align: center;
 
-  &::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: clamp(22px, 3.5vw, 42px);
-    width: 96px;
-    height: 3px;
-    background: ${({ theme }) => theme.colors.secondary};
-  }
-
+  ${SectionTitle},
   ${SectionLead} {
-    max-width: 760px;
-  }
-
-  ${SectionTitle} {
-    font-size: clamp(1.55rem, 2.45vw, 2.15rem);
-  }
-
-  @media (max-width: 540px) {
-    margin: 20px 0;
-    padding: 30px 16px;
+    margin-left: auto;
+    margin-right: auto;
   }
 `;
 
-const BrandStoryGrid = styled.div`
+const GoldTypes = styled.div`
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(300px, .92fr);
-  gap: 12px;
-  margin-top: 20px;
-
-  @media (max-width: 820px) {
-    grid-template-columns: 1fr;
-  }
-`;
-
-const StoryItems = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 28px auto 0;
+  max-width: 880px;
   border: 1px solid ${({ theme }) => theme.colors.border};
   background: ${({ theme }) => theme.colors.surface};
 
-  @media (max-width: 540px) {
+  @media (max-width: 680px) {
     grid-template-columns: 1fr;
   }
 `;
 
-const StoryItem = styled.div`
-  min-height: 82px;
-  padding: 15px 16px;
-  border-right: 1px solid ${({ theme }) => theme.colors.border};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+const GoldType = styled.div`
+  padding: 24px 20px;
+  border-left: 1px solid ${({ theme }) => theme.colors.border};
 
-  &:nth-child(2n) {
-    border-right: 0;
-  }
-
-  &:nth-last-child(-n + 2) {
-    border-bottom: 0;
-  }
-
-  small {
-    display: block;
-    margin-bottom: 6px;
-    color: ${({ theme }) => theme.colors.secondaryDark};
-    font-family: ${({ theme }) => theme.fonts.numeric};
-    font-size: .62rem;
-    font-weight: 850;
-    letter-spacing: .1em;
+  &:first-child {
+    border-left: 0;
   }
 
   strong {
     display: block;
     color: ${({ theme }) => theme.colors.primary};
-    font-size: 1rem;
-    line-height: 1.45;
+    font-size: 1.05rem;
   }
 
-  @media (max-width: 540px) {
-    border-right: 0;
-    border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  span {
+    display: block;
+    margin-top: 5px;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: .82rem;
+  }
 
-    &:nth-last-child(-n + 2) {
-      border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-    }
+  @media (max-width: 680px) {
+    border-left: 0;
+    border-top: 1px solid ${({ theme }) => theme.colors.border};
 
-    &:last-child {
-      border-bottom: 0;
+    &:first-child {
+      border-top: 0;
     }
   }
 `;
 
-const ValueStory = styled.div`
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: clamp(20px, 2.5vw, 26px);
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  background: ${({ theme }) => theme.colors.surface};
+const MergeLine = styled.div`
+  display: grid;
+  place-items: center;
+  min-height: 82px;
+  color: ${({ theme }) => theme.colors.secondaryDark};
+`;
+
+const MergeResult = styled.div`
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 26px 24px;
+  background: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.white};
 
   small {
-    color: ${({ theme }) => theme.colors.secondaryDark};
+    display: block;
+    margin-bottom: 7px;
+    color: ${({ theme }) => theme.colors.goldLight};
     font-family: ${({ theme }) => theme.fonts.numeric};
-    font-size: .66rem;
+    font-size: .65rem;
     font-weight: 850;
     letter-spacing: .13em;
   }
 
-  h3 {
-    margin: 8px 0 10px;
-    color: ${({ theme }) => theme.colors.primary};
-    font-family: ${({ theme }) => theme.fonts.heading};
-    font-size: clamp(1.25rem, 2.1vw, 1.7rem);
-    line-height: 1.34;
-    word-break: keep-all;
-  }
-
-  p {
-    margin: 0;
-    color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .84rem;
-    line-height: 1.56;
-    word-break: keep-all;
-  }
-`;
-
-const ValuePath = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 32px 1fr 32px 1fr;
-  align-items: stretch;
-  margin-top: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  background: ${({ theme }) => theme.colors.surface};
-
-  > svg {
-    align-self: center;
-    justify-self: center;
-    color: ${({ theme }) => theme.colors.secondaryDark};
-  }
-
-  @media (max-width: 680px) {
-    grid-template-columns: 1fr;
-
-    > svg {
-      margin: 5px 0;
-      transform: rotate(90deg);
-    }
-  }
-`;
-
-const ValueStep = styled.div`
-  padding: 14px 14px;
-  background: ${({ theme }) => theme.colors.surface};
-
-  small {
-    display: block;
-    margin-bottom: 6px;
-    color: ${({ theme }) => theme.colors.secondaryDark};
-    font-family: ${({ theme }) => theme.fonts.numeric};
-    font-size: .6rem;
-    font-weight: 850;
-    letter-spacing: .1em;
-  }
-
   strong {
     display: block;
-    color: ${({ theme }) => theme.colors.primary};
-    font-size: .95rem;
-    line-height: 1.42;
+    font-family: ${({ theme }) => theme.fonts.heading};
+    font-size: clamp(1.4rem, 3vw, 2rem);
+    line-height: 1.35;
   }
 `;
 
@@ -756,7 +663,7 @@ const CalculatorHead = styled.div`
   grid-template-columns: 1fr auto;
   align-items: end;
   gap: 24px;
-  margin-bottom: 18px;
+  margin-bottom: 24px;
 
   @media (max-width: 720px) {
     grid-template-columns: 1fr;
@@ -771,34 +678,10 @@ const CalculatorWrap = styled.div`
 
 /* ───────────────────── TRUST / PROCESS ───────────────────── */
 
-const TrustSection = styled(Section)`
-  padding-top: clamp(28px, 3.4vw, 40px);
-  padding-bottom: clamp(26px, 3.2vw, 38px);
-`;
-
-const ProcessSection = styled(Section)`
-  padding-top: clamp(12px, 1.8vw, 20px);
-  padding-bottom: clamp(28px, 3.4vw, 40px);
-
-  ${SectionTitle} {
-    font-size: clamp(1.45rem, 2.2vw, 1.95rem);
-  }
-`;
-
-const ReviewsSection = styled(Section)`
-  padding-top: clamp(30px, 3.7vw, 44px);
-  padding-bottom: clamp(28px, 3.4vw, 40px);
-`;
-
-const FAQSection = styled(Section)`
-  padding-top: clamp(22px, 2.8vw, 34px);
-  padding-bottom: clamp(24px, 3vw, 36px);
-`;
-
 const TrustGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  margin-top: 18px;
+  margin-top: 24px;
   border: 1px solid ${({ theme }) => theme.colors.border};
   background: ${({ theme }) => theme.colors.surface};
 
@@ -808,7 +691,7 @@ const TrustGrid = styled.div`
 `;
 
 const TrustCard = styled.article`
-  padding: 18px 20px;
+  padding: 24px;
   border-left: 1px solid ${({ theme }) => theme.colors.border};
 
   &:first-child {
@@ -820,7 +703,7 @@ const TrustCard = styled.article`
   }
 
   h3 {
-    margin: 9px 0 5px;
+    margin: 13px 0 7px;
     color: ${({ theme }) => theme.colors.primary};
     font-size: 1.13rem;
   }
@@ -845,7 +728,7 @@ const TrustCard = styled.article`
 const ProcessGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  margin-top: 16px;
+  margin-top: 24px;
   border: 1px solid ${({ theme }) => theme.colors.border};
   background: ${({ theme }) => theme.colors.surface};
 
@@ -855,7 +738,7 @@ const ProcessGrid = styled.div`
 `;
 
 const ProcessCard = styled.article`
-  padding: 16px 18px;
+  padding: 25px;
   border-left: 1px solid ${({ theme }) => theme.colors.border};
 
   &:first-child {
@@ -871,16 +754,16 @@ const ProcessCard = styled.article`
   }
 
   h3 {
-    margin: 9px 0 4px;
+    margin: 14px 0 7px;
     color: ${({ theme }) => theme.colors.primary};
-    font-size: 1.15rem;
+    font-size: 1.34rem;
   }
 
   p {
     margin: 0;
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .82rem;
-    line-height: 1.48;
+    font-size: .86rem;
+    line-height: 1.56;
   }
 
   @media (max-width: 760px) {
@@ -898,7 +781,7 @@ const ProcessCard = styled.article`
 const Verification = styled.section`
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(340px, .95fr);
-  margin: clamp(30px, 4vw, 44px) 0;
+  margin: clamp(48px, 6vw, 72px) 0;
   border: 1px solid ${({ theme }) => theme.colors.border};
   background: ${({ theme }) => theme.colors.surface};
 
@@ -908,7 +791,7 @@ const Verification = styled.section`
 `;
 
 const VerificationImage = styled.div`
-  min-height: 310px;
+  min-height: 390px;
   overflow: hidden;
 
   img {
@@ -926,14 +809,14 @@ const VerificationCopy = styled.div`
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: clamp(24px, 3.2vw, 34px);
+  padding: clamp(28px, 4vw, 44px);
 `;
 
 const StoreMeta = styled.div`
   display: grid;
-  gap: 8px;
-  margin-top: 18px;
-  padding-top: 16px;
+  gap: 10px;
+  margin-top: 24px;
+  padding-top: 20px;
   border-top: 1px solid ${({ theme }) => theme.colors.border};
   color: ${({ theme }) => theme.colors.textSecondary};
   font-size: .86rem;
@@ -953,16 +836,16 @@ const StoreMeta = styled.div`
 /* ───────────────────── REVIEWS / QUIZ / FAQ ───────────────────── */
 
 const SimpleHead = styled.div`
-  margin-bottom: 16px;
+  margin-bottom: 22px;
 `;
 
 const QuizBanner = styled.section`
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: center;
-  gap: 20px;
-  margin: 16px 0 clamp(34px, 4vw, 44px);
-  padding: clamp(22px, 3vw, 28px);
+  gap: 26px;
+  margin: 22px 0 clamp(52px, 6vw, 76px);
+  padding: clamp(26px, 4vw, 40px);
   background: ${({ theme }) => theme.colors.primary};
   color: ${({ theme }) => theme.colors.white};
 
@@ -975,10 +858,8 @@ const QuizBanner = styled.section`
   }
 
   h2 {
-    margin: 6px 0 7px;
+    margin: 7px 0 8px;
     color: ${({ theme }) => theme.colors.white};
-    font-size: clamp(1.4rem, 2.25vw, 2rem);
-    line-height: 1.25;
   }
 
   p {
@@ -996,8 +877,8 @@ const QuizLink = styled(Link)`
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 46px;
-  padding: 10px 17px;
+  min-height: 50px;
+  padding: 12px 19px;
   border: 1px solid ${({ theme }) => theme.colors.secondary};
   background: ${({ theme }) => theme.colors.secondary};
   color: ${({ theme }) => theme.colors.white};
@@ -1021,7 +902,7 @@ const FAQGrid = styled.div`
 `;
 
 const FAQ = styled.details`
-  padding: 14px 0;
+  padding: 18px 0;
   border-top: 1px solid ${({ theme }) => theme.colors.border};
 
   summary {
@@ -1045,8 +926,8 @@ const FinalCTA = styled.section`
   grid-template-columns: 1fr auto;
   align-items: center;
   gap: 28px;
-  margin: 0 0 28px;
-  padding: clamp(24px, 3.5vw, 34px);
+  margin: 0 0 68px;
+  padding: clamp(30px, 5vw, 50px);
   border: 1px solid ${({ theme }) => theme.colors.border};
   background: ${({ theme }) => theme.colors.surface};
 
@@ -1124,18 +1005,19 @@ export default function LandingPage() {
       <Hero aria-labelledby="landing-title">
         <HeroCopy>
           <HeroQuestion>
-            금을 현금화하기 전에 확인하는 새로운 방법 · <GoldToGoldHero>GOLD TO GOLD</GoldToGoldHero>
+            가지고 있던 금의 가치를 다시 이어가는 방법 · <GoldToGoldHero>GOLD TO GOLD</GoldToGoldHero>
           </HeroQuestion>
 
           <HeroTitle id="landing-title">
-            가지고 있는 금,
+            가지고 있던 금의 가치,
             <br />
-            <span>팔지 말고</span>
+            <span>999.9 골드바로</span>
             <br />
-            999.9 골드바로 바꾸세요
+            다시 이어가세요
           </HeroTitle>
 
           <HeroLead>
+            오래된 주얼리든, 한동안 착용하지 않은 금이든 <strong>금의 가치는 남아 있습니다.</strong>{" "}
             <GoldToGoldText>GOLD TO GOLD</GoldToGoldText>는 14K·18K·순금 등 가지고 있는 금을
             먼저 현금으로 팔지 않고, 순도와 중량 기준의 순금 가치로 계산해
             <strong> 999.9 골드바로 교환하는 한국골드마켓의 방식</strong>입니다.
@@ -1164,7 +1046,7 @@ export default function LandingPage() {
             <small>
               KOREA GOLD MARKET · <GoldToGoldText>GOLD TO GOLD</GoldToGoldText>
             </small>
-            <strong>오늘 바로 확인하고,<br />매장에서 최종 결정하세요.</strong>
+            <strong>내 금의 가치를 먼저 확인하고,<br />매장에서 최종 결정하세요.</strong>
           </HeroProofTop>
           <HeroProofBody>
             <ProofRow>
@@ -1339,68 +1221,43 @@ export default function LandingPage() {
         </FeeBar>
       </CompareSection>
 
-      {/* 06. 브랜드 본질 · 자기 상황 대입 */}
-      <DrawerSection aria-labelledby="brand-story-title">
-        <Kicker>YOUR GOLD · YOUR STORY</Kicker>
-        <SectionTitle id="brand-story-title">
-          금은 오래되어도,<br />
-          가치까지 오래되지는 않습니다.
-        </SectionTitle>
+      {/* 06. 자기 상황 대입 */}
+      <DrawerSection>
+        <Kicker>YOUR GOLD, ONE VALUE</Kicker>
+        <SectionTitle>쓰지 않는 금에도, 가치는 그대로 남아 있습니다.</SectionTitle>
         <SectionLead>
-          결혼 때 받았던 반지, 한쪽만 남은 귀걸이, 유행이 지나 손이 가지 않는 목걸이,
-          오래 보관한 돌반지. 지금 착용하지 않아도 그 안의 금은 여전히 금입니다.
+          오래된 주얼리, 끊어진 제품, 유행이 지나 손이 가지 않는 금, 한쪽만 남은 귀걸이까지.
+          지금 사용하지 않아도 금의 가치는 사라지지 않습니다.
+          각각 팔지 않고 순금 가치로 모아 999.9 골드바로 이어갈 수 있습니다.
         </SectionLead>
 
-        <BrandStoryGrid>
-          <StoryItems aria-label="가지고 있던 금의 예">
-            <StoryItem>
-              <small>01 · RING</small>
-              <strong>결혼 때 받았던 반지</strong>
-            </StoryItem>
-            <StoryItem>
-              <small>02 · EARRING</small>
-              <strong>한쪽만 남은 귀걸이</strong>
-            </StoryItem>
-            <StoryItem>
-              <small>03 · NECKLACE</small>
-              <strong>유행이 지나 착용하지 않는 목걸이</strong>
-            </StoryItem>
-            <StoryItem>
-              <small>04 · PURE GOLD</small>
-              <strong>오래 보관해 온 돌반지·순금 제품</strong>
-            </StoryItem>
-          </StoryItems>
+        <GoldTypes>
+          <GoldType>
+            <strong>14K 목걸이</strong>
+            <span>착용하지 않거나 끊어진 제품</span>
+          </GoldType>
+          <GoldType>
+            <strong>18K 반지·팔찌</strong>
+            <span>오래되어 보관만 하던 주얼리</span>
+          </GoldType>
+          <GoldType>
+            <strong>순금 제품</strong>
+            <span>돌반지·메달·기타 순금 제품</span>
+          </GoldType>
+        </GoldTypes>
 
-          <ValueStory>
-            <small>GOLD TO GOLD</small>
-            <h3>그 금의 의미는 간직하고,<br />가치는 새로운 골드로 이어갑니다.</h3>
-            <p>
-              여러 금제품을 각각 처분하는 대신 순도와 중량을 확인해 하나의 순금 가치로 계산하고,
-              999.9 골드바로 이어가는 것이 한국골드마켓의 GOLD TO GOLD입니다.
-            </p>
-          </ValueStory>
-        </BrandStoryGrid>
+        <MergeLine>
+          <ArrowRight size={24} aria-hidden style={{ transform: "rotate(90deg)" }} />
+        </MergeLine>
 
-        <ValuePath aria-label="GOLD TO GOLD 가치 전환 과정">
-          <ValueStep>
-            <small>YOUR GOLD</small>
-            <strong>가지고 있던 금</strong>
-          </ValueStep>
-          <ArrowRight size={20} aria-hidden />
-          <ValueStep>
-            <small>PURE GOLD VALUE</small>
-            <strong>확인된 하나의 순금 가치</strong>
-          </ValueStep>
-          <ArrowRight size={20} aria-hidden />
-          <ValueStep>
-            <small>999.9 GOLD</small>
-            <strong>새롭게 이어지는 골드</strong>
-          </ValueStep>
-        </ValuePath>
+        <MergeResult>
+          <small>ONE PURE GOLD VALUE</small>
+          <strong>여러 종류의 금 → 하나의 순금 가치 → 999.9 골드바</strong>
+        </MergeResult>
       </DrawerSection>
 
       {/* 07. 위험 제거 */}
-      <TrustSection aria-labelledby="trust-title">
+      <Section aria-labelledby="trust-title">
         <Kicker>TRANSPARENT PROCESS</Kicker>
         <SectionTitle id="trust-title">확인하고, 그다음 결정하세요.</SectionTitle>
 
@@ -1421,7 +1278,7 @@ export default function LandingPage() {
             <p>측정 결과와 비용을 확인한 뒤 원하는 경우에만 교환을 확정합니다.</p>
           </TrustCard>
         </TrustGrid>
-      </TrustSection>
+      </Section>
 
       {/* 08. 실제 매장 */}
       <Verification aria-labelledby="verification-title">
@@ -1457,7 +1314,7 @@ export default function LandingPage() {
       </Verification>
 
       {/* 09. 절차 */}
-      <ProcessSection aria-labelledby="process-title">
+      <Section aria-labelledby="process-title">
         <Kicker>3 SIMPLE STEPS</Kicker>
         <SectionTitle id="process-title">금교환은 세 단계입니다.</SectionTitle>
 
@@ -1478,19 +1335,19 @@ export default function LandingPage() {
             <p>결과에 동의하면 확정된 골드바 조합과 잔여 중량을 수령합니다.</p>
           </ProcessCard>
         </ProcessGrid>
-      </ProcessSection>
+      </Section>
 
       {/* 10. 사회적 증거 */}
-      <ReviewsSection aria-labelledby="reviews-title">
+      <Section aria-labelledby="reviews-title">
         <SimpleHead>
           <Kicker>VERIFIED EXCHANGE REVIEWS</Kicker>
           <SectionTitle id="reviews-title">먼저 교환한 고객의 이야기</SectionTitle>
         </SimpleHead>
         <GoldExchangeReviewList limitCount={6} />
-      </ReviewsSection>
+      </Section>
 
       {/* 11. FAQ */}
-      <FAQSection aria-labelledby="faq-title">
+      <Section aria-labelledby="faq-title">
         <SimpleHead>
           <Kicker>FREQUENTLY ASKED QUESTIONS</Kicker>
           <SectionTitle id="faq-title">교환 전에 이것만 확인하세요.</SectionTitle>
@@ -1527,7 +1384,7 @@ export default function LandingPage() {
             </FAQ>
           </div>
         </FAQGrid>
-      </FAQSection>
+      </Section>
 
       {/* 12. 마지막 행동 */}
       <FinalCTA>
@@ -1535,9 +1392,9 @@ export default function LandingPage() {
           <Kicker>
             BEFORE YOU SELL · <GoldToGoldText>GOLD TO GOLD</GoldToGoldText>
           </Kicker>
-          <h2>금을 팔기 전에, 다른 방법도 확인해보세요.</h2>
+          <h2>가지고 있던 금의 가치, 다시 확인해보세요.</h2>
           <p>
-            내가 가진 14K·18K·순금이 어떤 999.9 골드바가 되는지
+            내가 가진 14K·18K·순금이 어떤 999.9 골드바로 이어지는지
             로그인 없이 확인하고, 교환 여부는 그다음 결정하세요.
           </p>
         </div>

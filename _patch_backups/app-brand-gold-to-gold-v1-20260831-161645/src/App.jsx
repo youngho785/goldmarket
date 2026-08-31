@@ -60,7 +60,6 @@ const safeLazy = (importer, namedKey) =>
   );
 
 const GoldPrice = lazy(() => import("@/pages/GoldPrice"));
-const GoldToGoldIntro = lazy(() => import("@/pages/GoldToGoldIntro"));
 const Profile = lazy(() => import("@/pages/Profile"));
 const Settings = lazy(() => import("@/pages/Settings"));
 const GoldExchange = lazy(() => import("@/pages/GoldExchange"));
@@ -529,7 +528,6 @@ const router = createBrowserRouter([
     children: [
       { path: "/", element: <PlatformHome /> },
       { path: "/gold-price", element: <GoldPrice /> },
-      { path: "/gold-to-gold", element: <GoldToGoldIntro /> },
       { path: "/goldbar-fee", element: <GoldbarFee /> },
       { path: "/stores", element: <Stores /> },
       { path: "/gold-exchange", element: <GoldExchange /> },

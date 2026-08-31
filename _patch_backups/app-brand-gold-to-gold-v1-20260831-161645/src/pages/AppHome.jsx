@@ -7,6 +7,7 @@ import {
   BellRing,
   Calculator,
   CalendarDays,
+  Check,
   ChevronRight,
   ClipboardList,
   ReceiptText,
@@ -32,34 +33,18 @@ const Page = styled.div`
 const ExchangeCard = styled.section`
   position: relative;
   overflow: hidden;
-  padding: 21px 18px 16px;
+  padding: 21px 18px 17px;
   border: 1px solid
-    color-mix(in srgb, ${({ theme }) => theme.colors.gold} 34%, ${({ theme }) => theme.colors.border});
+    color-mix(in srgb, ${({ theme }) => theme.colors.gold} 32%, ${({ theme }) => theme.colors.border});
   border-radius: 22px;
-  background:
-    linear-gradient(
-      145deg,
-      color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 94%, white) 0%,
-      ${({ theme }) => theme.colors.surface} 100%
-    );
-
-  &::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 18px;
-    width: 72px;
-    height: 3px;
-    border-radius: 0 0 999px 999px;
-    background: ${({ theme }) => theme.colors.secondary};
-  }
+  background: ${({ theme }) => theme.semantic.badgeGoldBg};
 
   &::after {
     content: "G";
     position: absolute;
     right: -8px;
     bottom: -29px;
-    color: color-mix(in srgb, ${({ theme }) => theme.colors.gold} 9%, transparent);
+    color: color-mix(in srgb, ${({ theme }) => theme.colors.gold} 10%, transparent);
     font-family: ${({ theme }) => theme.fonts.heading};
     font-size: 8.4rem;
     font-weight: 900;
@@ -102,17 +87,11 @@ const ExchangeTitle = styled.h1`
 const ExchangeCopy = styled.p`
   position: relative;
   z-index: 1;
-  max-width: 430px;
-  margin: 9px 0 0;
+  margin: 8px 0 0;
   color: ${({ theme }) => theme.colors.textSecondary};
   font-size: 0.74rem;
   line-height: 1.55;
   word-break: keep-all;
-
-  strong {
-    color: ${({ theme }) => theme.colors.primary};
-    font-weight: 850;
-  }
 `;
 
 const ExchangeAction = styled(Link)`
@@ -142,36 +121,6 @@ const ExchangeAction = styled(Link)`
   svg {
     width: 19px;
     height: 19px;
-  }
-`;
-
-const ExchangeLearnLink = styled(Link)`
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-height: 42px;
-  margin-top: 8px;
-  padding: 9px 11px;
-  border: 1px solid
-    color-mix(in srgb, ${({ theme }) => theme.colors.gold} 24%, ${({ theme }) => theme.colors.border});
-  border-radius: 12px;
-  background: color-mix(in srgb, ${({ theme }) => theme.colors.surface} 72%, transparent);
-  color: ${({ theme }) => theme.colors.secondaryDark};
-  font-size: 0.72rem;
-  font-weight: 850;
-  text-decoration: none;
-
-  &:active {
-    background: ${({ theme }) => theme.colors.surface};
-  }
-
-  svg {
-    flex: 0 0 auto;
-    width: 15px;
-    height: 15px;
   }
 `;
 
@@ -346,8 +295,10 @@ const BenefitIcon = styled.span`
   width: 36px;
   height: 36px;
   border-radius: 12px;
-  background: ${({ theme }) => theme.semantic.badgeGoldBg};
-  color: ${({ theme }) => theme.colors.secondaryDark};
+  background: ${({ $done, theme }) =>
+    $done ? theme.semantic.alertSuccessBg : theme.semantic.badgeGoldBg};
+  color: ${({ $done, theme }) =>
+    $done ? theme.semantic.alertSuccessText : theme.colors.secondaryDark};
 
   svg {
     width: 18px;
@@ -379,37 +330,21 @@ const BenefitStatus = styled.span`
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 3px;
   min-height: 30px;
   padding: 6px 8px;
   border-radius: 999px;
-  background: ${({ theme }) => theme.colors.primary};
-  color: ${({ theme }) => theme.colors.goldLight};
+  background: ${({ $done, theme }) =>
+    $done ? theme.semantic.alertSuccessBg : theme.colors.primary};
+  color: ${({ $done, theme }) =>
+    $done ? theme.semantic.alertSuccessText : theme.colors.goldLight};
   font-size: 0.62rem;
   font-weight: 900;
   white-space: nowrap;
-`;
-
-const BenefitHistoryLink = styled(Link)`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 48px;
-  padding: 11px 15px;
-  border-top: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
-  color: ${({ theme }) => theme.colors.primary};
-  font-size: 0.72rem;
-  font-weight: 850;
-  text-decoration: none;
-
-  span {
-    color: ${({ theme }) => theme.colors.textSecondary};
-    font-weight: 750;
-  }
 
   svg {
-    width: 16px;
-    height: 16px;
-    color: ${({ theme }) => theme.colors.secondaryDark};
+    width: 12px;
+    height: 12px;
   }
 `;
 
@@ -575,9 +510,9 @@ export default function AppHome() {
   const benefits = [
     {
       key: "welcome",
-      to: user ? "/welcome" : "/register",
+      to: user ? (welcomeClaimed ? "/profile" : "/welcome") : "/register",
       title: "회원가입",
-      text: "회원가입하고 순금 0.01g 받기",
+      text: welcomeClaimed ? "순금 0.01g 혜택 완료" : "회원가입하고 순금 0.01g 받기",
       done: welcomeClaimed,
       icon: UserPlus,
     },
@@ -585,7 +520,7 @@ export default function AppHome() {
       key: "quiz",
       to: "/quiz/gold-bonus",
       title: "금 상식 퀵퀴즈",
-      text: "5문제 맞히고 순금 0.01g 더 받기",
+      text: quizClaimed ? "순금 0.01g 혜택 완료" : "5문제 맞히고 순금 0.01g 더 받기",
       done: quizClaimed,
       icon: Sparkles,
     },
@@ -593,14 +528,11 @@ export default function AppHome() {
       key: "push",
       to: user ? "/settings" : "/register",
       title: "금시세 알림",
-      text: "알림 설정하고 순금 0.01g 더 받기",
+      text: marketingClaimed ? "순금 0.01g 혜택 완료" : "알림 설정하고 순금 0.01g 더 받기",
       done: marketingClaimed,
       icon: BellRing,
     },
   ];
-
-  const visibleBenefits = user ? benefits.filter((item) => !item.done) : benefits;
-  const allBenefitsCompleted = !!user && visibleBenefits.length === 0;
 
   return (
     <Page>
@@ -614,22 +546,15 @@ export default function AppHome() {
           <em>999.9 골드바로</em>
         </ExchangeTitle>
         <ExchangeCopy>
-          14K·18K·순금 등을 현금으로 팔았다 다시 사지 않고,
-          <strong> 순금 가치로 이어가는 한국골드마켓의 금교환 방식</strong>입니다.
+          14K·18K·순금의 중량을 입력하고 예상 교환 결과를 바로 확인하세요.
         </ExchangeCopy>
-
         <ExchangeAction to="/gold-exchange">
           <span>
             <Calculator aria-hidden />
-            골드 투 골드 하러가기
+            내 금 계산하기
           </span>
           <ChevronRight aria-hidden />
         </ExchangeAction>
-
-        <ExchangeLearnLink to="/gold-to-gold">
-          GOLD TO GOLD가 무엇인가요?
-          <ChevronRight aria-hidden />
-        </ExchangeLearnLink>
       </ExchangeCard>
 
       <Section aria-labelledby="quick-title">
@@ -688,31 +613,28 @@ export default function AppHome() {
           </BenefitTotal>
         </BenefitHead>
 
-        {visibleBenefits.length > 0 && (
-          <BenefitList>
-            {visibleBenefits.map(({ key, to, title, text, icon: Icon }) => (
-              <BenefitLink key={key} to={to}>
-                <BenefitIcon>
-                  <Icon aria-hidden />
-                </BenefitIcon>
-                <BenefitCopy>
-                  <strong>{title}</strong>
-                  <small>{text}</small>
-                </BenefitCopy>
-                <BenefitStatus>순금 0.01g</BenefitStatus>
-              </BenefitLink>
-            ))}
-          </BenefitList>
-        )}
-
-        {allBenefitsCompleted && (
-          <BenefitHistoryLink to="/profile">
-            <span>순금 적립 내역</span>
-            <strong>
-              보기 <ChevronRight aria-hidden />
-            </strong>
-          </BenefitHistoryLink>
-        )}
+        <BenefitList>
+          {benefits.map(({ key, to, title, text, done, icon: Icon }) => (
+            <BenefitLink key={key} to={to}>
+              <BenefitIcon $done={done}>
+                {done ? <Check aria-hidden /> : <Icon aria-hidden />}
+              </BenefitIcon>
+              <BenefitCopy>
+                <strong>{title}</strong>
+                <small>{text}</small>
+              </BenefitCopy>
+              <BenefitStatus $done={done}>
+                {done ? (
+                  <>
+                    <Check aria-hidden /> 순금 0.01g 받음
+                  </>
+                ) : (
+                  "순금 0.01g"
+                )}
+              </BenefitStatus>
+            </BenefitLink>
+          ))}
+        </BenefitList>
       </BenefitCard>
 
       <Note>실제 교환 중량과 비용은 매장 실측 후 최종 확인합니다.</Note>
