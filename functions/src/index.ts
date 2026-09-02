@@ -2053,6 +2053,9 @@ function normalizedPushDevice(
  * 6) FCM 토큰 소유권 연결
  * - 같은 기기 토큰이 여러 회원에게 동시에 연결되지 않도록 서버에서 이전합니다.
  * - 로그아웃만으로는 토큰을 지우지 않지만, 다른 계정이 로그인하면 새 계정으로 소유권이 이동합니다.
+ * - 현재 계정이 이미 금시세·혜택 알림에 동의했고 대표 수신 기기가 비어 있으면,
+ *   다시 로그인한 현재 기기를 대표 수신 기기로 자동 복구합니다.
+ * - 다른 대표 수신 기기가 이미 지정되어 있으면 절대 덮어쓰지 않습니다.
  * ───────────────────────────────────────────────────────────── */
 export const bindPushToken = onCall<{
   token: string;
@@ -2122,6 +2125,29 @@ export const bindPushToken = onCall<{
       const targetData = targetSnapshot.exists
         ? (targetSnapshot.data() || {})
         : {};
+
+      /*
+       * A → B → 다시 A처럼 같은 기기에서 계정을 전환한 경우,
+       * B로 토큰이 이동할 때 A의 marketingFcmToken은 개인정보 보호를 위해 비워집니다.
+       *
+       * A가 다시 로그인하면:
+       * - A의 광고성 정보 수신동의가 여전히 ON이고
+       * - 금시세 알림 선호도 ON이며
+       * - A에게 다른 대표 수신 기기가 지정되어 있지 않을 때만
+       * 현재 기기를 대표 수신 기기로 자동 복구합니다.
+       *
+       * 이미 다른 기기가 대표 수신 기기라면 그대로 유지합니다.
+       */
+      const targetPreferences = normalizeNotificationPreferences(
+        targetData.notificationPreferences
+      );
+      const existingMarketingFcmToken = String(
+        targetData.marketingFcmToken || ""
+      ).trim();
+      const shouldRestoreMarketingTarget =
+        !existingMarketingFcmToken &&
+        marketingPushEnabled(targetData, targetPreferences);
+
       const targetPushDevices = readPushDevices(targetData.pushDevices);
       const existingDevice =
         targetPushDevices[deviceId] &&
@@ -2149,6 +2175,16 @@ export const bindPushToken = onCall<{
 
       if (native) {
         targetPatch.nativeFcmTokens = FieldValue.arrayUnion(token);
+      }
+
+      if (shouldRestoreMarketingTarget) {
+        targetPatch.marketingFcmToken = token;
+        targetPatch.marketingFcmBrowser =
+          native
+            ? "한국골드마켓 앱"
+            : device.browser || device.label || "현재 브라우저";
+        targetPatch.marketingFcmTokenUpdatedAt =
+          FieldValue.serverTimestamp();
       }
 
       if (!targetSnapshot.exists) {
