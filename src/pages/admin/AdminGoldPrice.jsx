@@ -466,7 +466,15 @@ export default function AdminGoldPrice() {
       }
       const value = snap.data();
       setCurrent(value);
-      setSourceDate(inputDate(value.sourceDate) || inputDate(todayKey()));
+
+      /*
+       * 관리 화면을 새로 열 때 기준일은 항상 한국시간 "오늘"로 맞춥니다.
+       * 마지막 공개 시세의 가격은 그대로 불러오므로 변동이 없는 날에도
+       * 저장하면 오늘 날짜의 goldPriceHistory 문서가 생성됩니다.
+       *
+       * 과거 날짜를 직접 선택해 불러오는 동작은 아래 loadDate()가 담당합니다.
+       */
+      setSourceDate(inputDate(todayKey()));
       setMarket(Object.fromEntries(
         PRICE_FIELDS.map(([key]) => [key, validPrice(value.market?.[key]) ? String(value.market[key]) : ""])
       ));

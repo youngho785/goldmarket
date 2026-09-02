@@ -1,7 +1,17 @@
 //src/components/gold/GoldPriceBoard.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import styled from "styled-components";
-import { doc, getDoc, onSnapshot } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  limit,
+  onSnapshot,
+  orderBy,
+  query,
+  where,
+} from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 
 const Wrap = styled.section`
@@ -491,14 +501,40 @@ export default function GoldPriceBoard() {
     }
 
     try {
-      const snap = await getDoc(doc(db, "goldPriceHistory", key));
+      const exactSnap = await getDoc(doc(db, "goldPriceHistory", key));
 
-      if (!snap.exists()) {
-        setHistoryMessage("선택한 날짜에 저장된 시세가 없습니다.");
+      if (exactSnap.exists()) {
+        setHistory({
+          ...exactSnap.data(),
+          lookupDate: key,
+          carriedForward: false,
+        });
         return;
       }
 
-      setHistory(snap.data());
+      /*
+       * 과거 데이터에는 시세 변동이 없는 날의 별도 문서가 없을 수 있습니다.
+       * 그런 날짜는 선택일 이전(포함)의 가장 최근 공개 시세를 적용 시세로 표시합니다.
+       */
+      const fallbackQuery = query(
+        collection(db, "goldPriceHistory"),
+        where("sourceDate", "<=", key),
+        orderBy("sourceDate", "desc"),
+        limit(1)
+      );
+      const fallbackSnapshot = await getDocs(fallbackQuery);
+      const fallbackDoc = fallbackSnapshot.docs[0];
+
+      if (!fallbackDoc) {
+        setHistoryMessage("선택한 날짜까지 저장된 시세가 없습니다.");
+        return;
+      }
+
+      setHistory({
+        ...(fallbackDoc.data() || {}),
+        lookupDate: key,
+        carriedForward: true,
+      });
     } catch (error) {
       console.warn(
         "[GoldPriceBoard] 과거 시세 조회 실패:",
@@ -606,8 +642,16 @@ export default function GoldPriceBoard() {
                   {historyMessage || (
                     <>
                       <strong>
-                        {formatDateKey(history.sourceDate)} 최종 시세
+                        {formatDateKey(history.lookupDate || history.sourceDate)}{" "}
+                        {history.carriedForward ? "적용 시세" : "최종 시세"}
                       </strong>
+
+                      {history.carriedForward && (
+                        <div>
+                          시세 변동이 없어 직전 공개 시세가 적용되었습니다.{" "}
+                          마지막 저장 기준일 {formatDateKey(history.sourceDate)}
+                        </div>
+                      )}
 
                       <HistoryGrid>
                         {FIELD_ROWS.map(([key, label, type]) => {
