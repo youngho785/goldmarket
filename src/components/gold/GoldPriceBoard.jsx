@@ -139,18 +139,28 @@ const HeadCell = styled(Cell)`
   font-weight: 900;
 
   small {
-    display: block;
-    margin-top: 2px;
-    color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: 0.6rem;
-    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 3px;
+    padding: 2px 6px;
+    border: 1px solid
+      color-mix(in srgb, ${({ theme }) => theme.colors.gold} 26%, ${({ theme }) => theme.colors.border});
+    border-radius: 999px;
+    background: ${({ theme }) => theme.semantic.badgeGoldBg};
+    color: ${({ theme }) => theme.colors.secondaryDark};
+    font-size: 0.61rem;
+    font-weight: 900;
+    line-height: 1.2;
+    letter-spacing: 0.02em;
   }
 
   @media (max-width: 520px) {
     font-size: 0.7rem;
 
     small {
-      font-size: 0.55rem;
+      padding: 1px 5px;
+      font-size: 0.56rem;
     }
   }
 `;

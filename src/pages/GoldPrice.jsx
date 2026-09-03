@@ -229,8 +229,28 @@ const Source = styled.span`
   font-size: 0.72rem;
   font-weight: 700;
 
+  b {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 2px;
+    padding: 2px 6px;
+    border: 1px solid rgba(242, 196, 95, 0.28);
+    border-radius: 999px;
+    background: rgba(242, 196, 95, 0.1);
+    color: #f2c45f;
+    font-size: 0.68rem;
+    font-weight: 950;
+    line-height: 1.2;
+    letter-spacing: 0.02em;
+  }
+
   @media (max-width: 760px) {
     font-size: 0.58rem;
+
+    b {
+      padding: 1px 5px;
+      font-size: 0.56rem;
+    }
   }
 `;
 
@@ -391,9 +411,29 @@ const SectionNote = styled.p`
   line-height: 1.55;
   word-break: keep-all;
 
+  b {
+    display: inline-flex;
+    align-items: center;
+    margin: 0 2px;
+    padding: 2px 6px;
+    border: 1px solid rgba(200, 146, 47, 0.2);
+    border-radius: 999px;
+    background: var(--gold-soft);
+    color: #9a6918;
+    font-size: 0.72rem;
+    font-weight: 950;
+    line-height: 1.2;
+    letter-spacing: 0.02em;
+  }
+
   @media (max-width: 760px) {
     font-size: 0.66rem;
     line-height: 1.4;
+
+    b {
+      padding: 1px 5px;
+      font-size: 0.61rem;
+    }
   }
 `;
 
@@ -510,6 +550,15 @@ const CardMetric = styled.div`
     color: #777d83;
     font-size: 0.67rem;
     font-weight: 800;
+
+    small {
+      margin-left: 4px;
+      color: #a87418;
+      font-size: 0.58rem;
+      font-weight: 950;
+      letter-spacing: 0.01em;
+      white-space: nowrap;
+    }
   }
 
   strong {
@@ -531,6 +580,11 @@ const CardMetric = styled.div`
     span {
       font-size: 0.48rem;
       line-height: 1.25;
+
+      small {
+        margin-left: 2px;
+        font-size: 0.42rem;
+      }
     }
 
     strong {
@@ -1731,7 +1785,7 @@ export default function GoldPrice() {
                         ? "시세 확인 중"
                         : "관리자 공개 후 표시"}
                   </span>
-                  <Source>기준일 {referenceDate} · VAT 포함</Source>
+                  <Source>기준일 {referenceDate} · <b>VAT 포함</b></Source>
                 </ChangeLine>
               </HeroPriceBlock>
             </HeroCopy>
@@ -1762,7 +1816,7 @@ export default function GoldPrice() {
               </SectionTitle>
             </div>
             <SectionNote>
-              1돈(3.75g) 기준 · 내가 살 때 VAT 포함 · 단위 원
+              1돈(3.75g) 기준 · 내가 살 때 <b>VAT 포함</b> · 단위 원
             </SectionNote>
           </SectionHead>
 
@@ -1788,7 +1842,7 @@ export default function GoldPrice() {
 
                   <CardBody>
                     <CardMetric>
-                      <span>살 때</span>
+                      <span>살 때 <small>(VAT 포함)</small></span>
                       <strong>
                         {!pagePriceAvailable
                           ? "-"
@@ -1831,7 +1885,10 @@ export default function GoldPrice() {
               </MatrixCell>
             ))}
 
-            <MatrixCell $first $label>살 때</MatrixCell>
+            <MatrixCell $first $label>
+              살 때
+              <small>VAT 포함</small>
+            </MatrixCell>
             {marketRows.map((row) => {
               const showProductText =
                 row.sellKey === "gold14kSellPerDon" &&

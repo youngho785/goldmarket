@@ -92,6 +92,23 @@ const PriceCell = styled.div`
     color: color-mix(in srgb, ${({ theme }) => theme.on.primary} 69%, transparent);
     font-size: 0.61rem;
     font-weight: 800;
+
+    b {
+      display: inline-flex;
+      align-items: center;
+      margin-left: 4px;
+      padding: 1px 5px;
+      border: 1px solid
+        color-mix(in srgb, ${({ theme }) => theme.colors.goldLight} 30%, transparent);
+      border-radius: 999px;
+      background: color-mix(in srgb, ${({ theme }) => theme.colors.goldLight} 11%, transparent);
+      color: ${({ theme }) => theme.colors.goldLight};
+      font-size: 0.55rem;
+      font-weight: 950;
+      line-height: 1.25;
+      letter-spacing: 0.02em;
+      vertical-align: middle;
+    }
   }
 
   strong {
@@ -297,7 +314,7 @@ export default function AppGoldPriceSummary() {
         <>
           <PriceGrid>
             <PriceCell>
-              <span>내가 살 때 · VAT 포함</span>
+              <span>내가 살 때 <b>VAT 포함</b></span>
               <strong>{formatWon(pureGold.buy)}</strong>
               <ChangeView change={pureGold.buyChange} />
             </PriceCell>
