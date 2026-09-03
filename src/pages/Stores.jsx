@@ -1,3 +1,4 @@
+//src/pages/Stores.jsx
 import React from "react";
 import styled from "styled-components";
 import {
@@ -21,133 +22,224 @@ const STORE = {
 };
 
 const Page = styled.main`
+  width: 100%;
   max-width: 1120px;
   margin: 0 auto;
-  padding: 30px 0 68px;
+  padding: 18px 0 46px;
+
+  @media (max-width: 720px) {
+    padding: 8px 0 18px;
+  }
 `;
 
 const Header = styled.header`
-  padding: clamp(30px, 5vw, 56px);
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-top: 3px solid ${({ theme }) => theme.colors.secondary};
-  background: ${({ theme }) => theme.colors.surface};
+  position: relative;
+  overflow: hidden;
+  padding: clamp(24px, 4.5vw, 44px);
+  border: 1px solid
+    color-mix(in srgb, ${({ theme }) => theme.colors.primary} 72%, transparent);
+  border-radius: 24px;
+  background: ${({ theme }) => theme.gradients.primary};
+  color: ${({ theme }) => theme.on.primary};
+  box-shadow: 0 12px 30px
+    color-mix(in srgb, ${({ theme }) => theme.colors.primary} 13%, transparent);
+
+  &::after {
+    content: "G";
+    position: absolute;
+    right: -16px;
+    bottom: -52px;
+    color: color-mix(in srgb, ${({ theme }) => theme.colors.gold} 8%, transparent);
+    font-family: ${({ theme }) => theme.fonts.heading};
+    font-size: clamp(8rem, 18vw, 12rem);
+    font-weight: 900;
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  @media (max-width: 540px) {
+    padding: 21px 17px 22px;
+    border-radius: 20px;
+  }
 `;
 
 const Kicker = styled.p`
-  margin: 0 0 9px;
+  position: relative;
+  z-index: 1;
+  margin: 0 0 7px;
   color: ${({ theme }) => theme.colors.secondaryDark};
   font-family: ${({ theme }) => theme.fonts.numeric};
-  font-size: .7rem;
-  font-weight: 850;
-  letter-spacing: .15em;
+  font-size: .64rem;
+  font-weight: 900;
+  letter-spacing: .14em;
+
+  ${Header} & {
+    color: ${({ theme }) => theme.colors.goldLight};
+  }
 `;
 
 const Title = styled.h1`
+  position: relative;
+  z-index: 1;
+  max-width: 760px;
   margin: 0;
-  color: ${({ theme }) => theme.colors.primary};
-  font-size: clamp(2rem, 5vw, 3.55rem);
+  color: ${({ theme }) => theme.on.primary};
+  font-size: clamp(1.8rem, 4.7vw, 3.2rem);
+  line-height: 1.15;
+  letter-spacing: -.04em;
+  word-break: keep-all;
 `;
 
 const Lead = styled.p`
+  position: relative;
+  z-index: 1;
   max-width: 720px;
-  margin: 16px 0 0;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  line-height: 1.85;
+  margin: 10px 0 0;
+  color: color-mix(in srgb, ${({ theme }) => theme.on.primary} 70%, transparent);
+  font-size: .88rem;
+  line-height: 1.65;
+  word-break: keep-all;
 `;
 
 const Layout = styled.div`
   display: grid;
   grid-template-columns: minmax(0, 1.08fr) minmax(330px, .92fr);
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-top: 0;
-  background: ${({ theme }) => theme.colors.surface};
+  gap: 12px;
+  margin-top: 12px;
 
-  @media (max-width: 820px) { grid-template-columns: 1fr; }
+  @media (max-width: 820px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 const StoreInfo = styled.section`
-  padding: clamp(30px, 5vw, 54px);
+  padding: clamp(22px, 4vw, 38px);
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 22px;
+  background: ${({ theme }) => theme.colors.surface};
+  box-shadow: 0 8px 24px
+    color-mix(in srgb, ${({ theme }) => theme.colors.primary} 5%, transparent);
 `;
 
 const StoreHead = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 20px;
-  margin-bottom: 32px;
+  gap: 18px;
+  margin-bottom: 24px;
 
-  h2 { margin: 0; font-size: clamp(1.55rem, 3vw, 2.1rem); }
+  h2 {
+    margin: 0;
+    color: ${({ theme }) => theme.colors.primary};
+    font-size: clamp(1.42rem, 3vw, 1.95rem);
+    letter-spacing: -.03em;
+  }
 `;
 
 const Seal = styled.span`
   display: grid;
   place-items: center;
-  width: 76px;
-  height: 76px;
+  width: 68px;
+  height: 68px;
   flex: 0 0 auto;
   border: 1px solid ${({ theme }) => theme.colors.secondary};
   border-radius: 50%;
+  background: ${({ theme }) => theme.semantic.badgeGoldBg};
   color: ${({ theme }) => theme.colors.secondaryDark};
   font-family: ${({ theme }) => theme.fonts.heading};
-  font-size: .76rem;
-  font-weight: 800;
-  line-height: 1.3;
+  font-size: .69rem;
+  font-weight: 850;
+  line-height: 1.25;
   text-align: center;
-  box-shadow: inset 0 0 0 5px ${({ theme }) => theme.colors.surface},
-    inset 0 0 0 6px ${({ theme }) => theme.colors.secondary}66;
+  box-shadow: inset 0 0 0 4px ${({ theme }) => theme.colors.surface};
+
+  @media (max-width: 390px) {
+    width: 60px;
+    height: 60px;
+    font-size: .63rem;
+  }
 `;
 
 const Details = styled.div`
   display: grid;
-  gap: 0;
   border-top: 1px solid ${({ theme }) => theme.colors.border};
 `;
 
 const Detail = styled.div`
   display: grid;
-  grid-template-columns: 110px 1fr;
-  gap: 16px;
-  padding: 17px 0;
+  grid-template-columns: 105px minmax(0, 1fr);
+  gap: 14px;
+  padding: 14px 0;
   border-bottom: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
 
   > span:first-child {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 7px;
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .82rem;
+    font-size: .76rem;
     font-weight: 800;
   }
-  svg { color: ${({ theme }) => theme.colors.secondaryDark}; }
-  a, strong { color: ${({ theme }) => theme.colors.primary}; font-weight: 800; }
 
-  @media (max-width: 460px) { grid-template-columns: 1fr; gap: 5px; }
+  svg {
+    color: ${({ theme }) => theme.colors.secondaryDark};
+  }
+
+  a,
+  strong {
+    color: ${({ theme }) => theme.colors.primary};
+    font-size: .86rem;
+    font-weight: 850;
+    word-break: keep-all;
+  }
+
+  @media (max-width: 460px) {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
 `;
 
 const Actions = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: 9px;
-  margin-top: 28px;
+  gap: 8px;
+  margin-top: 22px;
+
+  @media (max-width: 540px) {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+
+    > a:first-child {
+      grid-column: 1 / -1;
+    }
+  }
 `;
 
 const PrimaryAction = styled.a`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 9px;
-  min-height: 50px;
-  padding: 11px 18px;
-  background: ${({ theme }) => theme.colors.primary};
-  color: white;
-  font-weight: 820;
+  gap: 8px;
+  min-height: 48px;
+  padding: 10px 16px;
+  border: 1px solid
+    color-mix(in srgb, ${({ theme }) => theme.colors.gold} 12%, transparent);
+  border-radius: 13px;
+  background: ${({ theme }) => theme.gradients.primary};
+  color: ${({ theme }) => theme.colors.goldLight};
+  font-size: .82rem;
+  font-weight: 850;
+  text-decoration: none;
 
-  &:hover { color: white; background: ${({ theme }) => theme.colors.primaryDark}; }
+  &:hover {
+    color: ${({ theme }) => theme.colors.goldLight};
+    filter: brightness(1.04);
+  }
 `;
 
 const OutlineAction = styled(PrimaryAction)`
-  border: 1px solid ${({ theme }) => theme.colors.borderStrong};
-  background: transparent;
+  border-color: ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.primary};
 
   &:hover {
@@ -158,63 +250,83 @@ const OutlineAction = styled(PrimaryAction)`
 `;
 
 const VisitGuide = styled.aside`
-  padding: clamp(30px, 5vw, 54px);
-  border-left: 1px solid ${({ theme }) => theme.colors.border};
+  padding: clamp(22px, 4vw, 38px);
+  border: 1px solid
+    color-mix(in srgb, ${({ theme }) => theme.colors.gold} 22%, ${({ theme }) => theme.colors.border});
+  border-radius: 22px;
   background:
-    linear-gradient(color-mix(in srgb, ${({ theme }) => theme.colors.primary} 4%, transparent) 1px, transparent 1px),
-    ${({ theme }) => theme.colors.surfaceAlt};
-  background-size: 100% 31px, auto;
-
-  @media (max-width: 820px) {
-    border-top: 1px solid ${({ theme }) => theme.colors.border};
-    border-left: 0;
-  }
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 55%, white) 0%,
+      ${({ theme }) => theme.colors.surfaceAlt} 68%
+    );
 `;
 
 const GuideTitle = styled.h2`
-  margin-bottom: 24px;
-  font-size: 1.5rem;
+  margin: 0 0 20px;
+  color: ${({ theme }) => theme.colors.primary};
+  font-size: clamp(1.25rem, 3vw, 1.55rem);
+  letter-spacing: -.025em;
 `;
 
 const Checklist = styled.ol`
   display: grid;
-  gap: 18px;
+  gap: 15px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
   counter-reset: visit;
 
   li {
     display: grid;
-    grid-template-columns: 34px 1fr;
-    gap: 13px;
+    grid-template-columns: 32px minmax(0, 1fr);
+    gap: 11px;
     color: ${({ theme }) => theme.colors.textSecondary};
     counter-increment: visit;
+    font-size: .82rem;
+    line-height: 1.5;
   }
+
   li::before {
     content: counter(visit, decimal-leading-zero);
     display: grid;
     place-items: center;
-    width: 34px;
-    height: 34px;
-    border: 1px solid ${({ theme }) => theme.colors.secondary};
-    color: ${({ theme }) => theme.colors.secondaryDark};
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background: ${({ theme }) => theme.colors.primary};
+    color: ${({ theme }) => theme.colors.goldLight};
     font-family: ${({ theme }) => theme.fonts.numeric};
-    font-size: .68rem;
-    font-weight: 850;
+    font-size: .64rem;
+    font-weight: 900;
   }
-  strong { display: block; margin-bottom: 3px; color: ${({ theme }) => theme.colors.primary}; }
+
+  strong {
+    display: block;
+    margin-bottom: 2px;
+    color: ${({ theme }) => theme.colors.primary};
+    font-size: .86rem;
+  }
 `;
 
 const Assurance = styled.div`
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  margin-top: 30px;
-  padding: 17px;
+  gap: 9px;
+  margin-top: 24px;
+  padding: 13px 14px;
   border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 14px;
   background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: .83rem;
+  font-size: .76rem;
+  line-height: 1.5;
 
-  svg { flex: 0 0 auto; margin-top: 2px; color: ${({ theme }) => theme.colors.success}; }
+  svg {
+    flex: 0 0 auto;
+    margin-top: 1px;
+    color: ${({ theme }) => theme.colors.success};
+  }
 `;
 
 const toTel = (phone) => `tel:${phone.replace(/\D/g, "")}`;

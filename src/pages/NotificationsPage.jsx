@@ -13,28 +13,94 @@ import {
 const PAGE_SIZE = 30;
 
 const Wrap = styled.div`
-  max-width: 860px;
+  max-width: 760px;
   margin: 0 auto;
-  padding: 8px 0 30px;
+  padding: 7px 0 28px;
 `;
+const HeaderCard = styled.header`
+  position: relative;
+  margin-bottom: 10px;
+  padding: clamp(20px, 4vw, 29px);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.primary} 78%, transparent);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 92% 8%, color-mix(in srgb, ${({ theme }) => theme.colors.gold} 16%, transparent) 0, transparent 31%),
+    ${({ theme }) => theme.gradients.primary};
+  box-shadow: 0 12px 30px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 12%, transparent);
+
+  &::after {
+    content: "N";
+    position: absolute;
+    right: -5px;
+    bottom: -35px;
+    color: color-mix(in srgb, ${({ theme }) => theme.colors.goldLight} 7%, transparent);
+    font-family: ${({ theme }) => theme.fonts.heading};
+    font-size: 7.6rem;
+    font-weight: 950;
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  @media (max-width: 560px) {
+    padding: 16px 14px 14px;
+    border-radius: 19px;
+  }
+`;
+
 const H1 = styled.h1`
-  color: ${({ theme }) => theme.colors.text};
-  margin-bottom: 18px;
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  color: ${({ theme }) => theme.on.primary};
+  font-size: clamp(1.55rem, 4vw, 2.15rem);
+  line-height: 1.14;
+  letter-spacing: -.04em;
+
+  &::before {
+    content: "NOTIFICATIONS";
+    display: block;
+    margin-bottom: 7px;
+    color: ${({ theme }) => theme.colors.goldLight};
+    font-size: .61rem;
+    font-weight: 950;
+    letter-spacing: .14em;
+  }
 `;
 const Toolbar = styled.div`
+  position: relative;
+  z-index: 1;
   display: flex;
-  gap: 8px;
+  gap: 7px;
   align-items: center;
-  margin-bottom: 12px;
+  margin-top: 13px;
   flex-wrap: wrap;
+  color: color-mix(in srgb, ${({ theme }) => theme.on.primary} 70%, transparent);
+  font-size: .78rem;
+
+  strong {
+    color: ${({ theme }) => theme.colors.goldLight};
+  }
+
+  small {
+    color: color-mix(in srgb, ${({ theme }) => theme.on.primary} 54%, transparent);
+  }
+
+  button {
+    border-color: color-mix(in srgb, ${({ theme }) => theme.on.primary} 16%, transparent);
+    background: color-mix(in srgb, ${({ theme }) => theme.on.primary} 8%, transparent);
+    color: ${({ theme }) => theme.on.primary};
+  }
 `;
 const Button = styled.button`
-  min-height: 42px;
-  padding: 8px 12px;
+  min-height: 38px;
+  padding: 7px 11px;
   border: 1px solid ${({ theme }) => theme.colors.border};
   background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.text};
+  color: ${({ theme }) => theme.colors.primary};
   border-radius: 10px;
+  font-size: .78rem;
+  font-weight: 850;
   cursor: pointer;
 
   &:disabled {
@@ -48,39 +114,86 @@ const List = styled.ul`
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 `;
 const Item = styled.li`
-  border: 1px solid ${({ theme }) => theme.colors.border};
+  position: relative;
+  overflow: hidden;
+  border: 1px solid
+    ${({ $unread, theme }) =>
+      $unread
+        ? `color-mix(in srgb, ${theme.colors.gold} 28%, ${theme.colors.border})`
+        : theme.colors.border};
   background: ${({ $unread, theme }) =>
-    $unread ? theme.semantic.alertInfoBg : theme.colors.surface};
-  border-radius: 14px;
-  padding: 14px 16px;
+    $unread
+      ? `linear-gradient(135deg, color-mix(in srgb, ${theme.semantic.badgeGoldBg} 54%, white), ${theme.colors.surface})`
+      : theme.colors.surface};
+  border-radius: 16px;
+  padding: 13px 14px 13px 17px;
   cursor: pointer;
-  box-shadow: ${({ theme }) => theme.shadows.card};
-  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+  box-shadow: 0 7px 20px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 5%, transparent);
+  transition: transform .18s ease, border-color .18s ease;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 11px auto 11px 0;
+    width: 3px;
+    border-radius: 0 999px 999px 0;
+    background: ${({ $unread, theme }) =>
+      $unread ? theme.colors.secondary : "transparent"};
+  }
 
   &:hover {
     transform: translateY(-1px);
-    box-shadow: ${({ theme }) => theme.shadows.hover};
     border-color: ${({ theme }) => theme.colors.borderStrong};
   }
 `;
 const Title = styled.div`
-  font-weight: 700;
+  color: ${({ theme }) => theme.colors.primary};
+  font-size: .9rem;
+  font-weight: 900;
+  line-height: 1.35;
 `;
 const Body = styled.div`
   color: ${({ theme }) => theme.colors.textSecondary};
   margin-top: 4px;
+  font-size: .8rem;
+  line-height: 1.5;
 `;
 const Time = styled.div`
-  font-size: .85rem;
-  color: ${({ theme }) => theme.colors.textLight};
   margin-top: 6px;
+  color: ${({ theme }) => theme.colors.textLight};
+  font-family: ${({ theme }) => theme.fonts.numeric};
+  font-size: .68rem;
 `;
 const LoadMore = styled(Button)`
   display: block;
-  margin: 18px auto 0;
+  min-width: 140px;
+  margin: 16px auto 0;
+  border-color: ${({ theme }) => theme.colors.primary};
+  background: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.goldLight};
+`;
+
+
+const ErrorText = styled.p`
+  margin: 0 0 10px;
+  padding: 11px 12px;
+  border-radius: 12px;
+  background: ${({ theme }) => theme.semantic.alertErrorBg};
+  color: ${({ theme }) => theme.semantic.alertErrorText};
+  font-size: .8rem;
+`;
+
+const EmptyState = styled.div`
+  padding: 34px 18px;
+  border: 1px dashed ${({ theme }) => theme.colors.borderStrong};
+  border-radius: 16px;
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: .84rem;
+  text-align: center;
 `;
 
 function formatTimestamp(value) {
@@ -206,29 +319,31 @@ export default function NotificationsPage() {
 
   return (
     <Wrap>
-      <H1>알림</H1>
+      <HeaderCard>
+        <H1>알림</H1>
 
-      <Toolbar>
-        <div>
-          안 읽은 알림: <strong>{unreadNotifications}</strong>건
-          {unreadOnPage !== unreadNotifications && (
-            <small> · 현재 목록 {unreadOnPage}건</small>
+        <Toolbar>
+          <div>
+            안 읽은 알림: <strong>{unreadNotifications}</strong>건
+            {unreadOnPage !== unreadNotifications && (
+              <small> · 현재 목록 {unreadOnPage}건</small>
+            )}
+          </div>
+          {unreadNotifications > 0 && (
+            <Button type="button" disabled={markingAll} onClick={markAll}>
+              {markingAll ? "처리 중…" : "모두 읽음"}
+            </Button>
           )}
-        </div>
-        {unreadNotifications > 0 && (
-          <Button type="button" disabled={markingAll} onClick={markAll}>
-            {markingAll ? "처리 중…" : "모두 읽음"}
+          <Button type="button" onClick={() => navigate(-1)}>
+            ← 돌아가기
           </Button>
-        )}
-        <Button type="button" onClick={() => navigate(-1)}>
-          ← 돌아가기
-        </Button>
-      </Toolbar>
+        </Toolbar>
+      </HeaderCard>
 
-      {error && <p role="alert">{error}</p>}
+      {error && <ErrorText role="alert">{error}</ErrorText>}
 
       {items.length === 0 ? (
-        <p>알림이 없습니다.</p>
+        <EmptyState>새로운 알림이 없습니다.</EmptyState>
       ) : (
         <>
           <List>

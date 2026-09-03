@@ -43,58 +43,103 @@ import {
 const Container = styled.div`
   max-width: 720px;
   margin: 0 auto;
-  padding: 8px 0 32px;
+  padding: 7px 0 22px;
   color: ${({ theme }) => theme.colors.text};
 `;
 
 const PageHeader = styled.div`
-  margin-bottom: 22px;
+  position: relative;
+  margin-bottom: 10px;
+  padding: clamp(21px, 4vw, 30px);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.primary} 78%, transparent);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 92% 8%, color-mix(in srgb, ${({ theme }) => theme.colors.gold} 16%, transparent) 0, transparent 31%),
+    ${({ theme }) => theme.gradients.primary};
+  box-shadow: 0 12px 30px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 12%, transparent);
+
+  &::before {
+    content: "SETTINGS";
+    position: relative;
+    z-index: 1;
+    display: block;
+    margin-bottom: 7px;
+    color: ${({ theme }) => theme.colors.goldLight};
+    font-size: .61rem;
+    font-weight: 950;
+    letter-spacing: .14em;
+  }
+
+  &::after {
+    content: "G";
+    position: absolute;
+    right: -8px;
+    bottom: -34px;
+    color: color-mix(in srgb, ${({ theme }) => theme.colors.goldLight} 7%, transparent);
+    font-family: ${({ theme }) => theme.fonts.heading};
+    font-size: 7.4rem;
+    font-weight: 950;
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  @media (max-width: 560px) {
+    padding: 17px 15px 15px;
+    border-radius: 19px;
+  }
 `;
 
 const Title = styled.h1`
   position: relative;
-  margin: 0 0 10px;
-  padding-bottom: 14px;
-  color: ${({ theme }) => theme.colors.text};
+  z-index: 1;
+  margin: 0;
+  padding: 0;
+  color: ${({ theme }) => theme.on.primary};
+  font-size: clamp(1.55rem, 4vw, 2.15rem);
+  line-height: 1.14;
+  letter-spacing: -.04em;
 
   &::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    bottom: 0;
-    width: 50px;
-    height: 3px;
-    border-radius: 999px;
-    background: ${({ theme }) => theme.gradients.gold};
+    display: none;
   }
 `;
 
 const Intro = styled.p`
-  margin: 0;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  line-height: 1.65;
+  position: relative;
+  z-index: 1;
+  margin: 8px 0 0;
+  color: color-mix(in srgb, ${({ theme }) => theme.on.primary} 68%, transparent);
+  font-size: .76rem;
+  line-height: 1.5;
 `;
 
 const Section = styled.section`
-  margin-bottom: 18px;
-  padding: clamp(20px, 4vw, 28px);
+  margin-bottom: 10px;
+  padding: clamp(16px, 3.6vw, 22px);
   background: ${({ theme }) => theme.colors.surface};
   border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.radii.large};
-  box-shadow: ${({ theme }) => theme.shadows.card};
+  border-radius: 20px;
+  box-shadow: 0 8px 22px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 5%, transparent);
+
+  @media (max-width: 560px) {
+    padding: 14px 13px;
+    border-radius: 18px;
+  }
 `;
 
 const SectionTitle = styled.h2`
-  margin: 0 0 6px;
-  font-size: clamp(1.15rem, 3vw, 1.4rem);
-  color: ${({ theme }) => theme.colors.text};
+  margin: 0 0 5px;
+  font-size: clamp(1.05rem, 3vw, 1.28rem);
+  color: ${({ theme }) => theme.colors.primary};
+  letter-spacing: -.02em;
 `;
 
 const SectionDescription = styled.p`
-  margin: 0 0 14px;
+  margin: 0 0 9px;
   color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: .88rem;
-  line-height: 1.6;
+  font-size: .78rem;
+  line-height: 1.45;
 `;
 
 const Rows = styled.div`
@@ -105,31 +150,31 @@ const Rows = styled.div`
 const Row = styled.div`
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 14px;
+  gap: 10px;
   align-items: center;
-  padding: 15px 0;
+  padding: 11px 0;
   border-bottom: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
 `;
 
 const RowText = styled.span`
   display: grid;
-  gap: 4px;
+  gap: 2px;
 
   strong {
-    color: ${({ theme }) => theme.colors.text};
-    font-size: .96rem;
+    color: ${({ theme }) => theme.colors.primary};
+    font-size: .9rem;
   }
 
   small {
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .82rem;
-    line-height: 1.5;
+    font-size: .75rem;
+    line-height: 1.4;
   }
 
   em {
     color: ${({ theme }) => theme.colors.textLight};
-    font-size: .76rem;
-    line-height: 1.45;
+    font-size: .72rem;
+    line-height: 1.4;
     font-style: normal;
   }
 `;
@@ -140,8 +185,8 @@ const Switch = styled.div`
   width: 92px;
   height: 34px;
   padding: 3px;
-  border: 1px solid ${({ theme }) => theme.colors.borderStrong};
-  border-radius: 7px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 999px;
   background: ${({ theme }) => theme.colors.surfaceAlt};
 `;
 
@@ -152,12 +197,12 @@ const SwitchOption = styled.button`
   min-width: 0;
   padding: 0;
   border: 0;
-  border-radius: 4px;
+  border-radius: 999px;
   background: ${({ $active, theme }) =>
     $active ? theme.colors.primary : "transparent"};
   color: ${({ $active, theme }) =>
-    $active ? theme.on.primary : theme.colors.textSecondary};
-  font-size: .72rem;
+    $active ? theme.colors.goldLight : theme.colors.textSecondary};
+  font-size: .7rem;
   font-weight: 900;
   cursor: pointer;
 
@@ -169,18 +214,18 @@ const SwitchOption = styled.button`
 
 const Notice = styled.div`
   display: grid;
-  gap: 9px;
-  margin-top: 12px;
-  padding: 13px 14px;
+  gap: 6px;
+  margin-top: 9px;
+  padding: 10px 11px;
   border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 10px;
+  border-radius: 12px;
   background: ${({ theme }) => theme.colors.surfaceAlt};
   color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: .84rem;
-  line-height: 1.55;
+  font-size: .78rem;
+  line-height: 1.5;
 
   strong {
-    color: ${({ theme }) => theme.colors.text};
+    color: ${({ theme }) => theme.colors.primary};
   }
 `;
 
@@ -196,12 +241,12 @@ const Button = styled.button`
   justify-content: center;
   gap: 7px;
   min-height: 42px;
-  padding: 9px 14px;
+  padding: 9px 13px;
   border: 1px solid ${({ theme }) => theme.colors.primary};
-  border-radius: ${({ theme }) => theme.radii.small};
+  border-radius: 10px;
   background: ${({ theme }) => theme.colors.primary};
-  color: ${({ theme }) => theme.on.primary};
-  font-weight: 800;
+  color: ${({ theme }) => theme.colors.goldLight};
+  font-weight: 850;
   cursor: pointer;
 
   &:disabled {
@@ -216,6 +261,7 @@ const Button = styled.button`
 `;
 
 const OutlineButton = styled(Button)`
+  border-color: ${({ theme }) => theme.colors.borderStrong};
   background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.primary};
 `;
@@ -228,8 +274,8 @@ const DangerButton = styled(Button)`
 const StatusGrid = styled.dl`
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 9px;
-  margin: 14px 0 0;
+  gap: 7px;
+  margin: 12px 0 0;
 
   @media (max-width: 560px) {
     grid-template-columns: 1fr;
@@ -241,15 +287,15 @@ const StatusItem = styled.div`
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 44px;
-  padding: 9px 11px;
+  min-height: 42px;
+  padding: 9px 10px;
   border: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
-  border-radius: 9px;
+  border-radius: 11px;
   background: ${({ theme }) => theme.colors.surfaceAlt};
 
   dt {
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .78rem;
+    font-size: .74rem;
   }
 
   dd {
@@ -281,18 +327,18 @@ const Status = styled.span`
 `;
 
 const AdvancedDetails = styled.details`
-  margin-top: 14px;
-  padding: 0 14px;
+  margin-top: 12px;
+  padding: 0 13px;
   border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 10px;
+  border-radius: 12px;
   background: ${({ theme }) => theme.colors.surface};
 
   summary {
-    padding: 13px 0;
+    padding: 12px 0;
     cursor: pointer;
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .84rem;
-    font-weight: 800;
+    font-size: .79rem;
+    font-weight: 850;
   }
 `;
 
@@ -360,10 +406,16 @@ const Input = styled.input`
   min-height: 46px;
   padding: 10px 12px;
   border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.radii.small};
+  border-radius: 11px;
   background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.text};
-  font-size: 1rem;
+  font-size: .96rem;
+
+  &:focus {
+    outline: 2px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 25%, transparent);
+    outline-offset: 1px;
+    border-color: ${({ theme }) => theme.colors.secondary};
+  }
 `;
 
 const LinkList = styled.div`
@@ -375,17 +427,18 @@ const SettingLink = styled(Link)`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 15px 0;
+  gap: 10px;
+  padding: 11px 0;
   border-bottom: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
-  color: ${({ theme }) => theme.colors.text};
+  color: ${({ theme }) => theme.colors.primary};
   text-decoration: none;
-  font-weight: 750;
+  font-size: .88rem;
+  font-weight: 800;
 
   svg {
-    width: 18px;
-    height: 18px;
-    color: ${({ theme }) => theme.colors.textSecondary};
+    width: 17px;
+    height: 17px;
+    color: ${({ theme }) => theme.colors.secondaryDark};
   }
 `;
 
@@ -412,29 +465,33 @@ const DangerNote = styled.p`
 const NotificationSummary = styled.div`
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 14px;
+  gap: 10px;
   align-items: center;
-  margin-top: 14px;
-  padding: 16px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 12px;
-  background: ${({ theme }) => theme.colors.surfaceAlt};
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 18%, ${({ theme }) => theme.colors.border});
+  border-radius: 14px;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 48%, white),
+    ${({ theme }) => theme.colors.surface}
+  );
 
   > div {
     display: grid;
-    gap: 5px;
+    gap: 4px;
   }
 
   strong {
-    color: ${({ theme }) => theme.colors.text};
-    font-size: .96rem;
+    color: ${({ theme }) => theme.colors.primary};
+    font-size: .92rem;
   }
 
   p {
     margin: 0;
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .84rem;
-    line-height: 1.55;
+    font-size: .79rem;
+    line-height: 1.5;
   }
 
   @media (max-width: 560px) {
@@ -443,18 +500,18 @@ const NotificationSummary = styled.div`
 `;
 
 const TroubleshootDetails = styled.details`
-  margin-top: 14px;
-  padding: 0 14px;
+  margin-top: 10px;
+  padding: 0 11px;
   border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 10px;
+  border-radius: 12px;
   background: ${({ theme }) => theme.colors.surface};
 
   > summary {
     position: relative;
-    padding: 14px 24px 14px 0;
+    padding: 11px 24px 11px 0;
     cursor: pointer;
     color: ${({ theme }) => theme.colors.primary};
-    font-size: .88rem;
+    font-size: .82rem;
     font-weight: 850;
     list-style: none;
   }
@@ -469,7 +526,7 @@ const TroubleshootDetails = styled.details`
     right: 2px;
     top: 50%;
     transform: translateY(-50%);
-    color: ${({ theme }) => theme.colors.textSecondary};
+    color: ${({ theme }) => theme.colors.secondaryDark};
     font-size: 1.2rem;
     transition: transform .16s ease;
   }
@@ -486,7 +543,7 @@ const SettingDetails = styled.details`
     position: relative;
     display: grid;
     gap: 4px;
-    padding: 16px 30px 16px 0;
+    padding: 13px 28px 13px 0;
     cursor: pointer;
     list-style: none;
   }
@@ -524,8 +581,8 @@ const SettingDetails = styled.details`
 
 const DetailsBody = styled.div`
   display: grid;
-  gap: 14px;
-  padding: 2px 0 18px;
+  gap: 11px;
+  padding: 2px 0 14px;
 `;
 
 const DangerDetails = styled(SettingDetails)`

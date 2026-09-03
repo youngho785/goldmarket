@@ -29,7 +29,7 @@ const Section = styled.section`
   padding: clamp(34px, 4.1vw, 50px) 0;
 
   @media (max-width: 540px) {
-    padding: 28px 0;
+    padding: 25px 0;
   }
 `;
 
@@ -73,9 +73,12 @@ const PrimaryLink = styled(Link)`
   gap: 10px;
   min-height: 52px;
   padding: 13px 22px;
-  background: ${({ theme }) => theme.colors.primary};
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 12%, transparent);
+  border-radius: 14px;
+  background: ${({ theme }) => theme.gradients.primary};
   color: ${({ theme }) => theme.colors.white};
   font-weight: 850;
+  box-shadow: 0 9px 22px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 14%, transparent);
 
   &:hover {
     color: ${({ theme }) => theme.colors.white};
@@ -257,8 +260,11 @@ const HeroMicro = styled.ul`
 `;
 
 const HeroProof = styled.aside`
-  border: 1px solid ${({ theme }) => theme.colors.border};
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 18%, ${({ theme }) => theme.colors.border});
+  border-radius: 22px;
   background: ${({ theme }) => theme.colors.surface};
+  box-shadow: 0 14px 34px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 10%, transparent);
 `;
 
 const HeroProofTop = styled.div`
@@ -355,9 +361,11 @@ const JourneyCard = styled(Link)`
   min-height: 118px;
   padding: 17px 16px;
   border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 18px;
   background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.text};
   text-decoration: none;
+  box-shadow: 0 7px 20px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 5%, transparent);
   transition:
     transform ${({ theme }) => theme.transitions.base},
     box-shadow ${({ theme }) => theme.transitions.base},
@@ -428,8 +436,11 @@ const CompareGrid = styled.div`
   grid-template-columns: minmax(0, 2fr) 44px minmax(0, 3fr);
   align-items: stretch;
   margin-top: 22px;
+  overflow: hidden;
   border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 22px;
   background: ${({ theme }) => theme.colors.surface};
+  box-shadow: 0 10px 26px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 5%, transparent);
 
   @media (max-width: 760px) {
     grid-template-columns: 1fr;
@@ -569,9 +580,15 @@ const DrawerSection = styled(Section)`
   position: relative;
   margin: clamp(20px, 2.6vw, 30px) 0;
   padding: clamp(34px, 4vw, 44px) clamp(20px, 3vw, 34px);
-  border-top: 1px solid ${({ theme }) => theme.colors.border};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-  background: ${({ theme }) => theme.colors.surfaceAlt};
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 18%, ${({ theme }) => theme.colors.border});
+  border-radius: 22px;
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 52%, white) 0%,
+      ${({ theme }) => theme.colors.surfaceAlt} 62%
+    );
+  box-shadow: 0 10px 26px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 5%, transparent);
 
   &::before {
     content: "";
@@ -611,7 +628,9 @@ const BrandStoryGrid = styled.div`
 const StoryItems = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
+  overflow: hidden;
   border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 18px;
   background: ${({ theme }) => theme.colors.surface};
 
   @media (max-width: 540px) {
@@ -670,6 +689,7 @@ const ValueStory = styled.div`
   justify-content: center;
   padding: clamp(20px, 2.5vw, 26px);
   border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 18px;
   background: ${({ theme }) => theme.colors.surface};
 
   small {
@@ -703,7 +723,9 @@ const ValuePath = styled.div`
   grid-template-columns: 1fr 32px 1fr 32px 1fr;
   align-items: stretch;
   margin-top: 12px;
+  overflow: hidden;
   border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 18px;
   background: ${({ theme }) => theme.colors.surface};
 
   > svg {
@@ -799,7 +821,9 @@ const TrustGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   margin-top: 18px;
+  overflow: hidden;
   border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 20px;
   background: ${({ theme }) => theme.colors.surface};
 
   @media (max-width: 760px) {
@@ -846,7 +870,9 @@ const ProcessGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   margin-top: 16px;
+  overflow: hidden;
   border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 20px;
   background: ${({ theme }) => theme.colors.surface};
 
   @media (max-width: 760px) {
@@ -899,8 +925,11 @@ const Verification = styled.section`
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(340px, .95fr);
   margin: clamp(30px, 4vw, 44px) 0;
+  overflow: hidden;
   border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 22px;
   background: ${({ theme }) => theme.colors.surface};
+  box-shadow: 0 10px 28px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 6%, transparent);
 
   @media (max-width: 900px) {
     grid-template-columns: 1fr;
@@ -963,8 +992,11 @@ const QuizBanner = styled.section`
   gap: 20px;
   margin: 16px 0 clamp(34px, 4vw, 44px);
   padding: clamp(22px, 3vw, 28px);
-  background: ${({ theme }) => theme.colors.primary};
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 18%, transparent);
+  border-radius: 22px;
+  background: ${({ theme }) => theme.gradients.primary};
   color: ${({ theme }) => theme.colors.white};
+  box-shadow: 0 12px 30px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 12%, transparent);
 
   small {
     color: ${({ theme }) => theme.colors.goldLight};
@@ -999,6 +1031,7 @@ const QuizLink = styled(Link)`
   min-height: 46px;
   padding: 10px 17px;
   border: 1px solid ${({ theme }) => theme.colors.secondary};
+  border-radius: 13px;
   background: ${({ theme }) => theme.colors.secondary};
   color: ${({ theme }) => theme.colors.white};
   font-weight: 850;
@@ -1047,8 +1080,15 @@ const FinalCTA = styled.section`
   gap: 28px;
   margin: 0 0 28px;
   padding: clamp(24px, 3.5vw, 34px);
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  background: ${({ theme }) => theme.colors.surface};
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 16%, ${({ theme }) => theme.colors.border});
+  border-radius: 22px;
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 42%, white) 0%,
+      ${({ theme }) => theme.colors.surface} 60%
+    );
+  box-shadow: 0 10px 26px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 5%, transparent);
 
   &::before {
     content: "";

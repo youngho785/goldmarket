@@ -25,35 +25,91 @@ import {
 const Container = styled.div`
   max-width: 720px;
   margin: 0 auto;
-  padding: 8px 0 32px;
+  padding: 7px 0 28px;
   color: ${({ theme }) => theme.colors.text};
+`;
+
+
+const ProfileHero = styled.header`
+  position: relative;
+  margin-bottom: 10px;
+  padding: clamp(21px, 4vw, 30px);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.primary} 78%, transparent);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 92% 8%, color-mix(in srgb, ${({ theme }) => theme.colors.gold} 16%, transparent) 0, transparent 31%),
+    ${({ theme }) => theme.gradients.primary};
+  box-shadow: 0 12px 30px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 12%, transparent);
+
+  &::after {
+    content: "G";
+    position: absolute;
+    right: -8px;
+    bottom: -34px;
+    color: color-mix(in srgb, ${({ theme }) => theme.colors.goldLight} 7%, transparent);
+    font-family: ${({ theme }) => theme.fonts.heading};
+    font-size: 7.4rem;
+    font-weight: 950;
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  @media (max-width: 560px) {
+    padding: 17px 15px 15px;
+    border-radius: 19px;
+  }
+`;
+
+const ProfileEyebrow = styled.p`
+  position: relative;
+  z-index: 1;
+  margin: 0 0 7px;
+  color: ${({ theme }) => theme.colors.goldLight};
+  font-size: .61rem;
+  font-weight: 950;
+  letter-spacing: .14em;
+`;
+
+const ProfileHeroTitle = styled.h1`
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  color: ${({ theme }) => theme.on.primary};
+  font-size: clamp(1.55rem, 4vw, 2.15rem);
+  line-height: 1.14;
+  letter-spacing: -.04em;
+`;
+
+const ProfileHeroLead = styled.p`
+  position: relative;
+  z-index: 1;
+  margin: 8px 0 0;
+  color: color-mix(in srgb, ${({ theme }) => theme.on.primary} 68%, transparent);
+  font-size: .76rem;
+  line-height: 1.5;
 `;
 
 const Section = styled.section`
-  margin-bottom: 18px;
-  padding: clamp(20px, 4vw, 28px);
+  margin-bottom: 12px;
+  padding: clamp(18px, 4vw, 25px);
   background: ${({ theme }) => theme.colors.surface};
   border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.radii.large};
-  box-shadow: ${({ theme }) => theme.shadows.card};
+  border-radius: 20px;
+  box-shadow: 0 8px 22px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 5%, transparent);
+
+  @media (max-width: 560px) {
+    padding: 16px 14px;
+    border-radius: 18px;
+  }
 `;
 
 const Title = styled.h1`
-  position: relative;
-  margin: 0 0 26px;
-  padding-bottom: 14px;
-  color: ${({ theme }) => theme.colors.text};
-
-  &::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    bottom: 0;
-    width: 50px;
-    height: 3px;
-    border-radius: 999px;
-    background: ${({ theme }) => theme.gradients.gold};
-  }
+  margin: 0 0 18px;
+  color: ${({ theme }) => theme.colors.primary};
+  font-size: clamp(1.35rem, 4vw, 1.75rem);
+  line-height: 1.2;
+  letter-spacing: -.03em;
 `;
 
 const Form = styled.form`
@@ -68,34 +124,46 @@ const FormGroup = styled.div`
 `;
 
 const Label = styled.label`
-  margin-bottom: 7px;
-  color: ${({ theme }) => theme.colors.text};
-  font-weight: 750;
+  margin-bottom: 6px;
+  color: ${({ theme }) => theme.colors.primary};
+  font-size: .86rem;
+  font-weight: 850;
 `;
 
 const Input = styled.input`
   min-height: 46px;
   padding: 10px 12px;
   border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.radii.small};
+  border-radius: 11px;
   background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.text};
-  font-size: 1rem;
+  font-size: .96rem;
 
   &[disabled] {
     background: ${({ theme }) => theme.colors.surfaceAlt};
   }
+
+  &:focus {
+    outline: 2px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 25%, transparent);
+    outline-offset: 1px;
+    border-color: ${({ theme }) => theme.colors.secondary};
+  }
 `;
 
 const ImgPreview = styled.img`
-  width: 108px;
-  height: 108px;
-  margin-top: 10px;
+  width: 96px;
+  height: 96px;
+  margin: 2px 0 10px;
   object-fit: cover;
   border: 3px solid ${({ theme }) => theme.colors.surface};
   border-radius: 50%;
   outline: 1px solid ${({ theme }) => theme.colors.border};
   box-shadow: ${({ theme }) => theme.shadows.card};
+
+  @media (max-width: 560px) {
+    width: 88px;
+    height: 88px;
+  }
 `;
 
 const ButtonRow = styled.div`
@@ -106,13 +174,13 @@ const ButtonRow = styled.div`
 
 const Button = styled.button`
   min-height: 46px;
-  padding: 10px 16px;
-  border: 1px solid transparent;
-  border-radius: ${({ theme }) => theme.radii.small};
+  padding: 10px 15px;
+  border: 1px solid ${({ theme }) => theme.colors.primary};
+  border-radius: 11px;
   background: ${({ theme }) => theme.gradients.primary};
   color: ${({ theme }) => theme.on.primary};
-  font-size: 1rem;
-  font-weight: 750;
+  font-size: .94rem;
+  font-weight: 850;
   cursor: pointer;
 
   &:disabled {
@@ -121,7 +189,7 @@ const Button = styled.button`
   }
 
   &:hover:enabled {
-    filter: brightness(0.96);
+    filter: brightness(1.03);
   }
 `;
 
@@ -143,40 +211,72 @@ const MessageText = styled.p`
 
 const ProfileDetails = styled.div`
   display: grid;
-  gap: 2px;
+  gap: 0;
 
   p {
-    margin: 8px 0;
-    line-height: 1.55;
+    display: grid;
+    grid-template-columns: 78px minmax(0, 1fr);
+    gap: 8px;
+    margin: 0;
+    padding: 10px 0;
+    border-bottom: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
+    color: ${({ theme }) => theme.colors.text};
+    font-size: .9rem;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+
+  p strong {
+    color: ${({ theme }) => theme.colors.primary};
+    font-weight: 900;
+    white-space: nowrap;
+  }
+
+  ${ButtonRow} {
+    margin-top: 14px;
+  }
+
+  @media (max-width: 420px) {
+    p {
+      grid-template-columns: 68px minmax(0, 1fr);
+      gap: 7px;
+      font-size: .86rem;
+    }
   }
 `;
 
 const EmailChangePanel = styled.div`
   display: grid;
-  gap: 12px;
-  margin-top: 18px;
-  padding: 16px;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 13px;
   border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 12px;
+  border-radius: 14px;
   background: ${({ theme }) => theme.colors.surfaceAlt};
 
   p {
     margin: 0;
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: 0.9rem;
-    line-height: 1.55;
+    font-size: .84rem;
+    line-height: 1.5;
   }
 `;
 
 const RewardPanel = styled.div`
   display: grid;
-  gap: 10px;
-  margin-bottom: 24px;
-  padding: 16px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 12px;
-  background: ${({ theme }) => theme.semantic.alertSuccessBg};
-  color: ${({ theme }) => theme.semantic.alertSuccessText};
+  gap: 9px;
+  margin-bottom: 20px;
+  padding: 15px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 25%, ${({ theme }) => theme.colors.border});
+  border-radius: 16px;
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 72%, white),
+      ${({ theme }) => theme.colors.surface}
+    );
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 const RewardTitle = styled.strong`
@@ -184,7 +284,8 @@ const RewardTitle = styled.strong`
   align-items: center;
   gap: 8px;
   color: ${({ theme }) => theme.colors.primary};
-  font-size: 1.02rem;
+  font-size: .98rem;
+  font-weight: 900;
 `;
 
 const RewardToggle = styled.button`
@@ -215,9 +316,9 @@ const RewardSummary = styled.span`
   align-items: center;
   justify-content: flex-end;
   gap: 6px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: 0.88rem;
-  font-weight: 700;
+  color: ${({ theme }) => theme.colors.secondaryDark};
+  font-size: .78rem;
+  font-weight: 850;
   white-space: nowrap;
 `;
 
@@ -252,13 +353,13 @@ const RewardNote = styled.p`
 `;
 
 const RewardAction = styled.button`
-  min-height: 44px;
-  padding: 10px 14px;
+  min-height: 43px;
+  padding: 9px 13px;
   border: 1px solid ${({ theme }) => theme.colors.primary};
   border-radius: 10px;
   background: ${({ theme }) => theme.colors.primary};
-  color: ${({ theme }) => theme.on.primary};
-  font-weight: 800;
+  color: ${({ theme }) => theme.colors.goldLight};
+  font-weight: 850;
   cursor: pointer;
 
   &:disabled {
@@ -271,21 +372,22 @@ const RewardLink = styled(Link)`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
-  padding: 10px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.primary};
+  min-height: 43px;
+  padding: 9px 13px;
+  border: 1px solid ${({ theme }) => theme.colors.borderStrong};
   border-radius: 10px;
   background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.primary};
-  font-weight: 800;
+  font-weight: 850;
+  text-decoration: none;
 `;
 
 const RewardUsagePanel = styled.div`
   display: grid;
   gap: 10px;
-  padding: 14px;
+  padding: 13px;
   border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 10px;
+  border-radius: 12px;
   background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.text};
 `;
@@ -295,7 +397,7 @@ const RewardSelect = styled.select`
   min-height: 44px;
   padding: 9px 11px;
   border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 9px;
+  border-radius: 10px;
   background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.text};
 `;
@@ -323,11 +425,11 @@ const SettingsShortcut = styled(Link)`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
-  margin-top: 24px;
-  padding: 16px;
-  border: 1px solid ${({ theme }) => theme.colors.borderStrong};
-  border-radius: 12px;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 13px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 14px;
   background: ${({ theme }) => theme.colors.surfaceAlt};
   color: ${({ theme }) => theme.colors.text};
   text-decoration: none;
@@ -338,25 +440,25 @@ const SettingsShortcut = styled(Link)`
 
   > span {
     display: grid;
-    gap: 4px;
+    gap: 3px;
   }
 
   strong {
     color: ${({ theme }) => theme.colors.primary};
-    font-size: 0.98rem;
+    font-size: .94rem;
   }
 
   small {
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: 0.82rem;
-    line-height: 1.5;
+    font-size: .78rem;
+    line-height: 1.45;
   }
 
   svg {
-    width: 19px;
-    height: 19px;
+    width: 18px;
+    height: 18px;
     flex: 0 0 auto;
-    color: ${({ theme }) => theme.colors.textSecondary};
+    color: ${({ theme }) => theme.colors.secondaryDark};
   }
 `;
 
@@ -957,9 +1059,15 @@ export default function Profile() {
 
   return (
     <Container>
-      <Section>
-        <Title>내 프로필</Title>
+      <ProfileHero>
+        <ProfileEyebrow>MY GOLD</ProfileEyebrow>
+        <ProfileHeroTitle>내 프로필</ProfileHeroTitle>
+        <ProfileHeroLead>
+          적립 순금과 계정 정보를 한곳에서 확인하고 관리합니다.
+        </ProfileHeroLead>
+      </ProfileHero>
 
+      <Section>
         <RewardPanel aria-label="순금 적립 내역">
           <RewardToggle
             type="button"

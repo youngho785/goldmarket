@@ -109,82 +109,117 @@ const Page = styled.div`
   max-width: 980px;
   min-width: 0;
   margin: 0 auto;
-  padding: 20px 16px 3rem;
+  padding: 14px 12px 42px;
   box-sizing: border-box;
   overflow-x: hidden;
 
   @media (max-width: 720px) {
-    padding: 12px 10px 2.5rem;
+    padding: 7px 0 26px;
   }
 `;
 
 const PageHeader = styled.header`
+  position: relative;
   width: 100%;
   min-width: 0;
-  margin-bottom: 14px;
-  padding: clamp(20px, 4vw, 32px);
+  margin-bottom: 10px;
+  padding: clamp(21px, 4vw, 31px);
   box-sizing: border-box;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-top: 3px solid ${({ theme }) => theme.colors.secondary};
-  border-radius: 14px;
-  background: ${({ theme }) => theme.colors.surface};
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.primary} 78%, transparent);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 92% 6%, color-mix(in srgb, ${({ theme }) => theme.colors.gold} 15%, transparent) 0, transparent 31%),
+    ${({ theme }) => theme.gradients.primary};
+  box-shadow: 0 12px 30px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 12%, transparent);
+
+  &::after {
+    content: "MY";
+    position: absolute;
+    right: -5px;
+    bottom: -24px;
+    color: color-mix(in srgb, ${({ theme }) => theme.colors.goldLight} 6%, transparent);
+    font-family: ${({ theme }) => theme.fonts.heading};
+    font-size: 6.2rem;
+    font-weight: 950;
+    line-height: 1;
+    pointer-events: none;
+  }
 
   @media (max-width: 520px) {
-    padding: 18px 15px;
+    padding: 17px 15px 15px;
+    border-radius: 19px;
   }
 `;
 
 const Kicker = styled.p`
-  margin: 0 0 8px;
-  color: ${({ theme }) => theme.colors.secondaryDark};
+  position: relative;
+  z-index: 1;
+  margin: 0 0 7px;
+  color: ${({ theme }) => theme.colors.goldLight};
   font-family: ${({ theme }) => theme.fonts.numeric};
-  font-size: .69rem;
-  font-weight: 850;
+  font-size: .61rem;
+  font-weight: 950;
   letter-spacing: .15em;
 `;
 
 const HeaderLead = styled.p`
+  position: relative;
+  z-index: 1;
   max-width: 680px;
   margin: 8px 0 0;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: 0.9rem;
-  line-height: 1.55;
+  color: color-mix(in srgb, ${({ theme }) => theme.on.primary} 70%, transparent);
+  font-size: .78rem;
+  line-height: 1.5;
 `;
 
 const SectionTitle = styled.h1`
+  position: relative;
+  z-index: 1;
   margin: 0;
-  color: ${({ theme }) => theme.colors.primary};
-  font-size: clamp(1.65rem, 4vw, 2.45rem);
+  color: ${({ theme }) => theme.on.primary};
+  font-size: clamp(1.55rem, 4vw, 2.18rem);
+  line-height: 1.14;
+  letter-spacing: -.04em;
 `;
 
 const FilterBar = styled.div`
   width: 100%;
   min-width: 0;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 6px;
-  margin: 0 0 12px;
+  margin: 0 0 10px;
+  padding: 2px 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar { display: none; }
 `;
 
 const FilterChip = styled.button`
-  min-height: 36px;
-  padding: 7px 11px;
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 6px 10px;
   border-radius: 999px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
+  border: 1px solid
+    ${({ $active, theme }) =>
+      $active ? theme.colors.primary : theme.colors.border};
   background: ${({ $active, theme }) =>
-    $active
-      ? theme.colors.goldLight
-      : theme.colors.surface};
-  color: ${({ theme }) => theme.colors.text};
-  font-size: 0.8rem;
-  font-weight: 800;
+    $active ? theme.colors.primary : theme.colors.surface};
+  color: ${({ $active, theme }) =>
+    $active ? theme.colors.goldLight : theme.colors.textSecondary};
+  font-size: .74rem;
+  font-weight: 850;
   cursor: pointer;
+  white-space: nowrap;
 `;
 
 const Count = styled.span`
-  margin-left: .35rem;
-  font-weight: 800;
-  color: ${({ theme }) => theme.colors.primary};
+  margin-left: .3rem;
+  font-weight: 900;
+  color: inherit;
+  opacity: .78;
 `;
 
 const CardGrid = styled.div`
@@ -192,7 +227,7 @@ const CardGrid = styled.div`
   min-width: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 10px;
+  gap: 8px;
 `;
 
 const Card = styled.article`
@@ -202,9 +237,9 @@ const Card = styled.article`
   overflow: hidden;
   box-sizing: border-box;
   border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 14px;
+  border-radius: 18px;
   background: ${({ theme }) => theme.colors.surface};
-  box-shadow: ${({ theme }) => theme.shadows.card};
+  box-shadow: 0 7px 20px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 5%, transparent);
 `;
 
 const CardHeader = styled.button`
@@ -215,10 +250,15 @@ const CardHeader = styled.button`
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
-  padding: 13px 15px;
+  padding: 13px 14px;
   box-sizing: border-box;
   border: 0;
-  background: ${({ theme }) => theme.colors.background};
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 45%, white),
+      ${({ theme }) => theme.colors.surface}
+    );
   color: ${({ theme }) => theme.colors.text};
   text-align: left;
   cursor: pointer;
@@ -229,7 +269,7 @@ const CardHeader = styled.button`
 
   @media (max-width: 640px) {
     grid-template-columns: minmax(0, 1fr);
-    gap: 9px;
+    gap: 8px;
     padding: 12px;
   }
 `;
@@ -241,17 +281,18 @@ const HeaderLeft = styled.div`
 `;
 
 const HLabel = styled.span`
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: 0.76rem;
-  font-weight: 750;
+  color: ${({ theme }) => theme.colors.secondaryDark};
+  font-size: .68rem;
+  font-weight: 900;
+  letter-spacing: .02em;
 `;
 
 const HValue = styled.span`
   min-width: 0;
-  color: ${({ theme }) => theme.colors.text};
-  font-size: 1rem;
-  font-weight: 850;
-  line-height: 1.35;
+  color: ${({ theme }) => theme.colors.primary};
+  font-size: .96rem;
+  font-weight: 900;
+  line-height: 1.3;
 `;
 
 const HeaderRight = styled.div`
@@ -282,41 +323,47 @@ const FinalWeight = styled.div`
   min-width: 0;
   max-width: 100%;
   display: grid;
-  gap: 2px;
+  gap: 1px;
   text-align: right;
 
   small {
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: 0.72rem;
+    font-size: .66rem;
   }
 
   strong {
-    color: ${({ theme }) => theme.colors.primary};
+    color: ${({ theme }) => theme.colors.secondaryDark};
     font-family: ${({ theme }) => theme.fonts.numeric};
     font-size: 1rem;
-    font-weight: 900;
+    font-weight: 950;
   }
 
   @media (max-width: 640px) {
-    min-width: 0;
     text-align: left;
   }
 `;
 
 const StatusBadge = styled.span`
-  padding: .32rem .6rem;
+  padding: .3rem .56rem;
   border-radius: 9999px;
-  font-weight: 800;
-  font-size: .83rem;
+  font-weight: 850;
+  font-size: .72rem;
   background: ${({ $status, theme }) => {
-    if ($status === 'requested') return theme.colors.warning;
-    if ($status === 'scheduled') return theme.colors.success;
-    if ($status === 'completed') return theme.colors.secondary;
-    if ($status === 'rejected') return theme.colors.error;
-    if ($status === 'in_progress' || $status === '교환중') return theme.colors.info;
-    return theme.colors.gray;
+    if ($status === 'requested') return theme.semantic.alertWarningBg;
+    if ($status === 'scheduled') return theme.semantic.alertSuccessBg;
+    if ($status === 'completed') return theme.semantic.badgeGoldBg;
+    if ($status === 'rejected') return theme.semantic.alertErrorBg;
+    if ($status === 'in_progress' || $status === '교환중') return theme.semantic.alertInfoBg;
+    return theme.colors.surfaceAlt;
   }};
-  color: ${({ $status, theme }) => ($status === 'requested' ? theme.on.warning : theme.on.primary)};
+  color: ${({ $status, theme }) => {
+    if ($status === 'requested') return theme.semantic.alertWarningText;
+    if ($status === 'scheduled') return theme.semantic.alertSuccessText;
+    if ($status === 'completed') return theme.colors.primary;
+    if ($status === 'rejected') return theme.semantic.alertErrorText;
+    if ($status === 'in_progress' || $status === '교환중') return theme.colors.primary;
+    return theme.colors.textSecondary;
+  }};
 `;
 
 const Chev = styled.span`
@@ -333,11 +380,11 @@ const CardBody = styled.div`
   max-width: 100%;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 12px;
-  padding: 13px 15px 16px;
+  gap: 10px;
+  padding: 12px 14px 15px;
   box-sizing: border-box;
   overflow: hidden;
-  border-top: 1px solid ${({ theme }) => theme.colors.border};
+  border-top: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
 
   > * {
     min-width: 0;
@@ -345,7 +392,7 @@ const CardBody = styled.div`
   }
 
   @media (max-width: 640px) {
-    padding: 11px 10px 14px;
+    padding: 10px 10px 13px;
   }
 `;
 
@@ -355,9 +402,10 @@ const MetaGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 7px 14px;
-  padding: 10px 12px;
+  padding: 11px 12px;
   box-sizing: border-box;
-  border-radius: 10px;
+  border: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
+  border-radius: 12px;
   background: ${({ theme }) => theme.colors.surfaceAlt};
 
   @media (max-width: 720px) {
@@ -397,6 +445,8 @@ const TableWrap = styled.div`
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-inline: contain;
+  border: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
+  border-radius: 12px;
 `;
 
 const ItemsTable = styled.table`
@@ -480,17 +530,14 @@ const Empty = styled.p`
 `;
 
 const PlanCard = styled.div`
-  width: 100%;
-  min-width: 0;
-  display: grid;
-  gap: 6px;
-  padding: 10px 12px;
-  box-sizing: border-box;
-  overflow-wrap: anywhere;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 10px;
-  background: ${({ theme }) => theme.colors.surfaceAlt};
-  font-size: 0.84rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 20%, ${({ theme }) => theme.colors.border});
+  border-radius: 14px;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 52%, white),
+    ${({ theme }) => theme.colors.surface}
+  );
 `;
 const PlanRow = styled.div`
   min-width: 0;
@@ -518,19 +565,13 @@ const ScheduleActivity = styled.div`
   p { margin: .3rem 0 0; }
 `;
 
-const ScheduleActionsPanel = styled.section`
-  width: 100%;
-  min-width: 0;
-  margin-top: .25rem;
-  padding: 1rem;
-  box-sizing: border-box;
-  overflow: hidden;
+const ScheduleActionsPanel = styled.div`
+  display: grid;
+  gap: 10px;
+  padding: 13px;
   border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 14px;
   background: ${({ theme }) => theme.colors.surfaceAlt};
-
-  @media (max-width: 640px) {
-    padding: 12px;
-  }
 `;
 
 const ScheduleActionTitle = styled.h3`
@@ -552,21 +593,19 @@ const ScheduleButtonRow = styled.div`
 `;
 
 const ScheduleButton = styled.button`
-  min-height: 42px;
-  padding: .55rem .85rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
-  border: 1px solid ${({ $danger, theme }) =>
-    $danger ? theme.colors.error : theme.colors.primary};
-  background: ${({ $danger, theme }) =>
-    $danger ? theme.colors.surface : theme.colors.primary};
-  color: ${({ $danger, theme }) =>
-    $danger ? theme.colors.error : theme.on.primary};
-  font-weight: 800;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid ${({ theme }) => theme.colors.primary};
+  border-radius: 10px;
+  background: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.on.primary};
+  font-weight: 850;
   cursor: pointer;
-  &:disabled { cursor: not-allowed; opacity: .55; }
+
+  &:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+  }
 `;
 
 const ScheduleForm = styled.div`

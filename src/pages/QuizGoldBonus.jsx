@@ -100,238 +100,399 @@ const formatBonusG = (value) => Number(value || 0).toFixed(2);
 
 /* ============================
    UI
+   - 모바일 우선 "골드 리워드 게임" 톤
+   - 기능/채점/지급 로직은 그대로 두고 시각 구조만 재설계합니다.
    ============================ */
 const Page = styled.main`
   max-width: 760px;
   margin: 0 auto;
-  padding: 18px 0 58px;
+  padding: 14px 0 34px;
   color: ${({ theme }) => theme.colors.text};
+
+  @media (max-width: 640px) {
+    padding-top: 8px;
+    padding-bottom: 18px;
+  }
 `;
 
 const Intro = styled.header`
-  padding: clamp(24px, 5vw, 36px);
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.radii.large};
-  background: ${({ theme }) => theme.colors.surface};
-  box-shadow: ${({ theme }) => theme.shadows.card};
+  position: relative;
+  overflow: hidden;
+  padding: 17px 28px 14px;
+  border: 1px solid
+    color-mix(in srgb, ${({ theme }) => theme.colors.gold} 38%, transparent);
+  border-radius: 24px;
+  background:
+    radial-gradient(
+      circle at 88% 15%,
+      color-mix(in srgb, ${({ theme }) => theme.colors.gold} 22%, transparent) 0,
+      transparent 31%
+    ),
+    linear-gradient(
+      145deg,
+      ${({ theme }) => theme.colors.primary} 0%,
+      #111827 58%,
+      #17130c 100%
+    );
+  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.16);
+  isolation: isolate;
+
+  &::after {
+    content: "0.01";
+    position: absolute;
+    right: -10px;
+    bottom: -26px;
+    z-index: -1;
+    color: rgba(255, 255, 255, 0.035);
+    font-family: ${({ theme }) => theme.fonts.numeric};
+    font-size: clamp(5.5rem, 15vw, 8rem);
+    font-weight: 950;
+    letter-spacing: -0.08em;
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  @media (max-width: 640px) {
+    padding: 15px 15px 13px;
+    border-radius: 17px;
+  }
 `;
 
 const Eyebrow = styled.p`
-  margin: 0 0 8px;
-  color: ${({ theme }) => theme.colors.secondaryDark};
-  font-size: 0.76rem;
-  font-weight: 900;
-  letter-spacing: 0.09em;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 6px;
+  color: #e6c56e;
+  font-size: 0.64rem;
+  font-weight: 950;
+  letter-spacing: 0.16em;
+
+  &::before {
+    content: "";
+    width: 20px;
+    height: 1px;
+    background: currentColor;
+    opacity: 0.8;
+  }
 `;
 
 const Title = styled.h1`
+  max-width: 680px;
   margin: 0;
-  color: ${({ theme }) => theme.colors.primary};
-  font-size: clamp(1.85rem, 5vw, 2.65rem);
-  line-height: 1.2;
-  letter-spacing: -0.035em;
-  word-break: keep-all;
-`;
-
-const IntroText = styled.p`
-  margin: 14px 0 0;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: 0.98rem;
-  line-height: 1.75;
+  color: #fff;
+  font-size: clamp(1.55rem, 3.6vw, 2.05rem);
+  line-height: 1.12;
+  letter-spacing: -0.055em;
   word-break: keep-all;
 
-  strong {
-    color: ${({ theme }) => theme.colors.text};
+  @media (max-width: 640px) {
+    max-width: 330px;
+    font-size: clamp(1.55rem, 7.2vw, 1.9rem);
   }
 `;
 
 const MetaRow = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 18px;
+  display: none;
 `;
 
 const MetaBadge = styled.span`
   display: inline-flex;
   align-items: center;
-  min-height: 30px;
+  min-height: 29px;
   padding: 5px 10px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 999px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: 0.82rem;
-  font-weight: 750;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 0.73rem;
+  font-weight: 820;
+  backdrop-filter: blur(10px);
 
   &[data-gold="true"] {
-    border-color: ${({ theme }) => theme.colors.gold};
-    background: ${({ theme }) => theme.semantic.badgeGoldBg};
-    color: ${({ theme }) => theme.colors.primary};
+    border-color: rgba(230, 197, 110, 0.7);
+    background: rgba(230, 197, 110, 0.13);
+    color: #f4d477;
   }
 `;
 
 const ProgressArea = styled.div`
-  margin-top: 22px;
+  margin-top: 9px;
 `;
 
-const ProgressText = styled.div`
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 8px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: 0.86rem;
+const ProgressSteps = styled.div`
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 7px;
+`;
 
-  b {
-    color: ${({ theme }) => theme.colors.primary};
+const ProgressDot = styled.div`
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 27px;
+  border: 1px solid
+    ${({ $done, $active }) =>
+      $done || $active
+        ? "rgba(230, 197, 110, 0.72)"
+        : "rgba(255, 255, 255, 0.13)"};
+  border-radius: 999px;
+  background: ${({ $done, $active }) => {
+    if ($done) return "rgba(230, 197, 110, 0.19)";
+    if ($active) return "rgba(255, 255, 255, 0.08)";
+    return "rgba(255, 255, 255, 0.035)";
+  }};
+  color: ${({ $done, $active }) =>
+    $done || $active ? "#f4d477" : "rgba(255, 255, 255, 0.36)"};
+  font-family: ${({ theme }) => theme.fonts.numeric};
+  font-size: 0.69rem;
+  font-weight: 950;
+  transition:
+    border-color 180ms ease,
+    background 180ms ease,
+    color 180ms ease,
+    transform 180ms ease;
+
+  ${({ $active }) => ($active ? "transform: translateY(-1px);" : "")}
+
+  &::after {
+    content: "";
+    position: absolute;
+    bottom: 5px;
+    width: ${({ $done }) => ($done ? "16px" : "0")};
+    height: 2px;
+    border-radius: 999px;
+    background: #e6c56e;
+    transition: width 180ms ease;
+  }
+
+  @media (max-width: 390px) {
+    min-height: 25px;
+    font-size: 0.61rem;
   }
 `;
 
-const ProgressTrack = styled.div`
-  height: 8px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: ${({ theme }) => theme.colors.border};
-`;
-
-const ProgressBar = styled.div`
-  width: ${({ $value }) => `${$value}%`};
-  height: 100%;
-  border-radius: inherit;
-  background: ${({ theme }) => theme.gradients.gold};
-  transition: width 220ms ease;
-`;
-
 const QuestionCard = styled.section`
-  margin-top: 16px;
-  padding: clamp(22px, 5vw, 34px);
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.radii.large};
-  background: ${({ theme }) => theme.colors.surface};
-  box-shadow: ${({ theme }) => theme.shadows.card};
+  position: relative;
+  overflow: hidden;
+  margin-top: 10px;
+  padding: clamp(21px, 4vw, 30px);
+  scroll-margin-top: 74px;
+  border: 1px solid
+    color-mix(in srgb, ${({ theme }) => theme.colors.gold} 24%, ${({ theme }) => theme.colors.border});
+  border-radius: 24px;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, ${({ theme }) => theme.colors.surface} 98%, #fff) 0%,
+      ${({ theme }) => theme.colors.surface} 100%
+    );
+  box-shadow: 0 16px 38px rgba(15, 23, 42, 0.08);
+
+  &::after {
+    content: attr(data-step);
+    position: absolute;
+    top: -14px;
+    right: 12px;
+    color: color-mix(in srgb, ${({ theme }) => theme.colors.gold} 8%, transparent);
+    font-family: ${({ theme }) => theme.fonts.numeric};
+    font-size: clamp(6.5rem, 22vw, 10rem);
+    font-weight: 950;
+    letter-spacing: -0.08em;
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  @media (max-width: 640px) {
+    margin-top: 8px;
+    padding: 19px 16px 17px;
+    border-radius: 20px;
+  }
 `;
 
 const Category = styled.span`
   display: inline-flex;
   align-items: center;
-  min-height: 28px;
+  min-height: 27px;
   padding: 4px 9px;
-  border: 1px solid ${({ theme }) => theme.colors.borderStrong};
+  border: 1px solid
+    color-mix(in srgb, ${({ theme }) => theme.colors.gold} 45%, ${({ theme }) => theme.colors.border});
   border-radius: 999px;
-  color: ${({ theme }) => theme.colors.primary};
-  background: ${({ theme }) => theme.colors.surfaceAlt};
-  font-size: 0.78rem;
-  font-weight: 850;
+  color: ${({ theme }) => theme.colors.secondaryDark};
+  background: ${({ theme }) => theme.semantic.badgeGoldBg};
+  font-size: 0.7rem;
+  font-weight: 900;
 `;
 
 const QuestionNumber = styled.p`
-  margin: 16px 0 6px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: 0.83rem;
-  font-weight: 800;
+  margin: 18px 0 6px;
+  color: ${({ theme }) => theme.colors.textLight};
+  font-family: ${({ theme }) => theme.fonts.numeric};
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.13em;
 `;
 
 const QuestionTitle = styled.h2`
+  max-width: 630px;
   margin: 0;
-  color: ${({ theme }) => theme.colors.text};
-  font-size: clamp(1.25rem, 4vw, 1.65rem);
-  line-height: 1.45;
-  letter-spacing: -0.025em;
+  color: ${({ theme }) => theme.colors.primary};
+  font-size: clamp(1.35rem, 4.5vw, 1.82rem);
+  line-height: 1.38;
+  letter-spacing: -0.035em;
   word-break: keep-all;
+
+  @media (max-width: 640px) {
+    max-width: 320px;
+    font-size: clamp(1.28rem, 6.2vw, 1.58rem);
+    line-height: 1.4;
+  }
 `;
 
 const Choices = styled.div`
   display: grid;
-  gap: 10px;
+  gap: 9px;
   margin-top: 22px;
+
+  @media (max-width: 640px) {
+    margin-top: 18px;
+    gap: 8px;
+  }
 `;
 
 const Choice = styled.button`
   display: grid;
-  grid-template-columns: 32px minmax(0, 1fr);
-  gap: 10px;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 11px;
   align-items: center;
-  min-height: 54px;
-  padding: 11px 14px;
+  min-height: 60px;
+  padding: 10px 14px 10px 11px;
   border: 1px solid
     ${({ $selected, $correct, $wrong, theme }) => {
-      if ($correct) return theme.colors.success;
-      if ($wrong) return theme.colors.error;
+      if ($correct) return theme.colors.gold;
+      if ($wrong) return "color-mix(in srgb, #b96c6c 65%, transparent)";
       if ($selected) return theme.colors.primary;
       return theme.colors.border;
     }};
-  border-radius: 11px;
+  border-radius: 15px;
   background: ${({ $correct, $wrong, $selected, theme }) => {
-    if ($correct) return theme.semantic.alertSuccessBg;
-    if ($wrong) return theme.semantic.alertErrorBg;
+    if ($correct) return theme.semantic.badgeGoldBg;
+    if ($wrong) return "color-mix(in srgb, #b96c6c 8%, " + theme.colors.surface + ")";
     if ($selected) return theme.colors.surfaceAlt;
-    return theme.colors.background;
+    return theme.colors.surface;
   }};
   color: ${({ theme }) => theme.colors.text};
   font: inherit;
+  font-size: 0.92rem;
+  font-weight: 760;
+  line-height: 1.42;
   text-align: left;
   cursor: pointer;
+  transition:
+    transform 150ms ease,
+    border-color 150ms ease,
+    background 150ms ease,
+    box-shadow 150ms ease;
+
+  &:not(:disabled):active {
+    transform: scale(0.99);
+  }
+
+  @media (hover: hover) {
+    &:not(:disabled):hover {
+      transform: translateY(-1px);
+      border-color: ${({ theme }) =>
+        `color-mix(in srgb, ${theme.colors.gold} 58%, ${theme.colors.border})`};
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+    }
+  }
 
   &:disabled {
     cursor: default;
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.primary};
+    outline: 2px solid ${({ theme }) => theme.colors.gold};
     outline-offset: 2px;
+  }
+
+  @media (max-width: 640px) {
+    grid-template-columns: 36px minmax(0, 1fr);
+    min-height: 57px;
+    padding: 9px 12px 9px 10px;
+    border-radius: 14px;
+    font-size: 0.86rem;
   }
 `;
 
 const ChoiceMark = styled.span`
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: 34px;
+  height: 34px;
   border: 1px solid
     ${({ $selected, $correct, $wrong, theme }) => {
-      if ($correct) return theme.colors.success;
-      if ($wrong) return theme.colors.error;
+      if ($correct) return theme.colors.gold;
+      if ($wrong) return "#b96c6c";
       if ($selected) return theme.colors.primary;
       return theme.colors.borderStrong;
     }};
-  border-radius: 50%;
-  color: ${({ $selected, $correct, $wrong, theme }) =>
-    $selected || $correct || $wrong
-      ? theme.colors.primary
-      : theme.colors.textSecondary};
-  font-size: 0.8rem;
-  font-weight: 900;
+  border-radius: 11px;
+  background: ${({ $selected, $correct, $wrong, theme }) => {
+    if ($correct) return theme.colors.gold;
+    if ($wrong) return "rgba(185, 108, 108, 0.1)";
+    if ($selected) return theme.colors.primary;
+    return theme.colors.background;
+  }};
+  color: ${({ $selected, $correct, $wrong, theme }) => {
+    if ($correct) return theme.colors.primary;
+    if ($wrong) return "#9b4e4e";
+    if ($selected) return theme.on.primary;
+    return theme.colors.textSecondary;
+  }};
+  font-family: ${({ theme }) => theme.fonts.numeric};
+  font-size: 0.76rem;
+  font-weight: 950;
 `;
 
 const Feedback = styled.div`
-  margin-top: 18px;
-  padding: 15px 16px;
+  margin-top: 16px;
+  padding: 14px 15px;
   border: 1px solid
     ${({ $wrong, theme }) =>
-      $wrong ? theme.colors.error : theme.colors.success};
-  border-radius: 11px;
+      $wrong
+        ? "rgba(185, 108, 108, 0.36)"
+        : `color-mix(in srgb, ${theme.colors.gold} 52%, ${theme.colors.border})`};
+  border-radius: 14px;
   background: ${({ $wrong, theme }) =>
     $wrong
-      ? theme.semantic.alertErrorBg
-      : theme.semantic.alertSuccessBg};
+      ? `color-mix(in srgb, #b96c6c 7%, ${theme.colors.surface})`
+      : theme.semantic.badgeGoldBg};
   color: ${({ $wrong, theme }) =>
-    $wrong
-      ? theme.semantic.alertErrorText
-      : theme.semantic.alertSuccessText};
-  line-height: 1.65;
+    $wrong ? theme.colors.textSecondary : theme.colors.textSecondary};
+  font-size: 0.86rem;
+  line-height: 1.62;
 
   strong {
     display: block;
     margin-bottom: 5px;
-    color: ${({ theme }) => theme.colors.text};
+    color: ${({ $wrong, theme }) =>
+      $wrong ? "#9b4e4e" : theme.colors.secondaryDark};
+    font-size: 0.76rem;
+    font-weight: 950;
+    letter-spacing: 0.04em;
   }
 `;
 
 const ActionRow = styled.div`
   display: grid;
-  gap: 9px;
-  margin-top: 18px;
+  gap: 8px;
+  margin-top: 17px;
 
   @media (min-width: 560px) {
     grid-template-columns: 1fr auto;
@@ -344,18 +505,34 @@ const PrimaryButton = styled.button`
   align-items: center;
   justify-content: center;
   gap: 7px;
-  min-height: 48px;
-  padding: 11px 17px;
+  min-height: 50px;
+  padding: 11px 18px;
   border: 1px solid ${({ theme }) => theme.colors.primary};
-  border-radius: 10px;
-  background: ${({ theme }) => theme.gradients.primary};
+  border-radius: 13px;
+  background: ${({ theme }) => theme.colors.primary};
   color: ${({ theme }) => theme.on.primary};
   font: inherit;
-  font-weight: 850;
+  font-size: 0.86rem;
+  font-weight: 900;
+  text-decoration: none;
   cursor: pointer;
+  transition:
+    transform 150ms ease,
+    box-shadow 150ms ease;
+
+  &:not(:disabled):active {
+    transform: scale(0.99);
+  }
+
+  @media (hover: hover) {
+    &:not(:disabled):hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
+    }
+  }
 
   &:disabled {
-    opacity: 0.5;
+    opacity: 0.45;
     cursor: not-allowed;
   }
 
@@ -366,67 +543,122 @@ const PrimaryButton = styled.button`
 `;
 
 const SecondaryButton = styled(PrimaryButton)`
+  border-color: ${({ theme }) => theme.colors.borderStrong};
   background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.primary};
+  box-shadow: none;
 `;
 
 const ErrorText = styled.p`
-  margin: 16px 0 0;
+  margin: 14px 0 0;
   padding: 11px 13px;
-  border-radius: 10px;
+  border: 1px solid rgba(185, 108, 108, 0.24);
+  border-radius: 12px;
   color: ${({ theme }) => theme.semantic.alertErrorText};
   background: ${({ theme }) => theme.semantic.alertErrorBg};
+  font-size: 0.82rem;
   line-height: 1.55;
 `;
 
 const ResultCard = styled.section`
-  margin-top: 16px;
-  padding: clamp(24px, 5vw, 36px);
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.radii.large};
-  background: ${({ theme }) => theme.colors.surface};
-  box-shadow: ${({ theme }) => theme.shadows.card};
+  position: relative;
+  overflow: hidden;
+  margin-top: 13px;
+  padding: clamp(27px, 5vw, 40px);
+  border: 1px solid
+    color-mix(in srgb, ${({ theme }) => theme.colors.gold} 42%, transparent);
+  border-radius: 24px;
+  background:
+    radial-gradient(
+      circle at 50% 0%,
+      color-mix(in srgb, ${({ theme }) => theme.colors.gold} 18%, transparent),
+      transparent 42%
+    ),
+    linear-gradient(145deg, ${({ theme }) => theme.colors.primary}, #111827 72%);
+  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.15);
   text-align: center;
+
+  &::after {
+    content: "GOLD";
+    position: absolute;
+    right: -10px;
+    bottom: -17px;
+    color: rgba(255, 255, 255, 0.025);
+    font-size: clamp(4.5rem, 17vw, 8rem);
+    font-weight: 950;
+    letter-spacing: -0.07em;
+    pointer-events: none;
+  }
+
+  > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  @media (max-width: 640px) {
+    padding: 27px 18px 24px;
+    border-radius: 20px;
+  }
 `;
 
 const ResultIcon = styled.div`
   display: grid;
   place-items: center;
-  width: 58px;
-  height: 58px;
+  width: 64px;
+  height: 64px;
   margin: 0 auto 16px;
-  border-radius: 50%;
-  background: ${({ theme }) => theme.semantic.alertSuccessBg};
-  color: ${({ theme }) => theme.colors.primary};
+  border: 1px solid rgba(230, 197, 110, 0.65);
+  border-radius: 19px;
+  background: rgba(230, 197, 110, 0.13);
+  color: #f4d477;
+  transform: rotate(-4deg);
 
   svg {
-    width: 28px;
-    height: 28px;
+    width: 29px;
+    height: 29px;
+    transform: rotate(4deg);
   }
 `;
 
 const ResultTitle = styled.h2`
   margin: 0;
-  color: ${({ theme }) => theme.colors.primary};
-  font-size: clamp(1.45rem, 4vw, 1.9rem);
-  letter-spacing: -0.025em;
+  color: #fff;
+  font-size: clamp(1.55rem, 5vw, 2rem);
+  line-height: 1.3;
+  letter-spacing: -0.035em;
+  word-break: keep-all;
 `;
 
 const ResultText = styled.p`
   margin: 12px auto 0;
   max-width: 560px;
-  color: ${({ theme }) => theme.colors.textSecondary};
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.91rem;
   line-height: 1.7;
+  word-break: keep-all;
 
   b {
-    color: ${({ theme }) => theme.colors.text};
+    color: #f4d477;
+    font-weight: 950;
   }
 `;
 
 const ResultActions = styled.div`
   display: grid;
-  gap: 9px;
+  gap: 8px;
   margin-top: 22px;
+
+  ${PrimaryButton} {
+    border-color: #f1cf70;
+    background: #f1cf70;
+    color: #151515;
+  }
+
+  ${SecondaryButton} {
+    border-color: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.07);
+    color: #fff;
+  }
 
   @media (min-width: 560px) {
     grid-template-columns: 1fr 1fr;
@@ -437,31 +669,42 @@ const TrustNote = styled.aside`
   display: grid;
   grid-template-columns: 28px minmax(0, 1fr);
   gap: 11px;
-  margin-top: 16px;
-  padding: 16px;
+  margin-top: 12px;
+  padding: 14px 15px;
   border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 12px;
-  background: ${({ theme }) => theme.colors.background};
+  border-radius: 14px;
+  background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: 0.84rem;
-  line-height: 1.65;
+  font-size: 0.76rem;
+  line-height: 1.58;
 
   svg {
-    width: 22px;
-    height: 22px;
-    color: ${({ theme }) => theme.colors.primary};
+    width: 21px;
+    height: 21px;
+    color: ${({ theme }) => theme.colors.secondaryDark};
   }
 
   strong {
     display: block;
-    margin-bottom: 3px;
-    color: ${({ theme }) => theme.colors.text};
+    margin-bottom: 2px;
+    color: ${({ theme }) => theme.colors.primary};
+    font-size: 0.79rem;
+  }
+
+  @media (max-width: 640px) {
+    margin-top: 9px;
+    padding: 12px 13px;
+    font-size: 0.71rem;
   }
 `;
 
 const LoadingCard = styled(QuestionCard)`
   text-align: center;
   color: ${({ theme }) => theme.colors.textSecondary};
+
+  &::after {
+    content: "";
+  }
 `;
 
 /* ============================
@@ -490,7 +733,6 @@ export default function QuizGoldBonus() {
   const currentFeedback = feedback[currentQuestion?.id] || "";
   const completedCount =
     currentIndex + (currentFeedback === "correct" ? 1 : 0);
-  const progress = Math.round((completedCount / TOTAL) * 100);
 
   useEffect(() => {
     let cancelled = false;
@@ -603,7 +845,12 @@ export default function QuizGoldBonus() {
 
     setCurrentIndex((index) => index + 1);
     setError("");
-    window.scrollTo?.({ top: 0, behavior: "smooth" });
+
+    window.requestAnimationFrame?.(() => {
+      document
+        .getElementById("gold-quiz-question")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   };
 
   const resetQuiz = () => {
@@ -689,12 +936,11 @@ export default function QuizGoldBonus() {
     <Page>
       <Intro>
         <Eyebrow>GOLD QUICK QUIZ</Eyebrow>
-        <Title>금 상식 퀵퀴즈 5문제</Title>
-        <IntroText>
-          금교환에 필요한 5문제를 모두 맞히고
-          <strong> 순금 0.01g</strong>을 받아보세요.
-        </IntroText>
-
+        <Title>
+          5문제 풀고
+          <br />
+          순금 0.01g 받기
+        </Title>
         <MetaRow>
           <MetaBadge>약 1분</MetaBadge>
           <MetaBadge>5문제</MetaBadge>
@@ -702,15 +948,24 @@ export default function QuizGoldBonus() {
         </MetaRow>
 
         <ProgressArea>
-          <ProgressText>
-            <span>퀵퀴즈 진행</span>
-            <b>
-              {Math.min(completedCount, TOTAL)} / {TOTAL}
-            </b>
-          </ProgressText>
-          <ProgressTrack>
-            <ProgressBar $value={progress} />
-          </ProgressTrack>
+          <ProgressSteps aria-label={`퀵퀴즈 진행 ${Math.min(completedCount, TOTAL)} / ${TOTAL}`}>
+            {QUIZ.map((question, index) => {
+              const isDone = index < completedCount;
+              const isActive =
+                index === currentIndex && completedCount < TOTAL;
+
+              return (
+                <ProgressDot
+                  key={`progress-${question.id}`}
+                  $done={isDone}
+                  $active={isActive}
+                  aria-current={isActive ? "step" : undefined}
+                >
+                  {String(index + 1).padStart(2, "0")}
+                </ProgressDot>
+              );
+            })}
+          </ProgressSteps>
         </ProgressArea>
       </Intro>
 
@@ -721,10 +976,13 @@ export default function QuizGoldBonus() {
       )}
 
       {showQuiz && currentQuestion && (
-        <QuestionCard>
+        <QuestionCard
+          id="gold-quiz-question"
+          data-step={String(currentIndex + 1).padStart(2, "0")}
+        >
           <Category>{currentQuestion.category}</Category>
           <QuestionNumber>
-            {String(currentIndex + 1).padStart(2, "0")} /{" "}
+            QUESTION {String(currentIndex + 1).padStart(2, "0")} /{" "}
             {String(TOTAL).padStart(2, "0")}
           </QuestionNumber>
           <QuestionTitle>{currentQuestion.q}</QuestionTitle>
@@ -770,14 +1028,14 @@ export default function QuizGoldBonus() {
 
           {currentFeedback === "wrong" && (
             <Feedback $wrong>
-              <strong>다시 확인해 보세요</strong>
+              <strong>ONE MORE TRY</strong>
               {currentQuestion.hint}
             </Feedback>
           )}
 
           {currentFeedback === "correct" && (
             <Feedback>
-              <strong>✓ 확인했습니다</strong>
+              <strong>✓ NICE. 정답입니다</strong>
               {currentQuestion.explanation}
             </Feedback>
           )}
@@ -791,11 +1049,11 @@ export default function QuizGoldBonus() {
                 onClick={handleCheck}
                 disabled={!Number.isInteger(selected)}
               >
-                정답 확인
+                정답 확인하기
               </PrimaryButton>
             ) : currentIndex < TOTAL - 1 ? (
               <PrimaryButton type="button" onClick={handleNext}>
-                다음 내용
+                다음 문제
                 <ChevronRight />
               </PrimaryButton>
             ) : (
