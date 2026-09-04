@@ -16,6 +16,33 @@ service cloud.firestore {
           request.auth.token.get('superAdmin', false) == true);
     }
 
+    function validGoldVaultType(value) {
+      return value is string && value in [
+        '14k(585) 제품(팔찌,목걸이, 반지,귀걸이, 발찌 등)',
+        '18k(750) 제품(팔찌,목걸이, 반지,귀걸이, 발찌 등)',
+        '순금 995제품(목걸이,팔찌,반지,귀걸이)',
+        '순금 999제품(팔찌,목걸이, 반지,귀걸이)',
+        '순금 열쇠',
+        '순금 장식모양(거북이,두꺼비, 골프공, 핸드폰고리 등)',
+        '순금 마고자 단추 / 색상이 들어있는 제품',
+        '999,24k 순금덩어리(순도 측정후 999일 경우)'
+      ];
+    }
+
+    function validGoldVaultItem(data) {
+      return data.keys().hasAll([
+          'label', 'goldType', 'weightG', 'note', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'label', 'goldType', 'weightG', 'note', 'createdAt', 'updatedAt'
+        ]) &&
+        data.label is string && data.label.size() > 0 && data.label.size() <= 40 &&
+        validGoldVaultType(data.goldType) &&
+        (data.weightG is int || data.weightG is float) &&
+        data.weightG > 0 && data.weightG <= 10000 &&
+        data.note is string && data.note.size() <= 200;
+    }
+
     function protectedUserFieldsUnchanged() {
       return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
         'role', 'admin', 'superAdmin', 'bonus', 'bonusGoldMilliGrams',
@@ -211,6 +238,21 @@ service cloud.firestore {
         allow read: if isOwner(uid) || isAdmin();
         allow write: if false;
       }
+    }
+
+    match /users/{uid}/goldVaultItems/{itemId} {
+      // 개인이 기록한 금제품 상세는 본인만 조회합니다.
+      // 관리자 화면은 Cloud Functions가 반환하는 개수/통계만 사용합니다.
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid) &&
+        validGoldVaultItem(request.resource.data) &&
+        request.resource.data.createdAt == request.time &&
+        request.resource.data.updatedAt == request.time;
+      allow update: if isOwner(uid) &&
+        validGoldVaultItem(request.resource.data) &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        request.resource.data.updatedAt == request.time;
+      allow delete: if isOwner(uid);
     }
 
     match /profiles/{uid} {

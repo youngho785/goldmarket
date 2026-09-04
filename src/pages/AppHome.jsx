@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import AppGoldPriceSummary from "@/components/gold/AppGoldPriceSummary";
+import MyGoldIntroCard from "@/components/gold/MyGoldIntroCard";
 import { useAuthContext } from "@/context/AuthContext";
 import { getMemberBonusStatus } from "@/services/quizClient";
 import { db } from "@/firebase/firebase";
@@ -604,6 +605,7 @@ export default function AppHome() {
   return (
     <Page>
       <AppGoldPriceSummary />
+      <MyGoldIntroCard />
 
       <ExchangeCard aria-labelledby="app-home-title">
         <ExchangeKicker>GOLD TO GOLD</ExchangeKicker>

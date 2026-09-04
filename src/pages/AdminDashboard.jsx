@@ -209,14 +209,14 @@ export default function AdminDashboard() {
 
         <MenuGroup>
           <MenuLabel>고객·알림</MenuLabel>
-          <Tab to="members">회원관리</Tab>
+          <Tab to="members">회원·금고</Tab>
           <Tab to="notifications">
             알림함
             {unreadNotifications > 0 && (
               <Badge>{unreadNotifications}</Badge>
             )}
           </Tab>
-          <Tab to="notification-send">알림 발송</Tab>
+          <Tab to="notification-send">알림·캠페인</Tab>
         </MenuGroup>
 
         <MenuGroup>

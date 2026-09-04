@@ -671,8 +671,42 @@ export const setUserRole = onCall<{ uid: string; role: "user" | "admin" }>(
 );
 
 /* ─────────────────────────────────────────────────────────────
- * 관리자 회원 조회 / 계정 상태 변경
+ * 관리자 회원 조회 / 나의 금고 운영 통계 / 계정 상태 변경
+ * 개인 금제품 상세는 관리자 UI에 반환하지 않고 개수만 집계합니다.
  * ───────────────────────────────────────────────────────────── */
+function adminBonusGoldGrams(
+  data: FirebaseFirestore.DocumentData | undefined
+): number {
+  const milliGrams = Number(data?.bonusGoldMilliGrams);
+  if (Number.isFinite(milliGrams) && milliGrams >= 0) {
+    return milliGrams / 1000;
+  }
+
+  const legacyG = Number(data?.bonusGoldG || 0);
+  return Number.isFinite(legacyG) && legacyG > 0 ? legacyG : 0;
+}
+
+async function loadGoldVaultActivity(): Promise<{
+  itemCount: number;
+  activeUids: Set<string>;
+}> {
+  const snapshot = await db()
+    .collectionGroup("goldVaultItems")
+    .select("createdAt")
+    .get();
+  const activeUids = new Set<string>();
+
+  snapshot.docs.forEach((document) => {
+    const ownerRef = document.ref.parent.parent;
+    if (ownerRef?.id) activeUids.add(ownerRef.id);
+  });
+
+  return {
+    itemCount: snapshot.size,
+    activeUids,
+  };
+}
+
 export const listAdminUsers = onCall<{ pageToken?: string; pageSize?: number }>(
   { region: "asia-northeast3", enforceAppCheck: ENFORCE_APP_CHECK },
   async (req) => {
@@ -692,6 +726,56 @@ export const listAdminUsers = onCall<{ pageToken?: string; pageSize?: number }>(
       profileSnapshots.map((snapshot) => [snapshot.id, snapshot.data() || {}])
     );
 
+    const vaultCountEntries = result.users.length
+      ? await Promise.all(
+          result.users.map(async (user) => {
+            const countSnapshot = await db()
+              .collection(`users/${user.uid}/goldVaultItems`)
+              .count()
+              .get();
+            return [user.uid, Number(countSnapshot.data().count || 0)] as const;
+          })
+        )
+      : [];
+    const vaultCounts = new Map(vaultCountEntries);
+
+    const promotionRefs = result.users.flatMap((user) => [
+      {
+        uid: user.uid,
+        key: "welcome" as const,
+        ref: db().doc(`users/${user.uid}/promotions/welcome_gold_v1`),
+      },
+      {
+        uid: user.uid,
+        key: "quiz" as const,
+        ref: db().doc(`users/${user.uid}/promotions/gold_bonus_v1`),
+      },
+      {
+        uid: user.uid,
+        key: "marketingPush" as const,
+        ref: db().doc(`users/${user.uid}/promotions/marketing_push_bonus_v1`),
+      },
+    ]);
+    const promotionSnapshots = promotionRefs.length
+      ? await db().getAll(...promotionRefs.map((entry) => entry.ref))
+      : [];
+    const bonusRewards = new Map<
+      string,
+      { welcome: boolean; quiz: boolean; marketingPush: boolean }
+    >();
+
+    promotionSnapshots.forEach((snapshot, index) => {
+      const meta = promotionRefs[index];
+      if (!meta) return;
+      const current = bonusRewards.get(meta.uid) || {
+        welcome: false,
+        quiz: false,
+        marketingPush: false,
+      };
+      current[meta.key] = snapshot.exists;
+      bonusRewards.set(meta.uid, current);
+    });
+
     return {
       users: result.users.map((user) => {
         const profile = profiles.get(user.uid) || {};
@@ -709,10 +793,53 @@ export const listAdminUsers = onCall<{ pageToken?: string; pageSize?: number }>(
           role: isSuperAdmin ? "superAdmin" : isAdmin ? "admin" : "user",
           createdAt: user.metadata.creationTime || null,
           lastSignInAt: user.metadata.lastSignInTime || null,
-          bonusGoldG: Number(profile.bonusGoldG || 0),
+          bonusGoldG: adminBonusGoldGrams(profile),
+          vaultItemCount: vaultCounts.get(user.uid) || 0,
+          bonusRewards: bonusRewards.get(user.uid) || {
+            welcome: false,
+            quiz: false,
+            marketingPush: false,
+          },
         };
       }),
       nextPageToken: result.pageToken || null,
+    };
+  }
+);
+
+export const getAdminMyGoldOverview = onCall(
+  { region: "asia-northeast3", enforceAppCheck: ENFORCE_APP_CHECK },
+  async (req) => {
+    requireAdmin((req.auth?.token || {}) as Record<string, unknown>);
+
+    const [usersSnapshot, vaultActivity] = await Promise.all([
+      db()
+        .collection("users")
+        .select("bonusGoldMilliGrams", "bonusGoldG")
+        .get(),
+      loadGoldVaultActivity(),
+    ]);
+
+    let bonusBalanceG = 0;
+    let bonusHolderCount = 0;
+    usersSnapshot.docs.forEach((document) => {
+      const balanceG = adminBonusGoldGrams(document.data());
+      bonusBalanceG += balanceG;
+      if (balanceG > 0) bonusHolderCount += 1;
+    });
+
+    const userCount = usersSnapshot.size;
+    const vaultUserCount = vaultActivity.activeUids.size;
+
+    return {
+      ok: true,
+      userCount,
+      vaultUserCount,
+      vaultItemCount: vaultActivity.itemCount,
+      vaultUsageRate:
+        userCount > 0 ? Math.round((vaultUserCount / userCount) * 1000) / 10 : 0,
+      bonusHolderCount,
+      bonusBalanceG: Math.round(bonusBalanceG * 1000) / 1000,
     };
   }
 );
@@ -1798,7 +1925,7 @@ function notificationCategory(typeValue: unknown): "exchange" | "goldNews" | "be
   const type = String(typeValue || "").toLowerCase();
   if (type.startsWith("exchange_") || type.startsWith("bonus_gold_usage_")) return "exchange";
   if (type.startsWith("gold_price") || type.startsWith("gold_news") || type.startsWith("market_") || type === "notice") return "goldNews";
-  if (type.startsWith("promo_") || type.startsWith("quiz_") || type === "promo_bonus" || type === "welcome_bonus" || type.startsWith("event_") || type.startsWith("benefit_")) return "benefits";
+  if (type.startsWith("my_gold_") || type.startsWith("promo_") || type.startsWith("quiz_") || type === "promo_bonus" || type === "welcome_bonus" || type.startsWith("event_") || type.startsWith("benefit_")) return "benefits";
   return "other";
 }
 
@@ -2653,14 +2780,63 @@ export const sendPushTestNotification = onCall<{ token: string }>(
 type AdminNotificationTarget =
   | "all"
   | "goldNews"
+  | "myGoldEmpty"
+  | "myGoldActive"
+  | "bonusGoldHolders"
   | "reservationCustomers"
   | "specific";
 
 type AdminNotificationCategory =
   | "goldNews"
+  | "myGold"
   | "benefits"
   | "exchange"
   | "general";
+
+const ADMIN_NOTIFICATION_TARGETS: AdminNotificationTarget[] = [
+  "all",
+  "goldNews",
+  "myGoldEmpty",
+  "myGoldActive",
+  "bonusGoldHolders",
+  "reservationCustomers",
+  "specific",
+];
+
+const ADMIN_NOTIFICATION_CATEGORIES: AdminNotificationCategory[] = [
+  "goldNews",
+  "myGold",
+  "benefits",
+  "exchange",
+  "general",
+];
+
+function isMyGoldCampaignTarget(targetType: AdminNotificationTarget): boolean {
+  return ["myGoldEmpty", "myGoldActive", "bonusGoldHolders"].includes(targetType);
+}
+
+function isMarketingAdminCategory(category: AdminNotificationCategory): boolean {
+  return ["goldNews", "myGold", "benefits"].includes(category);
+}
+
+function assertAdminNotificationSelection(
+  targetType: AdminNotificationTarget,
+  category: AdminNotificationCategory
+): void {
+  if (!ADMIN_NOTIFICATION_TARGETS.includes(targetType)) {
+    throw new HttpsError(
+      "invalid-argument",
+      "알림 발송 대상을 확인해 주세요."
+    );
+  }
+
+  if (!ADMIN_NOTIFICATION_CATEGORIES.includes(category)) {
+    throw new HttpsError(
+      "invalid-argument",
+      "알림 종류를 확인해 주세요."
+    );
+  }
+}
 
 function normalizeInternalNotificationLink(value: unknown): string {
   const link = String(value || "/").trim();
@@ -2682,6 +2858,7 @@ function normalizeInternalNotificationLink(value: unknown): string {
 
 function manualNotificationType(category: AdminNotificationCategory): string {
   if (category === "goldNews") return "gold_news_admin";
+  if (category === "myGold") return "my_gold_admin";
   if (category === "benefits") return "benefit_admin";
   if (category === "exchange") return "exchange_admin";
   return "admin_notice";
@@ -2693,7 +2870,7 @@ function preferenceAllowsCategory(
   category: AdminNotificationCategory
 ): boolean {
   if (category === "exchange") return true;
-  if (category === "goldNews" || category === "benefits") {
+  if (isMarketingAdminCategory(category)) {
     return marketingPushEnabled(userData, preferences);
   }
   return true;
@@ -2705,6 +2882,7 @@ async function resolveAdminNotificationRecipients(params: {
   specificUser?: string;
 }): Promise<string[]> {
   const { targetType, category } = params;
+  assertAdminNotificationSelection(targetType, category);
 
   if (targetType === "specific") {
     const input = String(params.specificUser || "").trim();
@@ -2751,10 +2929,10 @@ async function resolveAdminNotificationRecipients(params: {
     );
 
     if (!preferenceAllowsCategory(userData, preferences, category)) {
-      if (category === "goldNews" || category === "benefits") {
+      if (isMarketingAdminCategory(category)) {
         throw new HttpsError(
           "failed-precondition",
-          "해당 사용자는 광고성 정보 수신에 동의하지 않았거나 금시세·혜택 알림을 해제하여 발송할 수 없습니다."
+          "해당 사용자는 광고성 정보 수신에 동의하지 않았거나 마케팅 알림을 해제하여 발송할 수 없습니다."
         );
       }
       throw new HttpsError(
@@ -2807,7 +2985,12 @@ async function resolveAdminNotificationRecipients(params: {
     return recipientUids;
   }
 
-  const usersSnapshot = await db().collection("users").get();
+  const [usersSnapshot, vaultActivity] = await Promise.all([
+    db().collection("users").get(),
+    targetType === "myGoldEmpty" || targetType === "myGoldActive"
+      ? loadGoldVaultActivity()
+      : Promise.resolve(null),
+  ]);
   const recipients: string[] = [];
 
   usersSnapshot.docs.forEach((document) => {
@@ -2818,15 +3001,61 @@ async function resolveAdminNotificationRecipients(params: {
 
     if (!preferenceAllowsCategory(userData, preferences, category)) return;
 
-    // ‘광고성 정보 수신동의 회원’ 대상을 선택한 경우 카테고리와 별개로
-    // 실제 광고성 정보 수신동의 + 마케팅 푸시 선호를 다시 확인합니다.
-    if (targetType === "goldNews" && !marketingPushEnabled(userData, preferences)) return;
+    if (
+      (targetType === "goldNews" || isMyGoldCampaignTarget(targetType)) &&
+      !marketingPushEnabled(userData, preferences)
+    ) {
+      return;
+    }
+
+    if (targetType === "myGoldEmpty" && vaultActivity?.activeUids.has(document.id)) {
+      return;
+    }
+    if (targetType === "myGoldActive" && !vaultActivity?.activeUids.has(document.id)) {
+      return;
+    }
+    if (targetType === "bonusGoldHolders" && adminBonusGoldGrams(userData) <= 0) {
+      return;
+    }
 
     recipients.push(document.id);
   });
 
   return recipients;
 }
+
+export const previewAdminNotificationRecipients = onCall<{
+  targetType: AdminNotificationTarget;
+  category: AdminNotificationCategory;
+  specificUser?: string;
+}>(
+  {
+    region: "asia-northeast3",
+    enforceAppCheck: ENFORCE_APP_CHECK,
+  },
+  async (req) => {
+    requireAdmin((req.auth?.token || {}) as Record<string, unknown>);
+
+    const targetType = String(
+      req.data?.targetType || ""
+    ) as AdminNotificationTarget;
+    const category = String(
+      req.data?.category || ""
+    ) as AdminNotificationCategory;
+    assertAdminNotificationSelection(targetType, category);
+
+    const recipients = await resolveAdminNotificationRecipients({
+      targetType,
+      category,
+      specificUser: req.data?.specificUser,
+    });
+
+    return {
+      ok: true,
+      recipientCount: recipients.length,
+    };
+  }
+);
 
 export const sendAdminNotification = onCall<{
   targetType: AdminNotificationTarget;
@@ -2851,25 +3080,7 @@ export const sendAdminNotification = onCall<{
       req.data?.category || ""
     ) as AdminNotificationCategory;
 
-    if (
-      !["all", "goldNews", "reservationCustomers", "specific"].includes(
-        targetType
-      )
-    ) {
-      throw new HttpsError(
-        "invalid-argument",
-        "알림 발송 대상을 확인해 주세요."
-      );
-    }
-
-    if (
-      !["goldNews", "benefits", "exchange", "general"].includes(category)
-    ) {
-      throw new HttpsError(
-        "invalid-argument",
-        "알림 종류를 확인해 주세요."
-      );
-    }
+    assertAdminNotificationSelection(targetType, category);
 
     const title = normalizeRequiredString(
       req.data?.title,
@@ -2894,7 +3105,7 @@ export const sendAdminNotification = onCall<{
     if (recipients.length === 0) {
       throw new HttpsError(
         "failed-precondition",
-        category === "goldNews" || category === "benefits"
+        isMarketingAdminCategory(category) || isMyGoldCampaignTarget(targetType)
           ? "광고성 정보 수신동의 기준으로 발송 가능한 사용자가 없습니다."
           : "현재 설정 기준으로 발송 가능한 사용자가 없습니다."
       );

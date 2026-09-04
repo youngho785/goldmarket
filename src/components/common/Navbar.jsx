@@ -446,7 +446,7 @@ export default function Navbar() {
       { to: "/gold-exchange", label: "금교환" },
       { to: "/goldbar-fee", label: "공임 안내" },
       { to: "/stores", label: "교환 절차·매장" },
-      { to: "/quiz/gold-bonus", label: "퀵퀴즈" },
+      { to: "/my-gold", label: "내 금고" },
       {
         to: "/my-exchanges",
         label: "교환내역",

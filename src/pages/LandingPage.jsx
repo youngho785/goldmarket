@@ -18,6 +18,7 @@ import {
 import LiteCalcFromGX from "@/components/LiteCalcFromGX";
 import GoldExchangeReviewList from "@/components/reviews/GoldExchangeReviewList";
 import GoldPriceBoard from "@/components/gold/GoldPriceBoard";
+import MyGoldIntroCard from "@/components/gold/MyGoldIntroCard";
 import goldVerificationImage from "@/assets/goldVerificationImage";
 
 const Page = styled.div`
@@ -335,6 +336,15 @@ const ProofRow = styled.div`
 
 
 /* ───────────────────── QUICK JOURNEY ───────────────────── */
+
+const MyGoldSection = styled.section`
+  width: 100%;
+  margin: 16px 0 2px;
+
+  @media (max-width: 680px) {
+    margin-top: 12px;
+  }
+`;
 
 const JourneySection = styled(Section)`
   padding-top: clamp(28px, 3.2vw, 38px);
@@ -1234,6 +1244,9 @@ export default function LandingPage() {
 
       {/* 02. 금시세 */}
       <GoldPriceBoard />
+      <MyGoldSection aria-label="내 금의 오늘 가치">
+        <MyGoldIntroCard />
+      </MyGoldSection>
 
       {/* 신규회원 혜택 · 퀵퀴즈를 첫 화면 가까이 노출 */}
       <QuizBanner aria-labelledby="quiz-title">

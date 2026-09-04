@@ -85,6 +85,7 @@ const GoldbarFee = lazy(() => import("@/pages/GoldbarFee"));
 const Stores = lazy(() => import("@/pages/Stores"));
 const Reviews = lazy(() => import("@/pages/Reviews"));
 const QuizGoldBonus = lazy(() => import("@/pages/QuizGoldBonus"));
+const MyGoldVault = lazy(() => import("@/pages/MyGoldVault"));
 
 const Terms = safeLazy(() => import("@/pages/terms/Terms"), "Terms");
 const Privacy = safeLazy(() => import("@/pages/terms/Privacy"), "Privacy");
@@ -535,6 +536,7 @@ const router = createBrowserRouter([
       { path: "/gold-exchange", element: <GoldExchange /> },
       { path: "/reviews", element: <Reviews /> },
       { path: "/quiz/gold-bonus", element: <QuizGoldBonus /> },
+      { path: "/my-gold", element: <MyGoldVault /> },
       { path: "/terms", element: <Terms /> },
       { path: "/privacy", element: <Privacy /> },
       { path: "/account-delete", element: <AccountDelete /> },

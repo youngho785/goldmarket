@@ -13,6 +13,9 @@ export const listAdminUsers = (options = {}) =>
     pageSize: options.pageSize || 50,
   });
 
+export const getAdminMyGoldOverview = () =>
+  call("getAdminMyGoldOverview");
+
 export async function listAdminUserProfilesFallback() {
   const snapshot = await getDocs(query(collection(db, "users"), limit(100)));
   return {
@@ -26,6 +29,9 @@ export async function listAdminUserProfilesFallback() {
           : profile.role === "user"
             ? "user"
             : "unknown";
+      const bonusGoldG = Number.isFinite(Number(profile.bonusGoldMilliGrams))
+        ? Math.max(0, Number(profile.bonusGoldMilliGrams)) / 1000
+        : Math.max(0, Number(profile.bonusGoldG || 0));
       return {
         uid: entry.id,
         email: String(profile.email || ""),
@@ -36,7 +42,9 @@ export async function listAdminUserProfilesFallback() {
         role,
         createdAt,
         lastSignInAt: null,
-        bonusGoldG: Number(profile.bonusGoldG || 0),
+        bonusGoldG,
+        vaultItemCount: null,
+        bonusRewards: null,
       };
     }),
     nextPageToken: null,

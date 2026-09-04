@@ -7,6 +7,7 @@ import {
   initializeTestEnvironment,
 } from "@firebase/rules-unit-testing";
 import {
+  deleteDoc,
   deleteField,
   doc,
   getDoc,
@@ -329,5 +330,88 @@ test("회원은 profiles 닉네임과 nicknames 인덱스를 직접 쓸 수 없�
   await assertFails(updateDoc(doc(db, "profiles", "owner"), { nickname: "위조닉" }));
   await assertFails(
     setDoc(doc(db, "nicknames", "위조닉"), { ownerUid: "owner", original: "위조닉" })
+  );
+});
+
+test("회원은 자신의 내 금고 항목을 생성·조회·수정·삭제할 수 있다", async () => {
+  const db = env.authenticatedContext("owner").firestore();
+  const ref = doc(db, "users", "owner", "goldVaultItems", "ring-1");
+
+  await assertSucceeds(
+    setDoc(ref, {
+      label: "엄마에게 받은 반지",
+      goldType: "18k(750) 제품(팔찌,목걸이, 반지,귀걸이, 발찌 등)",
+      weightG: 7.2,
+      note: "기념품",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+  );
+  await assertSucceeds(getDoc(ref));
+  await assertSucceeds(
+    updateDoc(ref, {
+      label: "엄마에게 받은 18K 반지",
+      updatedAt: serverTimestamp(),
+    })
+  );
+  await assertSucceeds(deleteDoc(ref));
+});
+
+test("내 금고 상세는 본인만 읽을 수 있고 관리자·다른 회원은 직접 열람할 수 없다", async () => {
+  await env.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), "users", "owner", "goldVaultItems", "ring-1"), {
+      label: "돌반지",
+      goldType: "순금 999제품(팔찌,목걸이, 반지,귀걸이)",
+      weightG: 3.75,
+      note: "",
+      createdAt: new Date("2026-09-03T00:00:00Z"),
+      updatedAt: new Date("2026-09-03T00:00:00Z"),
+    });
+  });
+
+  const ownerDb = env.authenticatedContext("owner").firestore();
+  const otherDb = env.authenticatedContext("other").firestore();
+  const adminDb = env.authenticatedContext("admin", { admin: true }).firestore();
+  const itemRef = doc(ownerDb, "users", "owner", "goldVaultItems", "ring-1");
+
+  await assertSucceeds(getDoc(itemRef));
+  await assertFails(getDoc(doc(otherDb, "users", "owner", "goldVaultItems", "ring-1")));
+  await assertFails(getDoc(doc(adminDb, "users", "owner", "goldVaultItems", "ring-1")));
+  await assertFails(
+    setDoc(doc(otherDb, "users", "owner", "goldVaultItems", "forged"), {
+      label: "타인 금",
+      goldType: "순금 열쇠",
+      weightG: 10,
+      note: "",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+  );
+});
+
+test("내 금고는 허용된 금 종류·무게·필드만 저장할 수 있다", async () => {
+  const db = env.authenticatedContext("owner").firestore();
+
+  await assertFails(
+    setDoc(doc(db, "users", "owner", "goldVaultItems", "bad-type"), {
+      label: "알 수 없는 금",
+      goldType: "임의 금종류",
+      weightG: 3.75,
+      note: "",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+  );
+
+  await assertFails(
+    setDoc(doc(db, "users", "owner", "goldVaultItems", "forged-value"), {
+      label: "위조 값",
+      goldType: "순금 열쇠",
+      weightG: 3.75,
+      note: "",
+      pureGoldG: 999999,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
   );
 });
