@@ -39,6 +39,11 @@ beforeEach(async () => {
       nickname: "골드고객",
       bonusGoldMilliGrams: 10,
     });
+    await setDoc(doc(db, "users", "admin"), {
+      displayName: "관리자",
+      role: "admin",
+      disabled: false,
+    });
     await setDoc(doc(db, "adminAuditLogs", "log-1"), {
       action: "exchange.status.changed",
     });
@@ -75,6 +80,51 @@ test("관리자 감사 로그는 관리자만 읽을 수 있다", async () => {
     .firestore();
   await assertFails(getDoc(doc(ownerDb, "adminAuditLogs", "log-1")));
   await assertSucceeds(getDoc(doc(adminDb, "adminAuditLogs", "log-1")));
+});
+
+
+test("관리자 claim이 남아 있어도 현재 role이 user이면 관리자 읽기를 차단한다", async () => {
+  await env.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), "users", "stale-admin"), {
+      role: "user",
+      disabled: false,
+    });
+  });
+  const staleAdminDb = env
+    .authenticatedContext("stale-admin", { admin: true })
+    .firestore();
+  await assertFails(getDoc(doc(staleAdminDb, "adminAuditLogs", "log-1")));
+});
+
+test("관리자 claim이 남아 있어도 disabled 계정은 관리자 읽기를 차단한다", async () => {
+  await env.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), "users", "disabled-admin"), {
+      role: "admin",
+      disabled: true,
+    });
+  });
+  const disabledAdminDb = env
+    .authenticatedContext("disabled-admin", { admin: true })
+    .firestore();
+  await assertFails(getDoc(doc(disabledAdminDb, "adminAuditLogs", "log-1")));
+});
+
+test("혜택 중복 방지 식별 기록은 클라이언트와 관리자 모두 직접 접근할 수 없다", async () => {
+  await env.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), "benefitClaimLocks", "hash-1"), {
+      identityType: "verified_email_sha256_v1",
+      claims: { welcome: { claimed: true } },
+    });
+  });
+  const ownerDb = env.authenticatedContext("owner").firestore();
+  const adminDb = env.authenticatedContext("admin", { admin: true }).firestore();
+  await assertFails(getDoc(doc(ownerDb, "benefitClaimLocks", "hash-1")));
+  await assertFails(getDoc(doc(adminDb, "benefitClaimLocks", "hash-1")));
+  await assertFails(
+    setDoc(doc(ownerDb, "benefitClaimLocks", "forged"), {
+      claims: { welcome: { claimed: false } },
+    })
+  );
 });
 
 test("회원은 자신의 문의만 유효한 형식으로 생성할 수 있다", async () => {

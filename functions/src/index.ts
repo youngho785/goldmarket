@@ -1,7 +1,7 @@
 // functions/src/index.ts
 // Cloud Functions (ESM + TypeScript)
 import { initializeApp, getApps } from "firebase-admin/app";
-import { getAuth } from "firebase-admin/auth";
+import { getAuth, type UserRecord } from "firebase-admin/auth";
 import { getStorage } from "firebase-admin/storage";
 import { getFirestore, FieldValue, type Firestore } from "firebase-admin/firestore";
 import { getMessaging, type BatchResponse, type SendResponse } from "firebase-admin/messaging";
@@ -44,16 +44,43 @@ function hasAdminClaim(token: Record<string, unknown> | undefined): boolean {
   return token?.admin === true || token?.superAdmin === true;
 }
 
-function requireAdmin(token: Record<string, unknown> | undefined): void {
-  if (!hasAdminClaim(token)) {
-    throw new HttpsError("permission-denied", "관리자 권한이 필요합니다.");
+async function loadCurrentAuthUser(uid: string | undefined): Promise<UserRecord> {
+  if (!uid) {
+    throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+  }
+
+  try {
+    const userRecord = await getAuth().getUser(uid);
+    if (userRecord.disabled) {
+      throw new HttpsError("permission-denied", "사용이 중지된 계정입니다.");
+    }
+    return userRecord;
+  } catch (error) {
+    if (error instanceof HttpsError) throw error;
+
+    const code = String((error as { code?: string })?.code || "");
+    if (code === "auth/user-not-found") {
+      throw new HttpsError("unauthenticated", "계정 정보를 확인할 수 없습니다. 다시 로그인해 주세요.");
+    }
+    console.error("[loadCurrentAuthUser] 사용자 확인 실패", { uid, code });
+    throw new HttpsError("unavailable", "계정 상태를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.");
   }
 }
 
-function requireSuperAdmin(token: Record<string, unknown> | undefined): void {
-  if (token?.superAdmin !== true) {
+async function requireCurrentAdmin(uid: string | undefined): Promise<string> {
+  const userRecord = await loadCurrentAuthUser(uid);
+  if (!hasAdminClaim(userRecord.customClaims as Record<string, unknown> | undefined)) {
+    throw new HttpsError("permission-denied", "관리자 권한이 필요합니다.");
+  }
+  return userRecord.uid;
+}
+
+async function requireCurrentSuperAdmin(uid: string | undefined): Promise<string> {
+  const userRecord = await loadCurrentAuthUser(uid);
+  if (userRecord.customClaims?.superAdmin !== true) {
     throw new HttpsError("permission-denied", "최고 관리자 권한이 필요합니다.");
   }
+  return userRecord.uid;
 }
 
 const RECENT_AUTH_MAX_AGE_SECONDS = 5 * 60;
@@ -83,41 +110,19 @@ function requireRecentAuthentication(
  * 예약/보너스처럼 중요한 상태 변경은 Firebase Auth의 현재 계정 상태를 직접 확인합니다.
  * 이메일 인증은 회원가입 시 한 번만 하면 되며, 이후 호출에서는 저장된 인증 완료 상태만 확인합니다.
  */
-async function requireVerifiedUser(uid: string | undefined): Promise<string> {
-  if (!uid) {
-    throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
-  }
-
-  try {
-    const userRecord = await getAuth().getUser(uid);
-
-    if (userRecord.disabled) {
-      throw new HttpsError("permission-denied", "사용이 중지된 계정입니다.");
-    }
-
-    if (!userRecord.emailVerified) {
-      throw new HttpsError(
-        "failed-precondition",
-        "이메일 인증을 완료한 회원만 이용할 수 있습니다."
-      );
-    }
-
-    return uid;
-  } catch (error) {
-    if (error instanceof HttpsError) throw error;
-
-    const code = String((error as { code?: string })?.code || "");
-    console.error("[requireVerifiedUser] 사용자 확인 실패", { uid, code });
-
-    if (code === "auth/user-not-found") {
-      throw new HttpsError("unauthenticated", "계정 정보를 확인할 수 없습니다. 다시 로그인해 주세요.");
-    }
-
+async function requireVerifiedUserRecord(uid: string | undefined): Promise<UserRecord> {
+  const userRecord = await loadCurrentAuthUser(uid);
+  if (!userRecord.emailVerified) {
     throw new HttpsError(
-      "unavailable",
-      "회원 인증 상태를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요."
+      "failed-precondition",
+      "이메일 인증을 완료한 회원만 이용할 수 있습니다."
     );
   }
+  return userRecord;
+}
+
+async function requireVerifiedUser(uid: string | undefined): Promise<string> {
+  return (await requireVerifiedUserRecord(uid)).uid;
 }
 
 /* ── 공통 상수/유틸 */
@@ -610,7 +615,7 @@ async function addUniqueNotificationForAdmins(
 export const releaseReservedSlot = onCall<{ dateKey: string; time: string }>(
   { region: "asia-northeast3", enforceAppCheck: ENFORCE_APP_CHECK },
   async (req) => {
-    requireAdmin((req.auth?.token || {}) as Record<string, unknown>);
+    await requireCurrentAdmin(req.auth?.uid);
     const { dateKey, time } = (req.data || {}) as Partial<{ dateKey: string; time: string }>;
     if (
       !dateKey ||
@@ -641,7 +646,7 @@ export const setUserRole = onCall<{ uid: string; role: "user" | "admin" }>(
   async (req) => {
     const callerUid = req.auth?.uid;
     if (!callerUid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
-    requireSuperAdmin((req.auth?.token || {}) as Record<string, unknown>);
+    await requireCurrentSuperAdmin(req.auth?.uid);
 
     const uid = String(req.data?.uid || "").trim();
     const role = req.data?.role;
@@ -661,11 +666,26 @@ export const setUserRole = onCall<{ uid: string; role: "user" | "admin" }>(
     if (role === "admin") nextClaims.admin = true;
     else delete nextClaims.admin;
 
+    const previousRole = target.customClaims?.admin === true ? "admin" : "user";
     await getAuth().setCustomUserClaims(uid, nextClaims);
-    await db().doc(`users/${uid}`).set(
-      { role, roleUpdatedAt: FieldValue.serverTimestamp(), roleUpdatedBy: callerUid },
-      { merge: true }
-    );
+    if (role === "user") {
+      await getAuth().revokeRefreshTokens(uid);
+    }
+
+    await Promise.all([
+      db().doc(`users/${uid}`).set(
+        { role, roleUpdatedAt: FieldValue.serverTimestamp(), roleUpdatedBy: callerUid },
+        { merge: true }
+      ),
+      db().collection("adminAuditLogs").add({
+        action: "user_role_changed",
+        targetUid: uid,
+        actorUid: callerUid,
+        previousRole,
+        nextRole: role,
+        createdAt: FieldValue.serverTimestamp(),
+      }),
+    ]);
     return { ok: true, uid, role };
   }
 );
@@ -710,7 +730,7 @@ async function loadGoldVaultActivity(): Promise<{
 export const listAdminUsers = onCall<{ pageToken?: string; pageSize?: number }>(
   { region: "asia-northeast3", enforceAppCheck: ENFORCE_APP_CHECK },
   async (req) => {
-    requireAdmin((req.auth?.token || {}) as Record<string, unknown>);
+    await requireCurrentAdmin(req.auth?.uid);
 
     const pageSize = Math.max(1, Math.min(Math.trunc(Number(req.data?.pageSize) || 50), 100));
     const pageToken = String(req.data?.pageToken || "").trim();
@@ -810,7 +830,7 @@ export const listAdminUsers = onCall<{ pageToken?: string; pageSize?: number }>(
 export const getAdminMyGoldOverview = onCall(
   { region: "asia-northeast3", enforceAppCheck: ENFORCE_APP_CHECK },
   async (req) => {
-    requireAdmin((req.auth?.token || {}) as Record<string, unknown>);
+    await requireCurrentAdmin(req.auth?.uid);
 
     const [usersSnapshot, vaultActivity] = await Promise.all([
       db()
@@ -849,7 +869,7 @@ export const setAdminUserDisabled = onCall<{ uid: string; disabled: boolean }>(
   async (req) => {
     const callerUid = req.auth?.uid;
     if (!callerUid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
-    requireSuperAdmin((req.auth?.token || {}) as Record<string, unknown>);
+    await requireCurrentSuperAdmin(req.auth?.uid);
 
     const uid = String(req.data?.uid || "").trim();
     const disabled = req.data?.disabled;
@@ -866,6 +886,9 @@ export const setAdminUserDisabled = onCall<{ uid: string; disabled: boolean }>(
     }
 
     await getAuth().updateUser(uid, { disabled });
+    if (disabled) {
+      await getAuth().revokeRefreshTokens(uid);
+    }
     await Promise.all([
       db().doc(`users/${uid}`).set(
         {
@@ -928,7 +951,7 @@ export const updateGoldRates = onCall<{
 }>(
   { region: "asia-northeast3", enforceAppCheck: ENFORCE_APP_CHECK },
   async (req) => {
-    requireAdmin((req.auth?.token || {}) as Record<string, unknown>);
+    await requireCurrentAdmin(req.auth?.uid);
     const actorUid = req.auth?.uid || "system";
     const purity = normalizeRateTable(req.data?.purity, DEFAULT_PURITY, "품목별 환산율");
     const exchange = normalizeRateTable(req.data?.exchange, DEFAULT_EXCHANGE, "교환율");
@@ -1523,7 +1546,7 @@ export const setExchangeGroupStatus = onCall<{
 }>(
   { region: "asia-northeast3", enforceAppCheck: ENFORCE_APP_CHECK },
   async (req) => {
-    requireAdmin((req.auth?.token || {}) as Record<string, unknown>);
+    await requireCurrentAdmin(req.auth?.uid);
 
     const groupId = String(req.data?.groupId || "").trim();
     const status = String(req.data?.status || "").trim() as
@@ -1546,15 +1569,6 @@ export const setExchangeGroupStatus = onCall<{
     }
 
     const groupMetaRef = db().doc(`goldExchangeGroups/${groupId}`);
-    const groupMetaSnap = await groupMetaRef.get();
-    const bonusUsageStatus = String(groupMetaSnap.get("bonusGoldUsageStatus") || "");
-    if (status === "completed" && bonusUsageStatus === "requested") {
-      throw new HttpsError(
-        "failed-precondition",
-        "적립 순금 사용 신청을 먼저 확정하거나 취소해 주세요."
-      );
-    }
-
     const col = db().collection("goldExchanges");
     const slotsRef = db().doc("appConfig/reservedSlots");
     const now = FieldValue.serverTimestamp();
@@ -1562,7 +1576,18 @@ export const setExchangeGroupStatus = onCall<{
 
     const result = await db().runTransaction(async (tx) => {
       const groupQuery = col.where("groupId", "==", groupId);
-      const groupSnapshot = await tx.get(groupQuery);
+      const [groupMetaSnap, groupSnapshot] = await Promise.all([
+        tx.get(groupMetaRef),
+        tx.get(groupQuery),
+      ]);
+      const bonusUsageStatus = String(groupMetaSnap.get("bonusGoldUsageStatus") || "");
+      if (status === "completed" && bonusUsageStatus === "requested") {
+        throw new HttpsError(
+          "failed-precondition",
+          "적립 순금 사용 신청을 먼저 확정하거나 취소해 주세요."
+        );
+      }
+
       let documents: FirebaseFirestore.DocumentSnapshot[] = [...groupSnapshot.docs];
 
       if (documents.length === 0) {
@@ -1611,6 +1636,7 @@ export const setExchangeGroupStatus = onCall<{
           scheduleChangeType: "",
           previousVisitDate: "",
           previousVisitTime: "",
+          bonusUsageStatus,
           changed: false,
         };
       }
@@ -1708,6 +1734,7 @@ export const setExchangeGroupStatus = onCall<{
         scheduleChangeType,
         previousVisitDate,
         previousVisitTime,
+        bonusUsageStatus,
         changed: true,
       };
     });
@@ -1719,7 +1746,7 @@ export const setExchangeGroupStatus = onCall<{
     if (
       status === "canceled" ||
       status === "rejected" ||
-      (status === "requested" && bonusUsageStatus === "used")
+      (status === "requested" && result.bonusUsageStatus === "used")
     ) {
       await reconcileBonusUsageForGroup({
         groupId,
@@ -1976,7 +2003,7 @@ export const setBookingAvailability = onCall<{
 }>(
   { region: "asia-northeast3", enforceAppCheck: ENFORCE_APP_CHECK },
   async (req) => {
-    requireAdmin((req.auth?.token || {}) as Record<string, unknown>);
+    await requireCurrentAdmin(req.auth?.uid);
 
     const dateKey = String(req.data?.dateKey || "").trim();
     const closed = req.data?.closed === true;
@@ -3034,7 +3061,7 @@ export const previewAdminNotificationRecipients = onCall<{
     enforceAppCheck: ENFORCE_APP_CHECK,
   },
   async (req) => {
-    requireAdmin((req.auth?.token || {}) as Record<string, unknown>);
+    await requireCurrentAdmin(req.auth?.uid);
 
     const targetType = String(
       req.data?.targetType || ""
@@ -3070,7 +3097,7 @@ export const sendAdminNotification = onCall<{
     enforceAppCheck: ENFORCE_APP_CHECK,
   },
   async (req) => {
-    requireAdmin((req.auth?.token || {}) as Record<string, unknown>);
+    await requireCurrentAdmin(req.auth?.uid);
 
     const actorUid = req.auth?.uid || "system";
     const targetType = String(
@@ -3229,7 +3256,7 @@ export const listAdminNotificationSends = onCall<{ limit?: number }>(
     enforceAppCheck: ENFORCE_APP_CHECK,
   },
   async (req) => {
-    requireAdmin((req.auth?.token || {}) as Record<string, unknown>);
+    await requireCurrentAdmin(req.auth?.uid);
 
     const limit = Math.max(
       1,
@@ -3401,6 +3428,216 @@ export const sendExchangeVisitDayBeforeReminders = onSchedule(
 
     console.log(
       `[sendExchangeVisitDayBeforeReminders] visitDate=${tomorrow} created=${createdCount}`
+    );
+  }
+);
+
+/* ─────────────────────────────────────────────────────────────
+ * 9) MY GOLD 주간 리포트
+ * - 매주 월요일 오전 10시
+ * - MY GOLD(등록 실물 금 또는 적립 순금)가 있는 회원만 대상
+ * - 광고성 정보 수신동의 + 마케팅 알림 ON 회원에게만 생성
+ * - 등록 실물 금은 현재 goldRates의 교환 적용률로 예상 인정 순금을 계산
+ * - 7일 전 공개 시세와 비교해 개인 MY GOLD 가치 변화를 안내
+ * - 날짜별 고정 알림 ID로 중복 발송 방지
+ * ───────────────────────────────────────────────────────────── */
+function readBonusGoldGramsForWeeklyReport(
+  userData: FirebaseFirestore.DocumentData | undefined
+): number {
+  const milliGrams = Number(userData?.bonusGoldMilliGrams);
+  if (Number.isFinite(milliGrams) && milliGrams >= 0) {
+    return milliGrams / 1000;
+  }
+
+  const grams = Number(userData?.bonusGoldG);
+  return Number.isFinite(grams) && grams > 0 ? grams : 0;
+}
+
+function weeklyGoldValueWon(pureGoldG: number, pureGoldBuyPerDon: number): number {
+  if (
+    !Number.isFinite(pureGoldG) ||
+    pureGoldG <= 0 ||
+    !Number.isFinite(pureGoldBuyPerDon) ||
+    pureGoldBuyPerDon <= 0
+  ) {
+    return 0;
+  }
+  return Math.round((pureGoldG / DON_TO_GRAMS) * pureGoldBuyPerDon);
+}
+
+function formatWeeklyWon(value: number): string {
+  const rounded = Math.round(Number(value) || 0);
+  return `${rounded.toLocaleString("ko-KR")}원`;
+}
+
+function formatWeeklySignedWon(value: number): string {
+  const rounded = Math.round(Number(value) || 0);
+  if (rounded === 0) return "0원";
+  return `${rounded > 0 ? "+" : "-"}${Math.abs(rounded).toLocaleString("ko-KR")}원`;
+}
+
+async function loadWeeklyGoldReferencePrice(targetDateKey: string): Promise<number> {
+  const compact = targetDateKey.replace(/-/g, "");
+  const history = db().collection("goldPriceHistory");
+  const exact = await history.doc(compact).get();
+  if (exact.exists) {
+    const exactPrice = Number(exact.get("market.pureGoldBuyPerDon")) || 0;
+    if (exactPrice > 0) return exactPrice;
+  }
+
+  const fallback = await history
+    .where("sourceDate", "<=", compact)
+    .orderBy("sourceDate", "desc")
+    .limit(1)
+    .get();
+  const fallbackDoc = fallback.docs[0];
+  return fallbackDoc
+    ? Number(fallbackDoc.get("market.pureGoldBuyPerDon")) || 0
+    : 0;
+}
+
+export const sendMyGoldWeeklyReports = onSchedule(
+  {
+    schedule: "0 10 * * 1",
+    timeZone: "Asia/Seoul",
+    region: "asia-northeast3",
+    timeoutSeconds: 300,
+    retryCount: 1,
+  },
+  async () => {
+    const today = koreaDateKey();
+    const referenceDate = addDaysToDateKey(today, -7);
+
+    const [publicConfigSnap, currentPriceSnap, ratesSnap, vaultSnapshot, usersSnapshot] =
+      await Promise.all([
+        db().doc("goldPricePublic/config").get(),
+        db().doc("goldPrices/current").get(),
+        db().doc("appConfig/goldRates").get(),
+        db().collectionGroup("goldVaultItems").get(),
+        db().collection("users").get(),
+      ]);
+
+    if (!publicConfigSnap.exists || publicConfigSnap.get("enabled") !== true) {
+      console.log(`[sendMyGoldWeeklyReports] date=${today} skipped=public-price-disabled`);
+      return;
+    }
+
+    const currentPrice = Number(currentPriceSnap.get("market.pureGoldBuyPerDon")) || 0;
+    if (currentPrice <= 0) {
+      console.log(`[sendMyGoldWeeklyReports] date=${today} skipped=current-price-missing`);
+      return;
+    }
+
+    const historicalPrice = await loadWeeklyGoldReferencePrice(referenceDate);
+    const ratesData = ratesSnap.exists ? ratesSnap.data() || {} : {};
+    const purity = {
+      ...DEFAULT_PURITY,
+      ...(ratesData.purity && typeof ratesData.purity === "object" ? ratesData.purity : {}),
+    } as Record<string, number>;
+    const exchange = {
+      ...DEFAULT_EXCHANGE,
+      ...(ratesData.exchange && typeof ratesData.exchange === "object" ? ratesData.exchange : {}),
+    } as Record<string, number>;
+
+    const vaultByUid = new Map<string, { itemCount: number; pureGoldG: number }>();
+    vaultSnapshot.docs.forEach((document) => {
+      const uid = document.ref.parent.parent?.id || "";
+      if (!uid) return;
+
+      const data = document.data() || {};
+      const weightG = Number(data.weightG) || 0;
+      const goldType = String(data.goldType || "");
+      if (weightG <= 0 || !goldType) return;
+
+      const recognizedG = computeFinalWeightFromRates({
+        grams: weightG,
+        goldType,
+        exchangeType: "999.9골드바",
+        purity,
+        exchange,
+      });
+      if (recognizedG <= 0) return;
+
+      const current = vaultByUid.get(uid) || { itemCount: 0, pureGoldG: 0 };
+      current.itemCount += 1;
+      current.pureGoldG = roundTo3(current.pureGoldG + recognizedG);
+      vaultByUid.set(uid, current);
+    });
+
+    let createdCount = 0;
+    let eligibleCount = 0;
+
+    for (const userDocument of usersSnapshot.docs) {
+      const uid = userDocument.id;
+      const userData = userDocument.data() || {};
+      const preferences = normalizeNotificationPreferences(
+        userDocument.get("notificationPreferences")
+      );
+
+      if (!marketingPushEnabled(userData, preferences)) continue;
+
+      const vault = vaultByUid.get(uid) || { itemCount: 0, pureGoldG: 0 };
+      const bonusGoldG = readBonusGoldGramsForWeeklyReport(userData);
+      const totalPureGoldG = roundTo3(vault.pureGoldG + bonusGoldG);
+      if (totalPureGoldG <= 0) continue;
+
+      eligibleCount += 1;
+      const currentValueWon = weeklyGoldValueWon(totalPureGoldG, currentPrice);
+      const historicalValueWon = historicalPrice > 0
+        ? weeklyGoldValueWon(totalPureGoldG, historicalPrice)
+        : 0;
+      const changeWon = historicalValueWon > 0
+        ? currentValueWon - historicalValueWon
+        : 0;
+      const changePercent = historicalValueWon > 0
+        ? (changeWon / historicalValueWon) * 100
+        : null;
+
+      const parts = [
+        `현재 참고가치 ${formatWeeklyWon(currentValueWon)}`,
+      ];
+      if (changePercent !== null && Number.isFinite(changePercent)) {
+        parts.push(
+          `7일 전보다 ${formatWeeklySignedWon(changeWon)} (${changePercent >= 0 ? "+" : ""}${changePercent.toFixed(2)}%)`
+        );
+      }
+      if (vault.itemCount > 0) {
+        parts.push(`실물 금 ${vault.itemCount}개 · 교환기준 예상 ${vault.pureGoldG.toFixed(2)}g`);
+      }
+      if (bonusGoldG > 0) {
+        parts.push(`적립 순금 ${bonusGoldG.toFixed(2)}g`);
+      }
+
+      const notificationId = `my-gold-weekly-${today}`;
+      const notificationRef = db().doc(`notifications/${uid}/items/${notificationId}`);
+      const existing = await notificationRef.get();
+      if (existing.exists) continue;
+
+      await notificationRef.set({
+        type: "my_gold_weekly",
+        title: "이번 주 MY GOLD",
+        body: parts.join(" · "),
+        link: "/my-gold",
+        meta: {
+          reportDate: today,
+          referenceDate,
+          currentValueWon,
+          historicalValueWon,
+          changeWon,
+          changePercent,
+          registeredItemCount: vault.itemCount,
+          registeredPureGoldG: vault.pureGoldG,
+          bonusGoldG,
+          totalPureGoldG,
+        },
+        createdAt: FieldValue.serverTimestamp(),
+        read: false,
+      });
+      createdCount += 1;
+    }
+
+    console.log(
+      `[sendMyGoldWeeklyReports] date=${today} eligible=${eligibleCount} created=${createdCount} historicalPrice=${historicalPrice}`
     );
   }
 );
@@ -3677,15 +3914,20 @@ export const deleteMyAccount = onCall<unknown>(
     let notificationItemsDeleted = 0;
     let ledgerDeleted = 0;
     let promotionsDeleted = 0;
+    let benefitClaimLocksRecorded = 0;
     let profilePhotosDeleted = 0;
     let legacyProfilesDeleted = 0;
 
     try {
       // 읽기만 먼저 수행합니다. auth_time 검사는 이미 끝난 상태입니다.
-      const [profileSnap, exchangeSnap] = await Promise.all([
+      const [profileSnap, exchangeSnap, authUser] = await Promise.all([
         profileRef.get(),
         exchanges.where("userId", "==", uid).get(),
+        getAuth().getUser(uid),
       ]);
+      const benefitIdentityHash = authUser.emailVerified
+        ? benefitIdentityHashFromEmail(authUser.email)
+        : "";
 
       const activeExchangeCount = exchangeSnap.docs.filter((document) =>
         isActiveExchangeStatus(document.get("status"))
@@ -3844,6 +4086,51 @@ export const deleteMyAccount = onCall<unknown>(
             },
           },
           {
+            name: "benefitClaimLocks",
+            run: async () => {
+              if (!benefitIdentityHash) return 0;
+
+              const rewardEntries: Array<{ key: BenefitRewardKey; promoId: string }> = [
+                { key: "welcome", promoId: WELCOME_BONUS_PROMO_ID },
+                { key: "quiz", promoId: QUIZ_BONUS_PROMO_ID },
+                { key: "marketingPush", promoId: MARKETING_PUSH_BONUS_PROMO_ID },
+              ];
+              const promotionSnapshots = await db().getAll(
+                ...rewardEntries.map((entry) =>
+                  db().doc(`users/${uid}/promotions/${entry.promoId}`)
+                )
+              );
+              const claimedRewards = rewardEntries.filter(
+                (_entry, index) => promotionSnapshots[index]?.exists
+              );
+              if (claimedRewards.length === 0) return 0;
+
+              const claimLockRef = benefitClaimLockRef(benefitIdentityHash);
+              const now = FieldValue.serverTimestamp();
+              const claims = Object.fromEntries(
+                claimedRewards.map((entry) => [
+                  entry.key,
+                  {
+                    claimed: true,
+                    promoId: entry.promoId,
+                    recordedAt: now,
+                  },
+                ])
+              );
+              await claimLockRef.set(
+                {
+                  schemaVersion: 1,
+                  identityType: BENEFIT_IDENTITY_TYPE,
+                  claims,
+                  updatedAt: now,
+                },
+                { merge: true }
+              );
+              benefitClaimLocksRecorded = claimedRewards.length;
+              return benefitClaimLocksRecorded;
+            },
+          },
+          {
             name: "promotions",
             run: async () => {
               promotionsDeleted = await deleteCollectionInBatches(
@@ -3893,6 +4180,8 @@ export const deleteMyAccount = onCall<unknown>(
                     marketingFcmToken: null,
                     marketingFcmBrowser: "",
                     marketingFcmTokenUpdatedAt: FieldValue.serverTimestamp(),
+                    role: "user",
+                    disabled: true,
                     deleted: true,
                     deletedAt: anonymizedAt,
                     anonymizedAt,
@@ -3963,6 +4252,7 @@ export const deleteMyAccount = onCall<unknown>(
         notificationItemsDeleted,
         ledgerDeleted,
         promotionsDeleted,
+        benefitClaimLocksRecorded,
         profilePhotosDeleted,
         legacyProfilesDeleted,
       });
@@ -4110,6 +4400,76 @@ const MARKETING_PUSH_BONUS_PROMO_ID = "marketing_push_bonus_v1";
 const MARKETING_PUSH_BONUS_CREDIT_MG = 10;
 const MARKETING_PUSH_BONUS_CREDIT_G =
   MARKETING_PUSH_BONUS_CREDIT_MG / 1000;
+const BENEFIT_CLAIM_LOCK_COLLECTION = "benefitClaimLocks";
+const BENEFIT_IDENTITY_TYPE = "verified_email_sha256_v1";
+type BenefitRewardKey = "welcome" | "quiz" | "marketingPush";
+
+const BENEFIT_PROMO_ID_BY_KEY: Record<BenefitRewardKey, string> = {
+  welcome: WELCOME_BONUS_PROMO_ID,
+  quiz: QUIZ_BONUS_PROMO_ID,
+  marketingPush: MARKETING_PUSH_BONUS_PROMO_ID,
+};
+
+function benefitIdentityHashFromEmail(value: unknown): string {
+  const email = String(value || "").trim().toLowerCase();
+  if (!email) return "";
+  return createHash("sha256")
+    .update(`koreagoldmarket-benefit-v1|${email}`)
+    .digest("hex");
+}
+
+function benefitIdentityHashForVerifiedUser(userRecord: UserRecord): string {
+  if (!userRecord.emailVerified) {
+    throw new HttpsError(
+      "failed-precondition",
+      "이메일 인증을 완료한 회원만 순금 혜택을 받을 수 있습니다."
+    );
+  }
+  const identityHash = benefitIdentityHashFromEmail(userRecord.email);
+  if (!identityHash) {
+    throw new HttpsError(
+      "failed-precondition",
+      "인증 이메일 정보를 확인한 뒤 다시 시도해 주세요."
+    );
+  }
+  return identityHash;
+}
+
+function benefitClaimLockRef(identityHash: string): FirebaseFirestore.DocumentReference {
+  return db().doc(`${BENEFIT_CLAIM_LOCK_COLLECTION}/${identityHash}`);
+}
+
+function benefitClaimedFromLock(
+  snapshot: FirebaseFirestore.DocumentSnapshot,
+  rewardKey: BenefitRewardKey
+): boolean {
+  const claims = snapshot.exists ? snapshot.data()?.claims : undefined;
+  return claims?.[rewardKey]?.claimed === true;
+}
+
+function recordBenefitClaimLock(
+  tx: FirebaseFirestore.Transaction,
+  lockRef: FirebaseFirestore.DocumentReference,
+  rewardKey: BenefitRewardKey,
+  at: FirebaseFirestore.FieldValue
+): void {
+  tx.set(
+    lockRef,
+    {
+      schemaVersion: 1,
+      identityType: BENEFIT_IDENTITY_TYPE,
+      claims: {
+        [rewardKey]: {
+          claimed: true,
+          promoId: BENEFIT_PROMO_ID_BY_KEY[rewardKey],
+          recordedAt: at,
+        },
+      },
+      updatedAt: at,
+    },
+    { merge: true }
+  );
+}
 
 type QuizBonusState = {
   ok: true;
@@ -4171,6 +4531,7 @@ function marketingPushBonusConfigured(
 
 async function resolveMarketingPushBonusState(
   uid: string,
+  identityHash: string,
   claimToken = ""
 ): Promise<QuizBonusState> {
   const userRef = db().doc(`users/${uid}`);
@@ -4180,11 +4541,13 @@ async function resolveMarketingPushBonusState(
   const ledgerRef = userRef
     .collection("ledger")
     .doc(`marketing_${MARKETING_PUSH_BONUS_PROMO_ID}`);
+  const claimLockRef = benefitClaimLockRef(identityHash);
 
   return db().runTransaction(async (tx) => {
-    const [userSnap, promoSnap] = await Promise.all([
+    const [userSnap, promoSnap, claimLockSnap] = await Promise.all([
       tx.get(userRef),
       tx.get(promoRef),
+      tx.get(claimLockRef),
     ]);
 
     const userData = userSnap.data();
@@ -4202,12 +4565,31 @@ async function resolveMarketingPushBonusState(
         )
       );
 
+      if (!benefitClaimedFromLock(claimLockSnap, "marketingPush")) {
+        recordBenefitClaimLock(
+          tx,
+          claimLockRef,
+          "marketingPush",
+          FieldValue.serverTimestamp()
+        );
+      }
       return {
         ok: true,
         claimed: true,
         alreadyClaimed: true,
         claimedNow: false,
         creditedG: creditedMg / 1000,
+        balanceG: balanceMg / 1000,
+      };
+    }
+
+    if (benefitClaimedFromLock(claimLockSnap, "marketingPush")) {
+      return {
+        ok: true,
+        claimed: true,
+        alreadyClaimed: true,
+        claimedNow: false,
+        creditedG: 0,
         balanceG: balanceMg / 1000,
       };
     }
@@ -4226,7 +4608,7 @@ async function resolveMarketingPushBonusState(
     if (!marketingPushBonusConfigured(userData, claimToken)) {
       throw new HttpsError(
         "failed-precondition",
-        "금시세·혜택 알림 수신동의와 현재 기기의 푸시 등록을 먼저 완료해 주세요."
+        "광고성 정보 수신동의(앱푸시)와 현재 기기의 푸시 등록을 먼저 완료해 주세요."
       );
     }
 
@@ -4263,6 +4645,7 @@ async function resolveMarketingPushBonusState(
       source: MARKETING_PUSH_BONUS_PROMO_ID,
       createdAt: now,
     });
+    recordBenefitClaimLock(tx, claimLockRef, "marketingPush", now);
 
     return {
       ok: true,
@@ -4284,16 +4667,18 @@ type WelcomeBonusState = {
   balanceG: number;
 };
 
-async function resolveWelcomeBonusState(uid: string): Promise<WelcomeBonusState> {
+async function resolveWelcomeBonusState(uid: string, identityHash: string): Promise<WelcomeBonusState> {
   const userRef = db().doc(`users/${uid}`);
   const promoRef = userRef.collection("promotions").doc(WELCOME_BONUS_PROMO_ID);
   const ledgerRef = userRef.collection("ledger").doc(`welcome_${WELCOME_BONUS_PROMO_ID}`);
+  const claimLockRef = benefitClaimLockRef(identityHash);
 
   return db().runTransaction(async (tx) => {
-    const [userSnap, promoSnap, ledgerSnap] = await Promise.all([
+    const [userSnap, promoSnap, ledgerSnap, claimLockSnap] = await Promise.all([
       tx.get(userRef),
       tx.get(promoRef),
       tx.get(ledgerRef),
+      tx.get(claimLockRef),
     ]);
 
     let balanceMg = bonusBalanceMilliGrams(userSnap.data());
@@ -4322,12 +4707,31 @@ async function resolveWelcomeBonusState(uid: string): Promise<WelcomeBonusState>
         });
       }
 
+      if (!benefitClaimedFromLock(claimLockSnap, "welcome")) {
+        recordBenefitClaimLock(
+          tx,
+          claimLockRef,
+          "welcome",
+          FieldValue.serverTimestamp()
+        );
+      }
       return {
         ok: true,
         claimed: true,
         alreadyClaimed: true,
         claimedNow: false,
         creditedG: creditedMg / 1000,
+        balanceG: balanceMg / 1000,
+      };
+    }
+
+    if (benefitClaimedFromLock(claimLockSnap, "welcome")) {
+      return {
+        ok: true,
+        claimed: true,
+        alreadyClaimed: true,
+        claimedNow: false,
+        creditedG: 0,
         balanceG: balanceMg / 1000,
       };
     }
@@ -4354,6 +4758,7 @@ async function resolveWelcomeBonusState(uid: string): Promise<WelcomeBonusState>
       source: WELCOME_BONUS_PROMO_ID,
       createdAt: now,
     });
+    recordBenefitClaimLock(tx, claimLockRef, "welcome", now);
 
     return {
       ok: true,
@@ -4366,18 +4771,34 @@ async function resolveWelcomeBonusState(uid: string): Promise<WelcomeBonusState>
   });
 }
 
-async function getQuizBonusState(uid: string): Promise<QuizBonusState> {
+async function getQuizBonusState(uid: string, identityHash: string): Promise<QuizBonusState> {
   const userRef = db().doc(`users/${uid}`);
   const promoRef = userRef.collection("promotions").doc(QUIZ_BONUS_PROMO_ID);
-  const [userSnap, promoSnap] = await Promise.all([userRef.get(), promoRef.get()]);
+  const claimLockRef = benefitClaimLockRef(identityHash);
+  const [userSnap, promoSnap, claimLockSnap] = await Promise.all([
+    userRef.get(),
+    promoRef.get(),
+    claimLockRef.get(),
+  ]);
 
   const balanceMg = bonusBalanceMilliGrams(userSnap.data());
 
-  if (!promoSnap.exists) {
+  if (!promoSnap.exists && !benefitClaimedFromLock(claimLockSnap, "quiz")) {
     return {
       ok: true,
       claimed: false,
       alreadyClaimed: false,
+      claimedNow: false,
+      creditedG: 0,
+      balanceG: balanceMg / 1000,
+    };
+  }
+
+  if (!promoSnap.exists) {
+    return {
+      ok: true,
+      claimed: true,
+      alreadyClaimed: true,
       claimedNow: false,
       creditedG: 0,
       balanceG: balanceMg / 1000,
@@ -4402,16 +4823,19 @@ async function getQuizBonusState(uid: string): Promise<QuizBonusState> {
 
 async function claimQuizBonusState(
   uid: string,
+  identityHash: string,
   claim: { score: number; attemptId: string }
 ): Promise<QuizBonusState> {
   const userRef = db().doc(`users/${uid}`);
   const promoRef = userRef.collection("promotions").doc(QUIZ_BONUS_PROMO_ID);
   const ledgerRef = userRef.collection("ledger").doc(`quiz_${QUIZ_BONUS_PROMO_ID}`);
+  const claimLockRef = benefitClaimLockRef(identityHash);
 
   return db().runTransaction(async (tx) => {
-    const [userSnap, promoSnap] = await Promise.all([
+    const [userSnap, promoSnap, claimLockSnap] = await Promise.all([
       tx.get(userRef),
       tx.get(promoRef),
+      tx.get(claimLockRef),
     ]);
 
     const balanceMg = bonusBalanceMilliGrams(userSnap.data());
@@ -4423,12 +4847,31 @@ async function claimQuizBonusState(
         Math.round(Number(promo.creditedG || QUIZ_BONUS_CREDIT_G) * 1000)
       );
 
+      if (!benefitClaimedFromLock(claimLockSnap, "quiz")) {
+        recordBenefitClaimLock(
+          tx,
+          claimLockRef,
+          "quiz",
+          FieldValue.serverTimestamp()
+        );
+      }
       return {
         ok: true,
         claimed: true,
         alreadyClaimed: true,
         claimedNow: false,
         creditedG: creditedMg / 1000,
+        balanceG: balanceMg / 1000,
+      };
+    }
+
+    if (benefitClaimedFromLock(claimLockSnap, "quiz")) {
+      return {
+        ok: true,
+        claimed: true,
+        alreadyClaimed: true,
+        claimedNow: false,
+        creditedG: 0,
         balanceG: balanceMg / 1000,
       };
     }
@@ -4462,6 +4905,7 @@ async function claimQuizBonusState(
       source: QUIZ_BONUS_PROMO_ID,
       createdAt: now,
     });
+    recordBenefitClaimLock(tx, claimLockRef, "quiz", now);
 
     return {
       ok: true,
@@ -4477,9 +4921,11 @@ async function claimQuizBonusState(
 export const welcomeClaimGoldBonus = onCall(
   { region: "asia-northeast3", enforceAppCheck: ENFORCE_APP_CHECK },
   async (req) => {
-    const uid = await requireVerifiedUser(req.auth?.uid);
+    const verifiedUser = await requireVerifiedUserRecord(req.auth?.uid);
+    const uid = verifiedUser.uid;
+    const identityHash = benefitIdentityHashForVerifiedUser(verifiedUser);
 
-    const res = await resolveWelcomeBonusState(uid);
+    const res = await resolveWelcomeBonusState(uid, identityHash);
     if (res.claimedNow) {
       try {
         await addNotificationForUser(uid, {
@@ -4503,11 +4949,13 @@ export const marketingPushClaimGoldBonus = onCall(
     enforceAppCheck: ENFORCE_APP_CHECK,
   },
   async (req) => {
-    const uid = await requireVerifiedUser(req.auth?.uid);
+    const verifiedUser = await requireVerifiedUserRecord(req.auth?.uid);
+    const uid = verifiedUser.uid;
+    const identityHash = benefitIdentityHashForVerifiedUser(verifiedUser);
 
-    // 이미 받은 계정은 알림 설정을 나중에 꺼도 회수하지 않습니다.
+    // 이미 받은 인증 이메일은 알림 설정을 나중에 꺼도 회수하지 않습니다.
     const existing =
-      await resolveMarketingPushBonusState(uid);
+      await resolveMarketingPushBonusState(uid, identityHash);
     if (existing.claimed) return existing;
 
     const userRef = db().doc(`users/${uid}`);
@@ -4520,7 +4968,7 @@ export const marketingPushClaimGoldBonus = onCall(
     if (!marketingPushBonusConfigured(userData, token)) {
       throw new HttpsError(
         "failed-precondition",
-        "금시세·혜택 알림 수신동의와 현재 기기의 푸시 등록을 먼저 완료해 주세요."
+        "광고성 정보 수신동의(앱푸시)와 현재 기기의 푸시 등록을 먼저 완료해 주세요."
       );
     }
 
@@ -4553,14 +5001,14 @@ export const marketingPushClaimGoldBonus = onCall(
 
     // dry-run 뒤에도 트랜잭션 안에서 같은 토큰/동의 상태를 재확인합니다.
     const res =
-      await resolveMarketingPushBonusState(uid, token);
+      await resolveMarketingPushBonusState(uid, identityHash, token);
 
     if (res.claimedNow) {
       try {
         await addNotificationForUser(uid, {
           type: "marketing_push_bonus",
-          title: "금시세·혜택 알림 순금 적립",
-          body: `금시세·혜택 알림 설정 혜택 순금 ${res.creditedG.toFixed(2)}g이 적립되었습니다. 골드바 교환 시 사용할 수 있습니다.`,
+          title: "광고성 정보 수신 설정 순금 적립",
+          body: `광고성 정보 수신 앱푸시 설정 혜택 순금 ${res.creditedG.toFixed(2)}g이 적립되었습니다. 골드바 교환 시 사용할 수 있습니다.`,
           link: "/profile",
           meta: {
             event: MARKETING_PUSH_BONUS_PROMO_ID,
@@ -4585,16 +5033,13 @@ export const memberBonusGetStatus = onCall(
     enforceAppCheck: ENFORCE_APP_CHECK,
   },
   async (req) => {
-    const uid = req.auth?.uid;
-    if (!uid) {
-      throw new HttpsError(
-        "unauthenticated",
-        "로그인이 필요합니다."
-      );
-    }
+    const verifiedUser = await requireVerifiedUserRecord(req.auth?.uid);
+    const uid = verifiedUser.uid;
+    const identityHash = benefitIdentityHashForVerifiedUser(verifiedUser);
 
     const userRef = db().doc(`users/${uid}`);
-    const [userSnap, welcomeSnap, marketingSnap, quizSnap] =
+    const claimLockRef = benefitClaimLockRef(identityHash);
+    const [userSnap, welcomeSnap, marketingSnap, quizSnap, claimLockSnap] =
       await Promise.all([
         userRef.get(),
         userRef
@@ -4609,6 +5054,7 @@ export const memberBonusGetStatus = onCall(
           .collection("promotions")
           .doc(QUIZ_BONUS_PROMO_ID)
           .get(),
+        claimLockRef.get(),
       ]);
 
     const creditG = (
@@ -4649,15 +5095,15 @@ export const memberBonusGetStatus = onCall(
         bonusBalanceMilliGrams(userSnap.data()) / 1000,
       rewards: {
         welcome: {
-          claimed: welcomeSnap.exists,
+          claimed: welcomeSnap.exists || benefitClaimedFromLock(claimLockSnap, "welcome"),
           creditedG: welcomeG,
         },
         marketingPush: {
-          claimed: marketingSnap.exists,
+          claimed: marketingSnap.exists || benefitClaimedFromLock(claimLockSnap, "marketingPush"),
           creditedG: marketingG,
         },
         quiz: {
-          claimed: quizSnap.exists,
+          claimed: quizSnap.exists || benefitClaimedFromLock(claimLockSnap, "quiz"),
           creditedG: quizG,
         },
       },
@@ -4668,9 +5114,9 @@ export const memberBonusGetStatus = onCall(
 export const quizGetGoldBonusStatus = onCall(
   { region: "asia-northeast3", enforceAppCheck: ENFORCE_APP_CHECK },
   async (req) => {
-    const uid = req.auth?.uid;
-    if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
-    return getQuizBonusState(uid);
+    const verifiedUser = await requireVerifiedUserRecord(req.auth?.uid);
+    const identityHash = benefitIdentityHashForVerifiedUser(verifiedUser);
+    return getQuizBonusState(verifiedUser.uid, identityHash);
   }
 );
 
@@ -4680,7 +5126,9 @@ export const quizClaimGoldBonus = onCall<{
 }>(
   { region: "asia-northeast3", enforceAppCheck: ENFORCE_APP_CHECK },
   async (req) => {
-    const uid = await requireVerifiedUser(req.auth?.uid);
+    const verifiedUser = await requireVerifiedUserRecord(req.auth?.uid);
+    const uid = verifiedUser.uid;
+    const identityHash = benefitIdentityHashForVerifiedUser(verifiedUser);
 
     const answerKey: Record<string, number> = { q1: 0, q2: 0, q3: 1, q4: 0, q5: 0 };
     const answers = req.data?.answers;
@@ -4705,7 +5153,7 @@ export const quizClaimGoldBonus = onCall<{
       throw new HttpsError("failed-precondition", "아쉽지만 기준 점수 미달입니다.");
     }
 
-    const res = await claimQuizBonusState(uid, { score, attemptId });
+    const res = await claimQuizBonusState(uid, identityHash, { score, attemptId });
 
     // 이미 수령한 계정에는 중복 알림을 만들지 않습니다.
     if (res.claimedNow) {
@@ -4992,7 +5440,7 @@ export const bonusAdminConfirmGoldUsage = onCall<{
 }>(
   { region: "asia-northeast3", enforceAppCheck: ENFORCE_APP_CHECK },
   async (req) => {
-    requireAdmin((req.auth?.token || {}) as Record<string, unknown>);
+    await requireCurrentAdmin(req.auth?.uid);
     const adminUid = req.auth?.uid || "admin";
     const groupId = cleanGroupId(req.data?.groupId);
     const requestCode = cleanUsageCode(req.data?.requestCode);
@@ -5241,7 +5689,7 @@ export const bonusAdminConfirmGoldUsage = onCall<{
 export const bonusAdminCancelGoldUsage = onCall<{ groupId: string; reason?: string }>(
   { region: "asia-northeast3", enforceAppCheck: ENFORCE_APP_CHECK },
   async (req) => {
-    requireAdmin((req.auth?.token || {}) as Record<string, unknown>);
+    await requireCurrentAdmin(req.auth?.uid);
     const groupId = cleanGroupId(req.data?.groupId);
     const reason = String(req.data?.reason || "매장 확인 중 신청 취소").trim().slice(0, 200);
     if (!groupId) throw new HttpsError("invalid-argument", "교환번호가 필요합니다.");
@@ -5850,7 +6298,7 @@ export const refreshGoldPriceNow = onCall(
   },
   async (req) => {
     try {
-      requireAdmin((req.auth?.token || {}) as Record<string, unknown>);
+      await requireCurrentAdmin(req.auth?.uid);
 
       console.log("[refreshGoldPriceNow] request", {
         uid: req.auth?.uid || null,
@@ -5897,7 +6345,7 @@ export const saveGoldPriceSettings = onCall<{ settings: unknown }>(
         hasSettings: req.data?.settings != null,
       });
 
-      requireAdmin(token);
+      await requireCurrentAdmin(req.auth?.uid);
 
       const settings = normalizeGoldPriceSettings(req.data?.settings);
 
@@ -5945,7 +6393,7 @@ export const saveGoldPriceSettings = onCall<{ settings: unknown }>(
 export const publishPendingGoldPrice = onCall(
   { region: "asia-northeast3", enforceAppCheck: ENFORCE_APP_CHECK },
   async (req) => {
-    requireAdmin((req.auth?.token || {}) as Record<string, unknown>);
+    await requireCurrentAdmin(req.auth?.uid);
     throw new HttpsError(
       "failed-precondition",
       "KRX 시세는 참고용입니다. 홈페이지 시세는 관리자 직접 입력 화면에서 저장해 주세요."

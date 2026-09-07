@@ -10,6 +10,7 @@ import { AgreementsSection } from "../components/AgreementsSection";
 import { checkNicknameAvailability, claimNickname } from "@/services/nicknameClient";
 import { ensureUserProfileOnSignup } from "../services/userService";
 import {
+  buildVerifyEmailPath,
   getAuthReturnPath,
 } from "@/lib/authReturn";
 import {
@@ -19,8 +20,8 @@ import {
 
 // Register 폼 복구용 세션 키 (보조 용도)
 const REGISTER_FORM_KEY = "registerFormData";
-// 현재 약관 버전 (Terms.jsx와 동일하게 유지)
-const CURRENT_TERMS_VERSION = "v1.1";
+// 현재 필수 동의 문서 조합 버전 (이용약관 + 개인정보처리방침)
+const CURRENT_CONSENT_VERSION = "terms-v2.0_privacy-v2.6";
 
 /* ───────────── Styled ───────────── */
 const Container = styled.div`
@@ -379,7 +380,7 @@ export default function Register() {
           doc(db, "users", uid),
           {
             consents: {
-              version: CURRENT_TERMS_VERSION,
+              version: CURRENT_CONSENT_VERSION,
               age14:     { accepted: true,                   at: ts },
               tos:       { accepted: true,                   at: ts },
               privacy:   { accepted: true,                   at: ts },
@@ -393,12 +394,10 @@ export default function Register() {
       // 보너스 지급은 이메일 인증 완료 후 WelcomeOnboarding에서 처리합니다.
       // 퀴즈를 먼저 풀었다면 결과는 localStorage(24시간)에 보존되어 인증 후 서버가 다시 검증합니다.
 
-      // 가입 직후에는 혜택 안내 화면으로 이동하되, 실제 적립은 이메일 인증 완료 후 진행합니다.
-      // 인증 메일 링크는 onboardingPath로 다시 돌아오도록 이미 발송되었습니다.
-      navigate(onboardingPath, {
-        state: {
-          from: returnTo || undefined,
-        },
+      // 가입 직후에는 혜택 화면을 먼저 보여주지 않고 이메일 인증 단계로 바로 이동합니다.
+      // 인증 완료 후에는 인증 메일의 continueUrl(onboardingPath)에 따라 WelcomeOnboarding으로 돌아옵니다.
+      navigate(buildVerifyEmailPath(onboardingPath), {
+        replace: true,
       });
     } catch (err) {
       console.error("회원가입 에러:", err);
@@ -418,8 +417,9 @@ export default function Register() {
         <NoticeBox role="note" aria-live="polite">
           <strong>회원가입하고 순금 0.01g 받기</strong>
           <div>
-            이메일 인증을 완료하면 계정당 1회 적립됩니다.
-            퀵퀴즈와 금시세 알림으로 최대 순금 0.03g까지 받을 수 있습니다.
+            각 순금 혜택은 인증 이메일 기준 1회만 지급되며, 탈퇴 후
+            재가입해도 중복 지급되지 않습니다. 퀵퀴즈와 광고성 정보 수신(앱푸시) 설정으로
+            최대 순금 0.03g까지 받을 수 있습니다.
           </div>
         </NoticeBox>
 
@@ -574,7 +574,7 @@ export default function Register() {
               !agreements.privacy
             }
           >
-            {loading ? "가입 중..." : "회원가입하고 순금 0.01g 받기"}
+            {loading ? "가입 중..." : "가입하기"}
           </Button>
         </Form>
       </Card>

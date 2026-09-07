@@ -1456,16 +1456,16 @@ export default function Settings() {
 
           if (token) {
             setNotificationPrefsMessage(
-              `${currentDeviceName}에서 금시세·혜택 알림을 받도록 설정했습니다.`
+              `${currentDeviceName}에서 광고성 정보 수신 앱푸시를 받도록 설정했습니다.`
             );
           } else {
             setNotificationPrefsError(
-              "금시세·혜택 알림은 켰지만 이 기기의 푸시 등록을 완료하지 못했습니다. 잠시 후 다시 시도해 주세요."
+              "광고성 정보 수신은 동의했지만 이 기기의 푸시 등록을 완료하지 못했습니다. 잠시 후 다시 시도해 주세요."
             );
           }
         } else {
           setNotificationPrefsMessage(
-            "금시세·혜택 알림을 켰습니다."
+            "광고성 정보 수신(앱푸시)을 켰습니다."
           );
         }
       } catch (error) {
@@ -1778,7 +1778,7 @@ export default function Settings() {
 
           if (!token) {
             setNotificationPrefsError(
-              "이 앱을 금시세·혜택 알림 수신 기기로 등록하지 못했습니다."
+              "이 앱을 광고성 정보 수신 기기로 등록하지 못했습니다."
             );
             return;
           }
@@ -1788,7 +1788,7 @@ export default function Settings() {
           );
 
           setNotificationPrefsMessage(
-            "금시세·혜택 알림을 한국골드마켓 앱에서 받도록 변경했습니다."
+            "광고성 정보 수신 앱푸시를 한국골드마켓 앱에서 받도록 변경했습니다."
           );
 
           await refreshPushDiagnostics();
@@ -1857,13 +1857,13 @@ export default function Settings() {
 
         if (!token) {
           setNotificationPrefsError(
-            "이 브라우저를 금시세·혜택 알림 수신 브라우저로 등록하지 못했습니다."
+            "이 브라우저를 광고성 정보 수신 브라우저로 등록하지 못했습니다."
           );
           return;
         }
 
         setNotificationPrefsMessage(
-          `금시세·혜택 알림 수신 브라우저를 ${currentBrowserName}(으)로 변경했습니다.`
+          `광고성 정보 수신 브라우저를 ${currentBrowserName}(으)로 변경했습니다.`
         );
 
         await refreshPushDiagnostics();
@@ -2450,7 +2450,7 @@ export default function Settings() {
         </SectionTitle>
 
         <SectionDescription>
-          예약 안내와 금시세 알림을 관리합니다.
+          예약·교환 서비스 안내와 광고성 정보 수신(금시세·MY GOLD 리포트·혜택)을 관리합니다.
         </SectionDescription>
 
         <Rows
@@ -2480,11 +2480,11 @@ export default function Settings() {
           <Row>
             <RowText>
               <strong>
-                금시세 알림
+                광고성 정보 수신(앱푸시)
               </strong>
 
               <small>
-                주요 시세 변동과 혜택을 받아봅니다.
+                주요 금시세 변동, MY GOLD 주간 리포트와 이벤트·혜택을 받아봅니다.
               </small>
 
               <em>
@@ -2494,7 +2494,7 @@ export default function Settings() {
 
             <Switch
               role="group"
-              aria-label="금시세 알림 설정"
+              aria-label="광고성 정보 수신 앱푸시 설정"
             >
               <SwitchOption
                 type="button"
@@ -2555,7 +2555,7 @@ export default function Settings() {
             true && (
             <Notice aria-live="polite">
               <strong>
-                금시세·혜택 알림을 받을 기기
+                광고성 정보 수신 앱푸시를 받을 기기
               </strong>
 
               {notificationPrefs

@@ -1,6 +1,6 @@
 // src/pages/MyGoldVault.jsx
 import React, { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import {
   collection,
@@ -459,6 +459,99 @@ const SummaryCard = styled.div`
 
 `;
 
+const ExchangeCta = styled(Link)`
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid
+    color-mix(in srgb, ${({ theme }) => theme.colors.gold} 15%, ${({ theme }) => theme.colors.border});
+  border-radius: 16px;
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 20%, white),
+      ${({ theme }) => theme.colors.surface} 72%
+    );
+  color: ${({ theme }) => theme.colors.primary};
+  text-decoration: none;
+  transition:
+    border-color ${({ theme }) => theme.transitions.base},
+    background ${({ theme }) => theme.transitions.base};
+
+  small {
+    display: block;
+    color: ${({ theme }) => theme.colors.secondaryDark};
+    font-size: 0.56rem;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+  }
+
+  strong {
+    display: block;
+    margin-top: 3px;
+    color: ${({ theme }) => theme.colors.primary};
+    font-size: 0.86rem;
+    font-weight: 900;
+    line-height: 1.35;
+    letter-spacing: -0.02em;
+    word-break: keep-all;
+  }
+
+  p {
+    margin: 4px 0 0;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: 0.62rem;
+    line-height: 1.45;
+    word-break: keep-all;
+  }
+
+  .action {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 6px;
+    color: ${({ theme }) => theme.colors.secondaryDark};
+    font-size: 0.64rem;
+    font-weight: 900;
+  }
+
+  > svg {
+    width: 18px;
+    height: 18px;
+    color: ${({ theme }) => theme.colors.secondaryDark};
+  }
+
+  &:hover {
+    color: ${({ theme }) => theme.colors.primary};
+    border-color: color-mix(
+      in srgb,
+      ${({ theme }) => theme.colors.gold} 32%,
+      ${({ theme }) => theme.colors.border}
+    );
+    background: ${({ theme }) => theme.colors.surfaceAlt};
+  }
+
+  @media (max-width: 520px) {
+    padding: 11px 12px;
+    border-radius: 14px;
+
+    strong {
+      font-size: 0.82rem;
+    }
+
+    p {
+      font-size: 0.6rem;
+    }
+
+    > svg {
+      width: 17px;
+      height: 17px;
+    }
+  }
+`;
+
 const Panel = styled.section`
   overflow: hidden;
   padding: clamp(15px, 3vw, 18px);
@@ -839,6 +932,12 @@ const ItemActions = styled.div`
     cursor: pointer;
   }
 
+  button[data-variant="exchange"] {
+    border-color: color-mix(in srgb, ${({ theme }) => theme.colors.gold} 42%, ${({ theme }) => theme.colors.border});
+    background: ${({ theme }) => theme.semantic.badgeGoldBg};
+    color: ${({ theme }) => theme.colors.secondaryDark} !important;
+  }
+
   button[data-variant="danger"] {
     color: ${({ theme }) => theme.colors.error} !important;
   }
@@ -881,6 +980,7 @@ const EMPTY_FORM = { label: "", goldType: "", weightValue: "", weightUnit: "g", 
 
 
 const GUEST_SAMPLE_BONUS_G = 0.03;
+const GOLD_EXCHANGE_MAX_PRODUCTS = 20;
 const GUEST_SAMPLE_ITEMS = Object.freeze([
   {
     id: "guest-sample-bracelet",
@@ -914,7 +1014,7 @@ function weightInputToGrams(form) {
 function formatGramsAndDon(value) {
   const grams = Number(value);
   if (!Number.isFinite(grams) || grams <= 0) return "-";
-  return `${grams.toFixed(3)}g · ${(grams / DON_TO_GRAMS).toFixed(3)}돈`;
+  return `${grams.toFixed(2)}g · ${(grams / DON_TO_GRAMS).toFixed(2)}돈`;
 }
 
 function compactDate(value) {
@@ -972,6 +1072,7 @@ function formatSignedPercent(value) {
 
 export default function MyGoldVault() {
   const { user } = useAuthContext();
+  const navigate = useNavigate();
   const {
     items,
     itemsLoading,
@@ -997,15 +1098,27 @@ export default function MyGoldVault() {
   const formTitle = editingId ? "나의 금 수정하기" : "나의 금 추가하기";
 
   const sortedItems = useMemo(() => items, [items]);
+  const exchangeProducts = useMemo(
+    () =>
+      sortedItems.slice(0, GOLD_EXCHANGE_MAX_PRODUCTS).map((item) => ({
+        goldType: item.goldType,
+        quantity: Number(item.weightG || 0),
+        inputUnit: "g",
+        exchangeType: "999.9골드바",
+        sourceItemId: item.id,
+        sourceLabel: item.label || "금제품",
+      })),
+    [sortedItems]
+  );
   const weightReference = useMemo(() => {
     const value = Number(form.weightValue);
     if (!Number.isFinite(value) || value <= 0) return "";
 
     if (form.weightUnit === "don") {
-      return `${value.toFixed(3)}돈 = ${(value * DON_TO_GRAMS).toFixed(3)}g`;
+      return `${value.toFixed(2)}돈 = ${(value * DON_TO_GRAMS).toFixed(2)}g`;
     }
 
-    return `${value.toFixed(3)}g = ${(value / DON_TO_GRAMS).toFixed(3)}돈`;
+    return `${value.toFixed(2)}g = ${(value / DON_TO_GRAMS).toFixed(2)}돈`;
   }, [form.weightUnit, form.weightValue]);
 
   const guestSample = useMemo(() => {
@@ -1078,6 +1191,25 @@ export default function MyGoldVault() {
   const historicalChange = historicalPrice
     ? getValueChange(vaultValueWon, historicalValueWon)
     : null;
+
+  const openSingleItemExchange = (item) => {
+    if (!item) return;
+    navigate("/gold-exchange", {
+      state: {
+        source: "my-gold",
+        vaultProducts: [
+          {
+            goldType: item.goldType,
+            quantity: Number(item.weightG || 0),
+            inputUnit: "g",
+            exchangeType: "999.9골드바",
+            sourceItemId: item.id,
+            sourceLabel: item.label || "금제품",
+          },
+        ],
+      },
+    });
+  };
 
   const resetForm = () => {
     setForm(EMPTY_FORM);
@@ -1241,10 +1373,6 @@ export default function MyGoldVault() {
             <strong>체험 예시</strong>
             <p>18K 팔찌 10g + 순금 돌반지 2돈 + 적립 순금 0.03g을 넣어본 화면입니다.</p>
           </div>
-          <GuestAction to="/register">
-            회원가입하고 순금 0.03g 나의 금고에 보관하기
-            <ArrowRight aria-hidden />
-          </GuestAction>
         </GuestPreviewBar>
 
         <SummaryGrid>
@@ -1262,9 +1390,21 @@ export default function MyGoldVault() {
           </SummaryCard>
           <SummaryCard>
             <span>보너스 적립 순금</span>
-            <strong>순금 {GUEST_SAMPLE_BONUS_G.toFixed(3)}g</strong>
+            <strong>순금 {GUEST_SAMPLE_BONUS_G.toFixed(2)}g</strong>
           </SummaryCard>
         </SummaryGrid>
+
+        <ExchangeCta to="/gold-exchange" aria-label="999.9 골드바 예상 교환량 보기">
+          <div>
+            <small>999.9 골드바 교환</small>
+            <strong>예상 순금 중량으로 교환량을 확인해 보세요</strong>
+            <p>
+              체험 예시 기준 {formatGramsAndDon(guestSample.productPureGoldG)} · 실제 교환량은 매장 실측 후 확정됩니다.
+            </p>
+            <span className="action">예상 교환량 보기 <ArrowRight size={13} aria-hidden /></span>
+          </div>
+          <ArrowRight aria-hidden />
+        </ExchangeCta>
 
         <FoldPanel>
           <FoldSummary>
@@ -1318,7 +1458,6 @@ export default function MyGoldVault() {
         <Panel>
           <PanelHead>
             <h2>나의 금 추가하기</h2>
-            <small>회원가입 후 직접 저장</small>
           </PanelHead>
           <Form onSubmit={(event) => event.preventDefault()}>
             <Field>
@@ -1334,25 +1473,18 @@ export default function MyGoldVault() {
             <Field>
               무게
               <WeightRow>
-                <Input value="10.000" readOnly aria-label="체험 예시 무게" />
+                <Input value="10.00" readOnly aria-label="체험 예시 무게" />
                 <UnitToggle aria-label="체험 예시 무게 단위">
                   <UnitButton type="button" $active disabled>g</UnitButton>
                   <UnitButton type="button" disabled>돈</UnitButton>
                 </UnitToggle>
               </WeightRow>
-              <WeightConversion>10.000g = 2.667돈</WeightConversion>
+              <WeightConversion>10.00g = 2.67돈</WeightConversion>
             </Field>
-            <GuestLockedNote>
-              <p>회원가입하면 이 입력창이 활성화되어 실제 보유 금을 추가·수정할 수 있습니다.</p>
-              <GuestAction to="/register">
-                회원가입하고 나의 금 추가하기
-                <ArrowRight aria-hidden />
-              </GuestAction>
-            </GuestLockedNote>
           </Form>
         </Panel>
 
-        <FoldPanel open>
+        <FoldPanel>
           <FoldSummary>
             <div>
               <h2>나의 금고 확인하기</h2>
@@ -1365,9 +1497,9 @@ export default function MyGoldVault() {
                 <ItemMain>
                   <BonusBadge>MEMBER GOLD · 체험 예시</BonusBadge>
                   <h3>한국골드마켓 적립 순금</h3>
-                  <p>회원가입·퀵퀴즈·금시세 알림 혜택으로 최대 순금 0.03g까지 모을 수 있습니다.</p>
+                  <p>한국골드마켓에서 적립된 순금도 내 금고에서 함께 확인할 수 있습니다.</p>
                   <ItemMetrics>
-                    <span>현재 보유 <strong>순금 {GUEST_SAMPLE_BONUS_G.toFixed(3)}g</strong></span>
+                    <span>현재 보유 <strong>순금 {GUEST_SAMPLE_BONUS_G.toFixed(2)}g</strong></span>
                     {publicPriceEnabled && (
                       <span>오늘 참고가 <strong>{formatWon(computeVaultValueWon(GUEST_SAMPLE_BONUS_G, customerSellPricePerDon))}</strong></span>
                     )}
@@ -1383,7 +1515,7 @@ export default function MyGoldVault() {
                     <p>{getGoldVaultTypeLabel(item.goldType)} · 실제 회원은 이름과 메모를 자유롭게 기록할 수 있습니다.</p>
                     <ItemMetrics>
                       <span>등록 <strong>{formatGramsAndDon(item.weightG)}</strong></span>
-                      <span>예상 순금 <strong>{Number(item.pureGoldG || 0).toFixed(3)}g</strong></span>
+                      <span>교환기준 예상 <strong>{Number(item.pureGoldG || 0).toFixed(2)}g</strong></span>
                       {publicPriceEnabled && (
                         <span>오늘 참고가 <strong>{formatWon(item.estimatedValueWon)}</strong></span>
                       )}
@@ -1417,7 +1549,7 @@ export default function MyGoldVault() {
     <Page>
       <ValuePanel aria-labelledby="my-gold-current-value-title">
         <ValueKicker>MY GOLD VALUE</ValueKicker>
-        <ValueTitle id="my-gold-current-value-title">내 금의 현재 참고가치</ValueTitle>
+        <ValueTitle id="my-gold-current-value-title">실물 금 + 적립 순금 총 참고가치</ValueTitle>
         <ValueAmount $empty={!vaultLoading && !hasVaultContent}>
           {vaultLoading
             ? "불러오는 중"
@@ -1440,11 +1572,31 @@ export default function MyGoldVault() {
       </ValuePanel>
 
       <SummaryGrid>
-        <SummaryCard><span>나의 금</span><strong>{summary.itemCount}개</strong></SummaryCard>
-        <SummaryCard><span>총 등록 무게</span><strong>{formatGramsAndDon(summary.totalWeightG)}</strong></SummaryCard>
-        <SummaryCard><span>예상 순금 중량</span><strong>{formatGramsAndDon(summary.pureGoldG)}</strong></SummaryCard>
-        <SummaryCard><span>보너스 적립</span><strong>순금 {bonusBalanceG.toFixed(3)}g</strong></SummaryCard>
+        <SummaryCard><span>등록 실물 금</span><strong>{summary.itemCount}개</strong></SummaryCard>
+        <SummaryCard><span>실물 금 등록 무게</span><strong>{formatGramsAndDon(summary.totalWeightG)}</strong></SummaryCard>
+        <SummaryCard><span>교환 기준 예상 인정 순금</span><strong>{formatGramsAndDon(summary.pureGoldG)}</strong></SummaryCard>
+        <SummaryCard><span>회원 혜택 적립 순금</span><strong>순금 {bonusBalanceG.toFixed(2)}g</strong></SummaryCard>
       </SummaryGrid>
+
+      <ExchangeCta
+        to="/gold-exchange"
+        state={{ source: "my-gold", vaultProducts: exchangeProducts }}
+        aria-label="MY GOLD에 등록한 실물 금으로 999.9 골드바 예상 교환량 보기"
+      >
+        <div>
+          <small>MY GOLD → 999.9 골드바 교환</small>
+          <strong>등록한 실물 금을 그대로 불러와 교환 계산하기</strong>
+          <p>
+            {summary.itemCount > 0
+              ? summary.itemCount > GOLD_EXCHANGE_MAX_PRODUCTS
+                ? `금교환 1회 최대 ${GOLD_EXCHANGE_MAX_PRODUCTS}개까지 입력할 수 있어 최근 등록 ${GOLD_EXCHANGE_MAX_PRODUCTS}개를 자동으로 가져갑니다. 나머지는 각 금제품의 ‘교환’ 버튼으로 따로 계산할 수 있습니다.`
+                : `실물 금 ${summary.itemCount}개를 계산기에 자동 입력합니다. 교환 기준 예상 인정 순금 ${formatGramsAndDon(summary.pureGoldG)} · 실제 인정량은 매장 실측 후 확정됩니다.`
+              : "먼저 실물 금을 등록하면 금 종류와 중량을 다시 입력하지 않고 교환 계산기로 가져갈 수 있습니다."}
+          </p>
+          <span className="action">MY GOLD로 교환 계산 <ArrowRight size={13} aria-hidden /></span>
+        </div>
+        <ArrowRight aria-hidden />
+      </ExchangeCta>
 
       {hasVaultContent && publicPriceEnabled && (
         <FoldPanel>
@@ -1542,7 +1694,7 @@ export default function MyGoldVault() {
                 step="0.001"
                 value={form.weightValue}
                 onChange={(e) => setForm((prev) => ({ ...prev, weightValue: e.target.value }))}
-                placeholder={form.weightUnit === "don" ? "예: 2.000" : "예: 7.500"}
+                placeholder={form.weightUnit === "don" ? "예: 2.00" : "예: 7.50"}
                 required
               />
               <UnitToggle aria-label="무게 단위 선택">
@@ -1606,7 +1758,7 @@ export default function MyGoldVault() {
               {vaultLoading
                 ? "내 금고 정보를 불러오는 중입니다."
                 : summary.itemCount > 0 || bonusBalanceG > 0
-                  ? `나의 금 ${summary.itemCount}개 · 적립 순금 ${bonusBalanceG.toFixed(3)}g`
+                  ? `나의 금 ${summary.itemCount}개 · 적립 순금 ${bonusBalanceG.toFixed(2)}g`
                   : "아직 추가한 금은 없지만 순금 혜택을 모을 수 있습니다."}
             </small>
           </div>
@@ -1620,10 +1772,10 @@ export default function MyGoldVault() {
                 <BonusItemCard>
                   <ItemMain>
                     <BonusBadge>MEMBER GOLD</BonusBadge>
-                    <h3>한국골드마켓 적립 순금</h3>
-                    <p>회원가입·퀵퀴즈·금시세 알림 혜택으로 최대 순금 0.03g까지 모을 수 있습니다.</p>
+                    <h3>한국골드마켓 회원 혜택 적립 순금</h3>
+                    <p>실물 금 등록분과 별도로 관리되는 회원 혜택 잔액입니다. 금교환에서 사용 가능한 적립 순금입니다.</p>
                     <ItemMetrics>
-                      <span>현재 보유 <strong>순금 {bonusBalanceG.toFixed(3)}g</strong></span>
+                      <span>현재 보유 <strong>순금 {bonusBalanceG.toFixed(2)}g</strong></span>
                       {publicPriceEnabled && bonusBalanceG > 0 && (
                         <span>오늘 참고가 <strong>{formatWon(bonusCurrentValueWon)}</strong></span>
                       )}
@@ -1638,13 +1790,22 @@ export default function MyGoldVault() {
                       <p>{getGoldVaultTypeLabel(item.goldType)}{item.note ? ` · ${item.note}` : ""}</p>
                       <ItemMetrics>
                         <span>등록 <strong>{formatGramsAndDon(item.weightG)}</strong></span>
-                        <span>예상 순금 <strong>{Number(item.pureGoldG || 0).toFixed(3)}g</strong></span>
+                        <span>교환기준 예상 <strong>{Number(item.pureGoldG || 0).toFixed(2)}g</strong></span>
                         {publicPriceEnabled && (
                           <span>오늘 참고가 <strong>{formatWon(item.estimatedValueWon)}</strong></span>
                         )}
                       </ItemMetrics>
                     </ItemMain>
                     <ItemActions>
+                      <button
+                        type="button"
+                        data-variant="exchange"
+                        onClick={() => openSingleItemExchange(item)}
+                        aria-label={`${item.label} 금교환 계산`}
+                        title="금교환 계산"
+                      >
+                        교환
+                      </button>
                       <button
                         type="button"
                         onClick={() => startEdit(item)}
@@ -1676,7 +1837,7 @@ export default function MyGoldVault() {
       </FoldPanel>
 
       <Notice>
-        내 금고의 등록 금과 적립 순금 금액은 공개 시세를 적용한 참고값입니다. 실제 금제품 교환 중량과 비용은 매장에서 순도·중량을 실측한 뒤 최종 확인합니다.
+        MY GOLD의 <strong>등록 실물 금</strong>은 사용자가 보유한 금제품 기록이고, <strong>회원 혜택 적립 순금</strong>은 한국골드마켓에서 적립된 별도 잔액입니다. “교환 기준 예상 인정 순금”과 금액은 한국골드마켓의 현재 교환 적용률·공개 시세를 적용한 참고값이며, 실제 교환 인정 중량과 비용은 매장에서 순도·중량을 실측한 뒤 최종 확정합니다.
       </Notice>
     </Page>
   );

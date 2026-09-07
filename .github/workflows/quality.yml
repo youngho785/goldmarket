@@ -31,4 +31,5 @@ jobs:
       - run: node functions/scripts/test-booking-policy.mjs
       - run: npm --prefix functions run test:account-deletion
       - run: npm --prefix functions run test:nickname-security
+      - run: npm --prefix functions run test:release-safety
       - run: npx firebase-tools emulators:exec --only firestore,storage "npm --prefix tests/rules test"

@@ -13,6 +13,7 @@ import { doc, onSnapshot } from "firebase/firestore";
 
 import { db, registerForPush } from "@/firebase/firebase";
 import { useAuthContext } from "@/context/AuthContext";
+import MyGoldTicker from "@/components/gold/MyGoldTicker";
 import {
   getNotificationPreferences,
   saveMarketingNotificationConsent,
@@ -1758,6 +1759,7 @@ export default function GoldPrice() {
 
   return (
     <Page>
+      <MyGoldTicker />
       <Shell>
         <Hero>
           <HeroCard>

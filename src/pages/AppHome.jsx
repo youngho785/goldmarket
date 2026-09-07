@@ -694,7 +694,7 @@ export default function AppHome() {
             {visibleBenefits.map(({ key, to, title, text, icon: Icon }) => (
               <BenefitLink key={key} to={to}>
                 <BenefitIcon>
-                  <Icon aria-hidden />
+                  {React.createElement(Icon, { "aria-hidden": true })}
                 </BenefitIcon>
                 <BenefitCopy>
                   <strong>{title}</strong>

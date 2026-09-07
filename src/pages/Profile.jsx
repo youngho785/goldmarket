@@ -521,7 +521,7 @@ export default function Profile() {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [uploadPct, setUploadPct] = useState(0);
+  const [, setUploadPct] = useState(0);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState("");
   const [photoStatus, setPhotoStatus] = useState("");

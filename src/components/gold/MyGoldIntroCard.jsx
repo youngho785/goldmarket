@@ -138,14 +138,14 @@ const ValueRow = styled.div`
 const Value = styled.strong`
   color: ${({ theme }) => theme.colors.goldLight};
   font-family: ${({ theme }) => theme.fonts.numeric};
-  font-size: clamp(2.35rem, 5.3vw, 3.65rem);
+  font-size: clamp(2.1rem, 4.8vw, 3.25rem);
   font-weight: 950;
   line-height: 0.98;
   letter-spacing: -0.055em;
   white-space: nowrap;
 
   @media (max-width: 420px) {
-    font-size: clamp(2.15rem, 10.5vw, 3rem);
+    font-size: clamp(1.95rem, 9.5vw, 2.7rem);
   }
 `;
 
@@ -165,18 +165,6 @@ const Change = styled.span`
   white-space: nowrap;
 `;
 
-const Example = styled.p`
-  margin: 8px 0 0;
-  color: color-mix(in srgb, ${({ theme }) => theme.on.primary} 64%, transparent);
-  font-size: 0.67rem;
-  line-height: 1.45;
-  word-break: keep-all;
-
-  strong {
-    color: ${({ theme }) => theme.colors.goldLight};
-    font-weight: 900;
-  }
-`;
 
 const Aside = styled.div`
   display: grid;
@@ -425,7 +413,7 @@ export default function MyGoldIntroCard() {
               ? "MY GOLD · 내 금고"
               : hasVaultContent
                 ? "MY GOLD · 내 금고"
-                : "MY GOLD · 체험 예시"}
+                : "MY GOLD"}
           </Kicker>
 
           <Title id="my-gold-intro-title">
@@ -448,15 +436,9 @@ export default function MyGoldIntroCard() {
             )}
           </ValueRow>
 
-          {!waitingForVault && !hasVaultContent && (
-            <Example>
-              예시 · <strong>18K 팔찌 10g + 순금 돌반지 2돈</strong>
-            </Example>
-          )}
-
           {!waitingForVault && user?.uid && (
             <BonusLine>
-              내 금고 적립 <strong>순금 {bonusBalanceG.toFixed(3)}g</strong>
+              내 금고 적립 <strong>순금 {bonusBalanceG.toFixed(2)}g</strong>
             </BonusLine>
           )}
 

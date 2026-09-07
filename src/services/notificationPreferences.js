@@ -209,7 +209,7 @@ export async function saveMarketingPushTarget(uid, token, browserName = "") {
     preferences.allEnabled === false ||
     preferences.goldNews === false
   ) {
-    throw new Error("금시세·혜택 알림 수신동의가 먼저 필요합니다.");
+    throw new Error("광고성 정보 수신동의(앱푸시)가 먼저 필요합니다.");
   }
 
   await setDoc(

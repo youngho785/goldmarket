@@ -25,6 +25,7 @@
     "test:policy": "npm run build && node scripts/test-booking-policy.mjs",
     "test:account-deletion": "npm run build && npx --yes firebase-tools@15.28.1 --config ../firebase.json --project demo-goldmarket emulators:exec --only firestore \"node scripts/test-account-deletion-security.mjs\"",
     "test:nickname-security": "npm run build && npx --yes firebase-tools@15.28.1 --config ../firebase.json --project demo-goldmarket emulators:exec --only firestore \"node scripts/test-nickname-security.mjs\"",
+    "test:release-safety": "npm run build && npx --yes firebase-tools@15.28.1 --config ../firebase.json --project demo-goldmarket emulators:exec --only firestore \"node scripts/test-release-safety.mjs\"",
     "audit:nicknames": "node scripts/audit-nickname-integrity.mjs",
     "cleanup:nicknames": "npm run build && node scripts/cleanup-nickname-integrity.mjs"
   },

@@ -2,7 +2,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import styled from "styled-components";
-import { BellRing, Check, ChevronRight, Gift, Sparkles } from "lucide-react";
+import { BellRing, Check, ChevronRight, Sparkles } from "lucide-react";
 
 import { useAuthContext } from "@/context/AuthContext";
 import { registerForPush } from "@/firebase/firebase";
@@ -195,12 +195,6 @@ const StepDescription = styled.p`
   word-break: keep-all;
 `;
 
-const ConsentNote = styled.p`
-  margin: 10px 0 0;
-  color: ${({ theme }) => theme.colors.textLight};
-  font-size: 0.78rem;
-  line-height: 1.55;
-`;
 
 const ActionButton = styled.button`
   display: inline-flex;
@@ -235,26 +229,6 @@ const OutlineButton = styled(ActionButton)`
   color: ${({ theme }) => theme.colors.primary};
 `;
 
-const VerifyCard = styled.section`
-  margin-top: 18px;
-  padding: 18px;
-  border: 1px solid ${({ theme }) => theme.colors.secondary}66;
-  border-radius: 14px;
-  background: ${({ theme }) => theme.semantic.alertWarningBg};
-
-  h2 {
-    margin: 0;
-    color: ${({ theme }) => theme.colors.text};
-    font-size: 1rem;
-  }
-
-  p {
-    margin: 7px 0 0;
-    color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: 0.88rem;
-    line-height: 1.6;
-  }
-`;
 
 const Message = styled.p`
   margin: 16px 0 0;
@@ -277,15 +251,6 @@ const FooterActions = styled.div`
   margin-top: 18px;
 `;
 
-const SkipButton = styled.button`
-  min-height: 42px;
-  border: 0;
-  background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font: inherit;
-  font-weight: 750;
-  cursor: pointer;
-`;
 
 function deviceName() {
   if (isAndroid) return "한국골드마켓 앱";
@@ -336,6 +301,14 @@ export default function WelcomeOnboarding() {
     () => `/welcome?next=${encodeURIComponent(nextPath)}`,
     [nextPath]
   );
+
+  useEffect(() => {
+    if (!user?.uid || isEmailVerified) return;
+
+    navigate(buildVerifyEmailPath(welcomePath), {
+      replace: true,
+    });
+  }, [user?.uid, isEmailVerified, navigate, welcomePath]);
 
   const [status, setStatus] = useState(() => rewardStatus(null));
   const [loading, setLoading] = useState(true);
@@ -491,20 +464,12 @@ export default function WelcomeOnboarding() {
 
   const handleFinish = () => {
     clearMemberOnboardingPending();
-    navigate(nextPath, { replace: true });
-  };
 
-  const handleSkip = () => {
-    clearMemberOnboardingPending();
+    const destination = nextPath.startsWith("/gold-exchange")
+      ? nextPath
+      : "/";
 
-    if (!isEmailVerified) {
-      navigate(buildVerifyEmailPath(nextPath), {
-        replace: true,
-      });
-      return;
-    }
-
-    navigate(nextPath, { replace: true });
+    navigate(destination, { replace: true });
   };
 
   const claimedCount =
@@ -519,6 +484,10 @@ export default function WelcomeOnboarding() {
       ? "선택한 일정으로 예약 계속하기"
       : "한국골드마켓 시작하기";
 
+  if (user?.uid && !isEmailVerified) {
+    return null;
+  }
+
   return (
     <Page>
       <Hero>
@@ -529,14 +498,23 @@ export default function WelcomeOnboarding() {
             : "회원가입을 축하합니다 🎉"}
         </Title>
         <Lead>
-          이메일 인증 후 <strong>순금 0.01g</strong>이 적립됩니다.
-          퀵퀴즈와 금시세 알림으로 <strong>순금 0.01g씩 더</strong> 받을 수 있습니다.
+          {status.welcome.claimed ? (
+            <>
+              회원가입이 완료되어 <strong>순금 0.01g</strong>이 적립되었습니다.
+            </>
+          ) : (
+            <>
+              회원가입이 완료되었습니다. <strong>순금 0.01g</strong> 적립을 확인하고 있습니다.
+            </>
+          )}
+          {" "}
+          광고성 정보 수신(금시세·MY GOLD 리포트·혜택)과 퀵퀴즈로 <strong>순금 0.01g씩 더</strong> 받을 수 있습니다.
         </Lead>
 
         <ProgressText>
           <span>신규회원 혜택 진행</span>
           <b>
-            {status.earnedG.toFixed(2)}g / {status.maxG.toFixed(2)}g
+            순금 {status.earnedG.toFixed(2)}g / {status.maxG.toFixed(2)}g
           </b>
         </ProgressText>
         <ProgressTrack aria-label={`신규회원 혜택 진행률 ${progress}%`}>
@@ -545,40 +523,22 @@ export default function WelcomeOnboarding() {
       </Hero>
 
       <Steps>
-        <StepCard $done={status.welcome.claimed}>
-          <StepIcon $done={status.welcome.claimed}>
-            {status.welcome.claimed ? <Check /> : <Gift />}
-          </StepIcon>
-          <StepBody>
-            <StepTop>
-              <h2>1. 회원가입하고 순금 0.01g 받기</h2>
-              <b>
-                {status.welcome.claimed
-                  ? `${status.welcome.creditedG.toFixed(2)}g 적립`
-                  : "순금 0.01g"}
-              </b>
-            </StepTop>
-            <StepDescription>
-              이메일 인증 완료 후 자동 적립됩니다.
-            </StepDescription>
-          </StepBody>
-        </StepCard>
-
         <StepCard $done={status.marketingPush.claimed}>
           <StepIcon $done={status.marketingPush.claimed}>
             {status.marketingPush.claimed ? <Check /> : <BellRing />}
           </StepIcon>
           <StepBody>
             <StepTop>
-              <h2>2. 금시세 알림 받고 순금 0.01g 더 받기</h2>
+              <h2>1. 광고성 정보 수신(앱푸시) 켜고 순금 0.01g 더 받기</h2>
               <b>
                 {status.marketingPush.claimed
-                  ? `${status.marketingPush.creditedG.toFixed(2)}g 적립`
+                  ? `순금 ${status.marketingPush.creditedG.toFixed(2)}g 적립`
                   : "순금 0.01g"}
               </b>
             </StepTop>
             <StepDescription>
-              금시세 주요 변동과 혜택을 현재 기기로 받아보세요.
+              금시세, 찾아보지 말고 받아보세요. 매번 검색할 필요 없이
+              주요 금시세 변동, MY GOLD 주간 리포트와 혜택을 앱푸시로 받아보세요.
             </StepDescription>
 
             {!status.marketingPush.claimed && (
@@ -591,16 +551,8 @@ export default function WelcomeOnboarding() {
                   <BellRing />
                   {marketingBusy
                     ? "알림 설정 중…"
-                    : !isEmailVerified
-                      ? "이메일 인증 후 알림 설정"
-                      : "알림 설정하고 순금 0.01g 더 받기"}
+                    : "광고성 정보 수신 켜고 순금 0.01g 더 받기"}
                 </ActionButton>
-                <ConsentNote>
-                  선택 사항입니다. 버튼을 누르면 금시세·혜택 등 광고성
-                  정보 알림 수신에 동의하며, 설정에서 언제든 해제할 수
-                  있습니다. 알림을 해제해도 이미 적립된 혜택은 회수하지
-                  않습니다.
-                </ConsentNote>
               </>
             )}
           </StepBody>
@@ -612,10 +564,10 @@ export default function WelcomeOnboarding() {
           </StepIcon>
           <StepBody>
             <StepTop>
-              <h2>3. 퀵퀴즈 풀고 순금 0.01g 더 받기</h2>
+              <h2>2. 퀵퀴즈 풀고 순금 0.01g 더 받기</h2>
               <b>
                 {status.quiz.claimed
-                  ? `${status.quiz.creditedG.toFixed(2)}g 적립`
+                  ? `순금 ${status.quiz.creditedG.toFixed(2)}g 적립`
                   : "순금 0.01g"}
               </b>
             </StepTop>
@@ -637,22 +589,6 @@ export default function WelcomeOnboarding() {
         </StepCard>
       </Steps>
 
-      {!isEmailVerified && (
-        <VerifyCard>
-          <h2>이메일 인증이 필요합니다</h2>
-          <p>가입하신 이메일의 인증 링크를 눌러주세요.</p>
-          <OutlineButton
-            type="button"
-            onClick={() =>
-              navigate(buildVerifyEmailPath(welcomePath))
-            }
-          >
-            이메일 인증하기
-            <ChevronRight />
-          </OutlineButton>
-        </VerifyCard>
-      )}
-
       {message && <Message aria-live="polite">{message}</Message>}
       {error && (
         <Message $error role="alert">
@@ -661,20 +597,10 @@ export default function WelcomeOnboarding() {
       )}
 
       <FooterActions>
-        {isEmailVerified && (
-          <ActionButton type="button" onClick={handleFinish}>
-            {finishLabel}
-            <ChevronRight />
-          </ActionButton>
-        )}
-
-        <SkipButton type="button" onClick={handleSkip}>
-          {isEmailVerified
-            ? allRewardsClaimed
-              ? "계속하기"
-              : "혜택은 나중에 받기"
-            : "혜택은 나중에 받고 이메일 인증하기"}
-        </SkipButton>
+        <ActionButton type="button" onClick={handleFinish}>
+          {finishLabel}
+          <ChevronRight />
+        </ActionButton>
       </FooterActions>
     </Page>
   );

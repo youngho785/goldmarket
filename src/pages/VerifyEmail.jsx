@@ -4,17 +4,21 @@ import styled from "styled-components";
 import {
   applyActionCode,
   checkActionCode,
+  verifyBeforeUpdateEmail,
 } from "firebase/auth";
 import { useNavigate, useLocation } from "react-router-dom";
 import { auth } from "../firebase/firebase";
 import {
   normalizeEmail,
-  requestEmailChange,
   sendVerificationEmailIfNeeded,
 } from "../services/authService";
 import { readMemberOnboardingPath } from "@/lib/memberOnboarding";
 import { isNative } from "@/platform/runtime";
-import { KGM_APP_RETURN_PARAM, KGM_PUBLIC_WEB_ORIGIN } from "@/lib/emailActionUrl";
+import {
+  buildEmailActionSettings,
+  KGM_APP_RETURN_PARAM,
+  KGM_PUBLIC_WEB_ORIGIN,
+} from "@/lib/emailActionUrl";
 import { useAuthContext } from "@/context/AuthContext";
 
 /* ───────── Styled ───────── */
@@ -111,6 +115,10 @@ const isNetworkRequestFailed = (err) =>
   err?.code === "auth/network-request-failed" ||
   String(err?.message || "").toLowerCase().includes("network-request-failed");
 
+const isUserTokenExpired = (err) =>
+  err?.code === "auth/user-token-expired" ||
+  String(err?.message || "").toLowerCase().includes("user-token-expired");
+
 async function reloadUserWithRetry(user) {
   let lastError = null;
 
@@ -154,8 +162,8 @@ export default function VerifyEmail() {
   const [resending, setResending] = useState(false);
   const [emailCorrectionOpen, setEmailCorrectionOpen] = useState(false);
   const [correctedEmail, setCorrectedEmail] = useState("");
-  const [correctionPassword, setCorrectionPassword] = useState("");
   const [changingEmail, setChangingEmail] = useState(false);
+  const [reloginRequired, setReloginRequired] = useState(false);
   const [pendingEmail, setPendingEmail] = useState("");
   const [appReturnReady, setAppReturnReady] = useState(false);
   const [appReturnHint, setAppReturnHint] = useState("");
@@ -312,6 +320,22 @@ export default function VerifyEmail() {
         const code = err?.code || "";
         const msg = (err?.message || "").toLowerCase();
 
+        // 이메일 변경 링크 적용 직후에는 기존 로그인 토큰이 폐기될 수 있습니다.
+        // 이 경우 인증 실패가 아니라 새 이메일로 다시 로그인하면 되는 정상 보안 동작입니다.
+        if (
+          actionApplied &&
+          mode === "verifyAndChangeEmail" &&
+          isUserTokenExpired(err)
+        ) {
+          setReloginRequired(true);
+          setChecking(false);
+          setAppReturnReady(false);
+          setMessage(
+            "✅ 새 이메일 확인이 완료되었습니다. 방금 인증한 새 이메일로 다시 로그인해 주세요."
+          );
+          return;
+        }
+
         // 인증 적용 뒤의 일시적 네트워크 오류는 인증 실패로 표시하지 않는다.
         if (actionApplied && isNetworkRequestFailed(err)) {
           setMessage(
@@ -412,7 +436,7 @@ export default function VerifyEmail() {
   /* 3) 로그인 상태에서 폴링 */
   useEffect(() => {
     const user = auth.currentUser || contextUser;
-    if (!user || user.emailVerified || processingLink) return;
+    if (!user || user.emailVerified || processingLink || reloginRequired) return;
 
     let stopped = false;
     let checkingNow = false;
@@ -452,7 +476,17 @@ export default function VerifyEmail() {
       } catch (e) {
         if (stopped) return;
 
-        if (isNetworkRequestFailed(e)) {
+        if (isUserTokenExpired(e)) {
+          // 새 이메일 확인 등으로 기존 토큰이 폐기된 경우 재로그인을 안내합니다.
+          setReloginRequired(true);
+          setMessage(
+            pendingEmail
+              ? "✅ 새 이메일 확인이 완료되었습니다. 방금 인증한 새 이메일로 다시 로그인해 주세요."
+              : "로그인 상태가 만료되었습니다. 다시 로그인해 주세요."
+          );
+          setChecking(false);
+          stopped = true;
+        } else if (isNetworkRequestFailed(e)) {
           // 앱↔메일/브라우저 전환 직후의 일시적 네트워크 오류는 치명 오류가 아니다.
           // 인터벌을 끊지 않고 다음 주기에 자동 재시도한다.
           setMessage("네트워크 연결을 다시 확인하고 있습니다. 인증 완료 여부를 자동으로 다시 확인합니다…");
@@ -485,7 +519,7 @@ export default function VerifyEmail() {
       document.removeEventListener("visibilitychange", handleVisibility);
       setChecking(false);
     };
-  }, [processingLink, destination, navigate, contextUser, pendingEmail]);
+  }, [processingLink, destination, navigate, contextUser, pendingEmail, reloginRequired]);
 
   /* 4) 재전송 */
   const handleResend = async () => {
@@ -519,25 +553,47 @@ export default function VerifyEmail() {
     setMessage("");
 
     try {
-      const result = await requestEmailChange(
-        correctedEmail,
-        correctionPassword,
-        continuePath || destination || "/"
+      const user = auth.currentUser;
+      if (!user) {
+        const error = new Error("로그인이 필요합니다.");
+        error.code = "auth/user-token-expired";
+        throw error;
+      }
+
+      const currentEmail = normalizeEmail(user.email);
+      const nextEmail = normalizeEmail(correctedEmail);
+
+      if (!nextEmail) {
+        throw new Error("새 이메일을 입력해 주세요.");
+      }
+      if (nextEmail === currentEmail) {
+        throw new Error("현재 이메일과 다른 이메일을 입력해 주세요.");
+      }
+
+      // 회원가입 직후의 이메일 오타 수정은 이미 최근 로그인된 세션을 사용합니다.
+      // 새 주소 소유 확인 링크를 눌러야 실제 이메일이 바뀌므로 비밀번호를 다시 받지 않습니다.
+      await verifyBeforeUpdateEmail(
+        user,
+        nextEmail,
+        buildEmailActionSettings(continuePath || destination || "/")
       );
 
-      setPendingEmail(result.pendingEmail);
+      setPendingEmail(nextEmail);
       setCorrectedEmail("");
-      setCorrectionPassword("");
       setEmailCorrectionOpen(false);
       setMessage(
-        `📧 ${result.pendingEmail}로 이메일 변경 확인 메일을 보냈습니다. ` +
+        `📧 ${nextEmail}로 이메일 변경 확인 메일을 보냈습니다. ` +
           "새 메일의 확인 링크를 눌러주세요. 기존 주소로 인증메일을 다시 보내지 않아도 됩니다."
       );
     } catch (err) {
       switch (err?.code) {
-        case "auth/invalid-credential":
-        case "auth/wrong-password":
-          setMessage("❌ 현재 비밀번호가 올바르지 않습니다.");
+        case "auth/requires-recent-login":
+        case "auth/user-token-expired":
+          setReloginRequired(true);
+          setEmailCorrectionOpen(false);
+          setMessage(
+            "보안을 위해 로그인 상태를 새로 확인해야 합니다. 로그인 후 이메일 수정을 다시 진행해 주세요."
+          );
           break;
         case "auth/email-already-in-use":
           setMessage("❌ 이미 다른 계정에서 사용 중인 이메일입니다.");
@@ -577,6 +633,22 @@ export default function VerifyEmail() {
 
       {processingLink ? (
         <Message>처리 중…</Message>
+      ) : reloginRequired ? (
+        <>
+          <Message $color={message.startsWith("✅") ? "var(--gm-success)" : "var(--gm-text-secondary)"}>
+            {message}
+          </Message>
+          <Button
+            onClick={() =>
+              navigate("/login", {
+                replace: true,
+                state: { from: destination },
+              })
+            }
+          >
+            새 이메일로 로그인하기
+          </Button>
+        </>
       ) : appReturnReady && appReturnRequested && isAndroidBrowser && !isNative ? (
         <>
           <Message $color="var(--gm-success)">
@@ -632,7 +704,6 @@ export default function VerifyEmail() {
                     onClick={() => {
                       setEmailCorrectionOpen((open) => !open);
                       setCorrectedEmail("");
-                      setCorrectionPassword("");
                       setMessage("");
                     }}
                   >
@@ -642,7 +713,7 @@ export default function VerifyEmail() {
                   {emailCorrectionOpen && (
                     <CorrectionPanel onSubmit={handleEmailCorrection} autoComplete="on">
                       <Message style={{ margin: 0 }}>
-                        새 이메일 주소와 가입할 때 사용한 현재 비밀번호를 입력해 주세요.
+                        새 이메일 주소를 입력해 주세요. 새 주소로 받은 확인 링크를 눌러야 변경이 완료됩니다.
                       </Message>
                       <CorrectionLabel htmlFor="correctedSignupEmail">
                         새 이메일
@@ -652,17 +723,6 @@ export default function VerifyEmail() {
                           value={correctedEmail}
                           onChange={(event) => setCorrectedEmail(event.target.value)}
                           autoComplete="email"
-                          required
-                        />
-                      </CorrectionLabel>
-                      <CorrectionLabel htmlFor="correctedSignupPassword">
-                        현재 비밀번호
-                        <CorrectionInput
-                          id="correctedSignupPassword"
-                          type="password"
-                          value={correctionPassword}
-                          onChange={(event) => setCorrectionPassword(event.target.value)}
-                          autoComplete="current-password"
                           required
                         />
                       </CorrectionLabel>

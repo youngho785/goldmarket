@@ -175,6 +175,7 @@ export async function signUp({
   }
 
   // Firestore 문서 보장 — nickname 자체는 서버 claimNickname만 기록합니다.
+  // 이름/휴대전화 등 필수 회원정보 저장에 실패하면 가입 완료로 넘기지 않습니다.
   try {
     await ensureUserProfileOnSignup(user, {
       displayName: safeName,
@@ -182,8 +183,11 @@ export async function signUp({
       phone,
       email: emailTrim,
     });
-  } catch (e) {
-    console.warn("ensureUserProfileOnSignup 실패(가입은 계속):", e);
+  } catch (profileError) {
+    console.error("회원 기본정보 저장 실패:", profileError);
+    throw new Error(
+      "회원 기본정보 저장에 실패했습니다. 같은 이메일과 비밀번호로 다시 가입을 진행해 주세요."
+    );
   }
 
   return user;

@@ -1514,7 +1514,7 @@ function getInitialProductsFromQuery() {
   const params = new URLSearchParams(window.location.search);
   const goldType = String(params.get("type") || "").trim();
   const rawWeight = Number(params.get("w"));
-  const inputUnit = params.get("unit") === "don" ? "돈" : "g";
+  const inputUnit = params.get("unit") === "don" ? "don" : "g";
   if (!goldType || !Number.isFinite(rawWeight) || rawWeight <= 0) {
     return [emptyProduct];
   }
@@ -1540,6 +1540,13 @@ export default function GoldExchange() {
   );
   const authDraft = authDraftRef.current;
   const initialRebookProductsRef = useRef(normalizeRebookProducts(rebook));
+  const initialVaultProductsRef = useRef(
+    !rebook
+      ? normalizeRebookProducts({ products: location.state?.vaultProducts })
+      : []
+  );
+  const importedFromMyGold =
+    location.state?.source === "my-gold" && initialVaultProductsRef.current.length > 0;
   const isRebook = !!rebook;
   const isDirectRebook = isRebook && (rebook?.directReservation === true || initialRebookProductsRef.current.length === 0);
 
@@ -1569,6 +1576,8 @@ export default function GoldExchange() {
       ? initialRebookProductsRef.current
       : authDraft?.products?.length
       ? authDraft.products
+      : initialVaultProductsRef.current.length > 0
+      ? initialVaultProductsRef.current
       : getInitialProductsFromQuery()
   );
   const [calculated, setCalculated] = useState(
@@ -1990,6 +1999,12 @@ export default function GoldExchange() {
           <RebookNotice role="status">
             <strong>취소된 예약 내용을 불러왔습니다.</strong><br />
             기존 제품과 연락처는 유지되며, 새로운 방문 날짜와 시간을 선택해 다시 신청해 주세요.
+          </RebookNotice>
+        )}
+        {importedFromMyGold && (
+          <RebookNotice role="status">
+            <strong>MY GOLD에서 등록한 실물 금 {initialVaultProductsRef.current.length}개를 불러왔습니다.</strong><br />
+            금 종류와 등록 중량을 다시 입력하지 않고 바로 예상 교환량을 계산할 수 있습니다. 실제 인정 중량은 매장 실측 후 확정됩니다.
           </RebookNotice>
         )}
         <FlowTrack aria-label="금교환 진행 단계">

@@ -12,8 +12,15 @@ service cloud.firestore {
 
     function isAdmin() {
       return signedIn() &&
-        (request.auth.token.get('admin', false) == true ||
-          request.auth.token.get('superAdmin', false) == true);
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('disabled', false) != true &&
+        (
+          request.auth.token.get('superAdmin', false) == true ||
+          (
+            request.auth.token.get('admin', false) == true &&
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'admin') != 'user'
+          )
+        );
     }
 
     function validGoldVaultType(value) {
@@ -45,9 +52,9 @@ service cloud.firestore {
 
     function protectedUserFieldsUnchanged() {
       return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
-        'role', 'admin', 'superAdmin', 'bonus', 'bonusGoldMilliGrams',
+        'role', 'admin', 'superAdmin', 'disabled', 'bonus', 'bonusGoldMilliGrams',
         'bonusGoldG', 'bonusGoldUpdatedAt', 'roleUpdatedAt', 'roleUpdatedBy',
-        'nickname'
+        'accountStatusUpdatedAt', 'accountStatusUpdatedBy', 'nickname'
       ]);
     }
 
@@ -307,6 +314,11 @@ service cloud.firestore {
     match /bonusGoldRedemptionRequests/{uid} {
       allow read: if isOwner(uid) || isAdmin();
       allow write: if false;
+    }
+
+    // 탈퇴 후 재가입에 따른 순금 혜택 중복 지급을 막는 서버 전용 가명처리 식별 기록입니다.
+    match /benefitClaimLocks/{lockId} {
+      allow read, write: if false;
     }
 
     match /verifiedGoldExchangeReviews/{reviewId} {

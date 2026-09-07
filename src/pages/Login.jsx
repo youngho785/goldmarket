@@ -192,8 +192,9 @@ export default function Login() {
     intent: location.state?.intent || "auth-return",
   };
 
-  const resolvePostLoginPath = () =>
-    readMemberOnboardingPath("") || returnTo;
+  // 일반 로그인은 원래 요청 경로로 복귀합니다.
+  // 신규회원 보너스 보드는 회원가입/이메일 인증 흐름에서만 진입합니다.
+  const resolvePostLoginPath = () => returnTo;
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);

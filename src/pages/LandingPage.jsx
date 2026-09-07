@@ -19,6 +19,7 @@ import LiteCalcFromGX from "@/components/LiteCalcFromGX";
 import GoldExchangeReviewList from "@/components/reviews/GoldExchangeReviewList";
 import GoldPriceBoard from "@/components/gold/GoldPriceBoard";
 import MyGoldIntroCard from "@/components/gold/MyGoldIntroCard";
+import MyGoldTicker from "@/components/gold/MyGoldTicker";
 import goldVerificationImage from "@/assets/goldVerificationImage";
 
 const Page = styled.div`
@@ -1169,6 +1170,8 @@ export default function LandingPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceSchema) }}
       />
+
+      <MyGoldTicker />
 
       {/* 01. 문제 인식 */}
       <Hero aria-labelledby="landing-title">
