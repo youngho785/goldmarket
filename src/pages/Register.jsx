@@ -258,7 +258,9 @@ export default function Register() {
 
   // 로그인과 동일한 공용 복귀 규칙을 사용합니다.
   const returnTo = getAuthReturnPath(location, "/");
-  const returningToMyGoldImport = returnTo.startsWith("/my-gold?import=calculator");
+  const returningToGuestMyGoldImport = returnTo.startsWith("/my-gold?import=guest");
+  const returningToMyGoldImport =
+    returningToGuestMyGoldImport || returnTo.startsWith("/my-gold?import=calculator");
   const returnAllowsUnverified =
     returnTo === "/my-gold" ||
     returnTo.startsWith("/my-gold?") ||
@@ -501,14 +503,18 @@ export default function Register() {
 
         <NoticeBox role="note" aria-live="polite">
           <strong>
-            {returningToMyGoldImport
-              ? "가입 후 방금 계산한 금을 내금고에 이어서 저장합니다"
-              : "회원가입하고 순금 0.01g 받기"}
+            {returningToGuestMyGoldImport
+              ? "가입 후 지금 만든 체험 내금고를 그대로 저장합니다"
+              : returningToMyGoldImport
+                ? "가입 후 방금 계산한 금을 내금고에 이어서 저장합니다"
+                : "회원가입하고 순금 0.01g 받기"}
           </strong>
           <div>
-            {returningToMyGoldImport
-              ? "계산한 금 종류와 중량은 임시 보관되어 있습니다. 가입이 끝나면 바로 내금고에 저장할 수 있고, 이메일 인증을 완료하면 회원가입 순금 0.01g 혜택도 받을 수 있습니다."
-              : "각 순금 혜택은 인증 이메일 기준 1회만 지급되며, 탈퇴 후 재가입해도 중복 지급되지 않습니다. 퀵퀴즈와 광고성 정보 수신(앱푸시) 설정으로 최대 순금 0.03g까지 받을 수 있습니다."}
+            {returningToGuestMyGoldImport
+              ? "체험에서 추가·수정한 금 이름·종류·중량·메모가 임시 보관되어 있습니다. 가입이 끝나면 그대로 실제 내금고에 저장할 수 있고, 이메일 인증을 완료하면 회원가입 순금 0.01g 혜택도 받을 수 있습니다."
+              : returningToMyGoldImport
+                ? "계산한 금 종류와 중량은 임시 보관되어 있습니다. 가입이 끝나면 바로 내금고에 저장할 수 있고, 이메일 인증을 완료하면 회원가입 순금 0.01g 혜택도 받을 수 있습니다."
+                : "각 순금 혜택은 인증 이메일 기준 1회만 지급되며, 탈퇴 후 재가입해도 중복 지급되지 않습니다. 퀵퀴즈와 광고성 정보 수신(앱푸시) 설정으로 최대 순금 0.03g까지 받을 수 있습니다."}
           </div>
         </NoticeBox>
 

@@ -4,6 +4,7 @@ import {
   GOLD_VAULT_MAX_WEIGHT_G,
   getGoldVaultTypeLabel,
   isSupportedGoldVaultType,
+  validateGoldVaultValues,
 } from "@/lib/goldVaultCatalog";
 
 const STORAGE_KEY = "kgm_my_gold_import_draft_v1";
@@ -86,7 +87,48 @@ export function saveGoldVaultImportDraft(products) {
   return draft;
 }
 
-export function readGoldVaultImportDraft() {
+function sanitizeGuestItems(items) {
+  if (!Array.isArray(items)) return [];
+  const result = [];
+  for (const item of items.slice(0, MAX_ITEMS)) {
+    try {
+      const normalized = validateGoldVaultValues(item || {});
+      result.push(normalized);
+    } catch {
+      // 유효하지 않은 체험 항목만 제외합니다.
+    }
+  }
+  return result;
+}
+
+export function saveGoldVaultGuestDraft(items) {
+  if (typeof window === "undefined") {
+    throw new Error("이 브라우저에서는 임시 저장을 사용할 수 없습니다.");
+  }
+
+  const sanitized = sanitizeGuestItems(items);
+  if (!sanitized.length) {
+    throw new Error("저장할 체험 금이 없습니다.");
+  }
+
+  const draft = {
+    version: VERSION,
+    source: "guest-my-gold",
+    savedAt: Date.now(),
+    items: sanitized,
+  };
+
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
+  } catch (error) {
+    console.warn("[goldVaultImportDraft] guest save failed:", error?.message || error);
+    throw new Error("체험한 내금고를 임시 저장하지 못했습니다. 브라우저 저장공간 설정을 확인해 주세요.");
+  }
+
+  return draft;
+}
+
+export function readGoldVaultImportDraft(expectedSource = "") {
   if (typeof window === "undefined") return null;
 
   try {
@@ -95,23 +137,29 @@ export function readGoldVaultImportDraft() {
 
     const parsed = JSON.parse(raw);
     const savedAt = Number(parsed?.savedAt || 0);
+    const source = String(parsed?.source || "");
     if (
       parsed?.version !== VERSION ||
-      parsed?.source !== "gold-exchange-calculator" ||
+      !["gold-exchange-calculator", "guest-my-gold"].includes(source) ||
+      (expectedSource && source !== expectedSource) ||
       !savedAt ||
       Date.now() - savedAt > TTL_MS
     ) {
-      localStorage.removeItem(STORAGE_KEY);
+      if (!expectedSource || source === expectedSource || Date.now() - savedAt > TTL_MS) {
+        localStorage.removeItem(STORAGE_KEY);
+      }
       return null;
     }
 
-    const items = sanitizeProducts(
-      (parsed?.items || []).map((item) => ({
-        goldType: item?.goldType,
-        quantity: item?.weightG,
-        inputUnit: "g",
-      }))
-    );
+    const items = source === "guest-my-gold"
+      ? sanitizeGuestItems(parsed?.items || [])
+      : sanitizeProducts(
+          (parsed?.items || []).map((item) => ({
+            goldType: item?.goldType,
+            quantity: item?.weightG,
+            inputUnit: "g",
+          }))
+        );
 
     if (!items.length) {
       localStorage.removeItem(STORAGE_KEY);
@@ -120,7 +168,7 @@ export function readGoldVaultImportDraft() {
 
     return {
       version: VERSION,
-      source: "gold-exchange-calculator",
+      source,
       savedAt,
       items,
     };

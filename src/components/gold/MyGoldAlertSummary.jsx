@@ -8,6 +8,7 @@ import {
   MY_GOLD_ALERT_BAR_OPTIONS,
   getMyGoldAlertGoals,
 } from "@/services/myGoldAlertGoalsService";
+import { readGuestMyGoldAlertGoals } from "@/lib/myGoldGuestDemo";
 
 const Card = styled.section`
   display: grid;
@@ -124,12 +125,18 @@ function formatGoalWon(value) {
   return `${Math.round(amount).toLocaleString("ko-KR")}원`;
 }
 
-export default function MyGoldAlertSummary({ uid }) {
-  const [goals, setGoals] = useState(null);
+export default function MyGoldAlertSummary({ uid, demoMode = false }) {
+  const [goals, setGoals] = useState(() => demoMode ? readGuestMyGoldAlertGoals() : null);
   const [pushReady, setPushReady] = useState(false);
-  const [loading, setLoading] = useState(!!uid);
+  const [loading, setLoading] = useState(!!uid && !demoMode);
 
   useEffect(() => {
+    if (demoMode) {
+      setGoals(readGuestMyGoldAlertGoals());
+      setPushReady(false);
+      setLoading(false);
+      return undefined;
+    }
     if (!uid) return undefined;
     let active = true;
     setLoading(true);
@@ -148,7 +155,7 @@ export default function MyGoldAlertSummary({ uid }) {
         if (active) setLoading(false);
       });
     return () => { active = false; };
-  }, [uid]);
+  }, [demoMode, uid]);
 
   const activeGoals = useMemo(() => {
     if (!goals?.enabled) return [];
@@ -171,9 +178,22 @@ export default function MyGoldAlertSummary({ uid }) {
         <Head>
           <Title>
             <strong id="my-gold-alert-summary-title"><BellRing size={16} aria-hidden /> 내금고 알림</strong>
-            <p>{loading ? "설정을 불러오는 중입니다." : activeGoals.length > 0 ? `${activeGoals.length}개 조건을 지켜보고 있어요.` : "내 금 가치나 원하는 골드바 조건에 도달하면 알려드릴 수 있어요."}</p>
+            <p>
+              {loading
+                ? "설정을 불러오는 중입니다."
+                : activeGoals.length > 0
+                  ? demoMode
+                    ? `${activeGoals.length}개 알림 조건을 체험 중이에요.`
+                    : `${activeGoals.length}개 조건을 지켜보고 있어요.`
+                  : demoMode
+                    ? "가치·순금 가격·골드바 목표 알림을 직접 설정해볼 수 있어요."
+                    : "내 금 가치나 원하는 골드바 조건에 도달하면 알려드릴 수 있어요."}
+            </p>
           </Title>
-          <Status $ready={pushReady}>{pushReady ? <BellRing size={12} aria-hidden /> : <Bell size={12} aria-hidden />}{pushReady ? "푸시 ON" : "푸시 확인"}</Status>
+          <Status $ready={pushReady}>
+            {pushReady ? <BellRing size={12} aria-hidden /> : <Bell size={12} aria-hidden />}
+            {demoMode ? "체험" : pushReady ? "푸시 ON" : "푸시 확인"}
+          </Status>
         </Head>
 
         {activeGoals.length > 0 && (
@@ -184,7 +204,7 @@ export default function MyGoldAlertSummary({ uid }) {
       </Main>
 
       <Action to="/my-gold/alerts">
-        <span>{activeGoals.length > 0 ? "알림 관리" : "알림 설정"}</span>
+        <span>{demoMode ? "알림 설정 체험" : activeGoals.length > 0 ? "알림 관리" : "알림 설정"}</span>
         <ChevronRight size={16} aria-hidden />
       </Action>
     </Card>

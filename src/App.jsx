@@ -538,6 +538,7 @@ const router = createBrowserRouter([
       { path: "/reviews", element: <Reviews /> },
       { path: "/quiz/gold-bonus", element: <QuizGoldBonus /> },
       { path: "/my-gold", element: <MyGoldVault /> },
+      { path: "/my-gold/alerts", element: <MyGoldAlerts /> },
       { path: "/terms", element: <Terms /> },
       { path: "/privacy", element: <Privacy /> },
       { path: "/account-delete", element: <AccountDelete /> },
@@ -546,7 +547,6 @@ const router = createBrowserRouter([
         element: <ProtectedRoute allowUnverified />,
         children: [
           { path: "/welcome", element: <WelcomeOnboarding /> },
-          { path: "/my-gold/alerts", element: <MyGoldAlerts /> },
         ],
       },
 

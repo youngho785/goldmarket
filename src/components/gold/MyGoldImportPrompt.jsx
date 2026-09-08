@@ -147,6 +147,7 @@ function formatWeight(weightG) {
 
 export default function MyGoldImportPrompt({
   draft,
+  source = "",
   currentCount = 0,
   maxItems = 30,
   loading = false,
@@ -156,18 +157,24 @@ export default function MyGoldImportPrompt({
   onCancel,
 }) {
   const items = Array.isArray(draft?.items) ? draft.items : [];
+  const fromGuestDemo = draft?.source === "guest-my-gold" || source === "guest-my-gold";
 
   if (!items.length) {
     return (
       <Card role="status">
         <Head>
           <div>
-            <h2>저장할 계산 정보가 없습니다</h2>
-            <small>임시 보관 시간이 지났거나 계산 정보가 지워졌습니다.</small>
+            <h2>{fromGuestDemo ? "저장할 체험 내금고 정보가 없습니다" : "저장할 계산 정보가 없습니다"}</h2>
+            <small>
+              {fromGuestDemo
+                ? "임시 보관 시간이 지났거나 체험 정보가 지워졌습니다."
+                : "임시 보관 시간이 지났거나 계산 정보가 지워졌습니다."}
+            </small>
           </div>
         </Head>
-        <CalculatorLink to="/gold-exchange">
-          금교환 계산기로 돌아가기 <ArrowRight size={15} aria-hidden />
+        <CalculatorLink to={fromGuestDemo ? "/my-gold" : "/gold-exchange"}>
+          {fromGuestDemo ? "내금고 체험으로 돌아가기" : "금교환 계산기로 돌아가기"}
+          <ArrowRight size={15} aria-hidden />
         </CalculatorLink>
       </Card>
     );
@@ -181,10 +188,18 @@ export default function MyGoldImportPrompt({
     <Card aria-labelledby="my-gold-import-title">
       <Head>
         <div>
-          <h2 id="my-gold-import-title">계산한 금 {items.length}개를 내금고에 저장할까요?</h2>
-          <small>금교환 계산기에서 입력한 금 종류와 원래 중량을 가져왔습니다.</small>
+          <h2 id="my-gold-import-title">
+            {fromGuestDemo
+              ? `체험한 금 ${items.length}개를 내금고에 그대로 저장할까요?`
+              : `계산한 금 ${items.length}개를 내금고에 저장할까요?`}
+          </h2>
+          <small>
+            {fromGuestDemo
+              ? "로그인 전에 추가·수정한 체험 금을 그대로 가져왔습니다."
+              : "금교환 계산기에서 입력한 금 종류와 원래 중량을 가져왔습니다."}
+          </small>
         </div>
-        <Badge>계산기에서 가져옴</Badge>
+        <Badge>{fromGuestDemo ? "체험 금고" : "계산기에서 가져옴"}</Badge>
       </Head>
 
       <List>
@@ -197,7 +212,9 @@ export default function MyGoldImportPrompt({
       </List>
 
       <Note>
-        계산 당시의 예상 순금량이나 골드바 결과는 저장하지 않습니다. 내금고에는 원래 금 종류와 중량만 저장하고, 현재 시세와 교환 기준으로 가치를 다시 계산합니다. 이름과 메모는 저장 후 자유롭게 수정할 수 있습니다.
+        {fromGuestDemo
+          ? "체험 화면의 금액·그래프 결과 자체를 저장하는 것이 아니라, 입력한 금 이름·종류·중량·메모를 실제 내금고에 저장합니다. 저장 후 현재 시세와 교환 기준으로 가치를 다시 계산합니다."
+          : "계산 당시의 예상 순금량이나 골드바 결과는 저장하지 않습니다. 내금고에는 원래 금 종류와 중량만 저장하고, 현재 시세와 교환 기준으로 가치를 다시 계산합니다. 이름과 메모는 저장 후 자유롭게 수정할 수 있습니다."}
       </Note>
 
       {!loading && !hasRoom && (
@@ -210,7 +227,11 @@ export default function MyGoldImportPrompt({
       <Actions>
         <PrimaryButton type="button" onClick={onConfirm} disabled={disabled}>
           <Save size={16} aria-hidden />
-          {saving ? "저장 중..." : `${items.length}개 모두 내금고에 저장`}
+          {saving
+            ? "저장 중..."
+            : fromGuestDemo
+              ? "체험한 내금고 그대로 저장"
+              : `${items.length}개 모두 내금고에 저장`}
         </PrimaryButton>
         <SecondaryButton type="button" onClick={onCancel} disabled={saving}>
           <X size={15} aria-hidden /> 취소

@@ -10,6 +10,10 @@ import {
   getMyGoldAlertGoals,
   saveMyGoldAlertGoals,
 } from "@/services/myGoldAlertGoalsService";
+import {
+  readGuestMyGoldAlertGoals,
+  saveGuestMyGoldAlertGoals,
+} from "@/lib/myGoldGuestDemo";
 
 const Card = styled.section`
   display: grid;
@@ -261,6 +265,7 @@ export default function MyGoldAlertGoals({
   bonusGoldG,
   publicPriceEnabled = true,
   loadingMetrics = false,
+  demoMode = false,
 }) {
   const [form, setForm] = useState({
     valueTargetWon: "",
@@ -269,12 +274,26 @@ export default function MyGoldAlertGoals({
     targetGoldBarG: "",
   });
   const [pushReady, setPushReady] = useState(false);
-  const [loading, setLoading] = useState(!!uid);
+  const [loading, setLoading] = useState(!!uid && !demoMode);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (demoMode) {
+      const goals = readGuestMyGoldAlertGoals();
+      setForm({
+        valueTargetWon: toInput(goals.valueTargetWon),
+        priceTargetPerDon: toInput(goals.priceTargetPerDon),
+        priceDirection: goals.priceDirection === "down" ? "down" : "up",
+        targetGoldBarG: toBarInput(goals.targetGoldBarG),
+      });
+      setPushReady(false);
+      setLoading(false);
+      setError("");
+      return undefined;
+    }
+
     if (!uid) return undefined;
     let active = true;
     setLoading(true);
@@ -297,7 +316,7 @@ export default function MyGoldAlertGoals({
         if (active) setLoading(false);
       });
     return () => { active = false; };
-  }, [uid]);
+  }, [demoMode, uid]);
 
   const hasAnyGoal = useMemo(
     () => !!(form.valueTargetWon || form.priceTargetPerDon || form.targetGoldBarG),
@@ -305,18 +324,30 @@ export default function MyGoldAlertGoals({
   );
 
   const save = async () => {
-    if (!uid || saving) return;
+    if (saving || (!uid && !demoMode)) return;
     setSaving(true);
     setMessage("");
     setError("");
+    const values = {
+      enabled: hasAnyGoal,
+      valueTargetWon: form.valueTargetWon ? Number(form.valueTargetWon) : null,
+      priceTargetPerDon: form.priceTargetPerDon ? Number(form.priceTargetPerDon) : null,
+      priceDirection: form.priceDirection === "down" ? "down" : "up",
+      targetGoldBarG: form.targetGoldBarG ? Number(form.targetGoldBarG) : null,
+    };
     try {
-      const result = await saveMyGoldAlertGoals({
-        enabled: hasAnyGoal,
-        valueTargetWon: form.valueTargetWon ? Number(form.valueTargetWon) : null,
-        priceTargetPerDon: form.priceTargetPerDon ? Number(form.priceTargetPerDon) : null,
-        priceDirection: form.priceDirection === "down" ? "down" : "up",
-        targetGoldBarG: form.targetGoldBarG ? Number(form.targetGoldBarG) : null,
-      });
+      if (demoMode) {
+        saveGuestMyGoldAlertGoals(values);
+        setPushReady(false);
+        setMessage(
+          hasAnyGoal
+            ? "체험 설정을 저장했습니다. 실제 푸시 알림은 로그인 후 같은 방식으로 설정할 수 있습니다."
+            : "체험 알림을 해제했습니다."
+        );
+        return;
+      }
+
+      const result = await saveMyGoldAlertGoals(values);
       setPushReady(result.pushReady === true);
       if (result.notified && Array.isArray(result.reached) && result.reached.length) {
         setMessage(`저장 완료 · 현재 이미 ${result.reached.join(" · ")}에 도달했습니다.`);
@@ -338,6 +369,12 @@ export default function MyGoldAlertGoals({
     setError("");
     setSaving(true);
     try {
+      if (demoMode) {
+        saveGuestMyGoldAlertGoals({ ...EMPTY_MY_GOLD_ALERT_GOALS });
+        setPushReady(false);
+        setMessage("체험 알림을 모두 해제했습니다.");
+        return;
+      }
       const result = await saveMyGoldAlertGoals({ ...EMPTY_MY_GOLD_ALERT_GOALS });
       setPushReady(result.pushReady === true);
       setMessage("내금고 알림을 모두 해제했습니다.");
@@ -357,7 +394,7 @@ export default function MyGoldAlertGoals({
         <h2 id="my-gold-alert-goals-title">알림 설정</h2>
         <Status $ready={pushReady}>
           {pushReady ? <BellRing size={13} aria-hidden /> : <Bell size={13} aria-hidden />}
-          {pushReady ? "푸시 ON" : "푸시 OFF"}
+          {demoMode ? "체험" : pushReady ? "푸시 ON" : "푸시 OFF"}
         </Status>
       </Head>
 
@@ -451,15 +488,21 @@ export default function MyGoldAlertGoals({
       {!pushReady && (
         <PushNotice>
           <Bell size={15} aria-hidden />
-          <span>자동 푸시를 받으려면 앱푸시 수신 설정이 필요합니다.</span>
-          <Link to="/settings">알림 설정</Link>
+          <span>
+            {demoMode
+              ? "지금은 알림 기능을 체험하는 중입니다. 실제 자동 푸시는 로그인 후 받을 수 있습니다."
+              : "자동 푸시를 받으려면 앱푸시 수신 설정이 필요합니다."}
+          </span>
+          <Link to={demoMode ? "/login?next=%2Fmy-gold%2Falerts" : "/settings"}>
+            {demoMode ? "로그인" : "알림 설정"}
+          </Link>
         </PushNotice>
       )}
 
       <Actions>
         <SaveButton type="button" onClick={save} disabled={loading || saving}>
           {message && !error ? <CheckCircle2 size={15} aria-hidden /> : <Save size={15} aria-hidden />}
-          {saving ? "저장 중..." : "알림 저장"}
+          {saving ? "저장 중..." : demoMode ? "체험 설정 저장" : "알림 저장"}
         </SaveButton>
         <ClearButton type="button" onClick={clear} disabled={loading || saving || !hasAnyGoal}>
           모두 해제

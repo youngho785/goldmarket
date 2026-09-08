@@ -186,7 +186,9 @@ export default function Login() {
 
   // next > state.from > legacy from 순으로 복귀 경로를 결정합니다.
   const returnTo = getAuthReturnPath(location, "/");
-  const returningToMyGoldImport = returnTo.startsWith("/my-gold?import=calculator");
+  const returningToGuestMyGoldImport = returnTo.startsWith("/my-gold?import=guest");
+  const returningToMyGoldImport =
+    returningToGuestMyGoldImport || returnTo.startsWith("/my-gold?import=calculator");
   const returnAllowsUnverified =
     returnTo === "/my-gold" ||
     returnTo.startsWith("/my-gold?") ||
@@ -321,9 +323,11 @@ export default function Login() {
       <Card>
         <Title>한국골드마켓에 오신것을 환영합니다.</Title>
         <SubTitle>
-          {returningToMyGoldImport
-            ? "로그인하면 방금 계산한 금을 내금고에 이어서 저장합니다."
-            : "이메일 인증만으로 간편하게 가입"}
+          {returningToGuestMyGoldImport
+            ? "로그인하면 지금 만든 체험 내금고를 그대로 저장합니다."
+            : returningToMyGoldImport
+              ? "로그인하면 방금 계산한 금을 내금고에 이어서 저장합니다."
+              : "이메일 인증만으로 간편하게 가입"}
         </SubTitle>
 
         <TopCtaWrap>
@@ -331,9 +335,11 @@ export default function Login() {
             to={registerPath}
             state={registerState}
             aria-label={
-              returningToMyGoldImport
-                ? "회원가입하고 계산한 금 내금고에 저장하기"
-                : "회원가입하기 - 신규회원 최대 순금 0.03g 혜택"
+              returningToGuestMyGoldImport
+                ? "회원가입하고 체험한 내금고 저장하기"
+                : returningToMyGoldImport
+                  ? "회원가입하고 계산한 금 내금고에 저장하기"
+                  : "회원가입하기 - 신규회원 최대 순금 0.03g 혜택"
             }
           >
             <CtaLineMain>
@@ -342,9 +348,11 @@ export default function Login() {
                 : "회원가입하고 순금 0.01g 받기"}
             </CtaLineMain>
             <CtaLineSub>
-              {returningToMyGoldImport
-                ? "계산한 금을 이어서 저장하고 순금 0.01g 회원혜택도 받아보세요"
-                : "퀵퀴즈와 금시세 알림으로 최대 순금 0.03g까지"}
+              {returningToGuestMyGoldImport
+                ? "체험에서 추가·수정한 금을 그대로 저장하고 순금 0.01g 회원혜택도 확인해보세요"
+                : returningToMyGoldImport
+                  ? "계산한 금을 이어서 저장하고 순금 0.01g 회원혜택도 받아보세요"
+                  : "퀵퀴즈와 금시세 알림으로 최대 순금 0.03g까지"}
             </CtaLineSub>
           </LuxuryCta>
         </TopCtaWrap>
