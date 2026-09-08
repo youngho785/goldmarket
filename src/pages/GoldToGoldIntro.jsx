@@ -535,7 +535,7 @@ export default function GoldToGoldIntro() {
             <span><Scale aria-hidden /></span>
             <div>
               <strong>온라인에서 예상 결과 확인</strong>
-              <p>종류와 중량을 입력해 예상 순금 중량과 골드바 조합을 먼저 확인합니다.</p>
+              <p>종류와 중량을 입력해 예상 순금량과 골드바 조합을 먼저 확인합니다.</p>
             </div>
           </TrustRow>
           <TrustRow>

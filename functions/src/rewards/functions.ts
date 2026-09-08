@@ -8,7 +8,6 @@ import {
   ENFORCE_APP_CHECK,
   requireCurrentAdmin,
   requireVerifiedUserRecord,
-  requireVerifiedUser,
   roundTo3,
   buildValidatedBarsPlan,
   addNotificationForUser,
@@ -27,12 +26,14 @@ import {
   QUIZ_BONUS_CREDIT_MG,
   QUIZ_BONUS_CREDIT_G,
   benefitIdentityHashForVerifiedUser,
+  benefitAccountHash,
   benefitClaimLockRef,
   benefitClaimedFromLock,
   recordBenefitClaimLock,
   toNonNegativeInteger,
   bonusBalanceMilliGrams,
   requestCreatedMillis,
+  BENEFIT_BALANCE_CARRYOVER_LEDGER_SOURCE,
 } from "./shared.js";
 
 function marketingPushBonusConfigured(
@@ -69,6 +70,139 @@ function marketingPushBonusConfigured(
   return Object.values(devices).some(
     (entry) => String(entry?.token || "").trim() === token
   );
+}
+
+type BenefitCarryoverRestoreResult = {
+  restoredNow: boolean;
+  restoredG: number;
+  restoredBalanceG: number;
+  balanceG: number;
+};
+
+async function restoreBenefitBalanceCarryover(
+  uid: string,
+  identityHash: string
+): Promise<BenefitCarryoverRestoreResult> {
+  const userRef = db().doc(`users/${uid}`);
+  const claimLockRef = benefitClaimLockRef(identityHash);
+  const currentAccountHash = benefitAccountHash(identityHash, uid);
+
+  return db().runTransaction(async (tx) => {
+    const [userSnap, claimLockSnap] = await Promise.all([
+      tx.get(userRef),
+      tx.get(claimLockRef),
+    ]);
+
+    const userData = userSnap.data();
+    const currentBalanceMg = bonusBalanceMilliGrams(userData);
+    const restoredBeforeMg = toNonNegativeInteger(
+      userData?.bonusGoldCarryoverRestoredMilliGrams
+    );
+    const carryover = claimLockSnap.exists
+      ? claimLockSnap.data()?.balanceCarryover
+      : undefined;
+
+    if (!carryover || String(carryover.state || "") !== "available") {
+      return {
+        restoredNow: false,
+        restoredG: 0,
+        restoredBalanceG: restoredBeforeMg / 1000,
+        balanceG: currentBalanceMg / 1000,
+      };
+    }
+
+    const sourceAccountHash = String(carryover.sourceAccountHash || "").trim();
+    if (!sourceAccountHash || sourceAccountHash === currentAccountHash) {
+      return {
+        restoredNow: false,
+        restoredG: 0,
+        restoredBalanceG: restoredBeforeMg / 1000,
+        balanceG: currentBalanceMg / 1000,
+      };
+    }
+
+    const carryoverMg = toNonNegativeInteger(carryover.balanceMilliGrams);
+    const archiveId = String(carryover.archiveId || "").trim().slice(0, 64);
+    const now = FieldValue.serverTimestamp();
+    const nextBalanceMg = currentBalanceMg + carryoverMg;
+
+    if (carryoverMg > 0) {
+      tx.set(
+        userRef,
+        {
+          bonusGoldMilliGrams: nextBalanceMg,
+          bonusGoldG: nextBalanceMg / 1000,
+          bonusGoldUpdatedAt: now,
+          bonusGoldCarryoverRestoredMilliGrams: carryoverMg,
+          bonusGoldCarryoverRestoredG: carryoverMg / 1000,
+          bonusGoldCarryoverRestoredAt: now,
+          bonusGoldCarryoverArchiveId: archiveId || null,
+        },
+        { merge: true }
+      );
+
+      const ledgerId = `carryover_${archiveId || sourceAccountHash.slice(0, 32)}`;
+      tx.set(
+        userRef.collection("ledger").doc(ledgerId),
+        {
+          direction: "credit",
+          amountMilliGrams: carryoverMg,
+          amountG: carryoverMg / 1000,
+          source: BENEFIT_BALANCE_CARRYOVER_LEDGER_SOURCE,
+          createdAt: now,
+          balanceApplied: true,
+          restoredFromDeletedAccount: true,
+        },
+        { merge: true }
+      );
+    }
+
+    tx.set(
+      claimLockRef,
+      {
+        balanceCarryover: {
+          schemaVersion: Number(carryover.schemaVersion || 1),
+          archiveId: archiveId || sourceAccountHash.slice(0, 32),
+          sourceAccountHash,
+          balanceMilliGrams: carryoverMg,
+          balanceG: carryoverMg / 1000,
+          archivedAt: carryover.archivedAt || now,
+          state: "restored",
+          restoredAt: now,
+        },
+        updatedAt: now,
+      },
+      { merge: true }
+    );
+
+    return {
+      restoredNow: carryoverMg > 0,
+      restoredG: carryoverMg / 1000,
+      restoredBalanceG: carryoverMg / 1000,
+      balanceG: nextBalanceMg / 1000,
+    };
+  });
+}
+
+async function announceCarryoverRestore(
+  uid: string,
+  result: BenefitCarryoverRestoreResult
+): Promise<void> {
+  if (!result.restoredNow || result.restoredG <= 0) return;
+  try {
+    await addNotificationForUser(uid, {
+      type: "bonus_gold_carryover_restored",
+      title: "미사용 적립 순금 복원 완료",
+      body: `이전 계정에서 사용하지 않은 순금 ${result.restoredG.toFixed(2)}g을 복원했습니다. 기존 혜택은 중복 지급되지 않습니다.`,
+      link: "/profile",
+      meta: {
+        event: BENEFIT_BALANCE_CARRYOVER_LEDGER_SOURCE,
+        restoredG: result.restoredG,
+      },
+    });
+  } catch (error) {
+    console.error("[benefitCarryover] 복원 알림 생성 실패", error);
+  }
 }
 
 async function resolveMarketingPushBonusState(
@@ -467,6 +601,8 @@ export const welcomeClaimGoldBonus = onCall(
     const uid = verifiedUser.uid;
     const identityHash = benefitIdentityHashForVerifiedUser(verifiedUser);
 
+    const carryover = await restoreBenefitBalanceCarryover(uid, identityHash);
+    await announceCarryoverRestore(uid, carryover);
     const res = await resolveWelcomeBonusState(uid, identityHash);
     if (res.claimedNow) {
       try {
@@ -494,6 +630,9 @@ export const marketingPushClaimGoldBonus = onCall(
     const verifiedUser = await requireVerifiedUserRecord(req.auth?.uid);
     const uid = verifiedUser.uid;
     const identityHash = benefitIdentityHashForVerifiedUser(verifiedUser);
+
+    const carryover = await restoreBenefitBalanceCarryover(uid, identityHash);
+    await announceCarryoverRestore(uid, carryover);
 
     // 이미 받은 인증 이메일은 알림 설정을 나중에 꺼도 회수하지 않습니다.
     const existing =
@@ -579,6 +718,9 @@ export const memberBonusGetStatus = onCall(
     const uid = verifiedUser.uid;
     const identityHash = benefitIdentityHashForVerifiedUser(verifiedUser);
 
+    const carryover = await restoreBenefitBalanceCarryover(uid, identityHash);
+    await announceCarryoverRestore(uid, carryover);
+
     const userRef = db().doc(`users/${uid}`);
     const claimLockRef = benefitClaimLockRef(identityHash);
     const [userSnap, welcomeSnap, marketingSnap, quizSnap, claimLockSnap] =
@@ -635,17 +777,27 @@ export const memberBonusGetStatus = onCall(
       ),
       balanceG:
         bonusBalanceMilliGrams(userSnap.data()) / 1000,
+      restoredBalanceG: toNonNegativeInteger(
+        userSnap.data()?.bonusGoldCarryoverRestoredMilliGrams
+      ) / 1000,
+      carryoverRestoredNow: carryover.restoredNow,
       rewards: {
         welcome: {
           claimed: welcomeSnap.exists || benefitClaimedFromLock(claimLockSnap, "welcome"),
+          claimedThisAccount: welcomeSnap.exists,
+          previouslyClaimed: !welcomeSnap.exists && benefitClaimedFromLock(claimLockSnap, "welcome"),
           creditedG: welcomeG,
         },
         marketingPush: {
           claimed: marketingSnap.exists || benefitClaimedFromLock(claimLockSnap, "marketingPush"),
+          claimedThisAccount: marketingSnap.exists,
+          previouslyClaimed: !marketingSnap.exists && benefitClaimedFromLock(claimLockSnap, "marketingPush"),
           creditedG: marketingG,
         },
         quiz: {
           claimed: quizSnap.exists || benefitClaimedFromLock(claimLockSnap, "quiz"),
+          claimedThisAccount: quizSnap.exists,
+          previouslyClaimed: !quizSnap.exists && benefitClaimedFromLock(claimLockSnap, "quiz"),
           creditedG: quizG,
         },
       },
@@ -658,6 +810,8 @@ export const quizGetGoldBonusStatus = onCall(
   async (req) => {
     const verifiedUser = await requireVerifiedUserRecord(req.auth?.uid);
     const identityHash = benefitIdentityHashForVerifiedUser(verifiedUser);
+    const carryover = await restoreBenefitBalanceCarryover(verifiedUser.uid, identityHash);
+    await announceCarryoverRestore(verifiedUser.uid, carryover);
     return getQuizBonusState(verifiedUser.uid, identityHash);
   }
 );
@@ -671,6 +825,8 @@ export const quizClaimGoldBonus = onCall<{
     const verifiedUser = await requireVerifiedUserRecord(req.auth?.uid);
     const uid = verifiedUser.uid;
     const identityHash = benefitIdentityHashForVerifiedUser(verifiedUser);
+    const carryover = await restoreBenefitBalanceCarryover(uid, identityHash);
+    await announceCarryoverRestore(uid, carryover);
 
     const answerKey: Record<string, number> = { q1: 0, q2: 0, q3: 1, q4: 0, q5: 0 };
     const answers = req.data?.answers;
@@ -753,8 +909,11 @@ function publicBonusUsageRequest(data: FirebaseFirestore.DocumentData | undefine
 export const bonusGetGoldUsageState = onCall(
   { region: "asia-northeast3", enforceAppCheck: ENFORCE_APP_CHECK },
   async (req) => {
-    const uid = req.auth?.uid;
-    if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+    const verifiedUser = await requireVerifiedUserRecord(req.auth?.uid);
+    const uid = verifiedUser.uid;
+    const identityHash = benefitIdentityHashForVerifiedUser(verifiedUser);
+    const carryover = await restoreBenefitBalanceCarryover(uid, identityHash);
+    await announceCarryoverRestore(uid, carryover);
 
     const userRef = db().doc(`users/${uid}`);
     const requestRef = db().doc(`bonusGoldRedemptionRequests/${uid}`);
@@ -799,7 +958,11 @@ export const bonusGetGoldUsageState = onCall(
 export const bonusRequestGoldUsage = onCall<{ groupId: string }>(
   { region: "asia-northeast3", enforceAppCheck: ENFORCE_APP_CHECK },
   async (req) => {
-    const uid = await requireVerifiedUser(req.auth?.uid);
+    const verifiedUser = await requireVerifiedUserRecord(req.auth?.uid);
+    const uid = verifiedUser.uid;
+    const identityHash = benefitIdentityHashForVerifiedUser(verifiedUser);
+    const carryover = await restoreBenefitBalanceCarryover(uid, identityHash);
+    await announceCarryoverRestore(uid, carryover);
 
     const groupId = cleanGroupId(req.data?.groupId);
     if (!groupId) {

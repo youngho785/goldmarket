@@ -203,8 +203,12 @@ const HistoryMeta = styled.div`
 const Count = styled.div`
   color: ${({ theme }) => theme.colors.textSecondary};
   font-size: .86rem;
+  line-height: 1.55;
   white-space: nowrap;
   text-align: right;
+
+  strong { color: ${({ theme }) => theme.colors.text}; }
+  small { color: ${({ theme }) => theme.colors.textLight}; }
 `;
 
 const TARGET_LABELS = {
@@ -252,7 +256,7 @@ const MY_GOLD_TEMPLATES = [
     label: "적립 순금 확인",
     targetType: "bonusGoldHolders",
     category: "myGold",
-    title: "내 금고에 적립된 순금을 확인해 보세요",
+    title: "내금고에 적립된 순금을 확인해 보세요",
     body: "한국골드마켓에서 적립한 순금과 나의 금을 한곳에서 확인해 보세요.",
     link: "/my-gold",
   },
@@ -274,6 +278,19 @@ function isMarketingCategory(category) {
 
 function isMarketingTarget(targetType) {
   return ["goldNews", "myGoldEmpty", "myGoldActive", "bonusGoldHolders"].includes(targetType);
+}
+
+function campaignClickRate(item) {
+  const successCount = Number(item?.pushSuccessCount || 0);
+  const clickCount = Number(item?.clickCount || 0);
+  if (successCount <= 0) return null;
+  return Math.round((clickCount / successCount) * 1000) / 10;
+}
+
+function isCampaignPushMetricsSettled(item) {
+  const createdCount = Number(item?.createdCount || 0);
+  const processedCount = Number(item?.pushProcessedCount || 0);
+  return item?.status === "completed" && createdCount > 0 && processedCount >= createdCount;
 }
 
 export default function AdminNotifications() {
@@ -421,7 +438,7 @@ export default function AdminNotifications() {
       });
 
       setMessage(
-        `알림 생성 완료 · 알림 대상 ${Number(result?.recipientCount || 0).toLocaleString("ko-KR")}명`
+        `알림 생성 완료 · 알림 대상 ${Number(result?.recipientCount || 0).toLocaleString("ko-KR")}명 · 푸시 성과는 최근 발송 이력에 순차 집계됩니다.`
       );
       setRecipientCount(null);
       setForm((prev) => ({ ...prev, title: "", body: "" }));
@@ -568,7 +585,10 @@ export default function AdminNotifications() {
 
       <Card>
         <Title>최근 발송 이력</Title>
-        <Intro>관리자가 생성한 최근 알림 캠페인 기록입니다.</Intro>
+        <Intro>
+          관리자 캠페인의 알림 대상, FCM 발송 성공 회원, 확인된 푸시 클릭을 보여줍니다.
+          FCM 성공은 Firebase가 발송 요청을 정상 처리한 결과이며 실제 화면 노출을 보장한다는 뜻은 아닙니다.
+        </Intro>
 
         <History>
           {historyLoading ? (
@@ -576,24 +596,55 @@ export default function AdminNotifications() {
           ) : history.length === 0 ? (
             <Status>아직 관리자 발송 이력이 없습니다.</Status>
           ) : (
-            history.map((item) => (
-              <HistoryRow key={item.id}>
-                <HistoryMeta>
-                  <strong>{item.title || "알림"}</strong>
-                  <span>{item.body || ""}</span>
-                  <small>
-                    {TARGET_LABELS[item.targetType] || item.targetType}
-                    {" · "}
-                    {CATEGORY_LABELS[item.category] || item.category}
-                    {item.createdAt ? ` · ${formatDate(item.createdAt)}` : ""}
-                  </small>
-                </HistoryMeta>
-                <Count>
-                  대상 {Number(item.recipientCount || 0).toLocaleString("ko-KR")}명<br />
-                  {HISTORY_STATUS_LABELS[item.status] || item.status || "상태 확인 중"}
-                </Count>
-              </HistoryRow>
-            ))
+            history.map((item) => {
+              const trackingEnabled = Number(item.trackingVersion || 0) >= 1;
+              const processedCount = Number(item.pushProcessedCount || 0);
+              const createdCount = Number(item.createdCount || 0);
+              const successCount = Number(item.pushSuccessCount || 0);
+              const clickCount = Number(item.clickCount || 0);
+              const clickRate = campaignClickRate(item);
+              const settled = isCampaignPushMetricsSettled(item);
+
+              return (
+                <HistoryRow key={item.id}>
+                  <HistoryMeta>
+                    <strong>{item.title || "알림"}</strong>
+                    <span>{item.body || ""}</span>
+                    <small>
+                      {TARGET_LABELS[item.targetType] || item.targetType}
+                      {" · "}
+                      {CATEGORY_LABELS[item.category] || item.category}
+                      {item.createdAt ? ` · ${formatDate(item.createdAt)}` : ""}
+                    </small>
+                  </HistoryMeta>
+                  <Count>
+                    대상 {Number(item.recipientCount || 0).toLocaleString("ko-KR")}명
+                    {trackingEnabled ? (
+                      <>
+                        <br />
+                        <strong>FCM 성공 {successCount.toLocaleString("ko-KR")}명</strong>
+                        <br />
+                        확인 클릭 {clickCount.toLocaleString("ko-KR")}명
+                        {clickRate == null ? "" : ` · 클릭률 ${clickRate}%`}
+                        {!settled && (
+                          <>
+                            <br />
+                            <small>푸시 집계 {processedCount.toLocaleString("ko-KR")} / {createdCount.toLocaleString("ko-KR")}</small>
+                          </>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <br />
+                        {HISTORY_STATUS_LABELS[item.status] || item.status || "상태 확인 중"}
+                        <br />
+                        <small>성과 측정 적용 전 발송</small>
+                      </>
+                    )}
+                  </Count>
+                </HistoryRow>
+              );
+            })
           )}
         </History>
       </Card>

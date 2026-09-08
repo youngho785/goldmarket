@@ -8,19 +8,27 @@ import { db } from "@/firebase/firebase";
 
 const Card = styled.section`
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.primary} 68%, transparent);
-  border-radius: 22px;
-  background: ${({ theme }) => theme.gradients.primary};
-  color: ${({ theme }) => theme.on.primary};
-  box-shadow: 0 12px 30px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 14%, transparent);
+  border: 1px solid
+    color-mix(in srgb, ${({ theme }) => theme.colors.gold} 22%, ${({ theme }) => theme.colors.border});
+  border-radius: 20px;
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 52%, white) 0%,
+      ${({ theme }) => theme.colors.surface} 58%
+    );
+  box-shadow: 0 8px 22px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 6%, transparent);
+`;
+
+const Inner = styled.div`
+  padding: 14px 14px 13px;
 `;
 
 const Head = styled.div`
   display: flex;
-  align-items: center;
+  align-items: start;
   justify-content: space-between;
   gap: 12px;
-  padding: 15px 16px 11px;
 `;
 
 const TitleWrap = styled.div`
@@ -29,24 +37,24 @@ const TitleWrap = styled.div`
   small {
     display: block;
     margin-bottom: 2px;
-    color: ${({ theme }) => theme.colors.goldLight};
-    font-size: 0.59rem;
-    font-weight: 900;
-    letter-spacing: 0.09em;
+    color: ${({ theme }) => theme.colors.secondaryDark};
+    font-size: 0.56rem;
+    font-weight: 950;
+    letter-spacing: 0.1em;
   }
 
   h2 {
     margin: 0;
-    color: inherit;
-    font-size: 0.98rem;
-    line-height: 1.3;
+    color: ${({ theme }) => theme.colors.primary};
+    font-size: 0.9rem;
+    line-height: 1.25;
     letter-spacing: -0.025em;
   }
 
   p {
     margin: 3px 0 0;
-    color: color-mix(in srgb, ${({ theme }) => theme.on.primary} 66%, transparent);
-    font-size: 0.6rem;
+    color: ${({ theme }) => theme.colors.textLight};
+    font-size: 0.57rem;
   }
 `;
 
@@ -57,85 +65,97 @@ const More = styled(Link)`
   flex: 0 0 auto;
   min-height: 32px;
   padding: 6px 8px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 10px;
-  background: color-mix(in srgb, ${({ theme }) => theme.on.primary} 9%, transparent);
-  color: ${({ theme }) => theme.colors.goldLight};
-  font-size: 0.64rem;
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.primary};
+  font-size: 0.62rem;
   font-weight: 900;
   text-decoration: none;
 
   svg {
     width: 13px;
     height: 13px;
+    color: ${({ theme }) => theme.colors.secondaryDark};
   }
 `;
 
-const PriceGrid = styled.div`
+const PriceRow = styled.div`
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin: 0 10px 10px;
-  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.on.primary} 11%, transparent);
-  border-radius: 16px;
-  background: color-mix(in srgb, ${({ theme }) => theme.on.primary} 6%, transparent);
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+  margin-top: 11px;
 `;
 
-const PriceCell = styled.div`
+const PrimaryPrice = styled.div`
   min-width: 0;
-  padding: 13px 12px 12px;
-  border-left: ${({ $second, theme }) =>
-    $second
-      ? `1px solid color-mix(in srgb, ${theme.on.primary} 12%, transparent)`
-      : "0"};
+
+  > span {
+    display: block;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: 0.6rem;
+    font-weight: 850;
+  }
+
+  > strong {
+    display: block;
+    margin-top: 3px;
+    color: ${({ theme }) => theme.colors.primary};
+    font-family: ${({ theme }) => theme.fonts.numeric};
+    font-size: clamp(1.45rem, 7.2vw, 2rem);
+    font-weight: 950;
+    line-height: 1;
+    letter-spacing: -0.045em;
+    white-space: nowrap;
+  }
+`;
+
+const BuyPrice = styled.div`
+  min-width: 118px;
+  padding: 8px 9px;
+  border: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
+  border-radius: 12px;
+  background: ${({ theme }) => theme.colors.surface};
+  text-align: right;
 
   span {
     display: block;
-    color: color-mix(in srgb, ${({ theme }) => theme.on.primary} 69%, transparent);
-    font-size: 0.61rem;
+    color: ${({ theme }) => theme.colors.textLight};
+    font-size: 0.54rem;
     font-weight: 800;
-
-    b {
-      display: inline-flex;
-      align-items: center;
-      margin-left: 4px;
-      padding: 1px 5px;
-      border: 1px solid
-        color-mix(in srgb, ${({ theme }) => theme.colors.goldLight} 30%, transparent);
-      border-radius: 999px;
-      background: color-mix(in srgb, ${({ theme }) => theme.colors.goldLight} 11%, transparent);
-      color: ${({ theme }) => theme.colors.goldLight};
-      font-size: 0.55rem;
-      font-weight: 950;
-      line-height: 1.25;
-      letter-spacing: 0.02em;
-      vertical-align: middle;
-    }
   }
 
   strong {
     display: block;
-    margin-top: 5px;
-    color: ${({ theme }) => theme.colors.goldLight};
+    margin-top: 3px;
+    color: ${({ theme }) => theme.colors.primary};
     font-family: ${({ theme }) => theme.fonts.numeric};
-    font-size: clamp(0.93rem, 4.5vw, 1.18rem);
+    font-size: 0.68rem;
     font-weight: 900;
-    line-height: 1.2;
     white-space: nowrap;
+  }
+
+  b {
+    color: ${({ theme }) => theme.colors.secondaryDark};
+    font-size: 0.52rem;
+    font-weight: 900;
   }
 `;
 
 const Change = styled.div`
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
   margin-top: 5px;
   color: ${({ $direction, theme }) =>
     $direction === "up"
-      ? "#FFD0D3"
+      ? theme.colors.accentCoral
       : $direction === "down"
-        ? "#C7E5FF"
-        : `color-mix(in srgb, ${theme.on.primary} 62%, transparent)`};
-  font-size: 0.59rem;
-  font-weight: 850;
+        ? theme.colors.info
+        : theme.colors.textLight};
+  font-size: 0.58rem;
+  font-weight: 900;
   white-space: nowrap;
 
   svg {
@@ -145,21 +165,20 @@ const Change = styled.div`
 `;
 
 const Empty = styled.div`
-  min-height: 86px;
+  min-height: 70px;
   display: grid;
   place-items: center;
-  padding: 18px 16px;
-  color: color-mix(in srgb, ${({ theme }) => theme.on.primary} 74%, transparent);
-  font-size: 0.72rem;
+  padding: 16px 10px 8px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 0.68rem;
   text-align: center;
 `;
 
 const Foot = styled.p`
-  margin: -2px 12px 12px;
-  color: color-mix(in srgb, ${({ theme }) => theme.on.primary} 55%, transparent);
-  font-size: 0.56rem;
+  margin: 9px 0 0;
+  color: ${({ theme }) => theme.colors.textLight};
+  font-size: 0.53rem;
   line-height: 1.4;
-  text-align: center;
 `;
 
 function formatWon(value) {
@@ -202,12 +221,13 @@ function getChange(current, previous) {
   const diff = now - before;
   return {
     diff,
+    percent: (diff / before) * 100,
     direction: diff > 0 ? "up" : diff < 0 ? "down" : "same",
   };
 }
 
 function ChangeView({ change }) {
-  if (!change) return <Change $direction="same">전일 비교 없음</Change>;
+  if (!change) return <Change $direction="same">전일 비교 준비 중</Change>;
 
   const Icon =
     change.direction === "up"
@@ -221,7 +241,7 @@ function ChangeView({ change }) {
       <Icon aria-hidden />
       {change.diff === 0
         ? "보합"
-        : `${Math.abs(change.diff).toLocaleString("ko-KR")}원`}
+        : `${change.diff > 0 ? "+" : "-"}${Math.abs(change.diff).toLocaleString("ko-KR")}원 · ${Math.abs(change.percent).toFixed(2)}%`}
     </Change>
   );
 }
@@ -294,39 +314,39 @@ export default function AppGoldPriceSummary() {
 
   return (
     <Card aria-labelledby="app-gold-price-title">
-      <Head>
-        <TitleWrap>
-          <small>TODAY'S GOLD</small>
-          <h2 id="app-gold-price-title">오늘의 순금 시세</h2>
-          {data && <p>기준일 {formatDate(getKoreaTodayDateKey())} · 1돈(3.75g)</p>}
-        </TitleWrap>
-        <More to="/gold-price">
-          전체 시세
-          <ChevronRight aria-hidden />
-        </More>
-      </Head>
+      <Inner>
+        <Head>
+          <TitleWrap>
+            <small>TODAY&apos;S GOLD</small>
+            <h2 id="app-gold-price-title">오늘의 순금 시세</h2>
+            {data && <p>기준일 {formatDate(getKoreaTodayDateKey())} · 1돈(3.75g)</p>}
+          </TitleWrap>
+          <More to="/gold-price">
+            전체 시세 <ChevronRight aria-hidden />
+          </More>
+        </Head>
 
-      {priceLoading ? (
-        <Empty>시세를 불러오는 중입니다.</Empty>
-      ) : !data ? (
-        <Empty>관리자 확인 후 금시세가 공개됩니다.</Empty>
-      ) : (
-        <>
-          <PriceGrid>
-            <PriceCell>
-              <span>내가 살 때 <b>VAT 포함</b></span>
-              <strong>{formatWon(pureGold.buy)}</strong>
-              <ChangeView change={pureGold.buyChange} />
-            </PriceCell>
-            <PriceCell $second>
-              <span>내가 팔 때</span>
-              <strong>{formatWon(pureGold.sell)}</strong>
-              <ChangeView change={pureGold.sellChange} />
-            </PriceCell>
-          </PriceGrid>
-          <Foot>순금 24K 기준 · 시세는 시장 상황에 따라 변동될 수 있습니다.</Foot>
-        </>
-      )}
+        {priceLoading ? (
+          <Empty>시세를 불러오는 중입니다.</Empty>
+        ) : !data ? (
+          <Empty>관리자 확인 후 금시세가 공개됩니다.</Empty>
+        ) : (
+          <>
+            <PriceRow>
+              <PrimaryPrice>
+                <span>순금(24K) 내가 팔 때</span>
+                <strong>{formatWon(pureGold.sell)}</strong>
+                <ChangeView change={pureGold.sellChange} />
+              </PrimaryPrice>
+              <BuyPrice>
+                <span>내가 살 때 <b>VAT 포함</b></span>
+                <strong>{formatWon(pureGold.buy)}</strong>
+              </BuyPrice>
+            </PriceRow>
+            <Foot>시세는 시장 상황에 따라 변동될 수 있으며 실제 교환은 매장 실측 후 확정됩니다.</Foot>
+          </>
+        )}
+      </Inner>
     </Card>
   );
 }

@@ -356,7 +356,7 @@ export default function VerifyEmail() {
             await reloadUserWithRetry(auth.currentUser);
             if (cancelled) return;
             if (auth.currentUser.emailVerified) {
-              moveAfterVerified("✅ 이미 이메일 인증이 완료되어 있습니다. 잠시 후 이동합니다.");
+              moveAfterVerified("✅ 이메일 인증 상태를 확인했습니다. 잠시 후 이동합니다.");
               return;
             }
           } catch {}

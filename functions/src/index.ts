@@ -25,12 +25,19 @@ export {
   sendPushTestNotification,
   previewAdminNotificationRecipients,
   sendAdminNotification,
+  recordAdminNotificationClick,
   listAdminNotificationSends,
   sendAdminExchangeDayBeforeSummary,
   sendExchangeVisitDayBeforeReminders,
   sendMyGoldWeeklyReports,
   cleanReservedSlots,
 } from "./notifications/functions.js";
+
+
+export {
+  saveMyGoldAlertGoals,
+  checkMyGoldAlertGoals,
+} from "./notifications/myGoldAlerts.js";
 
 export {
   checkNicknameAvailability,

@@ -86,6 +86,7 @@ const Stores = lazy(() => import("@/pages/Stores"));
 const Reviews = lazy(() => import("@/pages/Reviews"));
 const QuizGoldBonus = lazy(() => import("@/pages/QuizGoldBonus"));
 const MyGoldVault = lazy(() => import("@/pages/MyGoldVault"));
+const MyGoldAlerts = lazy(() => import("@/pages/MyGoldAlerts"));
 
 const Terms = safeLazy(() => import("@/pages/terms/Terms"), "Terms");
 const Privacy = safeLazy(() => import("@/pages/terms/Privacy"), "Privacy");
@@ -545,6 +546,7 @@ const router = createBrowserRouter([
         element: <ProtectedRoute allowUnverified />,
         children: [
           { path: "/welcome", element: <WelcomeOnboarding /> },
+          { path: "/my-gold/alerts", element: <MyGoldAlerts /> },
         ],
       },
 

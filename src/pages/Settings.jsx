@@ -2450,7 +2450,7 @@ export default function Settings() {
         </SectionTitle>
 
         <SectionDescription>
-          예약·교환 서비스 안내와 광고성 정보 수신(금시세·MY GOLD 리포트·혜택)을 관리합니다.
+          예약·교환 서비스 안내와 광고성 정보 수신(금시세·내금고 리포트·혜택)을 관리합니다.
         </SectionDescription>
 
         <Rows
@@ -2484,7 +2484,7 @@ export default function Settings() {
               </strong>
 
               <small>
-                주요 금시세 변동, MY GOLD 주간 리포트와 이벤트·혜택을 받아봅니다.
+                주요 금시세 변동, 내금고 주간 리포트와 이벤트·혜택을 받아봅니다.
               </small>
 
               <em>
@@ -3263,6 +3263,12 @@ export default function Settings() {
               관련 법령과 분쟁 대응을 위해
               필요한 기간 동안 식별정보를
               제거한 상태로 보존될 수 있습니다.
+              사용하지 않은 적립 순금 잔액은
+              같은 인증 이메일로 재가입할 때
+              복원할 수 있도록 가명 처리된
+              승계 기록으로 별도 보관되며,
+              회원가입·퀴즈·알림 혜택은 다시
+              지급되지 않습니다.
             </DangerNote>
 
             <Form

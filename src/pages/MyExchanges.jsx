@@ -173,6 +173,24 @@ const HeaderLead = styled.p`
   line-height: 1.5;
 `;
 
+const LedgerSummary = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  margin: 0 0 10px;
+
+  @media (max-width: 560px) { grid-template-columns: repeat(3, 1fr); }
+`;
+const LedgerMetric = styled.div`
+  padding: 11px 10px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 14px;
+  background: ${({ theme }) => theme.colors.surface};
+  text-align: center;
+  small { display:block; color: ${({ theme }) => theme.colors.textSecondary}; font-size:.62rem; font-weight:800; }
+  strong { display:block; margin-top:4px; color: ${({ theme }) => theme.colors.primary}; font-family: ${({ theme }) => theme.fonts.numeric}; font-size:1rem; }
+`;
+
 const SectionTitle = styled.h1`
   position: relative;
   z-index: 1;
@@ -527,6 +545,54 @@ const Help = styled.p`
 
 const Empty = styled.p`
   margin-top: 1.25rem;
+`;
+
+
+const EmptyState = styled.section`
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  padding: clamp(22px, 4vw, 30px);
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 18px;
+  background: ${({ theme }) => theme.colors.surface};
+  box-shadow: 0 7px 20px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 5%, transparent);
+`;
+
+const EmptyStateTitle = styled.h2`
+  margin: 0;
+  color: ${({ theme }) => theme.colors.primary};
+  font-size: clamp(1.22rem, 3vw, 1.55rem);
+  line-height: 1.3;
+`;
+
+const EmptyStateLead = styled.p`
+  max-width: 640px;
+  margin: 0;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: .84rem;
+  line-height: 1.6;
+`;
+
+const EmptyStateAction = styled(Link)`
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  margin-top: 8px;
+  padding: 9px 14px;
+  border: 1px solid ${({ theme }) => theme.colors.primary};
+  border-radius: 12px;
+  background: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.on.primary};
+  font-size: .78rem;
+  font-weight: 900;
+  text-decoration: none;
+
+  &:hover {
+    color: ${({ theme }) => theme.on.primary};
+  }
 `;
 
 const PlanCard = styled.div`
@@ -1109,8 +1175,8 @@ export default function MyExchanges() {
     <Page>
       <PageHeader>
         <Kicker>MY EXCHANGE LEDGER</Kicker>
-        <SectionTitle>나의 금 교환 내역</SectionTitle>
-        <HeaderLead>예약 상태와 최종 교환 중량을 확인하고, 필요한 내역만 펼쳐볼 수 있습니다.</HeaderLead>
+        <SectionTitle>금교환 기록</SectionTitle>
+        <HeaderLead>신청부터 방문·완료까지 금교환의 진행 상태와 결과를 한곳에서 기록합니다.</HeaderLead>
       </PageHeader>
       <FilterBar>
         {Object.entries(FILTER_LABEL).map(([key, label]) => (
@@ -1124,15 +1190,36 @@ export default function MyExchanges() {
     </Page>
   );
   if (err) return <Page><Empty style={{ color: 'var(--gm-error)' }}>{err}</Empty></Page>;
-  if (groups.length === 0) return <Page><Empty>등록된 교환 요청이 없습니다.</Empty></Page>;
+  if (groups.length === 0) return (
+    <Page>
+      <PageHeader>
+        <Kicker>MY EXCHANGE LEDGER</Kicker>
+        <SectionTitle>금교환 기록</SectionTitle>
+        <HeaderLead>신청부터 방문·완료까지 금교환의 진행 상태와 결과를 한곳에서 기록합니다.</HeaderLead>
+      </PageHeader>
+      <EmptyState>
+        <EmptyStateTitle>등록된 교환내역이 없습니다.</EmptyStateTitle>
+        <EmptyStateLead>
+          아직 신청한 금교환이 없습니다. 금교환을 신청하면 예약 상태와 교환 결과가 이곳에 기록됩니다.
+        </EmptyStateLead>
+        <EmptyStateAction to="/gold-exchange">금교환 계산하기</EmptyStateAction>
+      </EmptyState>
+    </Page>
+  );
 
   return (
     <Page>
       <PageHeader>
         <Kicker>MY EXCHANGE LEDGER</Kicker>
-        <SectionTitle>나의 금 교환 내역</SectionTitle>
-        <HeaderLead>예약 상태와 최종 교환 중량을 확인하고, 필요한 내역만 펼쳐볼 수 있습니다.</HeaderLead>
+        <SectionTitle>금교환 기록</SectionTitle>
+        <HeaderLead>신청부터 방문·완료까지 금교환의 진행 상태와 결과를 한곳에서 기록합니다.</HeaderLead>
       </PageHeader>
+
+      <LedgerSummary aria-label="금교환 진행 요약">
+        <LedgerMetric><small>진행 중</small><strong>{counts.active}</strong></LedgerMetric>
+        <LedgerMetric><small>예약 확정</small><strong>{counts.scheduled}</strong></LedgerMetric>
+        <LedgerMetric><small>교환 완료</small><strong>{counts.completed}</strong></LedgerMetric>
+      </LedgerSummary>
 
       <FilterBar role="tablist" aria-label="상태 필터">
         {Object.entries(FILTER_LABEL).map(([key, label]) => (
@@ -1194,7 +1281,7 @@ export default function MyExchanges() {
                     <small>
                       {g.bonus?.status === 'used'
                         ? '최종 적용 중량'
-                        : '예상 교환 중량'}
+                        : '예상 순금량'}
                     </small>
                     <strong>
                       {fmtG3(

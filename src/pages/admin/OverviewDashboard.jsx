@@ -29,13 +29,20 @@ const Card = styled(Link)`
   color: ${({ theme }) => theme.colors.text}; text-decoration: none;
   box-shadow: ${({ theme }) => theme.shadows.card};
   strong { display: block; font-size: 1.8rem; margin-bottom: 5px; }
-  span { color: ${({ theme }) => theme.colors.textSecondary}; }
+  span { color: ${({ theme }) => theme.colors.textSecondary}; line-height: 1.45; }
 `;
 const Section = styled.section`
   padding: 18px; border: 1px solid ${({ theme }) => theme.colors.border};
   background: ${({ theme }) => theme.colors.surface}; border-radius: 16px;
   h3 { margin: 0 0 6px; }
   > p { margin: 0 0 14px; color: ${({ theme }) => theme.colors.textSecondary}; }
+`;
+const InsightSection = styled(Section)`
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+`;
+const InsightCard = styled(Card)`
+  box-shadow: none;
+  strong { font-size: 1.65rem; }
 `;
 const Row = styled(Link)`
   display: grid; grid-template-columns: 1fr auto auto; gap: 12px;
@@ -61,12 +68,24 @@ const STATUS_LABEL = {
 
 const emptyMyGoldStats = {
   userCount: 0,
+  todayNewUserCount: 0,
+  weekNewUserCount: 0,
   vaultUserCount: 0,
   vaultItemCount: 0,
+  todayVaultItemCount: 0,
+  weekVaultItemCount: 0,
   vaultUsageRate: 0,
   bonusHolderCount: 0,
   bonusBalanceG: 0,
+  marketingConsentCount: 0,
+  marketingPushReadyCount: 0,
+  todayExchangeRequestCount: 0,
+  weekExchangeRequestCount: 0,
+  todayExchangeCompletedCount: 0,
+  weekExchangeCompletedCount: 0,
 };
+
+const count = (value) => Number(value || 0).toLocaleString("ko-KR");
 
 export default function OverviewDashboard() {
   const [groups, setGroups] = useState([]);
@@ -109,7 +128,7 @@ export default function OverviewDashboard() {
       .then((goldStats) => {
         setMyGoldStats({ ...emptyMyGoldStats, ...(goldStats || {}) });
       })
-      .catch((error) => console.warn("나의 금고 관리자 집계 실패", error));
+      .catch((error) => console.warn("관리자 운영 인사이트 집계 실패", error));
 
     return unsubscribe;
   }, []);
@@ -118,24 +137,57 @@ export default function OverviewDashboard() {
     <Page>
       <Intro>
         <h2>운영 개요</h2>
-        <p>금교환 처리와 회원·나의 금고 이용 현황을 한눈에 확인합니다.</p>
+        <p>오늘 처리할 일과 회원·내금고·금교환 흐름을 한눈에 확인합니다.</p>
       </Intro>
 
       <Grid>
         <Card to="gold-exchange?status=requested"><strong>{operationCounts.requested}</strong><span>신규 금교환 요청</span></Card>
         <Card to="gold-exchange?status=active"><strong>{operationCounts.active}</strong><span>예약·진행 중</span></Card>
         <Card to="support"><strong>{openSupportCount}</strong><span>답변 대기 문의</span></Card>
-        <Card to="members"><strong>{Number(myGoldStats.userCount || 0).toLocaleString("ko-KR")}</strong><span>전체 회원</span></Card>
+        <Card to="members"><strong>{count(myGoldStats.userCount)}</strong><span>전체 회원</span></Card>
       </Grid>
 
       <Section>
-        <h3>회원·나의 금고</h3>
+        <h3>전환 퍼널</h3>
+        <p>회원가입 → 내금고 등록 → 알림 허용 → 금교환 신청으로 이어지는 핵심 전환 상태입니다.</p>
+        <Grid>
+          <Card to="members"><strong>{count(myGoldStats.userCount)}명</strong><span>전체 회원</span></Card>
+          <Card to="members"><strong>{count(myGoldStats.vaultUserCount)}명</strong><span>내금고 등록 · {Number(myGoldStats.vaultUsageRate || 0).toFixed(1)}%</span></Card>
+          <Card to="notification-send"><strong>{count(myGoldStats.marketingPushReadyCount)}명</strong><span>푸시 수신 가능</span></Card>
+          <Card to="gold-exchange"><strong>{count(myGoldStats.weekExchangeRequestCount)}건</strong><span>이번 주 금교환 신청</span></Card>
+        </Grid>
+      </Section>
+
+      <InsightSection>
+        <h3>오늘</h3>
+        <p>한국시간 자정 이후 새로 발생한 활동입니다.</p>
+        <Grid>
+          <InsightCard to="members"><strong>{count(myGoldStats.todayNewUserCount)}명</strong><span>신규 회원</span></InsightCard>
+          <InsightCard to="members"><strong>{count(myGoldStats.todayVaultItemCount)}건</strong><span>내금고 추가 등록</span></InsightCard>
+          <InsightCard to="gold-exchange"><strong>{count(myGoldStats.todayExchangeRequestCount)}건</strong><span>금교환 신청</span></InsightCard>
+          <InsightCard to="gold-exchange?status=completed"><strong>{count(myGoldStats.todayExchangeCompletedCount)}건</strong><span>금교환 완료</span></InsightCard>
+        </Grid>
+      </InsightSection>
+
+      <InsightSection>
+        <h3>이번 주</h3>
+        <p>월요일 00:00부터 현재까지의 흐름입니다.</p>
+        <Grid>
+          <InsightCard to="members"><strong>{count(myGoldStats.weekNewUserCount)}명</strong><span>신규 회원</span></InsightCard>
+          <InsightCard to="members"><strong>{count(myGoldStats.weekVaultItemCount)}건</strong><span>내금고 추가 등록</span></InsightCard>
+          <InsightCard to="gold-exchange"><strong>{count(myGoldStats.weekExchangeRequestCount)}건</strong><span>금교환 신청</span></InsightCard>
+          <InsightCard to="gold-exchange?status=completed"><strong>{count(myGoldStats.weekExchangeCompletedCount)}건</strong><span>금교환 완료</span></InsightCard>
+        </Grid>
+      </InsightSection>
+
+      <Section>
+        <h3>회원 기반</h3>
         <p>개인 금제품의 종류·중량·메모는 표시하지 않고 이용 현황만 집계합니다.</p>
         <Grid>
-          <Card to="members"><strong>{Number(myGoldStats.vaultUserCount || 0).toLocaleString("ko-KR")}</strong><span>나의 금 등록 회원</span></Card>
-          <Card to="members"><strong>{Number(myGoldStats.vaultItemCount || 0).toLocaleString("ko-KR")}</strong><span>등록된 나의 금</span></Card>
-          <Card to="members"><strong>{Number(myGoldStats.vaultUsageRate || 0).toFixed(1)}%</strong><span>나의 금 등록률</span></Card>
-          <Card to="members"><strong>순금 {Number(myGoldStats.bonusBalanceG || 0).toFixed(3)}g</strong><span>회원 적립 순금 총 잔액 · 보유 {Number(myGoldStats.bonusHolderCount || 0).toLocaleString("ko-KR")}명</span></Card>
+          <Card to="members"><strong>{count(myGoldStats.vaultUserCount)}명</strong><span>내금고 등록 회원 · 등록률 {Number(myGoldStats.vaultUsageRate || 0).toFixed(1)}%</span></Card>
+          <Card to="members"><strong>{count(myGoldStats.vaultItemCount)}개</strong><span>등록된 내금고</span></Card>
+          <Card to="members"><strong>{count(myGoldStats.bonusHolderCount)}명</strong><span>적립 순금 보유 · 총 {Number(myGoldStats.bonusBalanceG || 0).toFixed(3)}g</span></Card>
+          <Card to="notification-send"><strong>{count(myGoldStats.marketingPushReadyCount)}명</strong><span>광고 푸시 가능 · 수신동의 {count(myGoldStats.marketingConsentCount)}명</span></Card>
         </Grid>
       </Section>
 

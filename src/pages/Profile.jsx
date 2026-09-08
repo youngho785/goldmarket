@@ -543,6 +543,7 @@ export default function Profile() {
     earnedG: 0,
     maxG: 0.03,
     balanceG: 0,
+    restoredBalanceG: 0,
     spendableG: 0,
     usage: null,
     eligibleGroups: [],
@@ -626,6 +627,7 @@ export default function Profile() {
         earnedG: 0,
         maxG: 0.03,
         balanceG: 0,
+        restoredBalanceG: 0,
         spendableG: 0,
         usage: null,
         eligibleGroups: [],
@@ -742,6 +744,7 @@ export default function Profile() {
           balanceG: Number(
             usage?.balanceG ?? fallbackBalance
           ),
+          restoredBalanceG: Number(memberBonus?.restoredBalanceG || 0),
           spendableG: Number(
             usage?.spendableG ??
               usage?.balanceG ??
@@ -1038,6 +1041,18 @@ export default function Profile() {
   const canRequestBonus =
     goldBonus.balanceG > 0 && goldBonus.usage?.status !== "requested";
 
+  const previousBenefitCount = [
+    goldBonus.welcomeClaimed && goldBonus.welcomeG <= 0,
+    goldBonus.marketingClaimed && goldBonus.marketingG <= 0,
+    goldBonus.quizClaimed && goldBonus.quizG <= 0,
+  ].filter(Boolean).length;
+
+  const claimedBenefitCount = [
+    goldBonus.welcomeClaimed,
+    goldBonus.marketingClaimed,
+    goldBonus.quizClaimed,
+  ].filter(Boolean).length;
+
   const rewardSummaryText = goldBonus.loading
     ? "확인 중"
     : goldBonus.usage?.status === "requested"
@@ -1060,10 +1075,10 @@ export default function Profile() {
   return (
     <Container>
       <ProfileHero>
-        <ProfileEyebrow>MY GOLD</ProfileEyebrow>
+        <ProfileEyebrow>MY GOLD · ACCOUNT</ProfileEyebrow>
         <ProfileHeroTitle>내 프로필</ProfileHeroTitle>
         <ProfileHeroLead>
-          적립 순금과 계정 정보를 한곳에서 확인하고 관리합니다.
+          내금고와 연결되는 적립 순금, 계정 정보, 금교환 혜택을 한곳에서 관리합니다.
         </ProfileHeroLead>
       </ProfileHero>
 
@@ -1096,7 +1111,9 @@ export default function Profile() {
                 <span>회원가입 혜택</span>
                 <b>
                   {goldBonus.welcomeClaimed
-                    ? `순금 ${goldBonus.welcomeG.toFixed(2)}g 적립`
+                    ? goldBonus.welcomeG > 0
+                      ? `순금 ${goldBonus.welcomeG.toFixed(2)}g 적립`
+                      : "이전 가입에서 지급됨"
                     : goldBonus.welcomeUnavailable
                       ? "조회 필요"
                       : "적립 확인 중"}
@@ -1106,7 +1123,11 @@ export default function Profile() {
               <RewardRow>
                 <span>금시세 알림</span>
                 {goldBonus.marketingClaimed ? (
-                  <b>순금 {goldBonus.marketingG.toFixed(2)}g 적립</b>
+                  <b>
+                    {goldBonus.marketingG > 0
+                      ? `순금 ${goldBonus.marketingG.toFixed(2)}g 적립`
+                      : "이전 가입에서 지급됨"}
+                  </b>
                 ) : goldBonus.marketingUnavailable ? (
                   <b>조회 필요</b>
                 ) : (
@@ -1117,7 +1138,11 @@ export default function Profile() {
               <RewardRow>
                 <span>금 상식 퀵퀴즈</span>
                 {goldBonus.quizClaimed ? (
-                  <b>순금 {goldBonus.quizG.toFixed(2)}g 적립</b>
+                  <b>
+                    {goldBonus.quizG > 0
+                      ? `순금 ${goldBonus.quizG.toFixed(2)}g 적립`
+                      : "이전 가입에서 지급됨"}
+                  </b>
                 ) : goldBonus.quizUnavailable ? (
                   <b>조회 필요</b>
                 ) : (
@@ -1125,14 +1150,20 @@ export default function Profile() {
                 )}
               </RewardRow>
 
+              {previousBenefitCount > 0 && (
+                <RewardNote>
+                  같은 인증 이메일로 이전 가입에서 받은 순금 혜택은 재가입 시 중복 지급되지 않습니다.
+                  {goldBonus.restoredBalanceG > 0
+                    ? ` 이전 계정에서 사용하지 않은 적립 순금 ${goldBonus.restoredBalanceG.toFixed(2)}g은 현재 사용 가능 잔액으로 복원되었습니다.`
+                    : " 혜택 지급 이력과 현재 사용 가능한 적립 순금은 구분해 표시합니다."}
+                </RewardNote>
+              )}
+
               <RewardTotal>
-                <span>총 적립 혜택</span>
+                <span>순금 혜택 지급 현황</span>
                 <b>
-                  순금 {goldBonus.earnedG.toFixed(2)}g /{" "}
-                  최대 순금 {goldBonus.maxG.toFixed(2)}g
-                  {goldBonus.earnedG + 0.000001 >= goldBonus.maxG
-                    ? " 달성 🎉"
-                    : ""}
+                  {claimedBenefitCount}/{3} 지급 완료
+                  {claimedBenefitCount >= 3 ? " 🎉" : ""}
                 </b>
               </RewardTotal>
 

@@ -1,0 +1,192 @@
+// src/components/gold/MyGoldAlertSummary.jsx
+import React, { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import styled from "styled-components";
+import { Bell, BellRing, ChevronRight } from "lucide-react";
+
+import {
+  MY_GOLD_ALERT_BAR_OPTIONS,
+  getMyGoldAlertGoals,
+} from "@/services/myGoldAlertGoalsService";
+
+const Card = styled.section`
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 15px;
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 17%, ${({ theme }) => theme.colors.border});
+  border-radius: 18px;
+  background: ${({ theme }) => theme.colors.surface};
+  box-shadow: 0 8px 22px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 4%, transparent);
+
+  @media (max-width: 560px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const Main = styled.div`
+  min-width: 0;
+  display: grid;
+  gap: 9px;
+`;
+
+const Head = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+`;
+
+const Title = styled.div`
+  min-width: 0;
+
+  strong {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: ${({ theme }) => theme.colors.primary};
+    font-size: 0.92rem;
+    font-weight: 950;
+  }
+
+  p {
+    margin: 4px 0 0;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: 0.63rem;
+    line-height: 1.4;
+    word-break: keep-all;
+  }
+`;
+
+const Status = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: ${({ $ready, theme }) => $ready ? theme.semantic.alertSuccessBg : theme.colors.surfaceAlt};
+  color: ${({ $ready, theme }) => $ready ? theme.semantic.alertSuccessText : theme.colors.textSecondary};
+  font-size: 0.57rem;
+  font-weight: 900;
+`;
+
+const Chips = styled.div`
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+`;
+
+const Chip = styled.span`
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 4px 8px;
+  border: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
+  border-radius: 999px;
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+  color: ${({ theme }) => theme.colors.text};
+  font-size: 0.59rem;
+  font-weight: 850;
+`;
+
+const Action = styled(Link)`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 42px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.on.primary};
+  text-decoration: none;
+  font-size: 0.68rem;
+  font-weight: 950;
+  white-space: nowrap;
+
+  @media (max-width: 560px) {
+    justify-content: space-between;
+  }
+`;
+
+function formatGoalWon(value) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount) || amount <= 0) return "";
+  if (amount >= 10000) {
+    const man = amount / 10000;
+    const label = Number.isInteger(man)
+      ? man.toLocaleString("ko-KR")
+      : man.toLocaleString("ko-KR", { maximumFractionDigits: 1 });
+    return `${label}만원`;
+  }
+  return `${Math.round(amount).toLocaleString("ko-KR")}원`;
+}
+
+export default function MyGoldAlertSummary({ uid }) {
+  const [goals, setGoals] = useState(null);
+  const [pushReady, setPushReady] = useState(false);
+  const [loading, setLoading] = useState(!!uid);
+
+  useEffect(() => {
+    if (!uid) return undefined;
+    let active = true;
+    setLoading(true);
+    getMyGoldAlertGoals(uid)
+      .then((result) => {
+        if (!active) return;
+        setGoals(result.goals || null);
+        setPushReady(result.pushReady === true);
+      })
+      .catch(() => {
+        if (!active) return;
+        setGoals(null);
+        setPushReady(false);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => { active = false; };
+  }, [uid]);
+
+  const activeGoals = useMemo(() => {
+    if (!goals?.enabled) return [];
+    const list = [];
+    if (Number(goals.valueTargetWon) > 0) list.push(`가치 ${formatGoalWon(goals.valueTargetWon)}`);
+    if (Number(goals.priceTargetPerDon) > 0) {
+      const direction = goals.priceDirection === "down" ? "하락" : "상승";
+      list.push(`순금 ${direction} ${formatGoalWon(goals.priceTargetPerDon)}`);
+    }
+    if (Number(goals.targetGoldBarG) > 0) {
+      const option = MY_GOLD_ALERT_BAR_OPTIONS.find((item) => Number(item.grams) === Number(goals.targetGoldBarG));
+      list.push(option?.label || `${goals.targetGoldBarG}g 골드바`);
+    }
+    return list;
+  }, [goals]);
+
+  return (
+    <Card id="my-gold-alert-summary" aria-labelledby="my-gold-alert-summary-title">
+      <Main>
+        <Head>
+          <Title>
+            <strong id="my-gold-alert-summary-title"><BellRing size={16} aria-hidden /> 내금고 알림</strong>
+            <p>{loading ? "설정을 불러오는 중입니다." : activeGoals.length > 0 ? `${activeGoals.length}개 조건을 지켜보고 있어요.` : "내 금 가치나 원하는 골드바 조건에 도달하면 알려드릴 수 있어요."}</p>
+          </Title>
+          <Status $ready={pushReady}>{pushReady ? <BellRing size={12} aria-hidden /> : <Bell size={12} aria-hidden />}{pushReady ? "푸시 ON" : "푸시 확인"}</Status>
+        </Head>
+
+        {activeGoals.length > 0 && (
+          <Chips aria-label="설정 중인 내금고 알림">
+            {activeGoals.map((label) => <Chip key={label}>{label}</Chip>)}
+          </Chips>
+        )}
+      </Main>
+
+      <Action to="/my-gold/alerts">
+        <span>{activeGoals.length > 0 ? "알림 관리" : "알림 설정"}</span>
+        <ChevronRight size={16} aria-hidden />
+      </Action>
+    </Card>
+  );
+}

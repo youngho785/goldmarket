@@ -16,6 +16,8 @@ export const MARKETING_PUSH_BONUS_CREDIT_G =
   MARKETING_PUSH_BONUS_CREDIT_MG / 1000;
 export const BENEFIT_CLAIM_LOCK_COLLECTION = "benefitClaimLocks";
 export const BENEFIT_IDENTITY_TYPE = "verified_email_sha256_v1";
+export const BENEFIT_BALANCE_CARRYOVER_SCHEMA_VERSION = 1;
+export const BENEFIT_BALANCE_CARRYOVER_LEDGER_SOURCE = "benefit_balance_carryover_v1";
 export type BenefitRewardKey = "welcome" | "quiz" | "marketingPush";
 
 export const BENEFIT_PROMO_ID_BY_KEY: Record<BenefitRewardKey, string> = {
@@ -30,6 +32,20 @@ export function benefitIdentityHashFromEmail(value: unknown): string {
   return createHash("sha256")
     .update(`koreagoldmarket-benefit-v1|${email}`)
     .digest("hex");
+}
+
+export function benefitAccountHash(identityHash: string, uid: string): string {
+  const cleanIdentity = String(identityHash || "").trim();
+  const cleanUid = String(uid || "").trim();
+  if (!cleanIdentity || !cleanUid) return "";
+  return createHash("sha256")
+    .update(`koreagoldmarket-benefit-account-v1|${cleanIdentity}|${cleanUid}`)
+    .digest("hex");
+}
+
+export function benefitCarryoverArchiveId(identityHash: string, uid: string): string {
+  const accountHash = benefitAccountHash(identityHash, uid);
+  return accountHash ? accountHash.slice(0, 32) : "";
 }
 
 export function benefitIdentityHashForVerifiedUser(userRecord: UserRecord): string {

@@ -144,9 +144,9 @@ export default function MyGoldTicker() {
     content = (
       <>
         <Gem size={14} aria-hidden />
-        <span>MY GOLD · 내 금을 한곳에서 관리하세요</span>
+        <span>MY GOLD · 내금고에서 내 금을 관리하세요</span>
         <span className="action">
-          내 금고 체험하기 <ArrowRight size={13} aria-hidden />
+          내금고 체험하기 <ArrowRight size={13} aria-hidden />
         </span>
       </>
     );
@@ -154,14 +154,14 @@ export default function MyGoldTicker() {
     content = (
       <>
         <Gem size={14} aria-hidden />
-        <span>MY GOLD · 내 금고를 불러오는 중입니다</span>
+        <span>MY GOLD · 내금고를 불러오는 중입니다</span>
       </>
     );
   } else if (pureGoldG > 0) {
     content = (
       <>
         <Gem size={14} aria-hidden />
-        <span>내 금고</span>
+        <span>내금고</span>
         <strong>{pureGoldG.toFixed(2)}g</strong>
         <span>·</span>
         <span>
@@ -169,7 +169,7 @@ export default function MyGoldTicker() {
         </span>
         <span>·</span>
         <span className="action">
-          내 금고 보기 <ArrowRight size={13} aria-hidden />
+          내금고 보기 <ArrowRight size={13} aria-hidden />
         </span>
       </>
     );
@@ -177,7 +177,7 @@ export default function MyGoldTicker() {
     content = (
       <>
         <Gem size={14} aria-hidden />
-        <span>내 금고</span>
+        <span>내금고</span>
         <strong>0.00g</strong>
         <span>· 보유 금을 등록하면 오늘의 가치를 함께 볼 수 있어요 ·</span>
         <span className="action">
@@ -188,7 +188,7 @@ export default function MyGoldTicker() {
   }
 
   return (
-    <Bar aria-label="내 금고 바로가기">
+    <Bar aria-label="내금고 바로가기">
       <Track data-track="true">
         <Segment to="/my-gold">{content}</Segment>
         <Segment to="/my-gold" aria-hidden="true" tabIndex={-1}>

@@ -262,8 +262,8 @@ const Disclaimer = styled.p`
 const PRODUCT_OPTIONS = [
   { value: "14k(585) 제품(팔찌,목걸이, 반지,귀걸이, 발찌 등)", label: "14K 주얼리" },
   { value: "18k(750) 제품(팔찌,목걸이, 반지,귀걸이, 발찌 등)", label: "18K 주얼리" },
-  { value: "순금 995제품(목걸이,팔찌,반지,귀걸이)", label: "순금 995 제품" },
-  { value: "순금 999제품(팔찌,목걸이, 반지,귀걸이)", label: "순금 999 제품" },
+  { value: "순금 995제품(목걸이,팔찌,반지,귀걸이)", label: "순금 995 제품(돌반지 포함)" },
+  { value: "순금 999제품(팔찌,목걸이, 반지,귀걸이)", label: "순금 999 제품(돌반지 포함)" },
   { value: "순금 열쇠", label: "순금 열쇠" },
   { value: "순금 장식모양(거북이,두꺼비, 골프공, 핸드폰고리 등)", label: "순금 장식 제품" },
   { value: "순금 마고자 단추 / 색상이 들어있는 제품", label: "순금 단추·색상 포함" },
@@ -360,11 +360,11 @@ export default function LiteCalcFromGX({ showCombo = true }) {
   const selectedQuickType = QUICK_TYPES.find((item) => item.value === goldType)?.value;
 
   return (
-    <Sheet aria-label="예상 순금 중량 계산서">
+    <Sheet aria-label="예상 순금량 계산서">
       <DocumentHead>
         <div>
           <Eyebrow>PRELIMINARY ASSAY NOTE</Eyebrow>
-          <CalcTitle>예상 순금 중량 계산</CalcTitle>
+          <CalcTitle>예상 순금량 계산</CalcTitle>
         </div>
         <DocumentNo>
           DOCUMENT NO.
@@ -432,7 +432,7 @@ export default function LiteCalcFromGX({ showCombo = true }) {
 
       <Result>
         <div>
-          <Label>EXPECTED FINE GOLD · 예상 순금 중량</Label>
+          <Label>EXPECTED FINE GOLD · 예상 순금량</Label>
           <ResultValue>
             {formatGrams(fineGrams)} <small>g</small>
           </ResultValue>

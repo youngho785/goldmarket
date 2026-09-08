@@ -14,6 +14,10 @@ import { doc, onSnapshot } from "firebase/firestore";
 import { db, registerForPush } from "@/firebase/firebase";
 import { useAuthContext } from "@/context/AuthContext";
 import MyGoldTicker from "@/components/gold/MyGoldTicker";
+import useBonusGoldBalance from "@/hooks/useBonusGoldBalance";
+import useGoldVaultDashboard from "@/hooks/useGoldVaultDashboard";
+import { DON_TO_GRAMS } from "@/lib/goldRates";
+import { computeVaultValueWon } from "@/lib/goldVaultCatalog";
 import {
   getNotificationPreferences,
   saveMarketingNotificationConsent,
@@ -359,6 +363,29 @@ const BarInner = styled.div`
       line-height: 1.45;
     }
   }
+`;
+
+const VaultImpact = styled(Link)`
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  margin: 0 0 12px;
+  padding: 15px 17px;
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 24%, ${({ theme }) => theme.colors.border});
+  border-radius: 18px;
+  background: linear-gradient(135deg, ${({ theme }) => theme.semantic.badgeGoldBg}, ${({ theme }) => theme.colors.surface});
+  color: ${({ theme }) => theme.colors.text};
+  text-decoration: none;
+  box-shadow: 0 8px 22px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 5%, transparent);
+
+  small { display:block; color: ${({ theme }) => theme.colors.secondaryDark}; font-size:.61rem; font-weight:950; letter-spacing:.09em; }
+  strong { display:block; margin-top:4px; color: ${({ theme }) => theme.colors.primary}; font-size:1rem; line-height:1.32; }
+  p { margin:4px 0 0; color: ${({ theme }) => theme.colors.textSecondary}; font-size:.75rem; line-height:1.45; }
+  b { color: ${({ theme }) => theme.colors.secondaryDark}; font-family: ${({ theme }) => theme.fonts.numeric}; }
+
+  > span { color: ${({ theme }) => theme.colors.primary}; font-weight:950; white-space:nowrap; }
+  @media (max-width: 600px) { grid-template-columns:1fr; padding:13px 14px; > span { font-size:.72rem; } }
 `;
 
 const Section = styled.section`
@@ -1455,6 +1482,8 @@ function compactChangeText(change) {
 export default function GoldPrice() {
   const navigate = useNavigate();
   const { user, isEmailVerified } = useAuthContext();
+  const vaultDashboard = useGoldVaultDashboard(user?.uid);
+  const bonusGold = useBonusGoldBalance(user?.uid);
 
   const [pushStatus, setPushStatus] = useState("checking");
   const [message, setMessage] = useState("");
@@ -1626,6 +1655,7 @@ export default function GoldPrice() {
         sell: market.pureGoldSellPerDon,
         buy: market.pureGoldBuyPerDon,
         previousSell: previous.pureGoldSellPerDon,
+        previousBuy: previous.pureGoldBuyPerDon,
       },
       {
         label: "18K",
@@ -1637,6 +1667,7 @@ export default function GoldPrice() {
         sell: market.gold18kSellPerDon,
         buy: market.gold18kBuyPerDon,
         previousSell: previous.gold18kSellPerDon,
+        previousBuy: previous.gold18kBuyPerDon,
       },
       {
         label: "14K",
@@ -1648,12 +1679,21 @@ export default function GoldPrice() {
         sell: market.gold14kSellPerDon,
         buy: market.gold14kBuyPerDon,
         previousSell: previous.gold14kSellPerDon,
+        previousBuy: previous.gold14kBuyPerDon,
       },
     ];
   }, [goldData]);
 
   const pureRow = marketRows[0];
-  const heroChange = changeInfo(pureRow?.sell, pureRow?.previousSell);
+  const heroChange = changeInfo(pureRow?.buy, pureRow?.previousBuy);
+  const vaultPureGoldG = Number(vaultDashboard.summary.pureGoldG || 0) + Number(bonusGold.balanceG || 0);
+  const vaultBonusValueWon = vaultDashboard.publicPriceEnabled
+    ? computeVaultValueWon(Number(bonusGold.balanceG || 0), vaultDashboard.customerSellPricePerDon)
+    : 0;
+  const vaultCurrentValueWon = Number(vaultDashboard.summary.estimatedValueWon || 0) + vaultBonusValueWon;
+  const vaultDayImpactWon = Number.isFinite(Number(pureRow?.buy)) && Number.isFinite(Number(pureRow?.previousBuy))
+    ? Math.round(((Number(pureRow.buy) - Number(pureRow.previousBuy)) / DON_TO_GRAMS) * vaultPureGoldG)
+    : 0;
   const referenceDate = formatDateKey(
     goldData?.sourceDate || getKoreaTodayDateKey()
   );
@@ -1767,14 +1807,14 @@ export default function GoldPrice() {
               <Eyebrow>TODAY&apos;S GOLD · KOREA GOLD MARKET</Eyebrow>
               <HeroTitle>오늘의 금시세</HeroTitle>
               <HeroLead>
-                오늘의 금시세를 확인하고, 주요 변동은 알림으로 받아보세요.
+                내가 팔 때 가격부터 확인하고, 오늘 시세가 내금고 가치에 미치는 변화까지 이어서 보세요.
               </HeroLead>
 
               <HeroPriceBlock>
-                <PriceLabel>순금(24K) 내가 살 때 · 1돈(3.75g)</PriceLabel>
+                <PriceLabel>순금(24K) 내가 팔 때 · 1돈(3.75g)</PriceLabel>
                 <HeroPrice>
                   <HeroPriceValue>
-                    {pagePriceAvailable ? formatWon(pureRow?.sell) : "-"}
+                    {pagePriceAvailable ? formatWon(pureRow?.buy) : "-"}
                   </HeroPriceValue>
                   <Won>원</Won>
                 </HeroPrice>
@@ -1787,7 +1827,7 @@ export default function GoldPrice() {
                         ? "시세 확인 중"
                         : "관리자 공개 후 표시"}
                   </span>
-                  <Source>기준일 {referenceDate} · <b>VAT 포함</b></Source>
+                  <Source>기준일 {referenceDate} · 고객 매입 참고가</Source>
                 </ChangeLine>
               </HeroPriceBlock>
             </HeroCopy>
@@ -1809,6 +1849,35 @@ export default function GoldPrice() {
           </HeroCard>
         </Hero>
 
+        {user?.uid ? (
+          <VaultImpact to="/my-gold" aria-label="오늘 시세가 내금고 가치에 미친 영향">
+            <div>
+              <small>TODAY → MY GOLD · 내금고</small>
+              {vaultPureGoldG > 0 ? (
+                <>
+                  <strong>오늘 시세로 내금고 가치는 <b>{Math.round(vaultCurrentValueWon).toLocaleString("ko-KR")}원</b></strong>
+                  <p>전일 순금 매입가 기준 영향 {vaultDayImpactWon > 0 ? "+" : ""}{vaultDayImpactWon.toLocaleString("ko-KR")}원 · 예상 순금량 {vaultPureGoldG.toFixed(2)}g</p>
+                </>
+              ) : (
+                <>
+                  <strong>내 금을 등록하면 오늘 시세가 내 자산에 미치는 변화를 바로 볼 수 있어요.</strong>
+                  <p>현재 가치 · 가격 변화 · 예상 순금량 · 교환 가능한 골드바가 내금고에 연결됩니다.</p>
+                </>
+              )}
+            </div>
+            <span>{vaultPureGoldG > 0 ? "내금고 보기 →" : "첫 금 등록 →"}</span>
+          </VaultImpact>
+        ) : (
+          <VaultImpact to="/register?from=gold-price">
+            <div>
+              <small>MAKE IT PERSONAL</small>
+              <strong>시세를 보는 것에서 끝내지 말고, 내 금의 오늘 가치를 저장하세요.</strong>
+              <p>회원가입 시 순금 0.01g · 내금고에 금을 등록하면 가치 변화와 골드바 교환 가능 상태를 계속 확인할 수 있습니다.</p>
+            </div>
+            <span>내금고 시작 →</span>
+          </VaultImpact>
+        )}
+
         <Section aria-labelledby="live-gold-price-title">
           <SectionHead>
             <div>
@@ -1818,7 +1887,7 @@ export default function GoldPrice() {
               </SectionTitle>
             </div>
             <SectionNote>
-              1돈(3.75g) 기준 · 내가 살 때 <b>VAT 포함</b> · 단위 원
+              1돈(3.75g) 기준 · 내가 살 때는 <b>VAT 포함</b> · 단위 원
             </SectionNote>
           </SectionHead>
 

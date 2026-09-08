@@ -57,3 +57,6 @@ goldmarket-current.xml
 
 # Local patch backups
 _patch_backups/
+
+# Local automatic patch backups
+_backups/

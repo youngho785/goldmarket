@@ -27,9 +27,13 @@ import {
   WELCOME_BONUS_PROMO_ID,
   MARKETING_PUSH_BONUS_PROMO_ID,
   BENEFIT_IDENTITY_TYPE,
+  BENEFIT_BALANCE_CARRYOVER_SCHEMA_VERSION,
   type BenefitRewardKey,
   benefitIdentityHashFromEmail,
+  benefitAccountHash,
+  benefitCarryoverArchiveId,
   benefitClaimLockRef,
+  bonusBalanceMilliGrams,
 } from "../rewards/shared.js";
 
 /* ─────────────────────────────────────────────────────────────
@@ -97,14 +101,124 @@ export const changeNickname = onCall<{ newNickname: string }>(
   }
 );
 
-/** Firebase Auth 계정 삭제 후 고아 닉네임 자동 해제
- * Auth 자체가 삭제된 UID만 대상으로 nickname 관련 필드/인덱스만 제거합니다.
- * 다른 회원/예약/문의/보너스 데이터는 건드리지 않습니다.
+async function archiveUnusedBenefitBalanceForIdentity(params: {
+  uid: string;
+  identityHash: string;
+  balanceMilliGrams: number;
+}): Promise<boolean> {
+  const identityHash = String(params.identityHash || "").trim();
+  if (!identityHash) return false;
+
+  const sourceAccountHash = benefitAccountHash(identityHash, params.uid);
+  const archiveId = benefitCarryoverArchiveId(identityHash, params.uid);
+  if (!sourceAccountHash || !archiveId) return false;
+
+  const currentBalanceMg = Math.max(
+    0,
+    Math.round(Number(params.balanceMilliGrams) || 0)
+  );
+  const claimLockRef = benefitClaimLockRef(identityHash);
+
+  return db().runTransaction(async (tx) => {
+    const lockSnap = await tx.get(claimLockRef);
+    const existing = lockSnap.exists
+      ? lockSnap.data()?.balanceCarryover
+      : undefined;
+    const existingState = String(existing?.state || "");
+    const existingSource = String(existing?.sourceAccountHash || "").trim();
+    const existingBalanceMg = Math.max(
+      0,
+      Math.round(Number(existing?.balanceMilliGrams) || 0)
+    );
+
+    // 같은 탈퇴 계정의 잔액이 이미 새 계정으로 복원된 뒤 지연된 Auth 삭제
+    // 트리거가 실행되어도 available 상태로 되돌리지 않습니다.
+    if (
+      existingState === "restored" &&
+      existingSource === sourceAccountHash
+    ) {
+      return false;
+    }
+
+    // 앞선 탈퇴 계정의 미복원 잔액이 남아 있다면 현재 계정의 잔액과 합쳐
+    // 다음 재가입 계정에서 한 번만 복원할 수 있게 연결합니다.
+    const nextBalanceMg =
+      existingState === "available"
+        ? existingSource === sourceAccountHash
+          ? Math.max(existingBalanceMg, currentBalanceMg)
+          : existingBalanceMg + currentBalanceMg
+        : currentBalanceMg;
+    const now = FieldValue.serverTimestamp();
+
+    tx.set(
+      claimLockRef,
+      {
+        schemaVersion: 1,
+        identityType: BENEFIT_IDENTITY_TYPE,
+        balanceCarryover: {
+          schemaVersion: BENEFIT_BALANCE_CARRYOVER_SCHEMA_VERSION,
+          archiveId,
+          sourceAccountHash,
+          balanceMilliGrams: nextBalanceMg,
+          balanceG: nextBalanceMg / 1000,
+          archivedAt: now,
+          state: "available",
+        },
+        updatedAt: now,
+      },
+      { merge: true }
+    );
+    return true;
+  });
+}
+
+async function archiveUnusedBenefitBalanceForDeletedAccount(params: {
+  uid: string;
+  verifiedEmail: unknown;
+  balanceMilliGrams: number;
+}): Promise<boolean> {
+  const identityHash = benefitIdentityHashFromEmail(params.verifiedEmail);
+  if (!identityHash) return false;
+  return archiveUnusedBenefitBalanceForIdentity({
+    uid: params.uid,
+    identityHash,
+    balanceMilliGrams: params.balanceMilliGrams,
+  });
+}
+
+/** Firebase Auth 계정 삭제 후 고아 닉네임 자동 해제 + 미사용 적립 순금 승계 보관
+ * - 인증 이메일 원문이나 UID는 승계 문서에 저장하지 않습니다.
+ * - Firestore 사용자 문서가 남아 있을 때만 현재 미사용 잔액을 보관합니다.
+ * - 앱의 정상 탈퇴에서는 deleteMyAccount가 Auth 삭제 전에 먼저 보관합니다.
  */
 export const cleanupNicknameAfterAuthDelete = functionsV1
   .region("asia-northeast3")
   .auth.user()
   .onDelete(async (user) => {
+    const userRef = db().doc(`users/${user.uid}`);
+    const userSnap = await userRef.get();
+
+    if (user.emailVerified && user.email && userSnap.exists) {
+      const carryoverMg = bonusBalanceMilliGrams(userSnap.data());
+      await archiveUnusedBenefitBalanceForDeletedAccount({
+        uid: user.uid,
+        verifiedEmail: user.email,
+        balanceMilliGrams: carryoverMg,
+      });
+
+      // Auth가 실제로 삭제된 뒤에는 이전 UID에 남은 잔액을 0으로 만들어
+      // 동일 잔액이 두 계정에 동시에 존재하는 상태를 방지합니다.
+      await userRef.set(
+        {
+          bonusGoldMilliGrams: 0,
+          bonusGoldG: 0,
+          bonusGoldUpdatedAt: FieldValue.serverTimestamp(),
+          bonusGoldCarriedOverAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+    }
+
     await releaseNicknameOwnershipForDeletedUid(db(), user.uid);
   });
 
@@ -251,14 +365,16 @@ export const deleteMyAccount = onCall<unknown>(
 
     try {
       // 읽기만 먼저 수행합니다. auth_time 검사는 이미 끝난 상태입니다.
-      const [profileSnap, exchangeSnap, authUser] = await Promise.all([
+      const [profileSnap, userSnap, exchangeSnap, authUser] = await Promise.all([
         profileRef.get(),
+        userRef.get(),
         exchanges.where("userId", "==", uid).get(),
         getAuth().getUser(uid),
       ]);
       const benefitIdentityHash = authUser.emailVerified
         ? benefitIdentityHashFromEmail(authUser.email)
         : "";
+      const unusedBonusBalanceMg = bonusBalanceMilliGrams(userSnap.data());
 
       const activeExchangeCount = exchangeSnap.docs.filter((document) =>
         isActiveExchangeStatus(document.get("status"))
@@ -434,7 +550,6 @@ export const deleteMyAccount = onCall<unknown>(
               const claimedRewards = rewardEntries.filter(
                 (_entry, index) => promotionSnapshots[index]?.exists
               );
-              if (claimedRewards.length === 0) return 0;
 
               const claimLockRef = benefitClaimLockRef(benefitIdentityHash);
               const now = FieldValue.serverTimestamp();
@@ -448,17 +563,29 @@ export const deleteMyAccount = onCall<unknown>(
                   },
                 ])
               );
-              await claimLockRef.set(
-                {
-                  schemaVersion: 1,
-                  identityType: BENEFIT_IDENTITY_TYPE,
-                  claims,
-                  updatedAt: now,
-                },
-                { merge: true }
-              );
+              if (claimedRewards.length > 0) {
+                await claimLockRef.set(
+                  {
+                    schemaVersion: 1,
+                    identityType: BENEFIT_IDENTITY_TYPE,
+                    claims,
+                    updatedAt: now,
+                  },
+                  { merge: true }
+                );
+              }
+
+              await archiveUnusedBenefitBalanceForIdentity({
+                uid,
+                identityHash: benefitIdentityHash,
+                balanceMilliGrams: unusedBonusBalanceMg,
+              });
+
               benefitClaimLocksRecorded = claimedRewards.length;
-              return benefitClaimLocksRecorded;
+              return {
+                claimedRewards: benefitClaimLocksRecorded,
+                balanceCarryoverG: unusedBonusBalanceMg / 1000,
+              };
             },
           },
           {
@@ -584,6 +711,7 @@ export const deleteMyAccount = onCall<unknown>(
         ledgerDeleted,
         promotionsDeleted,
         benefitClaimLocksRecorded,
+        benefitBalanceCarryoverG: unusedBonusBalanceMg / 1000,
         profilePhotosDeleted,
         legacyProfilesDeleted,
       });

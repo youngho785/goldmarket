@@ -69,6 +69,42 @@ const NoticeBox = styled.div`
   line-height: 1.55;
   margin-bottom: 16px;
 `;
+
+const StepIntro = styled.div`
+  margin-bottom: 15px;
+  h2 { margin: 0; color: ${({ theme }) => theme.colors.primary}; font-size: 1.05rem; }
+  p { margin: 5px 0 0; color: ${({ theme }) => theme.colors.textSecondary}; font-size: .8rem; line-height: 1.5; }
+`;
+const BenefitJourney = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0 0 18px;
+`;
+const BenefitStep = styled.div`
+  padding: 9px 7px;
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 24%, ${({ theme }) => theme.colors.border});
+  border-radius: 12px;
+  background: ${({ theme }) => theme.semantic.badgeGoldBg};
+  text-align: center;
+  small { display:block; color: ${({ theme }) => theme.colors.textSecondary}; font-size:.58rem; font-weight:800; }
+  strong { display:block; margin-top:3px; color: ${({ theme }) => theme.colors.secondaryDark}; font-family: ${({ theme }) => theme.fonts.numeric}; font-size:.75rem; }
+`;
+const ButtonRow = styled.div`
+  display: grid;
+  grid-template-columns: ${({ $single }) => ($single ? "1fr" : "minmax(0, .72fr) minmax(0, 1.28fr)")};
+  gap: 8px;
+`;
+const SecondaryButton = styled.button`
+  min-height: 48px;
+  padding: 12px 16px;
+  border: 1px solid ${({ theme }) => theme.colors.borderStrong};
+  border-radius: ${({ theme }) => theme.radii.small};
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.primary};
+  font-weight: 850;
+  cursor: pointer;
+`;
 const Form = styled.form`
   display: flex;
   flex-direction: column;
@@ -222,6 +258,12 @@ export default function Register() {
 
   // 로그인과 동일한 공용 복귀 규칙을 사용합니다.
   const returnTo = getAuthReturnPath(location, "/");
+  const returningToMyGoldImport = returnTo.startsWith("/my-gold?import=calculator");
+  const returnAllowsUnverified =
+    returnTo === "/my-gold" ||
+    returnTo.startsWith("/my-gold?") ||
+    returnTo.startsWith("/my-gold/alerts") ||
+    returnTo.startsWith("/gold-exchange?mode=vault");
   const onboardingPath = buildMemberOnboardingPath(returnTo);
 
   const [displayName, setDisplayName]         = useState("");
@@ -245,6 +287,7 @@ export default function Register() {
 
   const [showPassword, setShowPassword]               = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [step, setStep] = useState(1);
 
   // 폼 자동 저장/복구 (옵션)
   useEffect(() => {
@@ -281,6 +324,43 @@ export default function Register() {
       if (dup) setError("이미 사용 중인 닉네임입니다.");
     } catch (checkError) {
       setIsNickDuplicate(false);
+      setError(checkError?.message || "닉네임 확인에 실패했습니다.");
+    } finally {
+      setCheckingNick(false);
+    }
+  };
+
+  const goAccountNext = () => {
+    setError(null);
+    const normalizedEmail = (email || "").trim().toLowerCase();
+    if (!normalizedEmail) { setError("이메일을 입력해주세요."); return; }
+    if (password !== confirmPassword) { setError("비밀번호가 일치하지 않습니다."); return; }
+    if (!validatePassword(password)) {
+      setError("비밀번호는 8자 이상, 영문/숫자/특수문자를 포함해야 합니다.");
+      return;
+    }
+    setStep(2);
+  };
+
+  const goProfileNext = async () => {
+    setError(null);
+    if (!displayName.trim()) { setError("이름을 입력해주세요."); return; }
+    if (!validatePhone(phone)) {
+      setError("휴대전화 번호를 010-1234-5678 형식으로 입력해주세요.");
+      return;
+    }
+    const { value, valid } = normalizeNickname(nickname);
+    if (!value || !valid) {
+      setError("닉네임은 2~16자, 한글/영문/숫자/공백/밑줄만 가능합니다.");
+      return;
+    }
+    setCheckingNick(true);
+    try {
+      const dup = await isNicknameDuplicated(value);
+      setIsNickDuplicate(dup);
+      if (dup) { setError("이미 사용 중인 닉네임입니다."); return; }
+      setStep(3);
+    } catch (checkError) {
       setError(checkError?.message || "닉네임 확인에 실패했습니다.");
     } finally {
       setCheckingNick(false);
@@ -394,11 +474,16 @@ export default function Register() {
       // 보너스 지급은 이메일 인증 완료 후 WelcomeOnboarding에서 처리합니다.
       // 퀴즈를 먼저 풀었다면 결과는 localStorage(24시간)에 보존되어 인증 후 서버가 다시 검증합니다.
 
-      // 가입 직후에는 혜택 화면을 먼저 보여주지 않고 이메일 인증 단계로 바로 이동합니다.
-      // 인증 완료 후에는 인증 메일의 continueUrl(onboardingPath)에 따라 WelcomeOnboarding으로 돌아옵니다.
-      navigate(buildVerifyEmailPath(onboardingPath), {
-        replace: true,
-      });
+      // MY GOLD는 로그인만 하면 사용할 수 있으므로 MY GOLD 흐름에서 가입한 회원은
+      // 가입 직후 바로 요청한 내금고 흐름으로 복귀합니다. 인증 메일은 이미 발송되어 있으며
+      // 회원가입 순금 혜택과 예약 확정은 이메일 인증 완료 후 처리됩니다.
+      if (returnAllowsUnverified) {
+        navigate(returnTo, { replace: true });
+      } else {
+        navigate(buildVerifyEmailPath(onboardingPath), {
+          replace: true,
+        });
+      }
     } catch (err) {
       console.error("회원가입 에러:", err);
       setError(toKoreanError(err?.message));
@@ -415,167 +500,132 @@ export default function Register() {
         <Title>회원가입</Title>
 
         <NoticeBox role="note" aria-live="polite">
-          <strong>회원가입하고 순금 0.01g 받기</strong>
+          <strong>
+            {returningToMyGoldImport
+              ? "가입 후 방금 계산한 금을 내금고에 이어서 저장합니다"
+              : "회원가입하고 순금 0.01g 받기"}
+          </strong>
           <div>
-            각 순금 혜택은 인증 이메일 기준 1회만 지급되며, 탈퇴 후
-            재가입해도 중복 지급되지 않습니다. 퀵퀴즈와 광고성 정보 수신(앱푸시) 설정으로
-            최대 순금 0.03g까지 받을 수 있습니다.
+            {returningToMyGoldImport
+              ? "계산한 금 종류와 중량은 임시 보관되어 있습니다. 가입이 끝나면 바로 내금고에 저장할 수 있고, 이메일 인증을 완료하면 회원가입 순금 0.01g 혜택도 받을 수 있습니다."
+              : "각 순금 혜택은 인증 이메일 기준 1회만 지급되며, 탈퇴 후 재가입해도 중복 지급되지 않습니다. 퀵퀴즈와 광고성 정보 수신(앱푸시) 설정으로 최대 순금 0.03g까지 받을 수 있습니다."}
           </div>
         </NoticeBox>
 
         {error && <ErrorText role="alert" aria-live="assertive">{error}</ErrorText>}
 
+        <BenefitJourney aria-label="순금 혜택 여정">
+          <BenefitStep><small>회원가입</small><strong>+0.01g</strong></BenefitStep>
+          <BenefitStep><small>퀵퀴즈</small><strong>+0.01g</strong></BenefitStep>
+          <BenefitStep><small>금시세 알림</small><strong>+0.01g</strong></BenefitStep>
+        </BenefitJourney>
+
         <Form onSubmit={handleSubmit} autoComplete="on" aria-busy={loading ? "true" : undefined}>
-          {/* 이름 */}
-          <FormGroup>
-            <Label htmlFor="regName">이름</Label>
-            <Input
-              id="regName"
-              name="name"
-              type="text"
-              value={displayName}
-              onChange={e => setDisplayName(e.target.value)}
-              required
-              disabled={isDisabled}
-              autoComplete="name"
-              placeholder="예: 홍길동"
-            />
-          </FormGroup>
+          {step === 1 && (
+            <>
+              <StepIntro>
+                <h2>계정 만들기</h2>
+                <p>내금고에 금을 저장하고 가치 변화와 교환 가능 상태를 계속 확인할 계정을 만듭니다.</p>
+              </StepIntro>
 
-          {/* 이메일 */}
-          <FormGroup>
-            <Label htmlFor="regEmail">이메일</Label>
-            <Input
-              id="regEmail"
-              name="email"
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              required
-              disabled={isDisabled}
-              autoComplete="email"
-              inputMode="email"
-            />
-          </FormGroup>
+              <FormGroup>
+                <Label htmlFor="regEmail">이메일</Label>
+                <Input id="regEmail" name="email" type="email" value={email}
+                  onChange={e => setEmail(e.target.value)} required disabled={isDisabled}
+                  autoComplete="email" inputMode="email" />
+              </FormGroup>
 
-          {/* ✅ 비밀번호 매니저/접근성용 숨김 username (email 복제) */}
-          <VisuallyHidden
-            type="text"
-            name="username"
-            autoComplete="username"
-            value={email}
-            readOnly
-            aria-hidden="true"
-            tabIndex={-1}
-          />
+              <VisuallyHidden type="text" name="username" autoComplete="username" value={email}
+                readOnly aria-hidden="true" tabIndex={-1} />
 
-          {/* 비밀번호 */}
-          <FormGroup>
-            <Label htmlFor="regPassword">비밀번호</Label>
-            <Input
-              id="regPassword"
-              name="new-password"
-              type={showPassword ? "text" : "password"}
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              placeholder="8자 이상, 영문/숫자/특수문자 포함"
-              required
-              disabled={isDisabled}
-              autoComplete="new-password"
-            />
-            <ToggleButton
-              type="button"
-              onClick={() => setShowPassword(v => !v)}
-              aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 보기"}
-            >
-              {showPassword ? <FiEyeOff /> : <FiEye />}
-            </ToggleButton>
-          </FormGroup>
+              <FormGroup>
+                <Label htmlFor="regPassword">비밀번호</Label>
+                <Input id="regPassword" name="new-password" type={showPassword ? "text" : "password"}
+                  value={password} onChange={e => setPassword(e.target.value)}
+                  placeholder="8자 이상, 영문/숫자/특수문자 포함" required disabled={isDisabled}
+                  autoComplete="new-password" />
+                <ToggleButton type="button" onClick={() => setShowPassword(v => !v)}
+                  aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 보기"}>
+                  {showPassword ? <FiEyeOff /> : <FiEye />}
+                </ToggleButton>
+              </FormGroup>
 
-          {/* 비밀번호 확인 */}
-          <FormGroup>
-            <Label htmlFor="regPasswordConfirm">비밀번호 확인</Label>
-            <Input
-              id="regPasswordConfirm"
-              name="confirm-password"
-              type={showConfirmPassword ? "text" : "password"}
-              value={confirmPassword}
-              onChange={e => setConfirmPassword(e.target.value)}
-              placeholder="비밀번호를 다시 입력하세요"
-              required
-              disabled={isDisabled}
-              autoComplete="new-password"
-            />
-            <ToggleButton
-              type="button"
-              onClick={() => setShowConfirmPassword(v => !v)}
-              aria-label={showConfirmPassword ? "비밀번호 숨기기" : "비밀번호 보기"}
-            >
-              {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
-            </ToggleButton>
-          </FormGroup>
+              <FormGroup>
+                <Label htmlFor="regPasswordConfirm">비밀번호 확인</Label>
+                <Input id="regPasswordConfirm" name="confirm-password" type={showConfirmPassword ? "text" : "password"}
+                  value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
+                  placeholder="비밀번호를 다시 입력하세요" required disabled={isDisabled}
+                  autoComplete="new-password" />
+                <ToggleButton type="button" onClick={() => setShowConfirmPassword(v => !v)}
+                  aria-label={showConfirmPassword ? "비밀번호 숨기기" : "비밀번호 보기"}>
+                  {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
+                </ToggleButton>
+              </FormGroup>
 
-          {/* 닉네임 */}
-          <FormGroup>
-            <Label htmlFor="regNickname">닉네임</Label>
-            <Input
-              id="regNickname"
-              name="nickname"
-              type="text"
-              value={nickname}
-              onChange={e => {
-                setNickname(e.target.value);
-                setIsNickDuplicate(false);
-                setError(null);
-              }}
-              onBlur={handleNicknameBlur}
-              maxLength={16}
-              required
-              disabled={isDisabled}
-              style={isNickDuplicate ? { borderColor: "red" } : {}}
-              aria-invalid={isNickDuplicate ? "true" : undefined}
-              aria-describedby={isNickDuplicate ? "nickname-error" : undefined}
-            />
-            {checkingNick && <SmallText>중복 확인 중...</SmallText>}
-            {isNickDuplicate && (
-              <ErrorText id="nickname-error" role="alert">이미 사용 중인 닉네임입니다.</ErrorText>
-            )}
-          </FormGroup>
+              <ButtonRow $single>
+                <Button type="button" onClick={goAccountNext} disabled={isDisabled}>내 정보 입력하기 →</Button>
+              </ButtonRow>
+            </>
+          )}
 
-          {/* 휴대전화 */}
-          <FormGroup>
-            <Label htmlFor="regPhone">휴대전화</Label>
-            <Input
-              id="regPhone"
-              name="tel"
-              type="tel"
-              value={phone}
-              onChange={e => {
-                setPhone(formatPhone(e.target.value));
-                setError(null);
-              }}
-              placeholder="010-1234-5678"
-              required
-              disabled={isDisabled}
-              inputMode="numeric"
-              autoComplete="tel"
-            />
-          </FormGroup>
+          {step === 2 && (
+            <>
+              <StepIntro>
+                <h2>내 정보</h2>
+                <p>방문예약과 내금고에서 사용할 기본 정보를 입력합니다.</p>
+              </StepIntro>
 
-          {/* 약관 동의 섹션 */}
-          <AgreementsSection value={agreements} onChange={setAgreements} />
+              <FormGroup>
+                <Label htmlFor="regName">이름</Label>
+                <Input id="regName" name="name" type="text" value={displayName}
+                  onChange={e => setDisplayName(e.target.value)} required disabled={isDisabled}
+                  autoComplete="name" placeholder="예: 홍길동" />
+              </FormGroup>
 
-          <Button
-            type="submit"
-            disabled={
-              isDisabled ||
-              !agreements.age14 ||
-              !agreements.tos ||
-              !agreements.privacy
-            }
-          >
-            {loading ? "가입 중..." : "가입하기"}
-          </Button>
+              <FormGroup>
+                <Label htmlFor="regNickname">닉네임</Label>
+                <Input id="regNickname" name="nickname" type="text" value={nickname}
+                  onChange={e => { setNickname(e.target.value); setIsNickDuplicate(false); setError(null); }}
+                  onBlur={handleNicknameBlur} maxLength={16} required disabled={isDisabled}
+                  style={isNickDuplicate ? { borderColor: "red" } : {}}
+                  aria-invalid={isNickDuplicate ? "true" : undefined}
+                  aria-describedby={isNickDuplicate ? "nickname-error" : undefined} />
+                {checkingNick && <SmallText>중복 확인 중...</SmallText>}
+                {isNickDuplicate && <ErrorText id="nickname-error" role="alert">이미 사용 중인 닉네임입니다.</ErrorText>}
+              </FormGroup>
+
+              <FormGroup>
+                <Label htmlFor="regPhone">휴대전화</Label>
+                <Input id="regPhone" name="tel" type="tel" value={phone}
+                  onChange={e => { setPhone(formatPhone(e.target.value)); setError(null); }}
+                  placeholder="010-1234-5678" required disabled={isDisabled}
+                  inputMode="numeric" autoComplete="tel" />
+              </FormGroup>
+
+              <ButtonRow>
+                <SecondaryButton type="button" onClick={() => { setError(null); setStep(1); }}>← 이전</SecondaryButton>
+                <Button type="button" onClick={goProfileNext} disabled={isDisabled}>약관 확인하기 →</Button>
+              </ButtonRow>
+            </>
+          )}
+
+          {step === 3 && (
+            <>
+              <StepIntro>
+                <h2>약관 확인 후 완료</h2>
+                <p>필수 동의만 가입에 필요합니다. 광고성 정보 수신은 선택이며, 알림 혜택은 가입 후 직접 설정할 수 있습니다.</p>
+              </StepIntro>
+
+              <AgreementsSection value={agreements} onChange={setAgreements} />
+
+              <ButtonRow>
+                <SecondaryButton type="button" onClick={() => { setError(null); setStep(2); }}>← 이전</SecondaryButton>
+                <Button type="submit" disabled={isDisabled || !agreements.age14 || !agreements.tos || !agreements.privacy}>
+                  {loading ? "가입 중..." : "가입하고 순금 0.01g 받기"}
+                </Button>
+              </ButtonRow>
+            </>
+          )}
         </Form>
       </Card>
     </Container>

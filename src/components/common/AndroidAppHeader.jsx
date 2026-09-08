@@ -34,12 +34,9 @@ const Header = styled.header`
   z-index: 980;
   padding-top: env(safe-area-inset-top, 0px);
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-  background: color-mix(
-    in srgb,
-    ${({ theme }) => theme.colors.surface} 96%,
-    transparent
-  );
-  backdrop-filter: blur(18px);
+  background: ${({ theme }) => theme.colors.surface};
+  box-shadow: 0 1px 0 ${({ theme }) => theme.colors.border},
+    0 8px 22px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 6%, transparent);
 `;
 
 const Bar = styled.div`
@@ -384,6 +381,7 @@ const TOP_LEVEL_PATHS = new Set([
   "/",
   "/gold-price",
   "/gold-exchange",
+  "/my-gold",
   "/my-exchanges",
   "/profile",
 ]);
@@ -392,6 +390,8 @@ function titleForPath(pathname) {
   if (pathname === "/") return "한국골드마켓";
   if (pathname === "/gold-price") return "금시세";
   if (pathname === "/gold-exchange") return "금교환";
+  if (pathname === "/my-gold") return "내금고";
+  if (pathname === "/my-gold/alerts") return "내금고 알림";
   if (pathname === "/my-exchanges") return "예약";
   if (pathname === "/profile") return "내정보";
   if (pathname === "/settings") return "설정";

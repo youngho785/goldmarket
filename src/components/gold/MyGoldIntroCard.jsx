@@ -19,7 +19,7 @@ import {
   computeVaultValueWon,
 } from "@/lib/goldVaultCatalog";
 
-const SAMPLE_ITEMS = Object.freeze([
+const GUEST_SAMPLE_ITEMS = Object.freeze([
   {
     label: "18K 팔찌",
     goldType: "18k(750) 제품(팔찌,목걸이, 반지,귀걸이, 발찌 등)",
@@ -166,6 +166,16 @@ const Change = styled.span`
 `;
 
 
+const EmptyCopy = styled.p`
+  max-width: 620px;
+  margin: 9px 0 0;
+  color: color-mix(in srgb, ${({ theme }) => theme.on.primary} 72%, transparent);
+  font-size: .82rem;
+  line-height: 1.55;
+  word-break: keep-all;
+  strong { color: ${({ theme }) => theme.colors.goldLight}; }
+`;
+
 const Aside = styled.div`
   display: grid;
   justify-items: end;
@@ -307,20 +317,20 @@ export default function MyGoldIntroCard() {
   const waitingForVault =
     !!user?.uid && (dashboard.itemsLoading || bonus.loading);
 
-  const sample = useMemo(() => {
-    const values = SAMPLE_ITEMS.map((item) => {
+  const guestSample = useMemo(() => {
+    const values = GUEST_SAMPLE_ITEMS.map((item) => {
       const pureGoldG = computeVaultPureGoldG(item, dashboard.rates);
-      const currentValue = dashboard.publicPriceEnabled
-        ? computeVaultValueWon(pureGoldG, dashboard.customerSellPricePerDon)
-        : 0;
-      const previousValue = dashboard.publicPriceEnabled
-        ? computeVaultValueWon(pureGoldG, dashboard.previousCustomerSellPricePerDon)
-        : 0;
-
-      return { currentValue, previousValue };
+      return {
+        currentValue: dashboard.publicPriceEnabled
+          ? computeVaultValueWon(pureGoldG, dashboard.customerSellPricePerDon)
+          : 0,
+        previousValue: dashboard.publicPriceEnabled
+          ? computeVaultValueWon(pureGoldG, dashboard.previousCustomerSellPricePerDon)
+          : 0,
+      };
     });
 
-    const total = values.reduce(
+    const totals = values.reduce(
       (acc, item) => ({
         estimatedValueWon: acc.estimatedValueWon + item.currentValue,
         previousEstimatedValueWon:
@@ -328,18 +338,17 @@ export default function MyGoldIntroCard() {
       }),
       { estimatedValueWon: 0, previousEstimatedValueWon: 0 }
     );
-
     const changeWon =
-      total.estimatedValueWon > 0 && total.previousEstimatedValueWon > 0
-        ? total.estimatedValueWon - total.previousEstimatedValueWon
+      totals.estimatedValueWon > 0 && totals.previousEstimatedValueWon > 0
+        ? totals.estimatedValueWon - totals.previousEstimatedValueWon
         : 0;
     const changePercent =
-      total.previousEstimatedValueWon > 0
-        ? (changeWon / total.previousEstimatedValueWon) * 100
+      totals.previousEstimatedValueWon > 0
+        ? (changeWon / totals.previousEstimatedValueWon) * 100
         : null;
 
     return {
-      ...total,
+      ...totals,
       changePercent,
       changeDirection:
         changeWon > 0
@@ -399,7 +408,8 @@ export default function MyGoldIntroCard() {
     dashboard.summary.previousEstimatedValueWon,
   ]);
 
-  const display = hasVaultContent ? actual : sample;
+  const showGuestSample = !user?.uid;
+  const display = showGuestSample ? guestSample : actual;
   const change = changePercentView(display.changePercent, display.changeDirection);
   const ChangeIcon = change.icon;
 
@@ -410,57 +420,68 @@ export default function MyGoldIntroCard() {
           <Kicker>
             <Gem size={13} aria-hidden />
             {waitingForVault
-              ? "MY GOLD · 내 금고"
+              ? "MY GOLD · 내금고"
               : hasVaultContent
-                ? "MY GOLD · 내 금고"
-                : "MY GOLD"}
+                ? "MY GOLD · 내금고"
+                : showGuestSample
+                  ? "MY GOLD · 체험 예시"
+                  : "MY GOLD"}
           </Kicker>
 
           <Title id="my-gold-intro-title">
-            {waitingForVault ? "내 금고를 불러오고 있어요" : "내 금의 오늘 가치"}
+            {waitingForVault
+              ? "내금고를 불러오고 있어요"
+              : hasVaultContent || showGuestSample
+                ? "내 금의 오늘 가치"
+                : "내 금, 오늘 얼마일까요?"}
           </Title>
 
-          <ValueRow>
-            <Value>
-              {waitingForVault
-                ? "불러오는 중"
-                : dashboard.publicPriceEnabled
-                  ? formatWon(display.estimatedValueWon)
-                  : "시세 공개 대기"}
-            </Value>
-            {dashboard.publicPriceEnabled && !waitingForVault && (
-              <Change $direction={change.direction}>
-                <ChangeIcon size={14} aria-hidden />
-                {change.text}
-              </Change>
-            )}
-          </ValueRow>
+          {(waitingForVault || hasVaultContent || showGuestSample) ? (
+            <ValueRow>
+              <Value>
+                {waitingForVault
+                  ? "불러오는 중"
+                  : dashboard.publicPriceEnabled
+                    ? formatWon(display.estimatedValueWon)
+                    : "시세 공개 대기"}
+              </Value>
+              {dashboard.publicPriceEnabled && !waitingForVault && (hasVaultContent || showGuestSample) && (
+                <Change $direction={change.direction}>
+                  <ChangeIcon size={14} aria-hidden />
+                  {change.text}
+                </Change>
+              )}
+            </ValueRow>
+          ) : (
+            <EmptyCopy>
+              반지·목걸이·돌반지 등 <strong>금 1개만 등록하면</strong> 오늘 가치, 가격 변화, 예상 순금량, 교환 가능한 골드바를 계속 확인할 수 있습니다.
+            </EmptyCopy>
+          )}
 
-          {!waitingForVault && user?.uid && (
+          {!waitingForVault && hasVaultContent && user?.uid && (
             <BonusLine>
-              내 금고 적립 <strong>순금 {bonusBalanceG.toFixed(2)}g</strong>
+              적립 순금 <strong>{bonusBalanceG.toFixed(2)}g</strong>도 금교환 가치에 함께 더해집니다.
             </BonusLine>
           )}
 
-          {!user?.uid && (
+          {showGuestSample && (
             <BonusLine>
-              <Link to="/register">
-                회원가입하고 순금 0.03g 나의 금고에 보관하기
-                <ArrowRight aria-hidden />
-              </Link>
+              체험 예시 · 18K 팔찌 10g + 순금 돌반지 2돈
             </BonusLine>
           )}
         </Copy>
 
         <Aside>
           <Action to="/my-gold">
-            내 금고 보기
+            {hasVaultContent ? "내금고 보기" : user?.uid ? "첫 금 등록하기" : "내금고 체험하기"}
             <ArrowRight size={15} aria-hidden />
           </Action>
           <Disclaimer>
-            {user?.uid
-              ? "등록한 금과 적립 순금에 현재 환산율과 공개 시세를 적용한 참고값이며 실제 교환 금액은 매장 확인 후 확정됩니다."
-              : "현재 환산율과 공개 시세를 적용한 체험 예시이며 실제 교환 금액은 매장 확인 후 확정됩니다."}
+            {hasVaultContent
+              ? "등록한 금과 적립 순금에 현재 환산율과 공개 시세를 적용한 참고값이며 실제 교환 결과는 매장 확인 후 확정됩니다."
+              : user?.uid
+                ? "가상의 자산 금액을 표시하지 않습니다. 금을 등록한 뒤 실제 입력값으로 오늘 가치와 예상 순금량을 계산합니다."
+                : "예시 금제품과 현재 공개 시세를 적용한 체험값입니다. 실제 내 금은 회원가입 후 저장할 수 있습니다."}
           </Disclaimer>
         </Aside>
       </Inner>

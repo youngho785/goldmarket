@@ -10,6 +10,7 @@ export default defineConfig([
     'functions/lib/**',
     '.firebase/**',
     'backup-*/**',
+    '_backups/**',
 
     // Android/Capacitor 자동 생성·복사 산출물만 제외
     'android/.gradle/**',

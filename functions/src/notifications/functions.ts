@@ -193,6 +193,96 @@ export const bindPushToken = onCall<{
   }
 );
 
+const ADMIN_CAMPAIGN_BATCH_PARAM = "_kgmc";
+const ADMIN_CAMPAIGN_NOTIFICATION_PARAM = "_kgmn";
+
+function adminCampaignPushLink(
+  baseLink: string,
+  meta: unknown,
+  notificationId: string
+): string {
+  if (!meta || typeof meta !== "object" || Array.isArray(meta)) {
+    return baseLink;
+  }
+
+  const source = String((meta as Record<string, unknown>).source || "").trim();
+  const batchId = String((meta as Record<string, unknown>).batchId || "").trim();
+
+  if (source !== "admin_manual" || !batchId || !notificationId) {
+    return baseLink;
+  }
+
+  try {
+    const url = new URL(baseLink, "https://koreagoldmarket.com");
+    url.searchParams.set(ADMIN_CAMPAIGN_BATCH_PARAM, batchId);
+    url.searchParams.set(ADMIN_CAMPAIGN_NOTIFICATION_PARAM, notificationId);
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return baseLink;
+  }
+}
+
+type AdminCampaignPushOutcome = {
+  attempted: boolean;
+  success: boolean;
+  reason: "success" | "failed" | "unavailable" | "preference";
+};
+
+async function trackAdminCampaignPushOutcome(
+  notificationRef: FirebaseFirestore.DocumentReference,
+  outcome: AdminCampaignPushOutcome
+): Promise<void> {
+  try {
+    await db().runTransaction(async (tx) => {
+      const notificationSnap = await tx.get(notificationRef);
+      if (!notificationSnap.exists) return;
+
+      const notificationData = notificationSnap.data() || {};
+      if (notificationData.campaignDeliveryTrackedAt) return;
+
+      const rawMeta = notificationData.meta;
+      if (!rawMeta || typeof rawMeta !== "object" || Array.isArray(rawMeta)) {
+        return;
+      }
+
+      const meta = rawMeta as Record<string, unknown>;
+      const source = String(meta.source || "").trim();
+      const batchId = String(meta.batchId || "").trim();
+      if (source !== "admin_manual" || !batchId) return;
+
+      const sendRef = db().doc(`adminNotificationSends/${batchId}`);
+      const sendSnap = await tx.get(sendRef);
+      if (!sendSnap.exists) return;
+
+      const sendPatch: FirebaseFirestore.DocumentData = {
+        pushProcessedCount: FieldValue.increment(1),
+        metricsUpdatedAt: FieldValue.serverTimestamp(),
+      };
+
+      if (outcome.attempted) {
+        sendPatch.pushAttemptedCount = FieldValue.increment(1);
+        if (outcome.success) {
+          sendPatch.pushSuccessCount = FieldValue.increment(1);
+        } else {
+          sendPatch.pushFailureCount = FieldValue.increment(1);
+        }
+      } else {
+        sendPatch.pushUnavailableCount = FieldValue.increment(1);
+      }
+
+      tx.update(notificationRef, {
+        campaignDeliveryTrackedAt: FieldValue.serverTimestamp(),
+        campaignPushAttempted: outcome.attempted,
+        campaignPushSuccess: outcome.success,
+        campaignPushStatus: outcome.reason,
+      });
+      tx.set(sendRef, sendPatch, { merge: true });
+    });
+  } catch (error) {
+    console.warn("[trackAdminCampaignPushOutcome] failed", error);
+  }
+}
+
 /* ─────────────────────────────────────────────────────────────
  * 6) 알림 문서 생성 시 FCM 발송
  * ───────────────────────────────────────────────────────────── */
@@ -208,6 +298,7 @@ export const onNotificationCreate = onDocumentCreated(
         body?: string;
         type?: string;
         link?: string;
+        meta?: { source?: string; batchId?: string };
       };
 
       const userSnap = await db().doc(`users/${uid}`).get();
@@ -218,6 +309,13 @@ export const onNotificationCreate = onDocumentCreated(
       );
 
       if (!shouldSendPushForUser(userData, preferences, notif.type)) {
+        if (event.data?.ref) {
+          await trackAdminCampaignPushOutcome(event.data.ref, {
+            attempted: false,
+            success: false,
+            reason: "preference",
+          });
+        }
         return;
       }
 
@@ -293,12 +391,25 @@ export const onNotificationCreate = onDocumentCreated(
         }
       }
 
-      if (!tokens.length) return;
+      if (!tokens.length) {
+        if (event.data?.ref) {
+          await trackAdminCampaignPushOutcome(event.data.ref, {
+            attempted: false,
+            success: false,
+            reason: "unavailable",
+          });
+        }
+        return;
+      }
 
       const title = String(notif.title || "알림");
       const body = String(notif.body || "");
-      const link = String(notif.link || "/");
       const notificationId = String(event.params.docId || "");
+      const link = adminCampaignPushLink(
+        String(notif.link || "/"),
+        notif.meta,
+        notificationId
+      );
 
       const data = {
         type: String(notif.type || "notification"),
@@ -328,11 +439,14 @@ export const onNotificationCreate = onDocumentCreated(
       );
 
       const badTokens = new Set<string>();
+      let successfulTokenCount = 0;
 
       const collectBadTokens = (
         response: BatchResponse,
         sentTokens: string[]
       ) => {
+        successfulTokenCount += Number(response.successCount || 0);
+
         response.responses.forEach((result: SendResponse, index: number) => {
           if (result.success) return;
 
@@ -355,45 +469,51 @@ export const onNotificationCreate = onDocumentCreated(
         });
       };
 
-      /*
-       * Web / PWA
-       */
-      if (webTokens.length) {
-        const webResponse: BatchResponse =
-          await msg().sendEachForMulticast({
-            tokens: webTokens,
-            data,
-            webpush: {
-              headers: {
-                Urgency: "high",
+      let pushSendError: unknown = null;
+
+      try {
+        /*
+         * Web / PWA
+         */
+        if (webTokens.length) {
+          const webResponse: BatchResponse =
+            await msg().sendEachForMulticast({
+              tokens: webTokens,
+              data,
+              webpush: {
+                headers: {
+                  Urgency: "high",
+                },
               },
-            },
-          });
+            });
 
-        collectBadTokens(webResponse, webTokens);
-      }
+          collectBadTokens(webResponse, webTokens);
+        }
 
-      /*
-       * Android Native 앱
-       */
-      if (nativeTokens.length) {
-        const nativeResponse: BatchResponse =
-          await msg().sendEachForMulticast({
-            tokens: nativeTokens,
-            notification: {
-              title,
-              body,
-            },
-            data,
-            android: {
-              priority: "high",
+        /*
+         * Android Native 앱
+         */
+        if (nativeTokens.length) {
+          const nativeResponse: BatchResponse =
+            await msg().sendEachForMulticast({
+              tokens: nativeTokens,
               notification: {
-                icon: "ic_stat_goldmarket",
+                title,
+                body,
               },
-            },
-          });
+              data,
+              android: {
+                priority: "high",
+                notification: {
+                  icon: "ic_stat_goldmarket",
+                },
+              },
+            });
 
-        collectBadTokens(nativeResponse, nativeTokens);
+          collectBadTokens(nativeResponse, nativeTokens);
+        }
+      } catch (error) {
+        pushSendError = error;
       }
 
       /*
@@ -437,6 +557,16 @@ export const onNotificationCreate = onDocumentCreated(
           .update(updates)
           .catch(() => {});
       }
+
+      if (event.data?.ref) {
+        await trackAdminCampaignPushOutcome(event.data.ref, {
+          attempted: true,
+          success: successfulTokenCount > 0,
+          reason: successfulTokenCount > 0 ? "success" : "failed",
+        });
+      }
+
+      if (pushSendError) throw pushSendError;
     } catch (error) {
       console.error("[onNotificationCreate] error:", error);
     }
@@ -991,6 +1121,13 @@ export const sendAdminNotification = onCall<{
       link,
       recipientCount: recipients.length,
       createdCount: 0,
+      trackingVersion: 1,
+      pushProcessedCount: 0,
+      pushAttemptedCount: 0,
+      pushSuccessCount: 0,
+      pushFailureCount: 0,
+      pushUnavailableCount: 0,
+      clickCount: 0,
       actorUid,
       createdAt: FieldValue.serverTimestamp(),
       status: "creating",
@@ -1083,6 +1220,93 @@ export const sendAdminNotification = onCall<{
   }
 );
 
+export const recordAdminNotificationClick = onCall<{
+  batchId: string;
+  notificationId: string;
+}>(
+  {
+    region: "asia-northeast3",
+    enforceAppCheck: ENFORCE_APP_CHECK,
+  },
+  async (req) => {
+    const uid = req.auth?.uid;
+    if (!uid) {
+      throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+    }
+
+    const batchId = String(req.data?.batchId || "").trim();
+    const notificationId = String(req.data?.notificationId || "").trim();
+
+    const validId = (value: string, maxLength: number) =>
+      value.length >= 8 &&
+      value.length <= maxLength &&
+      !value.includes("/") &&
+      /^[A-Za-z0-9_-]+$/.test(value);
+
+    if (!validId(batchId, 100) || !validId(notificationId, 180)) {
+      throw new HttpsError(
+        "invalid-argument",
+        "알림 성과 식별값이 올바르지 않습니다."
+      );
+    }
+
+    const notificationRef = db().doc(
+      `notifications/${uid}/items/${notificationId}`
+    );
+
+    const result = await db().runTransaction(async (tx) => {
+      const notificationSnap = await tx.get(notificationRef);
+      if (!notificationSnap.exists) {
+        throw new HttpsError("not-found", "알림을 찾을 수 없습니다.");
+      }
+
+      const notificationData = notificationSnap.data() || {};
+      const rawMeta = notificationData.meta;
+      const meta =
+        rawMeta && typeof rawMeta === "object" && !Array.isArray(rawMeta)
+          ? (rawMeta as Record<string, unknown>)
+          : {};
+
+      if (
+        String(meta.source || "") !== "admin_manual" ||
+        String(meta.batchId || "") !== batchId
+      ) {
+        throw new HttpsError(
+          "permission-denied",
+          "이 캠페인 알림을 확인할 수 없습니다."
+        );
+      }
+
+      if (notificationData.campaignClickedAt) {
+        return { counted: false, alreadyCounted: true };
+      }
+
+      const sendRef = db().doc(`adminNotificationSends/${batchId}`);
+      const sendSnap = await tx.get(sendRef);
+      if (!sendSnap.exists) {
+        throw new HttpsError("not-found", "캠페인 기록을 찾을 수 없습니다.");
+      }
+
+      tx.update(notificationRef, {
+        campaignClickedAt: FieldValue.serverTimestamp(),
+      });
+      tx.set(
+        sendRef,
+        {
+          clickCount: FieldValue.increment(1),
+          lastClickedAt: FieldValue.serverTimestamp(),
+          metricsUpdatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      return { counted: true, alreadyCounted: false };
+    });
+
+    return { ok: true, ...result };
+  }
+);
+
 export const listAdminNotificationSends = onCall<{ limit?: number }>(
   {
     region: "asia-northeast3",
@@ -1115,6 +1339,13 @@ export const listAdminNotificationSends = onCall<{ limit?: number }>(
           link: data.link || "/",
           recipientCount: Number(data.recipientCount || 0),
           createdCount: Number(data.createdCount || 0),
+          trackingVersion: Number(data.trackingVersion || 0),
+          pushProcessedCount: Number(data.pushProcessedCount || 0),
+          pushAttemptedCount: Number(data.pushAttemptedCount || 0),
+          pushSuccessCount: Number(data.pushSuccessCount || 0),
+          pushFailureCount: Number(data.pushFailureCount || 0),
+          pushUnavailableCount: Number(data.pushUnavailableCount || 0),
+          clickCount: Number(data.clickCount || 0),
           status: data.status || "",
           createdAt:
             data.createdAt?.toDate?.()?.toISOString?.() || null,
@@ -1426,6 +1657,7 @@ export const sendMyGoldWeeklyReports = onSchedule(
         ? (changeWon / historicalValueWon) * 100
         : null;
 
+      const bonusOnly = vault.itemCount === 0 && bonusGoldG > 0;
       const parts = [
         `현재 참고가치 ${formatWeeklyWon(currentValueWon)}`,
       ];
@@ -1438,7 +1670,10 @@ export const sendMyGoldWeeklyReports = onSchedule(
         parts.push(`실물 금 ${vault.itemCount}개 · 교환기준 예상 ${vault.pureGoldG.toFixed(2)}g`);
       }
       if (bonusGoldG > 0) {
-        parts.push(`적립 순금 ${bonusGoldG.toFixed(2)}g`);
+        parts.push(`회원혜택 순금 ${bonusGoldG.toFixed(2)}g`);
+      }
+      if (bonusOnly) {
+        parts.push("실물 금을 등록하면 내 금 전체 가치 변화도 함께 볼 수 있어요");
       }
 
       const notificationId = `my-gold-weekly-${today}`;
@@ -1448,9 +1683,11 @@ export const sendMyGoldWeeklyReports = onSchedule(
 
       await notificationRef.set({
         type: "my_gold_weekly",
-        title: "이번 주 MY GOLD",
+        title: bonusOnly
+          ? `회원혜택 순금 ${bonusGoldG.toFixed(2)}g의 이번 주 가치`
+          : "이번 주 MY GOLD",
         body: parts.join(" · "),
-        link: "/my-gold",
+        link: "/my-gold#my-gold-value-trend",
         meta: {
           reportDate: today,
           referenceDate,

@@ -118,7 +118,7 @@ const Item = styled(NavLink)`
           ${$center &&
           css`
             transform: translateY(-14px);
-            color: ${theme.colors.primary};
+            color: ${theme.colors.textSecondary};
             font-weight: 900;
 
             ${IconShell} {
@@ -127,8 +127,8 @@ const Item = styled(NavLink)`
               margin-bottom: 1px;
               border: 4px solid ${theme.colors.surface};
               border-radius: 50%;
-              background: ${theme.colors.primary};
-              color: ${theme.colors.goldLight};
+              background: ${theme.semantic.badgeGoldBg};
+              color: ${theme.colors.primary};
               box-shadow: ${theme.shadows.card};
 
               svg {
@@ -136,6 +136,17 @@ const Item = styled(NavLink)`
                 height: 24px;
                 stroke-width: 2;
               }
+            }
+
+            &.active {
+              color: ${theme.colors.primary};
+            }
+
+            &.active ${IconShell} {
+              background: ${theme.colors.primary};
+              color: ${theme.colors.goldLight};
+              box-shadow: 0 12px 30px
+                color-mix(in srgb, ${theme.colors.primary} 22%, transparent);
             }
           `}
         `
@@ -174,7 +185,7 @@ const ANDROID_ITEMS = [
     label: "금교환",
     center: true,
   },
-  { to: "/my-exchanges", icon: ClipboardList, label: "예약" },
+  { to: "/my-exchanges", icon: ClipboardList, label: "내역" },
   { to: "/profile", icon: User, label: "내정보" },
 ];
 

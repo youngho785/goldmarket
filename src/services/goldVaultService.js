@@ -9,6 +9,7 @@ import {
   query,
   serverTimestamp,
   updateDoc,
+  writeBatch,
 } from "firebase/firestore";
 
 import { db } from "@/firebase/firebase";
@@ -43,6 +44,28 @@ export async function createGoldVaultItem(uid, values) {
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
+}
+
+export async function createGoldVaultItems(uid, valuesList) {
+  if (!uid) throw new Error("로그인이 필요합니다.");
+  if (!Array.isArray(valuesList) || valuesList.length === 0) {
+    throw new Error("저장할 금제품이 없습니다.");
+  }
+
+  const normalizedItems = valuesList.map((values) => validateGoldVaultValues(values));
+  const batch = writeBatch(db);
+
+  normalizedItems.forEach((normalized) => {
+    const itemRef = doc(vaultCollection(uid));
+    batch.set(itemRef, {
+      ...normalized,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+  });
+
+  await batch.commit();
+  return normalizedItems.length;
 }
 
 export async function updateGoldVaultItem(uid, itemId, values) {

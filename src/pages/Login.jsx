@@ -186,6 +186,12 @@ export default function Login() {
 
   // next > state.from > legacy from 순으로 복귀 경로를 결정합니다.
   const returnTo = getAuthReturnPath(location, "/");
+  const returningToMyGoldImport = returnTo.startsWith("/my-gold?import=calculator");
+  const returnAllowsUnverified =
+    returnTo === "/my-gold" ||
+    returnTo.startsWith("/my-gold?") ||
+    returnTo.startsWith("/my-gold/alerts") ||
+    returnTo.startsWith("/gold-exchange?mode=vault");
   const registerPath = buildAuthPath("/register", returnTo);
   const registerState = {
     from: returnTo,
@@ -231,7 +237,7 @@ export default function Login() {
     try {
       const user = await login(email, password);
 
-      if (!user.emailVerified) {
+      if (!user.emailVerified && !returnAllowsUnverified) {
         setError("이메일 인증이 필요합니다. 메일함에서 인증을 완료해 주세요.");
         setShowResend(true);
       } else {
@@ -277,7 +283,7 @@ export default function Login() {
       const user = await completeMfaSignIn(mfaChallenge, mfaCode);
       setMfaChallenge(null);
       setMfaCode("");
-      if (!user.emailVerified) {
+      if (!user.emailVerified && !returnAllowsUnverified) {
         setError("이메일 인증이 필요합니다. 메일함에서 인증을 완료해 주세요.");
         setShowResend(true);
       } else {
@@ -314,16 +320,32 @@ export default function Login() {
     <Container>
       <Card>
         <Title>한국골드마켓에 오신것을 환영합니다.</Title>
-        <SubTitle>이메일 인증만으로 간편하게 가입</SubTitle>
+        <SubTitle>
+          {returningToMyGoldImport
+            ? "로그인하면 방금 계산한 금을 내금고에 이어서 저장합니다."
+            : "이메일 인증만으로 간편하게 가입"}
+        </SubTitle>
 
         <TopCtaWrap>
           <LuxuryCta
             to={registerPath}
             state={registerState}
-            aria-label="회원가입하기 - 신규회원 최대 순금 0.03g 혜택"
+            aria-label={
+              returningToMyGoldImport
+                ? "회원가입하고 계산한 금 내금고에 저장하기"
+                : "회원가입하기 - 신규회원 최대 순금 0.03g 혜택"
+            }
           >
-            <CtaLineMain>회원가입하고 순금 0.01g 받기</CtaLineMain>
-            <CtaLineSub>퀵퀴즈와 금시세 알림으로 최대 순금 0.03g까지</CtaLineSub>
+            <CtaLineMain>
+              {returningToMyGoldImport
+                ? "회원가입하고 내금고에 저장하기"
+                : "회원가입하고 순금 0.01g 받기"}
+            </CtaLineMain>
+            <CtaLineSub>
+              {returningToMyGoldImport
+                ? "계산한 금을 이어서 저장하고 순금 0.01g 회원혜택도 받아보세요"
+                : "퀵퀴즈와 금시세 알림으로 최대 순금 0.03g까지"}
+            </CtaLineSub>
           </LuxuryCta>
         </TopCtaWrap>
 

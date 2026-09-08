@@ -1,7 +1,7 @@
 // src/pages/GoldExchange.jsx
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import styled, { keyframes, css } from "styled-components";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuthContext } from "../context/AuthContext";
 import { useLoginGate } from "@/context/LoginGateContext";
 import { db } from "../firebase/firebase";
@@ -36,6 +36,8 @@ import {
   readGoldExchangeDraft,
   saveGoldExchangeDraft,
 } from "@/lib/goldExchangeDraft";
+import { saveGoldVaultImportDraft } from "@/lib/goldVaultImportDraft";
+import { subscribeGoldVaultItems } from "@/services/goldVaultService";
 
 /* ── 매장 정보 ─────────────────────────────────── */
 const STORE_INFO = {
@@ -238,6 +240,121 @@ const Card = styled.div`
     padding: 14px 13px;
     border-radius: 18px;
   }
+`;
+
+const StartChoiceGrid = styled.div`
+  width: 100%;
+  max-width: 960px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+
+  @media (max-width: 680px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const StartChoice = styled.button`
+  min-height: 74px;
+  padding: 12px 13px;
+  border: 1px solid ${({ $active, theme }) =>
+    $active ? theme.colors.secondary : theme.colors.border};
+  border-radius: 16px;
+  background: ${({ $active, theme }) =>
+    $active ? theme.semantic.badgeGoldBg : theme.colors.surface};
+  color: ${({ theme }) => theme.colors.primary};
+  text-align: left;
+  cursor: ${({ $static }) => ($static ? "default" : "pointer")};
+  box-shadow: 0 7px 18px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 5%, transparent);
+
+  small {
+    display: block;
+    color: ${({ theme }) => theme.colors.secondaryDark};
+    font-size: .6rem;
+    font-weight: 950;
+    letter-spacing: .08em;
+  }
+  strong {
+    display: block;
+    margin-top: 4px;
+    font-size: .88rem;
+    line-height: 1.25;
+  }
+  span {
+    display: block;
+    margin-top: 4px;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: .69rem;
+    line-height: 1.35;
+  }
+`;
+
+const ModeSwitch = styled.button`
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 0;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.secondaryDark};
+  font-size: .72rem;
+  font-weight: 900;
+  text-align: center;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+`;
+
+const ExchangeOutcome = styled.div`
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  margin: 12px 0 16px;
+  padding: 15px;
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 30%, ${({ theme }) => theme.colors.border});
+  border-radius: 18px;
+  background: linear-gradient(135deg, ${({ theme }) => theme.semantic.badgeGoldBg}, ${({ theme }) => theme.colors.surface});
+
+  small {
+    display: block;
+    color: ${({ theme }) => theme.colors.secondaryDark};
+    font-size: .62rem;
+    font-weight: 950;
+    letter-spacing: .08em;
+  }
+  strong {
+    display: block;
+    margin-top: 5px;
+    color: ${({ theme }) => theme.colors.primary};
+    font-size: clamp(1.05rem, 3vw, 1.32rem);
+    line-height: 1.28;
+  }
+  p {
+    margin: 5px 0 0;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: .76rem;
+    line-height: 1.45;
+  }
+
+  @media (max-width: 520px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const MiniGoldBar = styled.div`
+  min-width: 124px;
+  padding: 12px 16px;
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.secondaryDark} 44%, transparent);
+  border-radius: 9px;
+  background: ${({ theme }) => theme.gradients.gold};
+  color: #17120a;
+  text-align: center;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 8px 20px rgba(126,88,23,.18);
+
+  small { color: rgba(23,18,10,.68); font-size: .52rem; letter-spacing: .11em; }
+  b { display: block; margin-top: 3px; font-size: .9rem; }
+  em { display: block; margin-top: 2px; font-family: ${({ theme }) => theme.fonts.numeric}; font-size: .7rem; font-style: normal; font-weight: 900; }
 `;
 
 const Title = styled.h2`
@@ -627,8 +744,8 @@ const MIN_BAR_GRAMS = ALL_DENOMS[0].grams;
 const PRODUCT_OPTIONS = [
   { value: '14k(585) 제품(팔찌,목걸이, 반지,귀걸이, 발찌 등)', label: '14k(585) 제품(팔찌/목걸이/반지/귀걸이/발찌)' },
   { value: '18k(750) 제품(팔찌,목걸이, 반지,귀걸이, 발찌 등)', label: '18k(750) 제품(팔찌/목걸이/반지/귀걸이/발찌)' },
-  { value: '순금 995제품(목걸이,팔찌,반지,귀걸이)', label: '순금 995 제품(목걸이/팔찌/반지/귀걸이)' },
-  { value: '순금 999제품(팔찌,목걸이, 반지,귀걸이)', label: '순금 999 제품(목걸이/팔찌/반지/귀걸이)' }, // ← 순서 포함 정확히 일치
+  { value: '순금 995제품(목걸이,팔찌,반지,귀걸이)', label: '순금 995 제품(목걸이/팔찌/반지/귀걸이/돌반지)' },
+  { value: '순금 999제품(팔찌,목걸이, 반지,귀걸이)', label: '순금 999 제품(목걸이/팔찌/반지/귀걸이/돌반지)' }, // ← 순서 포함 정확히 일치
   { value: '순금 열쇠', label: '순금 열쇠' },
   { value: '순금 장식모양(거북이,두꺼비, 골프공, 핸드폰고리 등)', label: '순금 장식모양(거북이/두꺼비 등)' }, // ← DEFAULT_PURITY 키와 동일
   { value: '순금 마고자 단추 / 색상이 들어있는 제품', label: '순금 마고자 단추/색상 포함' },
@@ -744,17 +861,41 @@ const QuantityField = React.memo(function QuantityField({
   );
 });
 
+function StartMethodScreen({ onChoose }) {
+  return (
+    <>
+      <StartChoiceGrid aria-label="금교환 시작 방법">
+        <StartChoice type="button" onClick={() => onChoose("vault")}>
+          <small>01 · MY VAULT</small>
+          <strong>내금고에서 나의 금 불러오기</strong>
+          <span>등록해 둔 금 종류와 중량을 바로 불러와 스텝 1에서 확인합니다.</span>
+        </StartChoice>
+        <StartChoice type="button" onClick={() => onChoose("manual")}>
+          <small>02 · DIRECT INPUT</small>
+          <strong>직접 입력하기</strong>
+          <span>14K·18K·순금의 종류와 중량을 직접 입력하는 스텝 1로 이동합니다.</span>
+        </StartChoice>
+        <StartChoice type="button" onClick={() => onChoose("visit")}>
+          <small>03 · IN STORE</small>
+          <strong>순도·무게를 잘 몰라요</strong>
+          <span>온라인 계산을 건너뛰고 바로 스텝 3 방문예약으로 이동합니다.</span>
+        </StartChoice>
+      </StartChoiceGrid>
+    </>
+  );
+}
+
 /* ── Step 1: 입력/계산 ─────────────────────────── */
 function CalcStep({
   products, error, onCalculate,
   handleProductChange, addProduct, removeProduct,
-  onGoReserveDirect,
+  onGoReserveDirect, fromVault,
 }) {
   return (
     <>
       <Card>
         <StepCenter><StepMark>스텝 1</StepMark></StepCenter>
-        <Title>스텝 1. 내 금 종류와 무게 입력</Title>
+        <Title>{fromVault ? "내금고에서 불러온 나의 금을 확인하세요" : "내 금 종류와 무게를 입력하세요"}</Title>
         {error && <ErrorText role="alert">{error}</ErrorText>}
 
         <form onSubmit={onCalculate}>
@@ -773,7 +914,7 @@ function CalcStep({
               {p.goldType === '기타(문의)' && (
                 <HelpText>
                   정확한 환산률 안내가 어려운 품목입니다. <b>010-7713-3739</b>로 문의하시거나
-                  아래 <b>“순도·무게를 몰라도 방문예약”</b>으로 진행해 주세요.
+                  <b>현장 확인 방문예약</b> 방식으로 진행해 주세요.
                 </HelpText>
               )}
 
@@ -818,25 +959,13 @@ function CalcStep({
           </SmallButton>
 
           <SectionSeparator />
-          <Button type="submit">예상 순금 중량과 골드바 조합 확인</Button>
+          <Button type="submit">예상 순금량과 골드바 조합 확인</Button>
         </form>
       </Card>
 
-      <Card>
-        <StepCenter><StepMark>바로 예약</StepMark></StepCenter>
-        <Title>순도와 무게를 몰라도 방문예약</Title>
-        <HelpText>
-          금의 순도와 무게를 몰라도 괜찮습니다. 매장에서 고객과 함께 확인하고,
-          최종 중량과 공임에 동의한 뒤 골드바 교환을 진행합니다.
-        </HelpText>
-        <OutlineButton
-          type="button"
-          onClick={onGoReserveDirect}
-          style={{ marginTop: 12 }}
-        >
-          현장 확인 방문예약
-        </OutlineButton>
-      </Card>
+      <ModeSwitch type="button" onClick={onGoReserveDirect}>
+        순도·무게를 잘 모르겠다면 현장 확인 방문예약으로 전환 →
+      </ModeSwitch>
     </>
   );
 }
@@ -846,6 +975,7 @@ function BarStep({
   products, totalGrams, totalDon, fmtG, fmtD,
   barGroup, setBarGroup, barChoice, setBarChoice,
   onGoReserve,
+  onSaveToMyGold,
   setStep,
 }) {
   if (totalGrams < MIN_BAR_GRAMS) {
@@ -856,7 +986,7 @@ function BarStep({
         <Title>예상 순금이 1g 미만입니다</Title>
         <InfoCard role="status">
           <p style={{ margin: 0 }}>
-            예상 순금은 <b>{fmtG(totalGrams)}g</b>이며, 최소 골드바 1g까지
+            예상 순금량은 <b>{fmtG(totalGrams)}g</b>이며, 최소 골드바 1g까지
             <b> {toFixed3CustomStr(needed)}g</b>이 더 필요합니다.
           </p>
           <p style={{ margin: "8px 0 0" }}>
@@ -867,6 +997,7 @@ function BarStep({
         <SectionSeparator />
         <div style={{ display: "grid", gap: 10 }}>
           <Button type="button" onClick={onGoReserve}>현장 확인 방문예약</Button>
+          <OutlineButton type="button" onClick={onSaveToMyGold}>내금고에 저장하고 가치 추적</OutlineButton>
           <GhostButton type="button" onClick={() => setStep(STEP.CALC)}>이전(제품 추가)</GhostButton>
         </div>
       </Card>
@@ -896,9 +1027,27 @@ function BarStep({
   return (
     <Card>
       <StepCenter><StepMark>스텝 2</StepMark></StepCenter>
-      <Title>스텝 2. 나의 금 골드바 선택하기</Title>
+      <Title>내 금으로 받을 골드바를 선택하세요</Title>
 
-      <SubTitle>제품별 환산 결과</SubTitle>
+      <ExchangeOutcome aria-label="예상 금교환 결과">
+        <div>
+          <small>MY GOLD → 999.9 GOLD</small>
+          <strong>예상 순금량 {fmtG(totalGrams)}g → {selectedBar.label} × {safeQty}</strong>
+          <p>
+            {roundTo3Custom(totalGrams - selectedBar.grams * safeQty) >= 0
+              ? `예상 잔여 순금 ${toFixed3CustomStr(roundTo3Custom(totalGrams - selectedBar.grams * safeQty))}g`
+              : `선택 규격까지 ${toFixed3CustomStr(roundTo3Custom(selectedBar.grams * safeQty - totalGrams))}g 추가 필요`}
+            · 실제 순금량은 매장 실측 후 확정됩니다.
+          </p>
+        </div>
+        <MiniGoldBar aria-hidden="true">
+          <small>KOREA GOLD MARKET</small>
+          <b>FINE GOLD 999.9</b>
+          <em>{selectedBar.label.replace(" 골드바", "")}</em>
+        </MiniGoldBar>
+      </ExchangeOutcome>
+
+      <SubTitle>제품별 순금 환산 결과</SubTitle>
       <TableWrap>
         <Table>
           <thead>
@@ -925,7 +1074,7 @@ function BarStep({
           </tbody>
           <tfoot>
             <tr>
-              <td colSpan={2}>합계(예상 순금)</td>
+              <td colSpan={2}>합계(예상 순금량)</td>
               <td>{fmtG(totalGrams)} g</td>
               <td>{fmtD(totalDon)} 돈</td>
             </tr>
@@ -1079,7 +1228,7 @@ function BarStep({
             return (
               <>
                 <p style={{ margin: 0 }}>
-                  현재 예상 순금은 <b>{fmtG(totalGrams)}g</b> ({fmtD(totalDon)}돈)이며, 선택한 <b>{selectedBar.label} × {qty}</b>를 만들려면
+                  현재 예상 순금량은 <b>{fmtG(totalGrams)}g</b> ({fmtD(totalDon)}돈)이며, 선택한 <b>{selectedBar.label} × {qty}</b>를 만들려면
                   <b> {toFixed3CustomStr(topUpG)}g</b> (<b>{fmtD(topUpG / DON_TO_GRAMS)}돈</b>)을 추가하면 됩니다.
                 </p>
                 <p style={{ margin: "8px 0 0", fontWeight: 700 }}>
@@ -1138,6 +1287,10 @@ function BarStep({
       <SectionSeparator />
       <div style={{ display: "grid", gap: 10 }}>
         <Button type="button" onClick={onGoReserve}>골드바 교환 하러가기</Button>
+        <OutlineButton type="button" onClick={onSaveToMyGold}>내금고에 저장하고 가치 추적</OutlineButton>
+        <HelpText style={{ margin: 0, textAlign: "center" }}>
+          지금 교환하지 않아도 저장해 두면 오늘 가치와 시세 변화를 계속 확인할 수 있습니다.
+        </HelpText>
         <GhostButton type="button" onClick={() => setStep(STEP.CALC)}>이전(수정)</GhostButton>
       </div>
     </Card>
@@ -1501,14 +1654,18 @@ function normalizeRebookProducts(rebook) {
     .filter(Boolean);
 }
 
-function getInitialProductsFromQuery() {
-  const emptyProduct = {
+function createEmptyProduct() {
+  return {
     goldType: "",
     quantity: "",
     inputUnit: "g",
     exchangeType: "999.9골드바",
     finalWeight: 0,
   };
+}
+
+function getInitialProductsFromQuery() {
+  const emptyProduct = createEmptyProduct();
   if (typeof window === "undefined") return [emptyProduct];
 
   const params = new URLSearchParams(window.location.search);
@@ -1531,10 +1688,15 @@ export default function GoldExchange() {
   const { user, isEmailVerified } = useAuthContext();
   const { openGate } = useLoginGate();
   const location = useLocation();
+  const navigate = useNavigate();
   const rebook = location.state?.rebook || null;
   const searchParams = new URLSearchParams(location.search);
   const resumeRequested = searchParams.get("resume") === "reservation";
   const directReservationRequested = searchParams.get("reserve") === "1";
+  const requestedEntryMode = String(searchParams.get("mode") || "").trim();
+  const entryMode = ["vault", "manual", "visit"].includes(requestedEntryMode)
+    ? requestedEntryMode
+    : "";
   const authDraftRef = useRef(
     !rebook && resumeRequested ? readGoldExchangeDraft() : null
   );
@@ -1548,11 +1710,19 @@ export default function GoldExchange() {
   const importedFromMyGold =
     location.state?.source === "my-gold" && initialVaultProductsRef.current.length > 0;
   const isRebook = !!rebook;
+  const showStartMethod =
+    !isRebook &&
+    !authDraft &&
+    !directReservationRequested &&
+    !importedFromMyGold &&
+    !entryMode;
   const isDirectRebook = isRebook && (rebook?.directReservation === true || initialRebookProductsRef.current.length === 0);
 
   /* 스텝 상태 */
   const [step, setStep] = useState(
-    isRebook || authDraft || directReservationRequested ? STEP.RESERVE : STEP.CALC
+    isRebook || authDraft || directReservationRequested || entryMode === "visit"
+      ? STEP.RESERVE
+      : STEP.CALC
   );
   const pageTopRef = useRef(null);
 
@@ -1568,7 +1738,7 @@ export default function GoldExchange() {
       if (document?.body) document.body.scrollTop = 0;
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [step]);
+  }, [step, entryMode, showStartMethod]);
 
   /* 계산 상태 */
   const [products, setProducts] = useState(() =>
@@ -1583,6 +1753,67 @@ export default function GoldExchange() {
   const [calculated, setCalculated] = useState(
     isRebook ? !isDirectRebook : !!authDraft?.calculated
   );
+  const [vaultImportedCount, setVaultImportedCount] = useState(
+    importedFromMyGold ? initialVaultProductsRef.current.length : 0
+  );
+  const [vaultImportLoading, setVaultImportLoading] = useState(
+    entryMode === "vault" && !importedFromMyGold
+  );
+  const fromVault = importedFromMyGold || vaultImportedCount > 0;
+
+  useEffect(() => {
+    if (entryMode !== "vault" || importedFromMyGold) return undefined;
+    if (!user?.uid) return undefined;
+
+    let active = true;
+    let unsubscribe = () => {};
+    setVaultImportLoading(true);
+    setError("");
+
+    unsubscribe = subscribeGoldVaultItems(
+      user.uid,
+      (items) => {
+        if (!active) return;
+        unsubscribe();
+        const nextProducts = (Array.isArray(items) ? items : [])
+          .slice(0, MAX_PRODUCTS_PER_BOOKING)
+          .map((item) => ({
+            ...createEmptyProduct(),
+            goldType: item.goldType,
+            quantity: String(Number(item.weightG || 0)),
+            inputUnit: "g",
+            exchangeType: "999.9골드바",
+            sourceItemId: item.id,
+            sourceLabel: item.label || "금제품",
+          }))
+          .filter((item) => item.goldType && Number(item.quantity) > 0);
+
+        if (nextProducts.length === 0) {
+          setVaultImportedCount(0);
+          setError("내금고에 등록된 실물 금이 없습니다. 먼저 금을 등록하거나 직접 입력해 주세요.");
+          setProducts([createEmptyProduct()]);
+        } else {
+          setProducts(nextProducts);
+          setVaultImportedCount(nextProducts.length);
+          setCalculated(false);
+          initializedChoiceRef.current = false;
+          setStep(STEP.CALC);
+        }
+        setVaultImportLoading(false);
+      },
+      (vaultError) => {
+        if (!active) return;
+        console.error("[GoldExchange] 내금고 불러오기 실패", vaultError);
+        setVaultImportLoading(false);
+        setError("내금고의 금을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.");
+      }
+    );
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [entryMode, importedFromMyGold, user?.uid]);
 
   /* 골드바 선택 상태 */
   const [barGroup, setBarGroup] = useState(
@@ -1769,9 +2000,71 @@ export default function GoldExchange() {
   const onGoReserveDirect = () => {
     setCalculated(false);
     setStep(STEP.RESERVE);
+    navigate("/gold-exchange?mode=visit");
+  };
+
+  const chooseStartMethod = (mode) => {
+    setError("");
+
+    if (mode === "vault") {
+      if (!user) {
+        openGate({
+          unifiedContinue: true,
+          purposeLabel: "내금고 불러오기",
+          message: "내금고에 저장한 나의 금을 불러오려면 로그인이 필요합니다.",
+          requireVerified: false,
+          intent: "exchange-vault-import",
+          next: "/gold-exchange?mode=vault",
+          cancelLabel: "나중에",
+          cancelAsText: true,
+        });
+        return;
+      }
+      setCalculated(false);
+      setStep(STEP.CALC);
+      navigate("/gold-exchange?mode=vault");
+      return;
+    }
+
+    if (mode === "visit") {
+      setCalculated(false);
+      setStep(STEP.RESERVE);
+      navigate("/gold-exchange?mode=visit");
+      return;
+    }
+
+    setCalculated(false);
+    setStep(STEP.CALC);
+    navigate("/gold-exchange?mode=manual");
   };
 
   const onGoReserve = () => setStep(STEP.RESERVE);
+
+  const onSaveToMyGold = () => {
+    setError("");
+    try {
+      const draft = saveGoldVaultImportDraft(products);
+      const next = "/my-gold?import=calculator";
+
+      if (user) {
+        navigate(next);
+        return;
+      }
+
+      openGate({
+        unifiedContinue: true,
+        purposeLabel: "내금고 저장",
+        message: `계산한 금 ${draft.items.length}개의 종류와 중량을 잠시 보관했습니다. 로그인 후 내금고에서 이어서 저장할 수 있습니다.`,
+        requireVerified: false,
+        intent: "my-gold-import",
+        next,
+        cancelLabel: "나중에",
+        cancelAsText: true,
+      });
+    } catch (saveError) {
+      setError(saveError?.message || "내금고 저장 준비에 실패했습니다.");
+    }
+  };
 
   const onRequireAuth = (event) => {
     event?.preventDefault?.();
@@ -1803,15 +2096,15 @@ export default function GoldExchange() {
     }
 
     openGate({
-      title: user
-        ? "이메일 인증 후 예약을 완료해 주세요"
-        : "로그인 후 예약을 완료해 주세요",
-      message: user
-        ? "선택한 날짜와 시간을 보관했습니다. 회원가입 때 받은 이메일 인증을 완료하면 예약 화면으로 돌아옵니다."
-        : "선택한 날짜와 시간을 보관했습니다. 로그인 또는 회원가입과 이메일 인증을 완료하면 예약 화면으로 돌아옵니다.",
+      unifiedContinue: true,
+      purposeLabel: "방문 예약",
+      message: "입력한 금 정보와 선택한 방문 일정을 잠시 보관했습니다. 로그인 후 예약을 이어서 완료할 수 있습니다.",
+      verificationMessage: "입력한 금 정보와 선택한 방문 일정을 잠시 보관했습니다. 이메일 인증 후 예약을 이어서 완료할 수 있습니다.",
       requireVerified: true,
       intent: "exchange-reservation-final",
       next: "/gold-exchange?resume=reservation",
+      cancelLabel: "나중에",
+      cancelAsText: true,
     });
   };
 
@@ -2001,28 +2294,34 @@ export default function GoldExchange() {
             기존 제품과 연락처는 유지되며, 새로운 방문 날짜와 시간을 선택해 다시 신청해 주세요.
           </RebookNotice>
         )}
-        {importedFromMyGold && (
+        {fromVault && (
           <RebookNotice role="status">
-            <strong>MY GOLD에서 등록한 실물 금 {initialVaultProductsRef.current.length}개를 불러왔습니다.</strong><br />
-            금 종류와 등록 중량을 다시 입력하지 않고 바로 예상 교환량을 계산할 수 있습니다. 실제 인정 중량은 매장 실측 후 확정됩니다.
+            <strong>내금고에서 등록한 나의 금 {vaultImportedCount || initialVaultProductsRef.current.length}개를 불러왔습니다.</strong><br />
+            금 종류와 등록 중량을 다시 입력하지 않고 스텝 1에서 확인한 뒤 바로 예상 교환량을 계산할 수 있습니다. 실제 인정 중량은 매장 실측 후 확정됩니다.
           </RebookNotice>
         )}
-        <FlowTrack aria-label="금교환 진행 단계">
-          {["01 예상계산", "02 조합선택", "03 방문예약", "04 접수완료"].map(
-            (label, index) => (
-              <FlowItem
-                key={label}
-                $active={step === index}
-                $done={step > index}
-                aria-current={step === index ? "step" : undefined}
-              >
-                {label}
-              </FlowItem>
-            )
-          )}
-        </FlowTrack>
+        {!showStartMethod && (
+          <FlowTrack aria-label="금교환 진행 단계">
+            {["01 예상계산", "02 조합선택", "03 방문예약", "04 접수완료"].map(
+              (label, index) => (
+                <FlowItem
+                  key={label}
+                  $active={step === index}
+                  $done={step > index}
+                  aria-current={step === index ? "step" : undefined}
+                >
+                  {label}
+                </FlowItem>
+              )
+            )}
+          </FlowTrack>
+        )}
       </FlowHeader>
-      {step === STEP.CALC && (
+      {showStartMethod && <StartMethodScreen onChoose={chooseStartMethod} />}
+      {!showStartMethod && vaultImportLoading && (
+        <Card><InfoCard role="status">내금고에서 나의 금을 불러오고 있습니다.</InfoCard></Card>
+      )}
+      {!showStartMethod && step === STEP.CALC && !vaultImportLoading && (
         <CalcStep
           products={products}
           error={error}
@@ -2031,6 +2330,7 @@ export default function GoldExchange() {
           addProduct={addProduct}
           removeProduct={removeProduct}
           onGoReserveDirect={onGoReserveDirect}
+          fromVault={fromVault}
         />
       )}
 
@@ -2046,6 +2346,7 @@ export default function GoldExchange() {
           barChoice={barChoice}
           setBarChoice={setBarChoice}
           onGoReserve={onGoReserve}
+          onSaveToMyGold={onSaveToMyGold}
           setStep={setStep}
         />
       )}

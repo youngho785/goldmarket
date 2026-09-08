@@ -66,14 +66,14 @@ const QUIZ = [
     category: "한국골드마켓 이용 안내",
     q: "금 교환 신청 전에 한국골드마켓에서 미리 확인할 수 있는 것은 무엇일까요?",
     choices: [
-      "예상 순금 중량·골드바 조합·제작 공임",
+      "예상 순금량·골드바 조합·제작 공임",
       "미래의 금 시세",
       "대출 가능 금액",
       "보석의 감정 등급",
     ],
     answer: 0,
     explanation:
-      "한국골드마켓에서는 신청 전에 예상 순금 중량과 골드바 조합, 제작 공임을 먼저 확인할 수 있습니다. 실제 교환은 매장에서 순도와 중량을 확인한 뒤 최종 결정합니다.",
+      "한국골드마켓에서는 신청 전에 예상 순금량과 골드바 조합, 제작 공임을 먼저 확인할 수 있습니다. 실제 교환은 매장에서 순도와 중량을 확인한 뒤 최종 결정합니다.",
     hint:
       "방문 전에 미리 계산하거나 확인할 수 있도록 제공하는 정보가 무엇인지 생각해 보세요.",
   },
@@ -727,6 +727,7 @@ export default function QuizGoldBonus() {
   const [statusLoading, setStatusLoading] = useState(true);
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
+  const [benefitClaimedBefore, setBenefitClaimedBefore] = useState(false);
 
   const currentQuestion = QUIZ[currentIndex];
   const selected = answers[currentQuestion?.id];
@@ -749,6 +750,7 @@ export default function QuizGoldBonus() {
     (async () => {
       setStatusLoading(true);
       setError("");
+      setBenefitClaimedBefore(false);
 
       try {
         // 이메일 인증이 끝난 뒤에만 서버 지급 함수를 호출합니다.
@@ -771,12 +773,7 @@ export default function QuizGoldBonus() {
 
         if (status?.claimed) {
           clearPendingQuizBonus();
-          setResult({
-            ...status,
-            ok: true,
-            alreadyClaimed: true,
-          });
-          return;
+          setBenefitClaimedBefore(true);
         }
 
         if (!isEmailVerified && pending?.answers) {
@@ -927,7 +924,6 @@ export default function QuizGoldBonus() {
 
   const showQuiz =
     !statusLoading &&
-    !result?.alreadyClaimed &&
     !result?.ok &&
     !result?.needSignup &&
     !result?.needVerification;
@@ -937,9 +933,9 @@ export default function QuizGoldBonus() {
       <Intro>
         <Eyebrow>GOLD QUICK QUIZ</Eyebrow>
         <Title>
-          5문제 풀고
+          {benefitClaimedBefore ? "금 상식 5문제" : "5문제 풀고"}
           <br />
-          순금 0.01g 받기
+          {benefitClaimedBefore ? "다시 확인해보세요" : "순금 0.01g 받기"}
         </Title>
         <MetaRow>
           <MetaBadge>약 1분</MetaBadge>
@@ -1065,7 +1061,9 @@ export default function QuizGoldBonus() {
                 <Gift />
                 {submitting
                   ? "혜택 확인 중…"
-                  : "퀵퀴즈 완료하고 순금 0.01g 받기"}
+                  : benefitClaimedBefore
+                    ? "퀵퀴즈 완료하기"
+                    : "퀵퀴즈 완료하고 순금 0.01g 받기"}
               </PrimaryButton>
             )}
 
@@ -1147,34 +1145,30 @@ export default function QuizGoldBonus() {
             </>
           ) : result.alreadyClaimed ? (
             <>
-              <ResultTitle>이미 완료한 퀵퀴즈입니다</ResultTitle>
+              <ResultTitle>퀵퀴즈 완료 · 순금 혜택은 이미 지급되었습니다</ResultTitle>
               <ResultText>
-                이 혜택은 계정당 1회 제공됩니다.
-                지급된 퀵퀴즈 혜택은
-                <b> {formatBonusG(result.creditedG)}g</b>입니다.
+                문제는 언제든 다시 풀 수 있습니다. 순금 0.01g 혜택은 인증 이메일 기준
+                1회만 지급되며, 현재 사용 가능한 적립 순금은
+                <b> {formatBonusG(result.balanceG || 0)}g</b>입니다.
               </ResultText>
 
               <ResultActions>
+                <PrimaryButton type="button" onClick={resetQuiz}>
+                  <RotateCcw />
+                  퀵퀴즈 다시 풀기
+                </PrimaryButton>
                 {nextPath ? (
-                  <PrimaryButton
+                  <SecondaryButton
                     type="button"
-                    onClick={() =>
-                      navigate(nextPath, { replace: true })
-                    }
+                    onClick={() => navigate(nextPath, { replace: true })}
                   >
                     혜택 계속하기
-                    <ChevronRight />
-                  </PrimaryButton>
+                  </SecondaryButton>
                 ) : (
-                  <PrimaryButton as={Link} to="/profile">
+                  <SecondaryButton as={Link} to="/profile">
                     내 적립 순금 확인
-                    <ChevronRight />
-                  </PrimaryButton>
+                  </SecondaryButton>
                 )}
-
-                <SecondaryButton as={Link} to="/gold-exchange">
-                  금교환 계산해보기
-                </SecondaryButton>
               </ResultActions>
             </>
           ) : result.ok ? (

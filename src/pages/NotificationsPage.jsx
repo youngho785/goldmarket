@@ -108,6 +108,27 @@ const Button = styled.button`
     cursor: not-allowed;
   }
 `;
+const FilterRow = styled.div`
+  display: flex;
+  gap: 6px;
+  margin: 0 0 10px;
+  padding: 2px 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+`;
+const FilterChip = styled.button`
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 7px 11px;
+  border: 1px solid ${({ $active, theme }) => $active ? theme.colors.primary : theme.colors.border};
+  border-radius: 999px;
+  background: ${({ $active, theme }) => $active ? theme.colors.primary : theme.colors.surface};
+  color: ${({ $active, theme }) => $active ? theme.colors.goldLight : theme.colors.textSecondary};
+  font-size: .73rem;
+  font-weight: 850;
+  cursor: pointer;
+`;
 const List = styled.ul`
   list-style: none;
   margin: 0;
@@ -218,6 +239,32 @@ function safeInternalLink(value) {
   }
 }
 
+const NOTIFICATION_FILTERS = [
+  ["all", "전체"],
+  ["vault", "내금고"],
+  ["price", "금시세"],
+  ["exchange", "금교환"],
+  ["benefit", "혜택"],
+  ["notice", "안내"],
+];
+
+function notificationCategory(item) {
+  const text = [
+    item?.title,
+    item?.body,
+    item?.link,
+    item?.data?.link,
+    item?.type,
+    item?.data?.type,
+  ].filter(Boolean).join(" ").toLowerCase();
+
+  if (/my-gold|내금고|금고|목표가|value goal|vault/.test(text)) return "vault";
+  if (/gold-exchange|금교환|교환|방문예약|예약|schedule|exchange/.test(text)) return "exchange";
+  if (/gold-price|금시세|금값|시세|price/.test(text)) return "price";
+  if (/혜택|퀴즈|적립|bonus|welcome|0\.01g|0\.03g/.test(text)) return "benefit";
+  return "notice";
+}
+
 export default function NotificationsPage() {
   const { user } = useAuthContext();
   const { unreadNotifications, refresh } = useNotificationContext();
@@ -231,6 +278,7 @@ export default function NotificationsPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [markingAll, setMarkingAll] = useState(false);
   const [error, setError] = useState("");
+  const [filter, setFilter] = useState("all");
 
   const loadFirstPage = useCallback(async () => {
     if (!uid) return;
@@ -257,6 +305,11 @@ export default function NotificationsPage() {
   const unreadOnPage = useMemo(
     () => items.reduce((sum, item) => sum + (item.read ? 0 : 1), 0),
     [items]
+  );
+
+  const filteredItems = useMemo(
+    () => filter === "all" ? items : items.filter((item) => notificationCategory(item) === filter),
+    [filter, items]
   );
 
   const loadMore = async () => {
@@ -340,14 +393,29 @@ export default function NotificationsPage() {
         </Toolbar>
       </HeaderCard>
 
+      <FilterRow role="tablist" aria-label="알림 종류">
+        {NOTIFICATION_FILTERS.map(([key, label]) => (
+          <FilterChip
+            key={key}
+            type="button"
+            role="tab"
+            aria-selected={filter === key}
+            $active={filter === key}
+            onClick={() => setFilter(key)}
+          >
+            {label}
+          </FilterChip>
+        ))}
+      </FilterRow>
+
       {error && <ErrorText role="alert">{error}</ErrorText>}
 
-      {items.length === 0 ? (
-        <EmptyState>새로운 알림이 없습니다.</EmptyState>
+      {filteredItems.length === 0 ? (
+        <EmptyState>{filter === "all" ? "새로운 알림이 없습니다." : "이 종류의 알림이 없습니다."}</EmptyState>
       ) : (
         <>
           <List>
-            {items.map((item) => (
+            {filteredItems.map((item) => (
               <Item
                 key={item.id}
                 $unread={!item.read}

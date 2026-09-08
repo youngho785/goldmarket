@@ -45,11 +45,28 @@ async function verifySourceGuards() {
     "completion transaction must block pending bonus usage"
   );
 
-  assert.match(source, /BENEFIT_CLAIM_LOCK_COLLECTION = "benefitClaimLocks"/);
-  assert.match(source, /benefitClaimedFromLock\(claimLockSnap, "welcome"\)/);
-  assert.match(source, /benefitClaimedFromLock\(claimLockSnap, "quiz"\)/);
-  assert.match(source, /benefitClaimedFromLock\(claimLockSnap, "marketingPush"\)/);
-  assert.match(source, /name: "benefitClaimLocks"/);
+  const rewardsSource = fs.readFileSync(
+    path.resolve(import.meta.dirname, "../src/rewards/functions.ts"),
+    "utf8"
+  );
+  const rewardSharedSource = fs.readFileSync(
+    path.resolve(import.meta.dirname, "../src/rewards/shared.ts"),
+    "utf8"
+  );
+  const accountSource = fs.readFileSync(
+    path.resolve(import.meta.dirname, "../src/account/functions.ts"),
+    "utf8"
+  );
+  assert.match(rewardSharedSource, /BENEFIT_CLAIM_LOCK_COLLECTION = "benefitClaimLocks"/);
+  assert.match(rewardsSource, /benefitClaimedFromLock\(claimLockSnap, "welcome"\)/);
+  assert.match(rewardsSource, /benefitClaimedFromLock\(claimLockSnap, "quiz"\)/);
+  assert.match(rewardsSource, /benefitClaimedFromLock\(claimLockSnap, "marketingPush"\)/);
+  assert.match(accountSource, /name: "benefitClaimLocks"/);
+  assert.match(rewardSharedSource, /BENEFIT_BALANCE_CARRYOVER_SCHEMA_VERSION = 1/);
+  assert.match(rewardsSource, /restoreBenefitBalanceCarryover/);
+  assert.match(rewardsSource, /balanceCarryover[\s\S]*state: "restored"/);
+  assert.match(accountSource, /balanceCarryover[\s\S]*state: "available"/);
+  assert.match(accountSource, /bonusGoldCarriedOverAt/);
 
   const roleSection = sourceSection(source, "export const setUserRole", "function adminBonusGoldGrams");
   assert.match(roleSection, /revokeRefreshTokens\(uid\)/);

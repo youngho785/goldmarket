@@ -12,7 +12,12 @@ import {
   DEFAULT_GOLD_RATES_VERSION,
   setReservedTime,
 } from "../core/runtime.js";
-import { adminBonusGoldGrams, loadGoldVaultActivity } from "./memberAnalytics.js";
+import {
+  adminBonusGoldGrams,
+  adminMarketingConsentAccepted,
+  adminMarketingPushReady,
+  loadGoldVaultActivity,
+} from "./memberAnalytics.js";
 
 /* ─────────────────────────────────────────────────────────────
  * 2) 예약 슬롯 해제 (관리자 UI용)
@@ -200,25 +205,100 @@ export const listAdminUsers = onCall<{ pageToken?: string; pageSize?: number }>(
   }
 );
 
+const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
+function startOfKstDayUtc(now = new Date()): Date {
+  const shifted = new Date(now.getTime() + KST_OFFSET_MS);
+  return new Date(
+    Date.UTC(
+      shifted.getUTCFullYear(),
+      shifted.getUTCMonth(),
+      shifted.getUTCDate()
+    ) - KST_OFFSET_MS
+  );
+}
+
+function startOfKstWeekUtc(now = new Date()): Date {
+  const shifted = new Date(now.getTime() + KST_OFFSET_MS);
+  const mondayOffset = (shifted.getUTCDay() + 6) % 7;
+  return new Date(
+    Date.UTC(
+      shifted.getUTCFullYear(),
+      shifted.getUTCMonth(),
+      shifted.getUTCDate() - mondayOffset
+    ) - KST_OFFSET_MS
+  );
+}
+
+function firestoreDate(value: unknown): Date | null {
+  if (value instanceof Date) return value;
+  if (!value || typeof value !== "object") return null;
+  const candidate = value as { toDate?: () => Date };
+  if (typeof candidate.toDate !== "function") return null;
+  try {
+    const result = candidate.toDate();
+    return result instanceof Date && Number.isFinite(result.getTime()) ? result : null;
+  } catch {
+    return null;
+  }
+}
+
 export const getAdminMyGoldOverview = onCall(
   { region: "asia-northeast3", enforceAppCheck: ENFORCE_APP_CHECK },
   async (req) => {
     await requireCurrentAdmin(req.auth?.uid);
 
-    const [usersSnapshot, vaultActivity] = await Promise.all([
+    const now = new Date();
+    const todayStart = startOfKstDayUtc(now);
+    const weekStart = startOfKstWeekUtc(now);
+    const groups = db().collection("goldExchangeGroups");
+
+    const [
+      usersSnapshot,
+      vaultActivity,
+      todayExchangeRequests,
+      weekExchangeRequests,
+      todayExchangeCompleted,
+      weekExchangeCompleted,
+    ] = await Promise.all([
       db()
         .collection("users")
-        .select("bonusGoldMilliGrams", "bonusGoldG")
+        .select(
+          "bonusGoldMilliGrams",
+          "bonusGoldG",
+          "createdAt",
+          "consents",
+          "notificationPreferences",
+          "marketingFcmToken",
+          "fcmTokens"
+        )
         .get(),
-      loadGoldVaultActivity(),
+      loadGoldVaultActivity({ todayStart, weekStart }),
+      groups.where("createdAt", ">=", todayStart).count().get(),
+      groups.where("createdAt", ">=", weekStart).count().get(),
+      groups.where("completedAt", ">=", todayStart).count().get(),
+      groups.where("completedAt", ">=", weekStart).count().get(),
     ]);
 
     let bonusBalanceG = 0;
     let bonusHolderCount = 0;
+    let todayNewUserCount = 0;
+    let weekNewUserCount = 0;
+    let marketingConsentCount = 0;
+    let marketingPushReadyCount = 0;
+
     usersSnapshot.docs.forEach((document) => {
-      const balanceG = adminBonusGoldGrams(document.data());
+      const data = document.data();
+      const balanceG = adminBonusGoldGrams(data);
       bonusBalanceG += balanceG;
       if (balanceG > 0) bonusHolderCount += 1;
+
+      const createdAt = firestoreDate(data.createdAt);
+      if (createdAt && createdAt >= todayStart) todayNewUserCount += 1;
+      if (createdAt && createdAt >= weekStart) weekNewUserCount += 1;
+
+      if (adminMarketingConsentAccepted(data)) marketingConsentCount += 1;
+      if (adminMarketingPushReady(data)) marketingPushReadyCount += 1;
     });
 
     const userCount = usersSnapshot.size;
@@ -226,13 +306,28 @@ export const getAdminMyGoldOverview = onCall(
 
     return {
       ok: true,
+      asOf: now.toISOString(),
+      period: {
+        todayStart: todayStart.toISOString(),
+        weekStart: weekStart.toISOString(),
+      },
       userCount,
+      todayNewUserCount,
+      weekNewUserCount,
       vaultUserCount,
       vaultItemCount: vaultActivity.itemCount,
+      todayVaultItemCount: vaultActivity.todayItemCount,
+      weekVaultItemCount: vaultActivity.weekItemCount,
       vaultUsageRate:
         userCount > 0 ? Math.round((vaultUserCount / userCount) * 1000) / 10 : 0,
       bonusHolderCount,
       bonusBalanceG: Math.round(bonusBalanceG * 1000) / 1000,
+      marketingConsentCount,
+      marketingPushReadyCount,
+      todayExchangeRequestCount: Number(todayExchangeRequests.data().count || 0),
+      weekExchangeRequestCount: Number(weekExchangeRequests.data().count || 0),
+      todayExchangeCompletedCount: Number(todayExchangeCompleted.data().count || 0),
+      weekExchangeCompletedCount: Number(weekExchangeCompleted.data().count || 0),
     };
   }
 );

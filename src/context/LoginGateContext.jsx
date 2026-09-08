@@ -7,8 +7,8 @@ import React, {
   useState,
   useCallback,
 } from "react";
-import { createPortal } from "react-dom";
-import { Link, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
+import ContinueAfterLoginModal from "@/components/auth/ContinueAfterLoginModal";
 import { useAuthContext } from "@/context/AuthContext";
 import {
   buildAuthPath,
@@ -28,6 +28,12 @@ export function LoginGateProvider({ children }) {
     requireVerified: true,
     intent: "",
     next: "/",
+    actionLabel: "",
+    cancelLabel: "",
+    cancelAsText: false,
+    unifiedContinue: false,
+    purposeLabel: "",
+    verificationMessage: "",
   });
 
   const pendingRef = useRef(null);
@@ -42,6 +48,12 @@ export function LoginGateProvider({ children }) {
       next,
       from,
       afterAuth,
+      actionLabel,
+      cancelLabel,
+      cancelAsText = false,
+      unifiedContinue = false,
+      purposeLabel = "",
+      verificationMessage = "",
     }) => {
       const returnPath = sanitizeAppReturnPath(next || from || "/", "/");
 
@@ -51,6 +63,12 @@ export function LoginGateProvider({ children }) {
         requireVerified,
         intent: intent || "",
         next: returnPath,
+        actionLabel: actionLabel || "",
+        cancelLabel: cancelLabel || "",
+        cancelAsText: !!cancelAsText,
+        unifiedContinue: !!unifiedContinue,
+        purposeLabel: purposeLabel || "",
+        verificationMessage: verificationMessage || "",
       });
       requireVerifiedRef.current = !!requireVerified;
       pendingRef.current =
@@ -133,87 +151,26 @@ export function LoginGateMount() {
     ? buildVerifyEmailPath(returnTo)
     : buildAuthPath("/login", returnTo);
 
-  const actionLabel = needsVerification
-    ? "이메일 인증 계속하기"
-    : "로그인/회원가입";
+  const effectiveMessage =
+    needsVerification && modalProps.verificationMessage
+      ? modalProps.verificationMessage
+      : modalProps.message;
 
-  const node = (
-    <div
-      role="dialog"
-      aria-modal="true"
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,.4)",
-        display: "grid",
-        placeItems: "center",
-        zIndex: 1000,
-      }}
-      onClick={closeGate}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          width: "min(92vw, 420px)",
-          background: "#fff",
-          borderRadius: 12,
-          padding: 20,
-          boxShadow: "0 10px 30px rgba(0,0,0,.18)",
-        }}
-      >
-        <h2 style={{ margin: 0, fontSize: "1.2rem" }}>
-          {modalProps.title ||
-            (needsVerification
-              ? "이메일 인증이 필요합니다"
-              : "로그인이 필요합니다")}
-        </h2>
-
-        <p style={{ margin: "10px 0 16px", color: "#555" }}>
-          {modalProps.message ||
-            (needsVerification
-              ? "인증을 완료한 뒤 원래 화면으로 돌아옵니다."
-              : "계속하려면 로그인 또는 회원가입을 완료해 주세요.")}
-        </p>
-
-        <div style={{ display: "grid", gap: 8 }}>
-          <Link
-            to={actionPath}
-            state={{
-              from: returnTo,
-              intent: modalProps.intent || undefined,
-            }}
-            onClick={closeGate}
-            style={{
-              display: "inline-block",
-              textAlign: "center",
-              padding: "12px 14px",
-              background: "#1F3A5F",
-              color: "#fff",
-              fontWeight: 800,
-              borderRadius: 10,
-              textDecoration: "none",
-            }}
-          >
-            {actionLabel}
-          </Link>
-
-          <button
-            type="button"
-            onClick={closeGate}
-            style={{
-              padding: "10px 12px",
-              borderRadius: 10,
-              background: "#f3f4f6",
-              border: "1px solid #e5e7eb",
-              fontWeight: 700,
-            }}
-          >
-            닫기
-          </button>
-        </div>
-      </div>
-    </div>
+  return (
+    <ContinueAfterLoginModal
+      open={isOpen}
+      onClose={closeGate}
+      actionPath={actionPath}
+      returnTo={returnTo}
+      intent={modalProps.intent || undefined}
+      needsVerification={needsVerification}
+      unifiedContinue={modalProps.unifiedContinue}
+      purposeLabel={modalProps.purposeLabel}
+      title={modalProps.title}
+      message={effectiveMessage}
+      actionLabel={modalProps.actionLabel}
+      cancelLabel={modalProps.cancelLabel}
+      cancelAsText={modalProps.cancelAsText}
+    />
   );
-
-  return createPortal(node, document.body);
 }

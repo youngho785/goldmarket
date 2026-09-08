@@ -268,22 +268,25 @@ function deviceName() {
 
 function rewardStatus(source) {
   const rewards = source?.rewards || {};
+  const normalizeReward = (reward) => {
+    const claimed = !!reward?.claimed;
+    const creditedG = Number(reward?.creditedG || 0);
+    return {
+      claimed,
+      creditedG,
+      receivedThisAccount: claimed && creditedG > 0,
+      previouslyReceived: claimed && creditedG <= 0,
+    };
+  };
+
   return {
     maxG: Number(source?.maxG ?? 0.03),
     earnedG: Number(source?.earnedG ?? 0),
     balanceG: Number(source?.balanceG ?? 0),
-    welcome: {
-      claimed: !!rewards.welcome?.claimed,
-      creditedG: Number(rewards.welcome?.creditedG || 0),
-    },
-    marketingPush: {
-      claimed: !!rewards.marketingPush?.claimed,
-      creditedG: Number(rewards.marketingPush?.creditedG || 0),
-    },
-    quiz: {
-      claimed: !!rewards.quiz?.claimed,
-      creditedG: Number(rewards.quiz?.creditedG || 0),
-    },
+    restoredBalanceG: Number(source?.restoredBalanceG ?? 0),
+    welcome: normalizeReward(rewards.welcome),
+    marketingPush: normalizeReward(rewards.marketingPush),
+    quiz: normalizeReward(rewards.quiz),
   };
 }
 
@@ -321,7 +324,7 @@ export default function WelcomeOnboarding() {
 
     if (isEmailVerified) {
       try {
-        // 웰컴 순금은 이메일 인증이 끝난 뒤 계정당 1회만 서버에서 지급합니다.
+        // 웰컴 순금은 이메일 인증이 끝난 뒤 인증 이메일 기준 1회만 서버에서 지급합니다.
         await claimWelcomeGoldBonus();
       } catch (claimError) {
         console.warn("[WelcomeOnboarding] welcome bonus claim failed:", claimError);
@@ -465,23 +468,29 @@ export default function WelcomeOnboarding() {
   const handleFinish = () => {
     clearMemberOnboardingPending();
 
-    const destination = nextPath.startsWith("/gold-exchange")
-      ? nextPath
-      : "/";
+    const continueToRequestedFlow =
+      nextPath.startsWith("/gold-exchange") ||
+      nextPath.startsWith("/my-gold?import=calculator");
+    const destination = continueToRequestedFlow ? nextPath : "/";
 
     navigate(destination, { replace: true });
   };
 
   const claimedCount =
-    Number(status.welcome.claimed) +
-    Number(status.marketingPush.claimed) +
-    Number(status.quiz.claimed);
+    Number(status.welcome.receivedThisAccount) +
+    Number(status.marketingPush.receivedThisAccount) +
+    Number(status.quiz.receivedThisAccount);
+  const previousClaimCount =
+    Number(status.welcome.previouslyReceived) +
+    Number(status.marketingPush.previouslyReceived) +
+    Number(status.quiz.previouslyReceived);
   const progress = Math.round((claimedCount / 3) * 100);
   const allRewardsClaimed = claimedCount === 3;
 
-  const finishLabel =
-    nextPath.startsWith("/gold-exchange")
-      ? "선택한 일정으로 예약 계속하기"
+  const finishLabel = nextPath.startsWith("/gold-exchange")
+    ? "선택한 일정으로 예약 계속하기"
+    : nextPath.startsWith("/my-gold?import=calculator")
+      ? "계산한 금 내금고에 저장 계속하기"
       : "한국골드마켓 시작하기";
 
   if (user?.uid && !isEmailVerified) {
@@ -498,17 +507,30 @@ export default function WelcomeOnboarding() {
             : "회원가입을 축하합니다 🎉"}
         </Title>
         <Lead>
-          {status.welcome.claimed ? (
+          {status.welcome.receivedThisAccount ? (
             <>
-              회원가입이 완료되어 <strong>순금 0.01g</strong>이 적립되었습니다.
+              회원가입이 완료되어 <strong>순금 0.01g</strong>이 현재 계정에 적립되었습니다.
+            </>
+          ) : status.welcome.previouslyReceived ? (
+            <>
+              이 인증 이메일은 이전 가입에서 회원가입 혜택을 이미 지급받았습니다.
+              각 순금 혜택은 <strong>인증 이메일 기준 1회</strong>만 제공되어 재가입 시 중복 적립되지 않습니다.
             </>
           ) : (
             <>
               회원가입이 완료되었습니다. <strong>순금 0.01g</strong> 적립을 확인하고 있습니다.
             </>
           )}
-          {" "}
-          광고성 정보 수신(금시세·MY GOLD 리포트·혜택)과 퀵퀴즈로 <strong>순금 0.01g씩 더</strong> 받을 수 있습니다.
+          {status.restoredBalanceG > 0 && (
+            <>
+              {" "}이전 계정에서 사용하지 않은 <strong>적립 순금 {status.restoredBalanceG.toFixed(2)}g</strong>은 현재 계정으로 복원했습니다.
+            </>
+          )}
+          {previousClaimCount < 3 && (
+            <>
+              {" "}아직 지급 이력이 없는 혜택은 조건을 완료하면 받을 수 있습니다.
+            </>
+          )}
         </Lead>
 
         <ProgressText>
@@ -532,13 +554,15 @@ export default function WelcomeOnboarding() {
               <h2>1. 광고성 정보 수신(앱푸시) 켜고 순금 0.01g 더 받기</h2>
               <b>
                 {status.marketingPush.claimed
-                  ? `순금 ${status.marketingPush.creditedG.toFixed(2)}g 적립`
+                  ? status.marketingPush.receivedThisAccount
+                    ? `순금 ${status.marketingPush.creditedG.toFixed(2)}g 적립`
+                    : "이전 가입에서 지급됨"
                   : "순금 0.01g"}
               </b>
             </StepTop>
             <StepDescription>
               금시세, 찾아보지 말고 받아보세요. 매번 검색할 필요 없이
-              주요 금시세 변동, MY GOLD 주간 리포트와 혜택을 앱푸시로 받아보세요.
+              주요 금시세 변동, 내금고 주간 리포트와 혜택을 앱푸시로 받아보세요.
             </StepDescription>
 
             {!status.marketingPush.claimed && (
@@ -567,7 +591,9 @@ export default function WelcomeOnboarding() {
               <h2>2. 퀵퀴즈 풀고 순금 0.01g 더 받기</h2>
               <b>
                 {status.quiz.claimed
-                  ? `순금 ${status.quiz.creditedG.toFixed(2)}g 적립`
+                  ? status.quiz.receivedThisAccount
+                    ? `순금 ${status.quiz.creditedG.toFixed(2)}g 적립`
+                    : "이전 가입에서 지급됨"
                   : "순금 0.01g"}
               </b>
             </StepTop>
