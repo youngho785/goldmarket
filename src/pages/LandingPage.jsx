@@ -4,8 +4,10 @@ import styled from "styled-components";
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
+  Calculator,
   CheckCircle2,
   Clock3,
+  Gem,
   MapPin,
   Phone,
   ReceiptText,
@@ -15,7 +17,6 @@ import {
 } from "lucide-react";
 
 import LiteCalcFromGX from "@/components/LiteCalcFromGX";
-import GoldExchangeReviewList from "@/components/reviews/GoldExchangeReviewList";
 import GoldPriceBoard from "@/components/gold/GoldPriceBoard";
 import MyGoldIntroCard from "@/components/gold/MyGoldIntroCard";
 import MyGoldTicker from "@/components/gold/MyGoldTicker";
@@ -27,43 +28,44 @@ const Page = styled.div`
 `;
 
 const Section = styled.section`
-  padding: clamp(34px, 4.1vw, 50px) 0;
+  padding: clamp(26px, 3.6vw, 44px) 0;
 
-  @media (max-width: 540px) {
-    padding: 25px 0;
+  @media (max-width: 560px) {
+    padding: 22px 0;
   }
 `;
 
 const Kicker = styled.p`
-  margin: 0 0 7px;
+  margin: 0 0 9px;
   color: ${({ theme }) => theme.colors.secondaryDark};
   font-family: ${({ theme }) => theme.fonts.numeric};
-  font-size: .68rem;
-  font-weight: 850;
-  letter-spacing: .15em;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.15em;
 `;
 
 const SectionTitle = styled.h2`
   max-width: 780px;
   margin: 0;
   color: ${({ theme }) => theme.colors.primary};
-  font-size: clamp(1.6rem, 2.7vw, 2.35rem);
-  line-height: 1.22;
-  letter-spacing: -.025em;
+  font-family: ${({ theme }) => theme.fonts.heading};
+  font-size: clamp(1.5rem, 2.5vw, 2.18rem);
+  line-height: 1.2;
+  letter-spacing: -0.032em;
   word-break: keep-all;
 `;
 
 const SectionLead = styled.p`
   max-width: 720px;
-  margin: 10px 0 0;
+  margin: 9px 0 0;
   color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: .95rem;
-  line-height: 1.64;
+  font-size: 0.88rem;
+  line-height: 1.62;
   word-break: keep-all;
 
   strong {
     color: ${({ theme }) => theme.colors.primary};
-    font-weight: 850;
+    font-weight: 900;
   }
 `;
 
@@ -71,23 +73,26 @@ const PrimaryLink = styled(Link)`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 9px;
   min-height: 52px;
-  padding: 13px 22px;
+  padding: 13px 21px;
   border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 12%, transparent);
   border-radius: 14px;
   background: ${({ theme }) => theme.gradients.primary};
   color: ${({ theme }) => theme.colors.white};
-  font-weight: 850;
+  font-weight: 900;
   text-decoration: none;
-  box-shadow: 0 9px 22px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 14%, transparent);
+  box-shadow: 0 10px 24px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 14%, transparent);
+  transition: transform ${({ theme }) => theme.transitions.fast},
+    background ${({ theme }) => theme.transitions.fast};
 
   &:hover {
     color: ${({ theme }) => theme.colors.white};
-    background: ${({ theme }) => theme.colors.primaryDark};
+    background: ${({ theme }) => theme.colors.primaryHover || theme.colors.primaryDark};
+    transform: translateY(-2px);
   }
 
-  @media (max-width: 540px) {
+  @media (max-width: 560px) {
     width: 100%;
   }
 `;
@@ -103,15 +108,18 @@ const SecondaryLink = styled(Link)`
   border-radius: 14px;
   background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.primary};
-  font-weight: 850;
+  font-weight: 900;
   text-decoration: none;
+  transition: transform ${({ theme }) => theme.transitions.fast},
+    border-color ${({ theme }) => theme.transitions.fast};
 
   &:hover {
     border-color: ${({ theme }) => theme.colors.secondary};
     color: ${({ theme }) => theme.colors.primary};
+    transform: translateY(-2px);
   }
 
-  @media (max-width: 540px) {
+  @media (max-width: 560px) {
     width: 100%;
   }
 `;
@@ -121,117 +129,84 @@ const TextLink = styled(Link)`
   align-items: center;
   gap: 7px;
   color: ${({ theme }) => theme.colors.secondaryDark};
-  font-size: .84rem;
-  font-weight: 850;
+  font-size: 0.84rem;
+  font-weight: 900;
   text-decoration: underline;
   text-underline-offset: 4px;
 `;
 
-const GoldToGoldText = styled.span`
-  display: inline-block;
-  background: ${({ theme }) => theme.gradients.goldShimmer};
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  color: transparent;
-  font-weight: 900;
-`;
-
-const GoldToGoldHero = styled(GoldToGoldText)`
-  letter-spacing: .02em;
-  background-size: 240% 100%;
-  background-position: 100% 50%;
-  text-shadow: 0 0 18px color-mix(in srgb, ${({ theme }) => theme.colors.gold} 12%, transparent);
-  animation: goldSweep 2.8s ease-out 1 forwards;
-
-  @keyframes goldSweep {
-    0% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    animation: none;
-    background-position: 50% 50%;
-  }
-`;
-
-/* 01. GOLD TO GOLD HERO */
 const Hero = styled.section`
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(360px, .92fr);
+  grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
   align-items: center;
-  gap: clamp(28px, 4.5vw, 58px);
-  min-height: 555px;
-  padding: clamp(42px, 5.5vw, 68px) 0 clamp(38px, 5vw, 60px);
+  gap: clamp(24px, 4vw, 48px);
+  min-height: 430px;
+  padding: clamp(32px, 4.3vw, 52px) 0 clamp(30px, 4vw, 48px);
 
   &::before {
     content: "";
     position: absolute;
-    top: 40px;
-    bottom: 40px;
+    top: 34px;
+    bottom: 34px;
     left: 0;
     width: 1px;
     background: ${({ theme }) => theme.colors.secondary};
   }
 
-  @media (max-width: 980px) {
+  @media (max-width: 920px) {
     grid-template-columns: 1fr;
     min-height: auto;
-    padding: 40px 22px 46px;
   }
 
-  @media (max-width: 540px) {
-    gap: 24px;
-    padding: 30px 14px 34px;
+  @media (max-width: 560px) {
+    padding: 28px 0 26px;
+
+    &::before {
+      top: 26px;
+      bottom: 26px;
+    }
   }
 `;
 
 const HeroCopy = styled.div`
-  max-width: 760px;
-  padding-left: clamp(24px, 3.4vw, 46px);
-
-  @media (max-width: 980px) { padding-left: 18px; }
-  @media (max-width: 540px) { padding-left: 10px; }
+  padding-left: clamp(18px, 2.8vw, 34px);
 `;
 
-const HeroQuestion = styled.p`
-  margin: 0 0 14px;
+const HeroKicker = styled.p`
+  margin: 0 0 11px;
   color: ${({ theme }) => theme.colors.secondaryDark};
-  font-size: .88rem;
-  font-weight: 850;
-  letter-spacing: -.01em;
-  word-break: keep-all;
+  font-family: ${({ theme }) => theme.fonts.numeric};
+  font-size: 0.64rem;
+  font-weight: 900;
+  letter-spacing: 0.13em;
 `;
 
 const HeroTitle = styled.h1`
-  max-width: 760px;
   margin: 0;
   color: ${({ theme }) => theme.colors.primary};
-  font-size: clamp(2.35rem, 4.9vw, 4.35rem);
-  font-weight: 700;
-  line-height: 1.12;
-  letter-spacing: -.045em;
+  font-family: ${({ theme }) => theme.fonts.heading};
+  font-size: clamp(2.05rem, 4.2vw, 3.55rem);
+  line-height: 1.06;
+  letter-spacing: -0.05em;
   word-break: keep-all;
 
-  span { color: ${({ theme }) => theme.colors.secondaryDark}; }
-
-  @media (max-width: 540px) {
-    font-size: clamp(2rem, 10.5vw, 2.75rem);
+  em {
+    color: ${({ theme }) => theme.colors.secondaryDark};
+    font-style: normal;
   }
 `;
 
 const HeroLead = styled.p`
-  max-width: 640px;
-  margin: 20px 0 0;
+  max-width: 610px;
+  margin: 16px 0 0;
   color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: clamp(.96rem, 1.4vw, 1.06rem);
-  line-height: 1.72;
+  font-size: clamp(0.9rem, 1.25vw, 1rem);
+  line-height: 1.64;
   word-break: keep-all;
 
   strong {
     color: ${({ theme }) => theme.colors.primary};
-    font-weight: 850;
   }
 `;
 
@@ -239,10 +214,10 @@ const HeroActions = styled.div`
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px 12px;
-  margin-top: 24px;
+  gap: 9px;
+  margin-top: 18px;
 
-  @media (max-width: 540px) {
+  @media (max-width: 560px) {
     display: grid;
     grid-template-columns: 1fr;
   }
@@ -251,586 +226,716 @@ const HeroActions = styled.div`
 const HeroMicro = styled.ul`
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 16px;
-  margin-top: 18px;
+  gap: 7px 14px;
+  margin: 13px 0 0;
   padding: 0;
-  list-style: none;
   color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: .79rem;
-  font-weight: 750;
+  font-size: 0.75rem;
+  list-style: none;
 
   li {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
   }
 
-  svg { color: ${({ theme }) => theme.colors.secondaryDark}; }
-
-  @media (max-width: 540px) { display: grid; }
+  svg {
+    color: ${({ theme }) => theme.colors.secondary};
+  }
 `;
 
-const HeroProof = styled.aside`
+const ValueLoop = styled.aside`
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 18%, ${({ theme }) => theme.colors.border});
-  border-radius: 22px;
-  background: ${({ theme }) => theme.colors.surface};
-  box-shadow: 0 14px 34px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 10%, transparent);
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 24%, ${({ theme }) => theme.colors.primary});
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 88% 8%, color-mix(in srgb, ${({ theme }) => theme.colors.gold} 18%, transparent), transparent 34%),
+    linear-gradient(145deg, #071625 0%, #0d2034 68%, #2d291f 100%);
+  color: #fff;
+  box-shadow: ${({ theme }) => theme.shadows.lg};
 `;
 
-const HeroProofTop = styled.div`
-  padding: 24px 26px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-  background: ${({ theme }) => theme.colors.primary};
-  color: ${({ theme }) => theme.colors.white};
+const ValueLoopHead = styled.div`
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 
   small {
-    display: block;
-    margin-bottom: 8px;
     color: ${({ theme }) => theme.colors.goldLight};
     font-family: ${({ theme }) => theme.fonts.numeric};
-    font-size: .64rem;
-    font-weight: 850;
-    letter-spacing: .13em;
+    font-size: 0.63rem;
+    font-weight: 900;
+    letter-spacing: 0.13em;
   }
 
   strong {
     display: block;
+    margin-top: 7px;
     font-family: ${({ theme }) => theme.fonts.heading};
-    font-size: clamp(1.35rem, 2.6vw, 1.8rem);
-    line-height: 1.3;
+    font-size: clamp(1.18rem, 2vw, 1.58rem);
+    line-height: 1.25;
+    letter-spacing: -0.035em;
   }
 `;
 
-const HeroProofBody = styled.div`display: grid;`;
-
-const ProofRow = styled.div`
+const ValueLoopBody = styled.div`
   display: grid;
-  grid-template-columns: 42px 1fr;
-  gap: 12px;
-  padding: 19px 22px;
-  border-top: 1px solid ${({ theme }) => theme.colors.border};
+  padding: 5px 20px 15px;
+`;
 
-  &:first-child { border-top: 0; }
+const LoopStep = styled.div`
+  position: relative;
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  gap: 10px;
+  padding: 10px 0;
 
-  span:first-child {
+  &:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    left: 15px;
+    bottom: -3px;
+    width: 1px;
+    height: 14px;
+    background: linear-gradient(${({ theme }) => theme.colors.goldLight}, transparent);
+    animation: valueFlow 2.4s ease-in-out infinite;
+  }
+
+  span {
     display: grid;
     place-items: center;
-    width: 34px;
-    height: 34px;
-    border: 1px solid ${({ theme }) => theme.colors.secondary};
-    color: ${({ theme }) => theme.colors.secondaryDark};
+    width: 30px;
+    height: 30px;
+    border: 1px solid rgba(247, 236, 210, 0.28);
+    border-radius: 50%;
+    color: ${({ theme }) => theme.colors.goldLight};
     font-family: ${({ theme }) => theme.fonts.numeric};
-    font-size: .68rem;
-    font-weight: 850;
+    font-size: 0.65rem;
+    font-weight: 900;
   }
 
   strong {
     display: block;
-    margin-bottom: 4px;
-    color: ${({ theme }) => theme.colors.primary};
+    margin-top: 1px;
+    font-size: 0.9rem;
   }
 
   p {
-    margin: 0;
-    color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .82rem;
+    margin: 4px 0 0;
+    color: rgba(255, 255, 255, 0.65);
+    font-size: 0.72rem;
     line-height: 1.5;
+  }
+
+  @keyframes valueFlow {
+    0%, 100% { opacity: 0.28; transform: translateY(-2px); }
+    50% { opacity: 1; transform: translateY(3px); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &:not(:last-child)::after { animation: none; }
   }
 `;
 
-/* 02. PRICE + MY GOLD */
-const PriceVaultSection = styled(Section)`
-  border-top: 1px solid ${({ theme }) => theme.colors.border};
+const LoopFooter = styled.div`
+  padding: 10px 20px 11px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  color: ${({ theme }) => theme.colors.goldLight};
+  font-family: ${({ theme }) => theme.fonts.numeric};
+  font-size: 0.58rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
 `;
 
-const MyGoldSection = styled.div`
-  width: 100%;
-  margin: 16px 0 0;
+const ActionSection = styled(Section)`
+  border-top: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
 `;
 
-const WelcomeGoldBanner = styled.section`
+const ActionGrid = styled.div`
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 20px;
-  margin-top: 16px;
-  padding: clamp(20px, 2.8vw, 27px);
-  border: 1px solid
-    color-mix(in srgb, ${({ theme }) => theme.colors.gold} 22%, transparent);
-  border-radius: 22px;
-  background: ${({ theme }) => theme.gradients.primary};
-  color: ${({ theme }) => theme.on.primary};
-  box-shadow: 0 12px 30px
-    color-mix(in srgb, ${({ theme }) => theme.colors.primary} 12%, transparent);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+
+  @media (max-width: 900px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (max-width: 560px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const ActionCard = styled(Link)`
+  position: relative;
+  display: flex;
+  min-height: 168px;
+  flex-direction: column;
+  padding: 16px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 16px;
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
+  text-decoration: none;
+  box-shadow: ${({ theme }) => theme.shadows.xs};
+  transition: transform ${({ theme }) => theme.transitions.base},
+    border-color ${({ theme }) => theme.transitions.base},
+    box-shadow ${({ theme }) => theme.transitions.base};
+
+  &:hover {
+    color: ${({ theme }) => theme.colors.text};
+    border-color: ${({ theme }) => theme.colors.secondary};
+    box-shadow: ${({ theme }) => theme.shadows.card};
+    transform: translateY(-4px);
+  }
+
+  > span:first-child {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+    background: ${({ theme }) => theme.semantic.badgeGoldBg};
+    color: ${({ theme }) => theme.colors.secondaryDark};
+  }
 
   small {
-    display: block;
-    color: ${({ theme }) => theme.colors.goldLight};
+    margin-top: 14px;
+    color: ${({ theme }) => theme.colors.secondaryDark};
     font-family: ${({ theme }) => theme.fonts.numeric};
-    font-size: .65rem;
+    font-size: 0.6rem;
     font-weight: 900;
-    letter-spacing: .13em;
+    letter-spacing: 0.12em;
+  }
+
+  h3 {
+    margin: 7px 0 0;
+    color: ${({ theme }) => theme.colors.primary};
+    font-family: ${({ theme }) => theme.fonts.heading};
+    font-size: 1.05rem;
+    line-height: 1.25;
+    letter-spacing: -0.025em;
+  }
+
+  p {
+    margin: 7px 0 12px;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: 0.72rem;
+    line-height: 1.58;
+    word-break: keep-all;
+  }
+
+  .go {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: auto;
+    color: ${({ theme }) => theme.colors.secondaryDark};
+    font-size: 0.75rem;
+    font-weight: 900;
+  }
+
+  &:hover .go svg {
+    transform: translateX(4px);
+  }
+
+  .go svg {
+    transition: transform ${({ theme }) => theme.transitions.fast};
+  }
+`;
+
+const LiveSection = styled(Section)`
+  margin-inline: calc(50% - 50vw);
+  padding-inline: max(calc((100vw - 1180px) / 2), 20px);
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+`;
+
+const LiveGrid = styled.div`
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: 14px;
+  align-items: start;
+  margin-top: 18px;
+
+  > * {
+    min-width: 0;
+  }
+
+  @media (max-width: 860px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const ContinuitySection = styled(Section)`
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: clamp(22px, 4vw, 46px);
+  align-items: center;
+
+  @media (max-width: 860px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const ContinuityVisual = styled.div`
+  overflow: hidden;
+  padding: 18px;
+  border-radius: 18px;
+  background: ${({ theme }) => theme.gradients.primary};
+  color: ${({ theme }) => theme.colors.white};
+  box-shadow: ${({ theme }) => theme.shadows.card};
+`;
+
+const ContinuityRow = styled.div`
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1fr;
+  gap: 7px;
+  align-items: center;
+  margin: 12px 0;
+  text-align: center;
+
+  div {
+    padding: 10px 7px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  span {
+    display: block;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.63rem;
+  }
+
+  strong {
+    display: block;
+    margin-top: 4px;
+    color: ${({ theme }) => theme.colors.goldLight};
+    font-size: 0.8rem;
+  }
+
+  svg {
+    color: ${({ theme }) => theme.colors.goldLight};
+  }
+
+  @media (max-width: 560px) {
+    grid-template-columns: 1fr;
+
+    > svg {
+      margin: 0 auto;
+      transform: rotate(90deg);
+    }
+  }
+`;
+
+const ContinuityCopy = styled.div`
+  h2 {
+    margin: 0;
+    color: ${({ theme }) => theme.colors.primary};
+    font-family: ${({ theme }) => theme.fonts.heading};
+    font-size: clamp(1.5rem, 2.6vw, 2.18rem);
+    line-height: 1.18;
+    letter-spacing: -0.04em;
+    word-break: keep-all;
+  }
+
+  p {
+    margin: 10px 0 0;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: 0.88rem;
+    line-height: 1.62;
+    word-break: keep-all;
+  }
+`;
+
+const CalculatorSection = styled(Section)`
+  border-top: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
+`;
+
+const CalculatorPanel = styled.details`
+  overflow: hidden;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 18px;
+  background: ${({ theme }) => theme.colors.surface};
+  box-shadow: ${({ theme }) => theme.shadows.xs};
+
+  &[open] {
+    box-shadow: ${({ theme }) => theme.shadows.card};
+  }
+`;
+
+const CalculatorSummary = styled.summary`
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 20px;
+  align-items: center;
+  padding: 18px 20px;
+  cursor: pointer;
+  list-style: none;
+
+  &::-webkit-details-marker {
+    display: none;
   }
 
   h2 {
-    margin: 7px 0 6px;
-    color: ${({ theme }) => theme.on.primary};
-    font-size: clamp(1.35rem, 2.2vw, 1.95rem);
-    line-height: 1.25;
+    margin: 0;
+    color: ${({ theme }) => theme.colors.primary};
+    font-family: ${({ theme }) => theme.fonts.heading};
+    font-size: clamp(1.35rem, 2.2vw, 1.9rem);
+    line-height: 1.2;
+    letter-spacing: -0.03em;
+    word-break: keep-all;
   }
 
   p {
-    margin: 0;
-    color: color-mix(in srgb, ${({ theme }) => theme.on.primary} 76%, transparent);
-    font-size: .86rem;
+    margin: 7px 0 0;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: 0.82rem;
     line-height: 1.55;
     word-break: keep-all;
   }
 
+  .open-calc {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 44px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: ${({ theme }) => theme.colors.primary};
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 900;
+    white-space: nowrap;
+  }
+
   @media (max-width: 680px) {
     grid-template-columns: 1fr;
-  }
-`;
+    gap: 12px;
+    padding: 16px;
 
-const WelcomeGoldLink = styled(Link)`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 48px;
-  padding: 11px 18px;
-  border: 1px solid ${({ theme }) => theme.colors.goldLight};
-  border-radius: 13px;
-  background: ${({ theme }) => theme.colors.secondary};
-  color: ${({ theme }) => theme.on.secondary};
-  font-weight: 900;
-  text-decoration: none;
-  white-space: nowrap;
-
-  &:hover {
-    color: ${({ theme }) => theme.on.secondary};
-    filter: brightness(1.05);
-  }
-`;
-
-/* 03. CALCULATOR */
-const CalculatorSection = styled(Section)`
-  border-top: 1px solid ${({ theme }) => theme.colors.border};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-`;
-
-const CalculatorHead = styled.div`
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: end;
-  gap: 24px;
-  margin-bottom: 18px;
-
-  @media (max-width: 720px) {
-    grid-template-columns: 1fr;
-    align-items: start;
+    .open-calc {
+      justify-content: center;
+      width: 100%;
+      min-height: 48px;
+    }
   }
 `;
 
 const CalculatorWrap = styled.div`
-  position: relative;
-  z-index: 1;
+  padding: 14px 14px 16px;
+  border-top: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
 `;
 
-/* 04. WHY GOLD TO GOLD */
-const CompareSection = styled(Section)`
-  padding-top: clamp(42px, 5vw, 60px);
-`;
-
-const CompareGrid = styled.div`
-  display: grid;
-  grid-template-columns: minmax(0, 2fr) 44px minmax(0, 3fr);
-  align-items: stretch;
-  margin-top: 22px;
-  overflow: hidden;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 22px;
-  background: ${({ theme }) => theme.colors.surface};
-  box-shadow: 0 10px 26px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 5%, transparent);
-
-  @media (max-width: 760px) { grid-template-columns: 1fr; }
-`;
-
-const CompareCard = styled.article`
-  padding: clamp(22px, 2.6vw, 30px);
-
-  small {
-    display: block;
-    margin-bottom: 10px;
-    color: ${({ theme }) => theme.colors.secondaryDark};
-    font-family: ${({ theme }) => theme.fonts.numeric};
-    font-size: .66rem;
-    font-weight: 850;
-    letter-spacing: .12em;
-  }
-
-  h3 {
-    margin: 0 0 18px;
-    color: ${({ theme }) => theme.colors.primary};
-    font-size: clamp(1.3rem, 2.4vw, 1.75rem);
-    line-height: 1.34;
-  }
-`;
-
-const Flow = styled.div`display: grid; gap: 8px;`;
-
-const FlowItem = styled.div`
+const BenefitBanner = styled.div`
   display: flex;
   align-items: center;
-  min-height: 44px;
-  padding: 10px 13px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  background: ${({ theme }) => theme.colors.surfaceAlt};
-  color: ${({ theme }) => theme.colors.primary};
-  font-size: .88rem;
-  font-weight: 800;
-`;
-
-const CompareNote = styled.p`
-  margin: 14px 0 0;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: .88rem;
-  line-height: 1.62;
-
-  strong { color: ${({ theme }) => theme.colors.primary}; }
-`;
-
-const CompareArrow = styled.div`
-  position: relative;
-  display: grid;
-  place-items: center;
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.secondaryDark};
-
-  &::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 50%;
-    width: 1px;
-    background: ${({ theme }) => theme.colors.secondary};
-    opacity: .6;
-    transform: translateX(-50%);
-  }
-
-  span {
-    position: relative;
-    z-index: 1;
-    display: grid;
-    place-items: center;
-    width: 34px;
-    height: 34px;
-    border: 1px solid ${({ theme }) => theme.colors.secondary};
-    border-radius: 50%;
-    background: ${({ theme }) => theme.colors.surface};
-    box-shadow: 0 0 0 6px ${({ theme }) => theme.colors.surface};
-  }
-
-  @media (max-width: 760px) {
-    min-height: 54px;
-
-    &::before {
-      top: 50%; right: 0; bottom: auto; left: 0;
-      width: auto; height: 1px;
-      transform: translateY(-50%);
-    }
-
-    svg { transform: rotate(90deg); }
-  }
-`;
-
-const FeeBar = styled.div`
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  gap: 18px;
+  justify-content: space-between;
+  gap: 16px;
   margin-top: 14px;
-  padding: 14px 18px;
+  padding: 13px 16px;
   border: 1px solid ${({ theme }) => theme.colors.border};
-  background: ${({ theme }) => theme.colors.surfaceAlt};
+  border-radius: 17px;
+  background: ${({ theme }) => theme.colors.surface};
+
+  small {
+    color: ${({ theme }) => theme.colors.secondaryDark};
+    font-family: ${({ theme }) => theme.fonts.numeric};
+    font-size: 0.58rem;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+  }
+
+  strong {
+    display: block;
+    margin-top: 4px;
+    color: ${({ theme }) => theme.colors.primary};
+    font-size: 0.85rem;
+  }
 
   p {
+    margin: 4px 0 0;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: 0.72rem;
+    line-height: 1.5;
+  }
+
+  @media (max-width: 680px) {
+    align-items: stretch;
+    flex-direction: column;
+  }
+`;
+
+const EmpathySection = styled(Section)`
+  padding-top: clamp(20px, 2.8vw, 30px);
+  padding-bottom: clamp(18px, 2.5vw, 28px);
+  border-top: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
+`;
+
+const EmpathyFrame = styled.div`
+  display: grid;
+  grid-template-columns: minmax(240px, 0.72fr) minmax(0, 1.28fr);
+  gap: clamp(20px, 3vw, 36px);
+  align-items: center;
+
+  @media (max-width: 820px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const EmpathyCopy = styled.div`
+  h2 {
     margin: 0;
-    color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .88rem;
-    line-height: 1.6;
-  }
-
-  strong { color: ${({ theme }) => theme.colors.primary}; }
-
-  @media (max-width: 680px) { grid-template-columns: 1fr; }
-`;
-
-const GoldStoryNote = styled.div`
-  margin-top: 14px;
-  padding: 18px 20px;
-  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 18%, ${({ theme }) => theme.colors.border});
-  border-radius: 18px;
-  background: linear-gradient(135deg, color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 48%, white), ${({ theme }) => theme.colors.surfaceAlt});
-
-  strong {
-    display: block;
     color: ${({ theme }) => theme.colors.primary};
-    font-size: 1rem;
+    font-family: ${({ theme }) => theme.fonts.heading};
+    font-size: clamp(1.35rem, 2.25vw, 1.88rem);
+    line-height: 1.22;
+    letter-spacing: -0.04em;
+    word-break: keep-all;
   }
 
   p {
-    margin: 6px 0 0;
+    margin: 8px 0 0;
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .84rem;
-    line-height: 1.58;
+    font-size: 0.8rem;
+    line-height: 1.68;
+    word-break: keep-all;
   }
 `;
 
-/* 05. STORE + TRUST */
-const TrustSection = styled(Section)`
-  border-top: 1px solid ${({ theme }) => theme.colors.border};
-`;
-
-const Verification = styled.div`
+const EmpathyRail = styled.div`
   display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(340px, .95fr);
-  margin-top: 22px;
-  overflow: hidden;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 22px;
-  background: ${({ theme }) => theme.colors.surface};
-  box-shadow: 0 10px 28px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 6%, transparent);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
 
-  @media (max-width: 900px) { grid-template-columns: 1fr; }
-`;
-
-const VerificationImage = styled.div`
-  min-height: 360px;
-  overflow: hidden;
-
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  @media (max-width: 540px) { min-height: 235px; }
-`;
-
-const VerificationCopy = styled.div`
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: clamp(24px, 3.2vw, 34px);
-`;
-
-const TrustList = styled.div`
-  display: grid;
-  gap: 0;
-  margin-top: 18px;
-  border-top: 1px solid ${({ theme }) => theme.colors.border};
-
-  div {
-    display: grid;
-    grid-template-columns: 30px 1fr;
-    gap: 10px;
-    padding: 11px 0;
-    border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-  }
-
-  svg { color: ${({ theme }) => theme.colors.secondaryDark}; }
-
-  strong {
-    display: block;
-    color: ${({ theme }) => theme.colors.primary};
-    font-size: .88rem;
-  }
-
-  p {
-    margin: 3px 0 0;
-    color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .78rem;
-    line-height: 1.45;
+  @media (max-width: 680px) {
+    grid-template-columns: 1fr 1fr;
   }
 `;
 
-const StoreMeta = styled.div`
-  display: grid;
-  gap: 8px;
-  margin-top: 16px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: .82rem;
+const EmpathyItem = styled.div`
+  min-height: 72px;
+  padding: 11px 12px;
+  border-top: 2px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 64%, transparent);
+  background: color-mix(in srgb, ${({ theme }) => theme.colors.surface} 72%, transparent);
+  transition:
+    transform ${({ theme }) => theme.transitions.fast},
+    background ${({ theme }) => theme.transitions.fast};
 
-  span, a {
-    display: flex;
-    align-items: center;
-    gap: 9px;
+  &:hover {
+    transform: translateY(-4px);
+    background: ${({ theme }) => theme.semantic.badgeGoldBg};
   }
-
-  svg { color: ${({ theme }) => theme.colors.secondaryDark}; }
-`;
-
-const ProcessStrip = styled.div`
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin-top: 14px;
-  overflow: hidden;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 18px;
-  background: ${({ theme }) => theme.colors.surface};
-
-  @media (max-width: 760px) { grid-template-columns: 1fr; }
-`;
-
-const ProcessStep = styled.div`
-  padding: 16px 18px;
-  border-left: 1px solid ${({ theme }) => theme.colors.border};
-
-  &:first-child { border-left: 0; }
 
   small {
+    display: block;
     color: ${({ theme }) => theme.colors.secondaryDark};
     font-family: ${({ theme }) => theme.fonts.numeric};
-    font-size: .62rem;
-    font-weight: 850;
-    letter-spacing: .1em;
+    font-size: 0.54rem;
+    font-weight: 900;
+    letter-spacing: 0.07em;
   }
 
   strong {
     display: block;
     margin-top: 6px;
     color: ${({ theme }) => theme.colors.primary};
+    font-size: 0.76rem;
+    line-height: 1.4;
+    word-break: keep-all;
+  }
+`;
+
+const TrustSection = styled(Section)`
+  border-top: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
+`;
+
+const Verification = styled.div`
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+  overflow: hidden;
+  margin-top: 16px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 18px;
+  background: ${({ theme }) => theme.colors.surface};
+  box-shadow: ${({ theme }) => theme.shadows.card};
+
+  @media (max-width: 820px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const VerificationImage = styled.div`
+  min-height: 250px;
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+
+  img {
+    width: 100%;
+    height: 100%;
+    min-height: 250px;
+    object-fit: cover;
+  }
+`;
+
+const VerificationCopy = styled.div`
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(20px, 3vw, 30px);
+`;
+
+const TrustList = styled.div`
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+
+  > div {
+    display: grid;
+    grid-template-columns: 36px 1fr;
+    gap: 11px;
+  }
+
+  svg {
+    margin-top: 2px;
+    color: ${({ theme }) => theme.colors.secondary};
+  }
+
+  strong {
+    color: ${({ theme }) => theme.colors.primary};
+    font-size: 0.84rem;
   }
 
   p {
-    margin: 4px 0 0;
+    margin: 3px 0 0;
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .78rem;
-    line-height: 1.45;
+    font-size: 0.73rem;
+    line-height: 1.5;
+  }
+`;
+
+const StoreMeta = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 14px;
+  margin-top: 14px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 0.72rem;
+
+  span,
+  a {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: inherit;
+    text-decoration: none;
+  }
+`;
+
+const FinalCTA = styled(Section)`
+  margin-inline: calc(50% - 50vw);
+  padding-inline: max(calc((100vw - 1180px) / 2), 20px);
+  background:
+    radial-gradient(circle at 80% 20%, color-mix(in srgb, ${({ theme }) => theme.colors.gold} 16%, transparent), transparent 30%),
+    ${({ theme }) => theme.colors.primaryDark};
+  color: #fff;
+`;
+
+const FinalInner = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 30px;
+
+  h2 {
+    margin: 0;
+    color: #fff;
+    font-family: ${({ theme }) => theme.fonts.heading};
+    font-size: clamp(1.55rem, 2.6vw, 2.2rem);
+    line-height: 1.15;
+    letter-spacing: -0.04em;
+  }
+
+  p {
+    max-width: 720px;
+    margin: 9px 0 0;
+    color: rgba(255, 255, 255, 0.66);
+    font-size: 0.86rem;
+    line-height: 1.6;
+    word-break: keep-all;
   }
 
   @media (max-width: 760px) {
-    border-left: 0;
-    border-top: 1px solid ${({ theme }) => theme.colors.border};
-    &:first-child { border-top: 0; }
+    align-items: stretch;
+    flex-direction: column;
   }
 `;
 
-/* 06. PROOF + FAQ */
-const ProofSection = styled(Section)`
-  border-top: 1px solid ${({ theme }) => theme.colors.border};
-`;
-
-const ProofGrid = styled.div`
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, .75fr);
-  gap: 28px;
-  margin-top: 20px;
-  align-items: start;
-
-  @media (max-width: 900px) { grid-template-columns: 1fr; }
-`;
-
-const FAQStack = styled.div`
-  border-top: 1px solid ${({ theme }) => theme.colors.border};
-`;
-
-const FAQ = styled.details`
-  padding: 15px 0;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-
-  summary {
-    cursor: pointer;
-    color: ${({ theme }) => theme.colors.primary};
-    font-weight: 800;
-  }
-
-  p {
-    margin: 10px 0 0;
-    color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .86rem;
-    line-height: 1.65;
-  }
-`;
-
-const FinalCTA = styled.section`
-  position: relative;
-  display: grid;
-  grid-template-columns: 1fr auto;
+const GoldLink = styled(Link)`
+  display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
-  gap: 28px;
-  margin: 34px 0 28px;
-  padding: clamp(24px, 3.5vw, 34px);
-  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 16%, ${({ theme }) => theme.colors.border});
-  border-radius: 22px;
-  background: linear-gradient(135deg, color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 42%, white), ${({ theme }) => theme.colors.surface} 60%);
-  box-shadow: 0 10px 26px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 5%, transparent);
+  justify-content: center;
+  gap: 9px;
+  min-height: 52px;
+  padding: 13px 20px;
+  border: 1px solid rgba(247, 236, 210, 0.35);
+  border-radius: 14px;
+  background: rgba(247, 236, 210, 0.1);
+  color: ${({ theme }) => theme.colors.goldLight};
+  font-weight: 900;
+  text-decoration: none;
 
-  &::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 118px;
-    height: 3px;
-    background: ${({ theme }) => theme.colors.secondary};
+  &:hover {
+    color: ${({ theme }) => theme.colors.goldLight};
+    background: rgba(247, 236, 210, 0.16);
   }
-
-  h2 {
-    margin: 0 0 8px;
-    color: ${({ theme }) => theme.colors.primary};
-  }
-
-  p {
-    margin: 0;
-    color: ${({ theme }) => theme.colors.textSecondary};
-    line-height: 1.6;
-  }
-
-  @media (max-width: 720px) { grid-template-columns: 1fr; }
 `;
 
 const serviceSchema = {
   "@context": "https://schema.org",
-  "@type": "Service",
-  name: "한국골드마켓 GOLD TO GOLD 999.9 골드바 교환",
+  "@type": "WebSite",
+  name: "한국골드마켓",
+  alternateName: "Korea Gold Market",
+  url: "https://koreagoldmarket.com/",
   description:
-    "GOLD TO GOLD는 14K, 18K, 순금 등 보유한 금을 먼저 현금으로 팔지 않고 순도와 중량 기준의 순금 가치로 계산해 999.9 골드바로 교환하는 한국골드마켓의 방식",
-  provider: {
-    "@type": "JewelryStore",
-    name: "원일귀금속",
-    telephone: "051-646-9700",
-    address: {
-      "@type": "PostalAddress",
-      streetAddress: "골드테마길 21",
-      addressLocality: "부산진구",
-      addressRegion: "부산광역시",
-      addressCountry: "KR",
-    },
-    openingHours: "Mo-Sa 10:00-18:00",
-  },
-  areaServed: "대한민국",
+    "오늘 금시세부터 MY GOLD 기록·관리, 999.9 골드바 교환까지 내 금의 가치를 확인하고 이어가는 금 생활 플랫폼",
 };
 
+const ACTIONS = [
+  {
+    to: "/gold-price",
+    kicker: "TODAY'S GOLD",
+    title: "오늘의 금값 확인하기",
+    description: "순금·18K·14K의 오늘 가격과 전일 대비 변화를 직관적으로 확인합니다.",
+    action: "오늘 금시세",
+    icon: Scale,
+  },
+  {
+    to: "/my-gold?add=1",
+    kicker: "VALUE CHECK",
+    title: "내 금 가치 계산하기",
+    description: "금 종류와 무게를 입력해 현재 가치와 예상 순금량을 바로 확인합니다.",
+    action: "내 금 넣어보기",
+    icon: Calculator,
+  },
+  {
+    to: "/my-gold",
+    kicker: "MY GOLD",
+    title: "내 금고 관리하기",
+    description: "내가 가진 금을 기록하고 오늘 가치와 변화, 골드바 가능 상태를 계속 관리합니다.",
+    action: "MY GOLD",
+    icon: Gem,
+  },
+  {
+    to: "/gold-exchange",
+    kicker: "GOLD TO GOLD",
+    title: "999.9 골드바로 이어가기",
+    description: "보유 금의 예상 순금 가치를 계산하고 999.9 골드바 교환으로 이어갑니다.",
+    action: "GOLD TO GOLD",
+    icon: Sparkles,
+  },
+];
+
 export default function LandingPage() {
-  const scrollToCompare = (event) => {
-    event.preventDefault();
-    const target = document.getElementById("why-gold-to-gold");
-    if (!target) return;
-
-    const reduceMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)"
-    ).matches;
-
-    target.scrollIntoView({
-      behavior: reduceMotion ? "auto" : "smooth",
-      block: "start",
-    });
-  };
-
   return (
     <Page>
       <script
@@ -842,155 +947,148 @@ export default function LandingPage() {
 
       <Hero aria-labelledby="landing-title">
         <HeroCopy>
-          <HeroQuestion>
-            금을 현금화하기 전에 확인하는 새로운 방법 · <GoldToGoldHero>GOLD TO GOLD</GoldToGoldHero>
-          </HeroQuestion>
-
+          <HeroKicker>KOREA GOLD MARKET · VALUE CONTINUES</HeroKicker>
           <HeroTitle id="landing-title">
-            가지고 있는 금,
+            내 금의 가치,
             <br />
-            <span>팔지 말고</span>
-            <br />
-            999.9 골드바로 바꾸세요
+            오늘도 <em>이어집니다.</em>
           </HeroTitle>
-
           <HeroLead>
-            <GoldToGoldText>GOLD TO GOLD</GoldToGoldText>는 14K·18K·순금 등 가지고 있는 금을
-            먼저 현금으로 팔지 않고, 순도와 중량 기준의 순금 가치로 계산해
-            <strong> 999.9 골드바로 교환하는 한국골드마켓의 방식</strong>입니다.
+            14K·18K·순금까지. 내가 가진 금의 오늘 가치를 먼저 확인하고 기록해두세요.
+            <strong> 가치의 변화를 관리하고, 필요할 때 999.9 골드바로 이어갈 수 있습니다.</strong>
           </HeroLead>
-
           <HeroActions>
-            <PrimaryLink to="/gold-exchange">
-              내 금 계산하기 <ArrowRight size={18} aria-hidden />
+            <PrimaryLink to="/my-gold?add=1">
+              내 금 가치 확인하기 <ArrowRight size={18} aria-hidden />
             </PrimaryLink>
-            <SecondaryLink to="/my-gold">
-              내금고 체험하기 <ArrowRight size={17} aria-hidden />
+            <SecondaryLink to="/gold-exchange">
+              999.9 골드바로 이어가기 <ArrowRight size={17} aria-hidden />
             </SecondaryLink>
-            <TextLink as="a" href="#why-gold-to-gold" onClick={scrollToCompare}>
-              교환방법 알아보기
+            <TextLink to="/gold-price">
+              오늘 금값 보기 <ArrowRight size={14} aria-hidden />
             </TextLink>
           </HeroActions>
-
           <HeroMicro>
-            <li><CheckCircle2 size={15} aria-hidden /> 로그인 없이 예상 계산</li>
-            <li><CheckCircle2 size={15} aria-hidden /> 교환 수수료 없음</li>
-            <li><CheckCircle2 size={15} aria-hidden /> 매장 실측 후 최종 결정</li>
+            <li><CheckCircle2 size={15} aria-hidden /> 비회원도 MY GOLD 체험 가능</li>
+            <li><CheckCircle2 size={15} aria-hidden /> 오늘 가치와 예상 순금량 확인</li>
+            <li><CheckCircle2 size={15} aria-hidden /> 매장 실측 후 교환 결정</li>
           </HeroMicro>
         </HeroCopy>
 
-        <HeroProof aria-label="한국골드마켓 핵심 흐름">
-          <HeroProofTop>
-            <small>KOREA GOLD MARKET · <GoldToGoldText>GOLD TO GOLD</GoldToGoldText></small>
-            <strong>내 금을 알고,<br />필요할 때 골드바로 이어가세요.</strong>
-          </HeroProofTop>
-          <HeroProofBody>
-            <ProofRow>
-              <span>01</span>
-              <div><strong>오늘 금시세 확인</strong><p>순금·18K·14K의 공개 시세와 변동을 확인합니다.</p></div>
-            </ProofRow>
-            <ProofRow>
-              <span>02</span>
-              <div><strong>내금고로 내 금 관리</strong><p>오늘 가치, 예상 순금량, 가능한 골드바를 확인합니다.</p></div>
-            </ProofRow>
-            <ProofRow>
-              <span>03</span>
-              <div><strong>방문 실측 후 교환</strong><p>순도·중량·제작 공임을 고객 앞에서 확인한 뒤 결정합니다.</p></div>
-            </ProofRow>
-          </HeroProofBody>
-        </HeroProof>
+        <ValueLoop aria-label="한국골드마켓 가치 흐름">
+          <ValueLoopHead>
+            <small>YOUR GOLD · VALUE LOOP</small>
+            <strong>금의 가치는<br />하나의 흐름으로 이어집니다.</strong>
+          </ValueLoopHead>
+          <ValueLoopBody>
+            <LoopStep><span>01</span><div><strong>확인</strong><p>오늘 금시세와 내 금의 현재 가치를 확인합니다.</p></div></LoopStep>
+            <LoopStep><span>02</span><div><strong>기록</strong><p>MY GOLD에 내가 가진 금을 남겨둡니다.</p></div></LoopStep>
+            <LoopStep><span>03</span><div><strong>관리</strong><p>가치 변화와 예상 순금량을 계속 확인합니다.</p></div></LoopStep>
+            <LoopStep><span>04</span><div><strong>교환</strong><p>필요할 때 999.9 GOLD로 가치를 이어갑니다.</p></div></LoopStep>
+          </ValueLoopBody>
+          <LoopFooter>CHECK → RECORD → MANAGE → CONTINUE ↺</LoopFooter>
+        </ValueLoop>
       </Hero>
 
-      <PriceVaultSection aria-labelledby="price-vault-title">
-        <Kicker>DAILY GOLD PRICE · MY GOLD</Kicker>
-        <SectionTitle id="price-vault-title">오늘 금시세를 보고, 내 금의 오늘 가치까지 확인하세요.</SectionTitle>
-        <SectionLead>
-          시세 확인에서 끝나지 않고 <strong>MY GOLD · 내금고</strong>에서 내가 가진 실물 금의 가치와 예상 순금량을 이어서 볼 수 있습니다.
-        </SectionLead>
-        <GoldPriceBoard />
-        <MyGoldSection>
-          <MyGoldIntroCard />
-        </MyGoldSection>
+      <ActionSection aria-labelledby="action-title">
+        <Kicker>START WITH YOUR GOLD</Kicker>
+        <SectionTitle id="action-title">내 금으로 무엇을 할 수 있을까요?</SectionTitle>
+        <SectionLead>긴 설명보다 필요한 행동부터 시작하세요. 확인한 값은 MY GOLD와 GOLD TO GOLD로 자연스럽게 이어집니다.</SectionLead>
+        <ActionGrid>
+          {ACTIONS.map(({ to, kicker, title, description, action, icon }) => (
+            <ActionCard key={to} to={to}>
+              <span>{React.createElement(icon, { size: 20, "aria-hidden": true })}</span>
+              <small>{kicker}</small>
+              <h3>{title}</h3>
+              <p>{description}</p>
+              <span className="go">{action} <ArrowRight size={14} aria-hidden /></span>
+            </ActionCard>
+          ))}
+        </ActionGrid>
+      </ActionSection>
 
-        <WelcomeGoldBanner aria-labelledby="welcome-gold-title">
+      <LiveSection aria-labelledby="live-value-title">
+        <Kicker>TODAY → MY GOLD</Kicker>
+        <SectionTitle id="live-value-title">오늘 금값이 바뀌면, 내 금의 가치도 함께 바뀝니다.</SectionTitle>
+        <SectionLead>
+          시세는 숫자로 끝나지 않습니다. <strong>MY GOLD에 기록한 내 금의 오늘 가치와 변화</strong>로 바로 연결됩니다.
+        </SectionLead>
+        <LiveGrid>
+          <MyGoldIntroCard />
+          <GoldPriceBoard />
+        </LiveGrid>
+        <BenefitBanner>
           <div>
-            <small>WELCOME GOLD · NEW MEMBER BENEFIT</small>
-            <h2 id="welcome-gold-title">퀵퀴즈 풀고 순금 0.01g 받기</h2>
-            <p>회원가입 +0.01g · 퀵퀴즈 +0.01g · 금시세 알림 +0.01g → 최대 순금 0.03g</p>
+            <small>WELCOME GOLD</small>
+            <strong>한국골드마켓을 시작하면 최대 순금 0.03g</strong>
+            <p>회원가입 +0.01g · 퀵퀴즈 +0.01g · 금시세 알림 +0.01g</p>
           </div>
-          <WelcomeGoldLink to="/quiz/gold-bonus">
-            퀵퀴즈 풀고 순금 0.01g 받기
-            <Sparkles size={17} aria-hidden />
-          </WelcomeGoldLink>
-        </WelcomeGoldBanner>
-      </PriceVaultSection>
+          <TextLink to="/quiz/gold-bonus">순금 혜택 보기 <Sparkles size={15} aria-hidden /></TextLink>
+        </BenefitBanner>
+      </LiveSection>
+
+      <EmpathySection aria-labelledby="empathy-title">
+        <EmpathyFrame>
+          <EmpathyCopy>
+            <Kicker>YOUR GOLD · YOUR STORY</Kicker>
+            <h2 id="empathy-title">서랍 속에 오래 머문 금도,<br />가치는 그대로 남아 있습니다.</h2>
+            <p>지금 자주 사용하지 않는 금을 떠올려보세요. GOLD TO GOLD는 그 안에 남아 있는 금의 가치를 새로운 형태로 이어가는 방법입니다.</p>
+          </EmpathyCopy>
+          <EmpathyRail aria-label="GOLD TO GOLD 공감 사례">
+            <EmpathyItem><small>BROKEN</small><strong>끊어진 목걸이·팔찌</strong></EmpathyItem>
+            <EmpathyItem><small>ONE EARRING</small><strong>한쪽만 남은 귀걸이</strong></EmpathyItem>
+            <EmpathyItem><small>OLD JEWELRY</small><strong>오래된 14K·18K</strong></EmpathyItem>
+            <EmpathyItem><small>FOR THE FUTURE</small><strong>아이의 돌반지</strong></EmpathyItem>
+          </EmpathyRail>
+        </EmpathyFrame>
+      </EmpathySection>
+
+      <ContinuitySection aria-labelledby="gold-to-gold-title">
+        <ContinuityVisual aria-hidden>
+          <Kicker style={{ color: "#F7ECD2" }}>GOLD TO GOLD</Kicker>
+          <ContinuityRow>
+            <div><span>가지고 있는 금</span><strong>14K · 18K · 순금</strong></div>
+            <ArrowRight size={18} />
+            <div><span>가치 확인</span><strong>예상 순금량</strong></div>
+            <ArrowRight size={18} />
+            <div><span>가치 이어가기</span><strong>999.9 GOLD</strong></div>
+          </ContinuityRow>
+          <p style={{ margin: 0, color: "rgba(255,255,255,.64)", fontSize: ".73rem", lineHeight: 1.55 }}>
+            온라인 계산은 예상값이며 최종 순도와 중량은 매장 실측 후 확정됩니다.
+          </p>
+        </ContinuityVisual>
+        <ContinuityCopy>
+          <Kicker>CONTINUE THE VALUE</Kicker>
+          <h2 id="gold-to-gold-title">쓰임이 달라진 금,<br />999.9 GOLD로 이어보세요.</h2>
+          <p>
+            순도와 중량을 기준으로 예상 순금량을 확인하고, 실물 999.9 골드바라는 새로운 형태로 금의 가치를 이어갈 수 있습니다.
+          </p>
+          <HeroActions>
+            <PrimaryLink to="/gold-to-gold">GOLD TO GOLD 시작하기 <ArrowRight size={17} aria-hidden /></PrimaryLink>
+          </HeroActions>
+        </ContinuityCopy>
+      </ContinuitySection>
 
       <CalculatorSection aria-labelledby="calculator-title">
-        <CalculatorHead>
-          <div>
-            <Kicker>TRY IT NOW</Kicker>
-            <SectionTitle id="calculator-title">내 금은 어떤 골드바가 될까요?</SectionTitle>
-            <SectionLead>
-              금의 종류와 중량을 입력하면 예상 순금량과 가능한 999.9 골드바 조합을 로그인 없이 먼저 확인할 수 있습니다.
-            </SectionLead>
-          </div>
-        </CalculatorHead>
-        <CalculatorWrap><LiteCalcFromGX showCombo /></CalculatorWrap>
+        <CalculatorPanel>
+          <CalculatorSummary>
+            <div>
+              <Kicker>TRY IT NOW</Kicker>
+              <h2 id="calculator-title">내 금은 어떤 999.9 골드바가 될까요?</h2>
+              <p>필요할 때 펼쳐서 종류와 중량만 입력하면 예상 순금량과 가능한 골드바 조합을 확인할 수 있습니다.</p>
+            </div>
+            <span className="open-calc">바로 계산하기 <Calculator size={16} aria-hidden /></span>
+          </CalculatorSummary>
+          <CalculatorWrap><LiteCalcFromGX showCombo /></CalculatorWrap>
+        </CalculatorPanel>
       </CalculatorSection>
 
-      <CompareSection id="why-gold-to-gold" aria-labelledby="compare-title">
-        <Kicker>SELL & BUY vs <GoldToGoldText>GOLD TO GOLD</GoldToGoldText></Kicker>
-        <SectionTitle id="compare-title">같은 금인데, 왜 굳이 팔았다 다시 사야 할까요?</SectionTitle>
-        <SectionLead>
-          보유한 금의 순금 가치를 현금화했다가 다시 구매하는 대신, <strong>금에서 금으로 바로 이어가는 방식</strong>을 비교해보세요.
-        </SectionLead>
-
-        <CompareGrid>
-          <CompareCard>
-            <small>일반적인 방식 · SELL & BUY</small>
-            <h3>금을 팔고 골드바를 다시 구매</h3>
-            <Flow>
-              <FlowItem>01 · 14K·18K·순금 제품</FlowItem>
-              <FlowItem>02 · 매입가격으로 현금 판매</FlowItem>
-              <FlowItem>03 · 골드바 판매가격으로 재구매</FlowItem>
-              <FlowItem>04 · 999.9 골드바</FlowItem>
-            </Flow>
-            <CompareNote>매도와 재구매 사이에 <strong>매입가격과 판매가격의 차이</strong>가 생길 수 있습니다.</CompareNote>
-          </CompareCard>
-
-          <CompareArrow aria-hidden><span><ArrowRight size={20} /></span></CompareArrow>
-
-          <CompareCard>
-            <small>한국골드마켓의 방식 · GOLD TO GOLD</small>
-            <h3>금을 팔지 않고 999.9 골드바로</h3>
-            <Flow>
-              <FlowItem>01 · 14K·18K·순금 제품</FlowItem>
-              <FlowItem>02 · 순도와 중량 확인</FlowItem>
-              <FlowItem>03 · 순금 가치로 계산</FlowItem>
-              <FlowItem>04 · 999.9 골드바 교환</FlowItem>
-            </Flow>
-            <CompareNote>불필요한 현금화 단계를 줄이고 <strong>금에서 금으로 가치를 이어갑니다.</strong></CompareNote>
-          </CompareCard>
-        </CompareGrid>
-
-        <FeeBar>
-          <p><strong>GOLD TO GOLD 교환 수수료는 없습니다.</strong> 999.9 골드바 제작에 필요한 규격별 제작 공임만 별도로 청구됩니다.</p>
-          <TextLink to="/goldbar-fee">골드바 공임 확인하기 <ArrowRight size={14} aria-hidden /></TextLink>
-        </FeeBar>
-
-        <GoldStoryNote>
-          <strong>결혼 반지, 한쪽만 남은 귀걸이, 오래된 목걸이, 돌반지까지.</strong>
-          <p>지금 착용하지 않아도 그 안의 금은 여전히 가치가 있습니다. 내금고에서 먼저 확인하고, 필요할 때 하나의 순금 가치로 모아 골드바로 이어갈 수 있습니다.</p>
-        </GoldStoryNote>
-      </CompareSection>
-
-      <TrustSection aria-labelledby="trust-store-title">
+      <TrustSection aria-labelledby="trust-title">
         <Kicker>ONLINE CALCULATION · IN-STORE VERIFICATION</Kicker>
-        <SectionTitle id="trust-store-title">온라인에서 계산하고, 실제 매장에서 직접 확인합니다.</SectionTitle>
+        <SectionTitle id="trust-title">온라인에서 확인하고, 실제 매장에서 다시 확인합니다.</SectionTitle>
         <SectionLead>
           온라인 결과는 예상값입니다. 최종 순도·중량·공임은 부산 범천동 원일귀금속에서 고객과 함께 확인하고 동의 후 확정합니다.
         </SectionLead>
-
         <Verification>
           <VerificationImage>
             <img
@@ -1011,42 +1109,25 @@ export default function LandingPage() {
               <span><Clock3 size={16} aria-hidden /> 월–토 10:00–18:00</span>
               <a href="tel:0516469700"><Phone size={16} aria-hidden /> 교환 상담 051-646-9700</a>
             </StoreMeta>
-            <TextLink to="/stores" style={{ marginTop: "16px", alignSelf: "flex-start" }}>교환 절차·매장 자세히 보기 <ArrowRight size={14} aria-hidden /></TextLink>
+            <TextLink to="/stores" style={{ marginTop: "18px", alignSelf: "flex-start" }}>
+              교환 절차·매장 자세히 보기 <ArrowRight size={14} aria-hidden />
+            </TextLink>
           </VerificationCopy>
         </Verification>
-
-        <ProcessStrip aria-label="금교환 세 단계">
-          <ProcessStep><small>STEP 01 · ONLINE</small><strong>예상 계산</strong><p>금 종류와 중량을 입력해 예상 결과를 확인합니다.</p></ProcessStep>
-          <ProcessStep><small>STEP 02 · IN STORE</small><strong>매장 실측</strong><p>순도·중량·공임을 고객 앞에서 확인합니다.</p></ProcessStep>
-          <ProcessStep><small>STEP 03 · COMPLETE</small><strong>999.9 골드바</strong><p>결과에 동의하면 교환을 확정합니다.</p></ProcessStep>
-        </ProcessStrip>
       </TrustSection>
 
-      <ProofSection aria-labelledby="proof-title">
-        <Kicker>VERIFIED REVIEWS · FAQ</Kicker>
-        <SectionTitle id="proof-title">먼저 교환한 고객의 이야기와, 교환 전에 필요한 답만 모았습니다.</SectionTitle>
-        <ProofGrid>
-          <div><GoldExchangeReviewList limitCount={3} /></div>
-          <FAQStack>
-            <FAQ><summary>교환 수수료가 있나요?</summary><p>999.9 골드바 교환 자체에 별도의 교환 수수료는 없습니다. 규격별 제작 공임만 별도로 안내합니다.</p></FAQ>
-            <FAQ><summary>온라인 계산 결과가 최종 결과인가요?</summary><p>아닙니다. 입력값에 따른 예상치이며 최종 순도와 중량은 매장 실측 후 확정합니다.</p></FAQ>
-            <FAQ><summary>측정 후 교환하지 않아도 되나요?</summary><p>네. 최종 인정 중량과 제작 공임을 확인한 뒤 동의하지 않으면 교환을 확정하지 않습니다.</p></FAQ>
-            <FAQ><summary>비회원도 내금고를 볼 수 있나요?</summary><p>네. 로그인 없이 체험 화면을 볼 수 있습니다. 자신의 금을 저장하고 계속 관리하려면 회원가입이 필요합니다.</p></FAQ>
-          </FAQStack>
-        </ProofGrid>
-
-        <FinalCTA>
+      <FinalCTA aria-labelledby="final-cta-title">
+        <FinalInner>
           <div>
-            <Kicker>BEFORE YOU SELL · GOLD TO GOLD</Kicker>
-            <h2>금을 팔기 전에, 내 금부터 확인해보세요.</h2>
-            <p>내금고에서 내 금을 알아보고, 999.9 골드바 교환이 필요할 때 GOLD TO GOLD로 이어가세요.</p>
+            <Kicker style={{ color: "#F7ECD2" }}>KOREA GOLD MARKET · VALUE CONTINUES</Kicker>
+            <h2 id="final-cta-title">내 금의 가치를<br />오늘부터 이어가세요.</h2>
+            <p>먼저 확인하고 기록해두세요. 오늘의 변화는 MY GOLD에서 관리하고, 필요할 때 999.9 골드바로 이어갈 수 있습니다.</p>
           </div>
-          <HeroActions style={{ marginTop: 0 }}>
-            <PrimaryLink to="/gold-exchange">내 금으로 받을 골드바 계산 <ArrowRight size={18} aria-hidden /></PrimaryLink>
-            <SecondaryLink to="/my-gold">내금고 체험하기 <ArrowRight size={16} aria-hidden /></SecondaryLink>
-          </HeroActions>
-        </FinalCTA>
-      </ProofSection>
+          <div>
+            <GoldLink to="/my-gold?add=1">MY GOLD 시작하기 <ArrowRight size={17} aria-hidden /></GoldLink>
+          </div>
+        </FinalInner>
+      </FinalCTA>
     </Page>
   );
 }

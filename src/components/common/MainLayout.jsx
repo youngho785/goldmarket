@@ -21,14 +21,18 @@ import { isAndroid } from "@/platform/runtime";
 const MainContent = styled.main`
   width: 100%;
   flex: 1 0 auto;
-  padding-bottom: ${({ $hideBottomNav, $android }) =>
-    $android
-      ? $hideBottomNav
-        ? "30px"
-        : "calc(92px + env(safe-area-inset-bottom, 0px))"
-      : $hideBottomNav
-        ? "72px"
-        : "132px"};
+  padding-bottom: ${({ $hideBottomNav, $android, $home, $compactDesktop }) =>
+    $home && !$android
+      ? "0px"
+      : $compactDesktop && !$android
+        ? "34px"
+        : $android
+          ? $hideBottomNav
+            ? "30px"
+            : "calc(92px + env(safe-area-inset-bottom, 0px))"
+          : $hideBottomNav
+            ? "72px"
+            : "132px"};
 
   @media (max-width: 768px) {
     padding-bottom: ${({ $hideBottomNav, $android }) =>
@@ -174,6 +178,8 @@ export default function MainLayout() {
         aria-label="메인 콘텐츠"
         $hideBottomNav={hideBottomNav}
         $android={isAndroid}
+        $home={pathname === "/"}
+        $compactDesktop={pathname === "/gold-price"}
       >
         <Container noBottomPadding={noBottomPadding}>
           <Suspense fallback={<RouteSkeleton />}>

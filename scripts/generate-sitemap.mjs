@@ -22,8 +22,11 @@ async function generate() {
     { loc: `${baseUrl}/`, changefreq: "weekly", priority: 1.0 },
     { loc: `${baseUrl}/gold-price`, changefreq: "daily", priority: 1.0 },
     { loc: `${baseUrl}/gold-exchange`, changefreq: "weekly", priority: 1.0 },
+    { loc: `${baseUrl}/my-gold`, changefreq: "weekly", priority: 0.9 },
+    { loc: `${baseUrl}/gold-to-gold`, changefreq: "monthly", priority: 0.9 },
     { loc: `${baseUrl}/goldbar-fee`, changefreq: "monthly", priority: 0.8 },
     { loc: `${baseUrl}/stores`, changefreq: "monthly", priority: 0.8 },
+    { loc: `${baseUrl}/reviews`, changefreq: "weekly", priority: 0.6 },
     { loc: `${baseUrl}/terms`, changefreq: "yearly", priority: 0.3 },
     { loc: `${baseUrl}/privacy`, changefreq: "yearly", priority: 0.3 },
   ];
@@ -57,6 +60,16 @@ async function generate() {
       description: "여러 금 제품을 합산해 예상 순금 중량과 가능한 골드바 조합을 확인합니다.",
     },
     {
+      title: "MY GOLD · 내금고",
+      path: "/my-gold",
+      description: "내가 가진 금을 기록하고 오늘 가치, 변화, 예상 순금량을 관리합니다.",
+    },
+    {
+      title: "GOLD TO GOLD",
+      path: "/gold-to-gold",
+      description: "보유 금의 순금 가치를 999.9 골드바로 이어가는 한국골드마켓의 금교환 방식을 확인합니다.",
+    },
+    {
       title: "골드바 제작 공임 안내",
       path: "/goldbar-fee",
       description: "규격별 골드바 제작 공임과 계산 기준을 확인합니다.",
@@ -81,9 +94,9 @@ async function generate() {
   const rss =
     `<?xml version="1.0" encoding="UTF-8"?>\n` +
     `<rss version="2.0">\n<channel>\n` +
-    `<title>한국골드마켓 금시세·골드바 교환 안내</title>\n` +
+    `<title>한국골드마켓 — 금의 가치를 이어가다</title>\n` +
     `<link>${baseUrl}</link>\n` +
-    `<description>오늘의 금시세, 예상 중량 계산, 골드바 공임과 부산 매장 이용 안내입니다.</description>\n` +
+    `<description>오늘 금시세, MY GOLD 기록·관리, GOLD TO GOLD와 부산 매장 이용 안내입니다.</description>\n` +
     `<language>ko</language>\n` +
     `<lastBuildDate>${new Date().toUTCString()}</lastBuildDate>\n` +
     rssItems +

@@ -424,11 +424,11 @@ export default function AppMyGoldDashboard() {
         <Inner>
           <Kicker><Gem aria-hidden /> MY GOLD</Kicker>
           <EmptyTitle id="app-my-gold-title">
-            내 금, 오늘 <em>얼마일까요?</em>
+            내 금의 가치,<br /><em>오늘도 이어집니다.</em>
           </EmptyTitle>
           <EmptyCopy>
-            가지고 있는 14K·18K·순금의 종류와 무게만 입력하면 예상 순금량과
-            999.9 골드바 교환 결과를 먼저 확인할 수 있습니다.
+            14K·18K·순금의 종류와 무게만 입력해보세요. 오늘 가치와 예상 순금량,
+            가능한 999.9 골드바까지 한 번에 확인할 수 있습니다.
           </EmptyCopy>
           <EmptyBenefits>
             <span>현재 가치</span>
@@ -436,8 +436,8 @@ export default function AppMyGoldDashboard() {
             <span>골드바 조합</span>
           </EmptyBenefits>
           <EmptyActions>
-            <PrimaryAction to="/my-gold">
-              <Gem aria-hidden /> 내금고 체험하기 <ArrowRight aria-hidden />
+            <PrimaryAction to="/my-gold?add=1">
+              <Gem aria-hidden /> 내 금 가치 확인하기 <ArrowRight aria-hidden />
             </PrimaryAction>
             <SubAction to="/gold-exchange">
               <Calculator aria-hidden /> 금교환 바로 계산 <ArrowRight aria-hidden />
@@ -469,17 +469,17 @@ export default function AppMyGoldDashboard() {
         <Inner>
           <Kicker><Gem aria-hidden /> MY GOLD</Kicker>
           <EmptyTitle id="app-my-gold-title">
-            첫 금을 등록하면<br /><em>교환 가능 골드바</em>가 보여요.
+            내 금 1개부터<br /><em>기록해보세요.</em>
           </EmptyTitle>
           <EmptyCopy>
-            반지·목걸이·돌반지처럼 가지고 있는 실물 금을 등록해 두면 오늘 가치와
-            예상 순금량이 자동으로 연결됩니다.
+            반지 하나, 돌반지 하나부터 시작하면 오늘 가치와 변화, 예상 순금량과
+            교환 가능한 골드바가 계속 연결됩니다.
           </EmptyCopy>
           {bonusBalanceG > 0 && (
             <Bonus>현재 회원혜택 적립 <strong>순금 {bonusBalanceG.toFixed(2)}g</strong> 보유 중</Bonus>
           )}
-          <PrimaryAction to="/my-gold">
-            <Plus aria-hidden /> 내금고에 금 등록하기 <ArrowRight aria-hidden />
+          <PrimaryAction to="/my-gold?add=1">
+            <Plus aria-hidden /> 첫 금 등록하기 <ArrowRight aria-hidden />
           </PrimaryAction>
           <SubAction to="/gold-exchange">
             등록 없이 먼저 교환 계산 <ArrowRight aria-hidden />

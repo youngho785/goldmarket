@@ -144,9 +144,9 @@ export default function MyGoldTicker() {
     content = (
       <>
         <Gem size={14} aria-hidden />
-        <span>MY GOLD · 내금고에서 내 금을 관리하세요</span>
+        <span>내 금의 가치, 오늘도 이어집니다.</span>
         <span className="action">
-          내금고 체험하기 <ArrowRight size={13} aria-hidden />
+          MY GOLD 체험하기 <ArrowRight size={13} aria-hidden />
         </span>
       </>
     );

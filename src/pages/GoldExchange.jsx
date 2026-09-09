@@ -53,12 +53,12 @@ const PageContainer = styled.div`
   flex-direction: column;
   align-items: center;
   width: 100%;
-  padding: 18px 0 44px;
+  padding: 14px 0 30px;
   background: transparent;
   min-height: calc(100svh - 180px);
 
   @media (max-width: 640px) {
-    padding: 8px 0 24px;
+    padding: 7px 0 20px;
   }
 `;
 
@@ -66,15 +66,15 @@ const FlowHeader = styled.header`
   position: relative;
   width: 100%;
   max-width: 960px;
-  margin-bottom: 12px;
-  padding: clamp(22px, 4vw, 34px);
+  margin-bottom: 8px;
+  padding: ${({ $compact }) => ($compact ? "14px 18px" : "clamp(18px, 3vw, 25px)")};
   overflow: hidden;
   border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.primary} 78%, transparent);
-  border-radius: 24px;
+  border-radius: ${({ $compact }) => ($compact ? "16px" : "20px")};
   background:
     radial-gradient(circle at 93% 8%, color-mix(in srgb, ${({ theme }) => theme.colors.gold} 16%, transparent) 0, transparent 30%),
     ${({ theme }) => theme.gradients.primary};
-  box-shadow: 0 14px 34px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 14%, transparent);
+  box-shadow: 0 10px 26px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 11%, transparent);
 
   &::after {
     content: "G";
@@ -83,14 +83,14 @@ const FlowHeader = styled.header`
     bottom: -46px;
     color: color-mix(in srgb, ${({ theme }) => theme.colors.goldLight} 7%, transparent);
     font-family: ${({ theme }) => theme.fonts.heading};
-    font-size: 10rem;
+    font-size: ${({ $compact }) => ($compact ? "7rem" : "8rem")};
     font-weight: 900;
     line-height: 1;
     pointer-events: none;
   }
 
   @media (max-width: 640px) {
-    padding: 18px 16px 15px;
+    padding: ${({ $compact }) => ($compact ? "12px 13px" : "15px 14px 13px")};
     border-radius: 20px;
   }
 `;
@@ -111,7 +111,7 @@ const PageTitle = styled.h1`
   z-index: 1;
   margin: 0;
   color: ${({ theme }) => theme.on.primary};
-  font-size: clamp(1.75rem, 4.6vw, 2.75rem);
+  font-size: ${({ $compact }) => ($compact ? "clamp(1.25rem, 2.5vw, 1.6rem)" : "clamp(1.55rem, 3.5vw, 2.2rem)")};
   line-height: 1.12;
   letter-spacing: -.045em;
   word-break: keep-all;
@@ -121,15 +121,16 @@ const PageLead = styled.p`
   position: relative;
   z-index: 1;
   max-width: 700px;
-  margin: 9px 0 0;
+  margin: 7px 0 0;
   color: color-mix(in srgb, ${({ theme }) => theme.on.primary} 72%, transparent);
-  font-size: .82rem;
+  font-size: .76rem;
   line-height: 1.55;
   word-break: keep-all;
+  display: ${({ $compact }) => ($compact ? "none" : "block")};
 
   @media (max-width: 640px) {
-    margin-top: 7px;
-    font-size: .74rem;
+    margin-top: 5px;
+    font-size: .7rem;
     line-height: 1.48;
   }
 `;
@@ -158,7 +159,7 @@ const FlowTrack = styled.ol`
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 6px;
-  margin: 17px 0 0;
+  margin: 10px 0 0;
   padding: 5px;
   border: 1px solid color-mix(in srgb, ${({ theme }) => theme.on.primary} 12%, transparent);
   border-radius: 14px;
@@ -167,13 +168,13 @@ const FlowTrack = styled.ol`
 
   @media (max-width: 620px) {
     gap: 4px;
-    margin-top: 13px;
+    margin-top: 9px;
   }
 `;
 
 const FlowItem = styled.li`
   min-width: 0;
-  padding: 9px 7px;
+  padding: 7px 6px;
   border: 0;
   border-radius: 10px;
   background: ${({ $active, $done, theme }) =>
@@ -247,8 +248,8 @@ const StartChoiceGrid = styled.div`
   max-width: 960px;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: 7px;
+  margin-bottom: 8px;
 
   @media (max-width: 680px) {
     grid-template-columns: 1fr;
@@ -256,11 +257,11 @@ const StartChoiceGrid = styled.div`
 `;
 
 const StartChoice = styled.button`
-  min-height: 74px;
-  padding: 12px 13px;
+  min-height: 66px;
+  padding: 10px 12px;
   border: 1px solid ${({ $active, theme }) =>
     $active ? theme.colors.secondary : theme.colors.border};
-  border-radius: 16px;
+  border-radius: 14px;
   background: ${({ $active, theme }) =>
     $active ? theme.semantic.badgeGoldBg : theme.colors.surface};
   color: ${({ theme }) => theme.colors.primary};
@@ -277,15 +278,15 @@ const StartChoice = styled.button`
   }
   strong {
     display: block;
-    margin-top: 4px;
-    font-size: .88rem;
+    margin-top: 3px;
+    font-size: .84rem;
     line-height: 1.25;
   }
   span {
     display: block;
-    margin-top: 4px;
+    margin-top: 3px;
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .69rem;
+    font-size: .65rem;
     line-height: 1.35;
   }
 `;
@@ -867,18 +868,18 @@ function StartMethodScreen({ onChoose }) {
       <StartChoiceGrid aria-label="금교환 시작 방법">
         <StartChoice type="button" onClick={() => onChoose("vault")}>
           <small>01 · MY VAULT</small>
-          <strong>내금고에서 나의 금 불러오기</strong>
-          <span>등록해 둔 금 종류와 중량을 바로 불러와 스텝 1에서 확인합니다.</span>
+          <strong>MY GOLD에서 불러오기</strong>
+          <span>등록한 금 종류·중량으로 바로 계산합니다.</span>
         </StartChoice>
         <StartChoice type="button" onClick={() => onChoose("manual")}>
           <small>02 · DIRECT INPUT</small>
           <strong>직접 입력하기</strong>
-          <span>14K·18K·순금의 종류와 중량을 직접 입력하는 스텝 1로 이동합니다.</span>
+          <span>14K·18K·순금의 종류와 중량을 직접 입력합니다.</span>
         </StartChoice>
         <StartChoice type="button" onClick={() => onChoose("visit")}>
           <small>03 · IN STORE</small>
-          <strong>순도·무게를 잘 몰라요</strong>
-          <span>온라인 계산을 건너뛰고 바로 스텝 3 방문예약으로 이동합니다.</span>
+          <strong>매장에서 확인하기</strong>
+          <span>순도·중량을 몰라도 됩니다. 계산 없이 방문예약으로 이동합니다.</span>
         </StartChoice>
       </StartChoiceGrid>
     </>
@@ -2281,12 +2282,12 @@ export default function GoldExchange() {
 
   return (
     <PageContainer ref={pageTopRef}>
-      <FlowHeader>
+      <FlowHeader $compact={!showStartMethod}>
         <PageEyebrow>GOLD EXCHANGE APPLICATION</PageEyebrow>
-        <PageTitle>내 금을 999.9 골드바로 교환</PageTitle>
-        <PageLead>
-          예상 중량 계산과 방문 날짜·시간 선택까지 로그인 없이 이용할 수 있습니다.
-          실제 예약요청은 로그인 또는 회원가입 후 완료합니다.
+        <PageTitle $compact={!showStartMethod}>내 금을 999.9 골드바로 교환</PageTitle>
+        <PageLead $compact={!showStartMethod}>
+          예상 계산과 방문 날짜·시간 선택은 로그인 없이 이용할 수 있습니다.
+          예약 요청만 로그인 또는 회원가입 후 완료합니다.
         </PageLead>
         {isRebook && (
           <RebookNotice role="status">

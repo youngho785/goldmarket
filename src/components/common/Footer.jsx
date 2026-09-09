@@ -284,10 +284,11 @@ export default function Footer() {
             </Operator>
           </SealRow>
 
-          <h2>금시세 · 금교환 · 방문 예약</h2>
+          <h2>금의 가치를 이어가다</h2>
 
           <p>
-            원일귀금속 매장에서 순도·중량·공임을 최종 확인합니다.
+            오늘 금시세부터 MY GOLD 기록·관리, 999.9 골드바 교환까지.
+            내가 가진 금의 가치를 하나의 흐름으로 이어갑니다.
           </p>
         </Brand>
 
@@ -295,11 +296,11 @@ export default function Footer() {
           <h3>SERVICE</h3>
 
           <LinkList>
-            <Link to="/gold-exchange">내 금 계산</Link>
+            <Link to="/gold-price">오늘 금시세</Link>
+            <Link to="/my-gold">MY GOLD · 내금고</Link>
+            <Link to="/gold-exchange">GOLD TO GOLD</Link>
             <Link to="/goldbar-fee">골드바 공임</Link>
             <Link to="/stores">교환 절차·매장</Link>
-            <Link to="/my-exchanges">교환내역</Link>
-            <Link to="/quiz/gold-bonus">금 퀵퀴즈</Link>
           </LinkList>
         </Col>
 

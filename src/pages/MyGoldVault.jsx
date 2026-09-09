@@ -12,7 +12,7 @@ import {
   query,
   where,
 } from "firebase/firestore";
-import { ArrowRight, Calculator, ChevronRight, Gem, Minus, Plus, Save, Sparkles, TrendingDown, TrendingUp, X } from "lucide-react";
+import { ArrowRight, ChevronRight, Gem, LockKeyhole, Minus, Plus, Save, Sparkles, TrendingDown, TrendingUp, X } from "lucide-react";
 
 import { useAuthContext } from "@/context/AuthContext";
 import { db } from "@/firebase/firebase";
@@ -43,6 +43,7 @@ import {
   saveGoldVaultGuestDraft,
 } from "@/lib/goldVaultImportDraft";
 import {
+  DEFAULT_GUEST_MY_GOLD_ITEMS,
   GUEST_MY_GOLD_BONUS_G,
   clearGuestMyGoldDemo,
   readGuestMyGoldItems,
@@ -73,35 +74,24 @@ const Page = styled.div`
 
 const VaultHero = styled.section`
   position: relative;
-  overflow: hidden;
   display: grid;
-  gap: 11px;
-  padding: clamp(18px, 3.2vw, 25px);
-  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 24%, ${({ theme }) => theme.colors.border});
-  border-radius: 25px;
+  gap: 10px;
+  padding: clamp(16px, 2.8vw, 21px);
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 18%, ${({ theme }) => theme.colors.border});
+  border-radius: 20px;
   background:
-    radial-gradient(circle at 94% 6%, color-mix(in srgb, ${({ theme }) => theme.colors.gold} 10%, transparent) 0, transparent 32%),
-    linear-gradient(140deg, color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 30%, white), ${({ theme }) => theme.colors.surface} 68%);
+    linear-gradient(
+      140deg,
+      color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 20%, white),
+      ${({ theme }) => theme.colors.surface} 72%
+    );
   color: ${({ theme }) => theme.colors.text};
-  box-shadow: 0 12px 34px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 7%, transparent);
-
-  &::after {
-    content: "G";
-    position: absolute;
-    right: -21px;
-    bottom: -58px;
-    color: color-mix(in srgb, ${({ theme }) => theme.colors.gold} 8%, transparent);
-    font-family: ${({ theme }) => theme.fonts.numeric};
-    font-size: 12rem;
-    font-weight: 950;
-    line-height: 1;
-    pointer-events: none;
-  }
+  box-shadow: 0 8px 24px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 5%, transparent);
 
   @media (max-width: 520px) {
-    gap: 10px;
-    padding: 17px 16px 18px;
-    border-radius: 23px;
+    gap: 9px;
+    padding: 15px 14px 16px;
+    border-radius: 18px;
   }
 `;
 
@@ -111,16 +101,71 @@ const HeroKicker = styled.div`
   display: inline-flex;
   width: fit-content;
   align-items: center;
-  gap: 7px;
-  min-height: 27px;
-  padding: 5px 9px;
-  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 34%, ${({ theme }) => theme.colors.border});
-  border-radius: 999px;
-  background: ${({ theme }) => theme.semantic.badgeGoldBg};
-  color: ${({ theme }) => theme.colors.primary};
-  font-size: 0.66rem;
+  gap: 6px;
+  color: ${({ theme }) => theme.colors.secondaryDark};
+  font-size: 0.61rem;
   font-weight: 950;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
+
+  svg {
+    width: 14px;
+    height: 14px;
+    color: ${({ theme }) => theme.colors.gold};
+  }
+`;
+
+const PrivacyBadge = styled.div`
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  align-items: center;
+  gap: 6px;
+  margin-top: -2px;
+  padding: 6px 9px;
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.info} 18%, ${({ theme }) => theme.colors.border});
+  border-radius: 999px;
+  background: color-mix(in srgb, ${({ theme }) => theme.colors.info} 5%, ${({ theme }) => theme.colors.surface});
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 1.35;
+  word-break: keep-all;
+
+  svg {
+    flex: 0 0 auto;
+    width: 13px;
+    height: 13px;
+    color: ${({ theme }) => theme.colors.info};
+  }
+
+  strong {
+    color: ${({ theme }) => theme.colors.primary};
+    font-weight: 950;
+  }
+
+  @media (max-width: 520px) {
+    padding: 5px 8px;
+    font-size: 0.59rem;
+  }
+`;
+
+const VaultDefinition = styled.p`
+  position: relative;
+  z-index: 1;
+  max-width: 680px;
+  margin: -1px 0 2px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 0.62rem;
+  font-weight: 750;
+  line-height: 1.5;
+  word-break: keep-all;
+
+  @media (max-width: 520px) {
+    font-size: 0.59rem;
+    line-height: 1.45;
+  }
 `;
 
 const HeroTitle = styled.h1`
@@ -129,23 +174,23 @@ const HeroTitle = styled.h1`
   margin: 0;
   color: ${({ theme }) => theme.colors.primary};
   font-family: ${({ theme }) => theme.fonts.heading};
-  font-size: clamp(1.28rem, 4vw, 1.82rem);
-  font-weight: 500;
-  line-height: 1.18;
-  letter-spacing: -0.035em;
+  font-size: clamp(1.02rem, 3vw, 1.32rem);
+  font-weight: 600;
+  line-height: 1.22;
+  letter-spacing: -0.03em;
 `;
 
 const HeroAmount = styled.strong`
   position: relative;
   z-index: 1;
   display: block;
-  margin-top: -2px;
+  margin-top: -1px;
   color: ${({ theme }) => theme.colors.primary};
   font-family: ${({ theme }) => theme.fonts.numeric};
-  font-size: ${({ $empty }) => $empty ? "clamp(1.35rem, 4.5vw, 2rem)" : "clamp(2.45rem, 8vw, 4.15rem)"};
+  font-size: ${({ $empty }) => $empty ? "clamp(1.2rem, 4vw, 1.65rem)" : "clamp(2.15rem, 6.5vw, 3.35rem)"};
   font-weight: 950;
-  line-height: 0.98;
-  letter-spacing: -0.055em;
+  line-height: 1;
+  letter-spacing: -0.05em;
   overflow-wrap: anywhere;
 `;
 
@@ -179,129 +224,107 @@ const HeroStats = styled.div`
   z-index: 1;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 7px;
+  margin-top: 2px;
+  border-top: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
 `;
 
 const HeroStat = styled.div`
   min-width: 0;
-  padding: 10px 9px;
-  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 16%, ${({ theme }) => theme.colors.border});
-  border-radius: 14px;
-  background: color-mix(in srgb, ${({ theme }) => theme.colors.surface} 92%, ${({ theme }) => theme.semantic.badgeGoldBg});
+  padding: 9px 10px;
+
+  & + & {
+    border-left: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
+  }
 
   span {
     display: block;
     overflow: hidden;
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: clamp(0.52rem, 2vw, 0.61rem);
-    font-weight: 850;
-    line-height: 1.25;
+    font-size: clamp(0.51rem, 1.8vw, 0.58rem);
+    font-weight: 800;
+    line-height: 1.2;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   strong {
     display: block;
-    margin-top: 4px;
+    margin-top: 3px;
     color: ${({ theme }) => theme.colors.primary};
     font-family: ${({ theme }) => theme.fonts.numeric};
-    font-size: clamp(0.76rem, 2.7vw, 0.96rem);
+    font-size: clamp(0.74rem, 2.4vw, 0.9rem);
     font-weight: 950;
     line-height: 1.15;
     white-space: nowrap;
   }
+
+  @media (max-width: 420px) {
+    padding-inline: 7px;
+  }
 `;
 
-const ReadinessPanel = styled.div`
+const ReadinessPanel = styled(Link)`
   position: relative;
   z-index: 1;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
-  padding: 14px 15px;
-  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 30%, ${({ theme }) => theme.colors.primary});
-  border-radius: 17px;
-  background:
-    radial-gradient(circle at 92% 10%, color-mix(in srgb, ${({ theme }) => theme.colors.gold} 12%, transparent) 0, transparent 34%),
-    linear-gradient(140deg, #081925 0%, ${({ theme }) => theme.colors.primary} 72%, #17231f 100%);
-  box-shadow: 0 10px 24px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 13%, transparent);
+  padding: 10px 11px;
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 20%, ${({ theme }) => theme.colors.border});
+  border-radius: 13px;
+  background: color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 46%, ${({ theme }) => theme.colors.surface});
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 0.16s ease, background 0.16s ease, transform 0.16s ease;
 
-  > div:first-child { min-width: 0; }
+  &:hover {
+    border-color: color-mix(in srgb, ${({ theme }) => theme.colors.gold} 38%, ${({ theme }) => theme.colors.border});
+    background: color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 68%, ${({ theme }) => theme.colors.surface});
+    transform: translateY(-1px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 55%, transparent);
+    outline-offset: 2px;
+  }
+
+  > div {
+    min-width: 0;
+  }
 
   small {
     display: block;
-    color: ${({ theme }) => theme.colors.goldLight};
-    font-size: 0.56rem;
+    color: ${({ theme }) => theme.colors.secondaryDark};
+    font-size: 0.53rem;
     font-weight: 950;
-    letter-spacing: 0.07em;
+    letter-spacing: 0.08em;
   }
 
   strong {
     display: block;
-    margin-top: 4px;
-    color: #fffaf0;
-    font-size: clamp(0.95rem, 3.2vw, 1.22rem);
+    margin-top: 2px;
+    color: ${({ theme }) => theme.colors.primary};
+    font-size: clamp(0.76rem, 2.7vw, 0.9rem);
     font-weight: 950;
-    line-height: 1.24;
+    line-height: 1.3;
     word-break: keep-all;
   }
 
   p {
-    margin: 5px 0 0;
-    color: rgba(255,255,255,0.64);
-    font-size: 0.62rem;
-    line-height: 1.45;
+    margin: 3px 0 0;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: 0.57rem;
+    line-height: 1.4;
     word-break: keep-all;
   }
 
-  .bar {
-    display: grid;
-    grid-template-rows: auto auto auto;
-    place-items: center;
-    width: 92px;
-    min-height: 64px;
-    padding: 7px 8px;
-    border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 55%, transparent);
-    border-radius: 13px;
-    background: linear-gradient(145deg, #f7e6b9 0%, ${({ theme }) => theme.colors.goldLight} 38%, ${({ theme }) => theme.colors.gold} 100%);
-    color: ${({ theme }) => theme.colors.primary};
-    text-align: center;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.65), 0 8px 18px rgba(0,0,0,0.18);
-  }
-
-  .bar b {
-    font-family: ${({ theme }) => theme.fonts.heading};
-    font-size: 0.78rem;
-    line-height: 1;
-  }
-
-  .bar span {
-    margin-top: 2px;
-    font-family: ${({ theme }) => theme.fonts.numeric};
-    font-size: 0.43rem;
-    font-weight: 900;
-    letter-spacing: 0.035em;
-    line-height: 1.15;
-    white-space: nowrap;
-  }
-
-  .bar em {
-    margin-top: 3px;
-    font-family: ${({ theme }) => theme.fonts.numeric};
-    font-size: 0.82rem;
-    font-style: normal;
-    font-weight: 950;
-    line-height: 1;
-    white-space: nowrap;
-  }
-
-  @media (max-width: 440px) {
-    grid-template-columns: minmax(0, 1fr) 82px;
-    gap: 9px;
-    padding: 13px;
-
-    .bar { width: 82px; min-height: 60px; }
+  > svg {
+    width: 18px;
+    height: 18px;
+    color: ${({ theme }) => theme.colors.secondaryDark};
   }
 `;
 
@@ -309,45 +332,57 @@ const HeroActions = styled.div`
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
 `;
 
-const HeroExchangeAction = styled(Link)`
-  display: flex;
+const HeroAddAction = styled.button`
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 9px;
-  min-height: 50px;
-  padding: 10px 15px;
-  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 52%, transparent);
-  border-radius: 15px;
-  background: linear-gradient(105deg, #f7e6ba 0%, ${({ theme }) => theme.colors.goldLight} 38%, ${({ theme }) => theme.colors.gold} 100%);
-  color: ${({ theme }) => theme.colors.primary};
-  box-shadow: 0 9px 22px color-mix(in srgb, ${({ theme }) => theme.colors.gold} 18%, transparent);
-  font-size: 0.8rem;
-  font-weight: 950;
-  text-decoration: none;
-
-  svg { width: 18px; height: 18px; }
-`;
-
-const HeroSaveAction = styled.button`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 9px;
-  min-height: 50px;
-  padding: 10px 15px;
+  gap: 7px;
+  min-height: 44px;
+  padding: 9px 12px;
   border: 1px solid ${({ theme }) => theme.colors.primary};
-  border-radius: 15px;
+  border-radius: 12px;
   background: ${({ theme }) => theme.colors.primary};
   color: ${({ theme }) => theme.on.primary};
-  box-shadow: 0 9px 22px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 16%, transparent);
-  font-size: 0.8rem;
+  font-size: 0.73rem;
   font-weight: 950;
   cursor: pointer;
 
-  svg { width: 18px; height: 18px; }
+  svg {
+    width: 16px;
+    height: 16px;
+    color: ${({ theme }) => theme.colors.goldLight};
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const HeroExchangeAction = styled(Link)`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 9px 11px;
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 30%, ${({ theme }) => theme.colors.border});
+  border-radius: 12px;
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.primary};
+  font-size: 0.7rem;
+  font-weight: 900;
+  text-decoration: none;
+
+  svg {
+    width: 15px;
+    height: 15px;
+    color: ${({ theme }) => theme.colors.secondaryDark};
+  }
 `;
 
 const GuestModeNote = styled.p`
@@ -363,12 +398,12 @@ const GuestModeNote = styled.p`
 
 const VaultSection = styled.section`
   display: grid;
-  gap: 13px;
-  padding: clamp(16px, 3vw, 20px);
-  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 13%, ${({ theme }) => theme.colors.border});
-  border-radius: 22px;
+  gap: 11px;
+  padding: clamp(14px, 2.6vw, 18px);
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 10%, ${({ theme }) => theme.colors.border});
+  border-radius: 18px;
   background: ${({ theme }) => theme.colors.surface};
-  box-shadow: 0 10px 28px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 5%, transparent);
+  box-shadow: 0 7px 20px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 4%, transparent);
 `;
 
 const SectionHead = styled.div`
@@ -420,36 +455,36 @@ const AddGoldButton = styled.button`
 const BonusStrip = styled.div`
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
-  padding: 12px 13px;
-  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 30%, ${({ theme }) => theme.colors.border});
-  border-radius: 15px;
-  background: linear-gradient(120deg, ${({ theme }) => theme.semantic.badgeGoldBg}, ${({ theme }) => theme.colors.surface});
+  padding: 9px 3px 2px;
+  border-top: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
+  background: transparent;
 
   small {
     display: block;
     color: ${({ theme }) => theme.colors.secondaryDark};
-    font-size: 0.57rem;
+    font-size: 0.54rem;
     font-weight: 950;
     letter-spacing: 0.05em;
   }
 
   strong {
     display: block;
-    margin-top: 3px;
-    color: ${({ theme }) => theme.colors.primary};
-    font-size: 0.78rem;
-    font-weight: 900;
-    line-height: 1.35;
+    margin-top: 2px;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: 0.66rem;
+    font-weight: 800;
+    line-height: 1.4;
   }
 
   .amount {
     color: ${({ theme }) => theme.colors.primary};
     font-family: ${({ theme }) => theme.fonts.numeric};
-    font-size: 0.9rem;
+    font-size: 0.79rem;
     font-weight: 950;
     text-align: right;
+    white-space: nowrap;
   }
 `;
 
@@ -1203,34 +1238,32 @@ const ErrorText = styled.p`
 
 const ItemList = styled.div`
   display: grid;
-  gap: 8px;
+  overflow: hidden;
+  border: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
+  border-radius: 14px;
+  background: ${({ theme }) => theme.colors.surface};
 `;
 
 const ItemCard = styled.article`
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
-  padding: 14px;
-  border: 1px solid
-    color-mix(in srgb, ${({ theme }) => theme.colors.gold} 11%, ${({ theme }) => theme.colors.border});
-  border-radius: 17px;
-  background:
-    linear-gradient(
-      145deg,
-      color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 18%, white),
-      ${({ theme }) => theme.colors.surfaceAlt} 74%
-    );
-  transition:
-    transform ${({ theme }) => theme.transitions.base},
-    border-color ${({ theme }) => theme.transitions.base};
+  gap: 10px;
+  padding: 11px 12px;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
+  background: transparent;
+  transition: background ${({ theme }) => theme.transitions.base};
+
+  &:last-child {
+    border-bottom: 0;
+  }
 
   &:hover {
-    transform: translateY(-1px);
-    border-color: color-mix(in srgb, ${({ theme }) => theme.colors.gold} 34%, ${({ theme }) => theme.colors.border});
+    background: color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 26%, transparent);
   }
 
   @media (max-width: 460px) {
     grid-template-columns: 1fr;
+    padding-inline: 9px;
   }
 `;
 
@@ -1379,6 +1412,109 @@ const Notice = styled.p`
   word-break: keep-all;
 `;
 
+const GuestSaveCard = styled.section`
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px 18px;
+  align-items: center;
+  padding: clamp(16px, 2.6vw, 20px);
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 28%, ${({ theme }) => theme.colors.border});
+  border-radius: 18px;
+  background:
+    linear-gradient(
+      140deg,
+      color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 45%, white),
+      ${({ theme }) => theme.colors.surface} 70%
+    );
+  color: ${({ theme }) => theme.colors.text};
+  box-shadow: 0 8px 24px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 5%, transparent);
+
+  @media (max-width: 680px) {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 16px 14px;
+    border-radius: 16px;
+  }
+`;
+
+const GuestSaveCopy = styled.div`
+  display: grid;
+  gap: 6px;
+
+  small {
+    color: ${({ theme }) => theme.colors.secondaryDark};
+    font-family: ${({ theme }) => theme.fonts.numeric};
+    font-size: 0.55rem;
+    font-weight: 950;
+    letter-spacing: 0.1em;
+  }
+
+  h2 {
+    margin: 0;
+    color: ${({ theme }) => theme.colors.primary};
+    font-family: ${({ theme }) => theme.fonts.heading};
+    font-size: clamp(1.02rem, 2.8vw, 1.3rem);
+    line-height: 1.3;
+    word-break: keep-all;
+  }
+
+  p {
+    max-width: 580px;
+    margin: 0;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: 0.66rem;
+    line-height: 1.58;
+    word-break: keep-all;
+  }
+`;
+
+const GuestSaveBenefits = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 4px 7px;
+    border: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
+    border-radius: 999px;
+    background: ${({ theme }) => theme.colors.surface};
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: 0.56rem;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+`;
+
+const GuestSaveAction = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid ${({ theme }) => theme.colors.primary};
+  border-radius: 12px;
+  background: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.on.primary};
+  font-size: 0.68rem;
+  font-weight: 950;
+  white-space: nowrap;
+  cursor: pointer;
+
+  svg {
+    width: 15px;
+    height: 15px;
+    color: ${({ theme }) => theme.colors.goldLight};
+  }
+
+  @media (max-width: 680px) {
+    width: 100%;
+  }
+`;
+
 const EMPTY_FORM = { label: "", goldType: "", weightValue: "", weightUnit: "g", note: "" };
 
 
@@ -1456,6 +1592,17 @@ function formatSignedPercent(value) {
   return `${number > 0 ? "+" : "-"}${Math.abs(number).toFixed(2)}%`;
 }
 
+function guestVaultFingerprint(items) {
+  return JSON.stringify(
+    (Array.isArray(items) ? items : []).map((item) => ({
+      label: String(item?.label || "").trim(),
+      goldType: String(item?.goldType || "").trim(),
+      weightG: Number(item?.weightG || 0),
+      note: String(item?.note || "").trim(),
+    }))
+  );
+}
+
 const MY_GOLD_BAR_DENOMS = Object.freeze([
   { grams: 500, label: "500g 골드바" },
   { grams: 100, label: "100g 골드바" },
@@ -1523,6 +1670,7 @@ export default function MyGoldVault() {
   const [compareError, setCompareError] = useState("");
   const [weeklyTrendChange, setWeeklyTrendChange] = useState(null);
   const importKind = new URLSearchParams(location.search).get("import");
+  const addRequested = new URLSearchParams(location.search).get("add") === "1";
   const importRequested = importKind === "calculator" || importKind === "guest";
   const importSource = importKind === "guest" ? "guest-my-gold" : "gold-exchange-calculator";
   const [importDraft, setImportDraft] = useState(() =>
@@ -1605,9 +1753,47 @@ export default function MyGoldVault() {
 
   const activeItems = isGuest ? guestItems : items;
   const activeSummary = isGuest ? guestSummary : summary;
+  const hasPersonalizedGuestVault = useMemo(() => {
+    if (!isGuest || guestRawItems.length === 0) return false;
+    return guestVaultFingerprint(guestRawItems) !== guestVaultFingerprint(DEFAULT_GUEST_MY_GOLD_ITEMS);
+  }, [guestRawItems, isGuest]);
   const bonusBalanceG = isGuest ? GUEST_MY_GOLD_BONUS_G : Number(bonus.balanceG || 0);
   const vaultLoading = isGuest ? false : itemsLoading || bonus.loading;
   const canAddMore = activeItems.length < GOLD_VAULT_MAX_ITEMS || !!editingId;
+
+  useEffect(() => {
+    if (!addRequested || formOpen || editingId) return;
+
+    const params = new URLSearchParams(location.search);
+    params.delete("add");
+    const nextSearch = params.toString();
+
+    if (!canAddMore) {
+      setError(`내금고에는 최대 ${GOLD_VAULT_MAX_ITEMS}개까지 등록할 수 있습니다.`);
+      navigate(
+        { pathname: location.pathname, search: nextSearch ? `?${nextSearch}` : "" },
+        { replace: true }
+      );
+      return;
+    }
+
+    setForm(EMPTY_FORM);
+    setEditingId("");
+    setError("");
+    setFormOpen(true);
+    navigate(
+      { pathname: location.pathname, search: nextSearch ? `?${nextSearch}` : "" },
+      { replace: true }
+    );
+  }, [
+    addRequested,
+    canAddMore,
+    editingId,
+    formOpen,
+    location.pathname,
+    location.search,
+    navigate,
+  ]);
 
   const sortedItems = useMemo(() => activeItems, [activeItems]);
   const exchangeProducts = useMemo(
@@ -1945,6 +2131,18 @@ export default function MyGoldVault() {
         <HeroKicker>
           <Gem size={15} aria-hidden /> MY GOLD · {isGuest ? "내금고 체험" : "내금고"}
         </HeroKicker>
+        <PrivacyBadge role="note" aria-label="MY GOLD 비공개 안내">
+          <LockKeyhole aria-hidden />
+          <span>
+            <strong>{isGuest ? "가입 후에도 내 금 기록은 비공개" : "내 금 기록은 비공개입니다"}</strong>
+            {isGuest
+              ? " · 저장한 상세 기록은 다른 회원에게 공개되지 않고, 본인 계정의 MY GOLD에서만 조회됩니다."
+              : " · 등록한 종류·중량 등 상세 기록은 다른 회원에게 공개되지 않고, 본인 계정의 MY GOLD에서만 조회됩니다."}
+          </span>
+        </PrivacyBadge>
+        <VaultDefinition>
+          MY GOLD는 실물 금을 맡기는 서비스가 아니라, 내가 가진 금의 정보를 기록해 현재 가치와 변화를 확인하는 개인 관리 공간입니다.
+        </VaultDefinition>
         <HeroTitle id="my-vault-current-value-title">
           {isGuest ? "내 금을 직접 넣어보세요." : "내 금의 오늘 가치"}
         </HeroTitle>
@@ -1983,7 +2181,7 @@ export default function MyGoldVault() {
 
         <HeroStats>
           <HeroStat>
-            <span>실물 금</span>
+            <span>등록 중량</span>
             <strong>{Number(activeSummary.totalWeightG || 0).toFixed(2)}g</strong>
           </HeroStat>
           <HeroStat>
@@ -1996,54 +2194,39 @@ export default function MyGoldVault() {
           </HeroStat>
         </HeroStats>
 
-        <ReadinessPanel>
-          {activeSummary.itemCount > 0 ? (
-            <>
-              <div>
-                <small>MY GOLD → 999.9 GOLD BAR</small>
-                <strong>
-                  {barReadiness?.available
-                    ? `${barReadiness.label} 교환 가능`
-                    : `1g 골드바까지 약 ${Number(barReadiness?.neededG || 0).toFixed(2)}g 더 필요`}
-                </strong>
-                <p>
-                  예상 순금량 {Number(activeSummary.pureGoldG || 0).toFixed(2)}g
-                  {barReadiness?.available
-                    ? ` · 예상 잔여 순금 ${Number(barReadiness.remainingG || 0).toFixed(2)}g`
-                    : " · 금을 더 등록하면 교환 가능 규격이 자동으로 갱신됩니다."}
-                </p>
-              </div>
-              <div className="bar" aria-label={barReadiness?.available ? `${barReadiness.label} 999.9 골드바` : "1g 골드바 목표"}>
-                <b>KGM</b>
-                <span>FINE GOLD 999.9</span>
-                <em>{barReadiness?.available ? barReadiness.label : "1g 목표"}</em>
-              </div>
-            </>
-          ) : (
-            <>
-              <div>
-                <small>첫 금을 등록해 보세요</small>
-                <strong>금 종류와 무게만 입력하면 예상 순금량과 가능한 골드바를 바로 계산합니다.</strong>
-                <p>반지, 목걸이, 돌반지처럼 지금 가지고 있는 금부터 기록해 두세요.</p>
-              </div>
-              <div className="bar" aria-hidden><b>KGM</b><span>FINE GOLD 999.9</span><em>START</em></div>
-            </>
-          )}
+        <ReadinessPanel
+          to="/gold-exchange"
+          state={{ source: "my-gold", vaultProducts: exchangeProducts }}
+          aria-label="MY GOLD 예상 순금량으로 금교환 페이지 열기"
+        >
+          <div>
+            <small>999.9 GOLD · VALUE INSIGHT</small>
+            <strong>
+              {activeSummary.itemCount > 0
+                ? barReadiness?.available
+                  ? `현재 예상 순금량으로 ${barReadiness.label} 교환 가능`
+                  : `1g 골드바까지 약 ${Number(barReadiness?.neededG || 0).toFixed(2)}g 더 필요`
+                : "금 하나를 등록하면 교환 가능한 골드바를 바로 확인합니다."}
+            </strong>
+            <p>
+              {activeSummary.itemCount > 0
+                ? `예상 순금량 ${Number(activeSummary.pureGoldG || 0).toFixed(2)}g`
+                : "반지, 목걸이, 돌반지처럼 지금 가지고 있는 금부터 기록해 보세요."}
+            </p>
+          </div>
+          <ChevronRight aria-hidden />
         </ReadinessPanel>
 
         <HeroActions>
-          {isGuest && activeSummary.itemCount > 0 && (
-            <HeroSaveAction type="button" onClick={saveGuestVaultToAccount}>
-              <Save aria-hidden /> 지금 만든 내금고 저장 <ArrowRight aria-hidden />
-            </HeroSaveAction>
-          )}
+          <HeroAddAction type="button" onClick={openAddForm} disabled={!canAddMore}>
+            <Plus aria-hidden /> 금 추가
+          </HeroAddAction>
           <HeroExchangeAction
-            to="/gold-exchange"
-            state={{ source: "my-gold", vaultProducts: exchangeProducts }}
-            aria-label="내금고의 실물 금으로 금교환 계산하기"
+            to="/gold-to-gold"
+            aria-label="GOLD TO GOLD 서비스 소개 보기"
           >
-            <Calculator aria-hidden />
-            {activeSummary.itemCount > 0 ? "내금고로 교환 계산하기" : "금교환 계산 먼저 해보기"}
+            <Gem aria-hidden />
+            GOLD TO GOLD란?
             <ArrowRight aria-hidden />
           </HeroExchangeAction>
         </HeroActions>
@@ -2084,7 +2267,7 @@ export default function MyGoldVault() {
             <p>
               {isGuest
                 ? "예시 금을 고치거나 내 금을 새로 넣어보세요. 화면의 가치와 골드바 가능량이 바로 바뀝니다."
-                : "실물 금을 기록해 두면 오늘 가치와 예상 순금량, 교환 가능 골드바가 자동으로 따라옵니다."}
+                : "내가 가진 금의 종류와 중량을 기록하면 오늘 가치와 예상 순금량, 교환 가능 골드바가 자동으로 계산됩니다."}
             </p>
           </div>
           <SectionActions>
@@ -2158,6 +2341,27 @@ export default function MyGoldVault() {
         </BonusStrip>
       </VaultSection>
 
+      {isGuest && hasPersonalizedGuestVault && activeSummary.itemCount > 0 && (
+        <GuestSaveCard aria-label="MY GOLD 회원가입 저장 안내">
+          <GuestSaveCopy>
+            <small>SAVE YOUR GOLD · FREE</small>
+            <h2>오늘 확인한 내 금의 가치, 내일도 이어보세요.</h2>
+            <p>
+              지금 만든 MY GOLD 기록을 계정에 저장하면 오늘 가치와 가격 변화, 예상 순금량과
+              골드바 가능 상태를 계속 확인할 수 있습니다. 회원가입 후 지금 입력한 금 정보가 그대로 이어집니다.
+            </p>
+            <GuestSaveBenefits aria-label="MY GOLD 회원 혜택">
+              <span>지금 입력한 금 그대로 저장</span>
+              <span>가치 변화 계속 확인</span>
+              <span>회원가입 순금 0.01g</span>
+            </GuestSaveBenefits>
+          </GuestSaveCopy>
+          <GuestSaveAction type="button" onClick={saveGuestVaultToAccount}>
+            <Save aria-hidden /> MY GOLD 기록 저장하기 <ArrowRight aria-hidden />
+          </GuestSaveAction>
+        </GuestSaveCard>
+      )}
+
       {hasVaultContent && publicPriceEnabled && (
         <MyGoldValueTrend
           pureGoldG={vaultPureGoldG}
@@ -2219,9 +2423,9 @@ export default function MyGoldVault() {
 
       <Notice>
         {isGuest ? (
-          <>체험 중 입력한 금은 이 기기에만 임시 보관되며 <strong>지금 만든 내금고 저장</strong>을 선택하기 전에는 계정에 저장되지 않습니다. 회원혜택 0.03g은 체험 예시입니다. 예상 순금량과 금액은 참고값이며 실제 교환은 매장 실측 후 확정됩니다.</>
+          <>체험 중 입력한 금 기록은 이 기기에만 임시 보관되며 <strong>MY GOLD 기록 저장</strong>을 선택하기 전에는 계정에 저장되지 않습니다. MY GOLD는 실물 금 보관 서비스가 아닙니다. 회원혜택 0.03g은 체험 예시이며, 예상 순금량과 금액은 참고값입니다. 실제 교환은 매장 실측 후 확정됩니다.</>
         ) : (
-          <>내금고의 <strong>등록 실물 금</strong>은 사용자가 보유한 금제품 기록이고, <strong>회원 혜택 적립 순금</strong>은 한국골드마켓에서 적립된 별도 잔액입니다. 예상 순금량과 금액은 현재 교환 적용률·공개 시세를 적용한 참고값이며, 실제 교환 순금량과 비용은 매장에서 순도·중량을 실측한 뒤 최종 확정합니다.</>
+          <>MY GOLD는 <strong>실물 금 보관 서비스가 아닙니다.</strong> 등록한 금 정보는 사용자가 가진 금제품의 개인 기록이며, <strong>회원 혜택 적립 순금</strong>은 한국골드마켓에서 적립된 별도 잔액입니다. 예상 순금량과 금액은 현재 교환 적용률·공개 시세를 적용한 참고값이며, 실제 교환 순금량과 비용은 매장에서 순도·중량을 실측한 뒤 최종 확정합니다.</>
         )}
       </Notice>
 

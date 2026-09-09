@@ -7,12 +7,12 @@ import useMyGoldValueTrend, { MY_GOLD_TREND_PERIODS } from "@/hooks/useMyGoldVal
 
 const Card = styled.section`
   display: grid;
-  gap: 15px;
-  padding: clamp(16px, 3vw, 20px);
-  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 14%, ${({ theme }) => theme.colors.border});
-  border-radius: 22px;
+  gap: 12px;
+  padding: clamp(14px, 2.6vw, 17px);
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 10%, ${({ theme }) => theme.colors.border});
+  border-radius: 18px;
   background: ${({ theme }) => theme.colors.surface};
-  box-shadow: 0 10px 28px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 5%, transparent);
+  box-shadow: 0 7px 20px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 4%, transparent);
 `;
 
 const Head = styled.div`
@@ -92,20 +92,20 @@ const ChangeLine = styled.div`
 
 const ChartWrap = styled.div`
   position: relative;
-  min-height: 186px;
-  padding: 8px 4px 2px;
-  border-radius: 16px;
+  min-height: 154px;
+  padding: 6px 3px 1px;
+  border-radius: 13px;
   background: linear-gradient(
     180deg,
-    color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 42%, transparent),
-    transparent 78%
+    color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 32%, transparent),
+    transparent 80%
   );
 `;
 
 const Svg = styled.svg`
   display: block;
   width: 100%;
-  height: 166px;
+  height: 136px;
   overflow: visible;
   color: ${({ theme }) => theme.colors.secondaryDark};
 `;
@@ -258,7 +258,7 @@ function formatCompactDate(value) {
 
 function buildChartGeometry(points) {
   const width = 640;
-  const height = 166;
+  const height = 136;
   const paddingX = 12;
   const paddingY = 14;
   if (!points.length) return { width, height, polyline: "", area: "", min: 0, max: 0 };

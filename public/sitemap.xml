@@ -16,6 +16,16 @@
     <priority>1</priority>
   </url>
   <url>
+    <loc>https://koreagoldmarket.com/my-gold</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://koreagoldmarket.com/gold-to-gold</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
     <loc>https://koreagoldmarket.com/goldbar-fee</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
@@ -24,6 +34,11 @@
     <loc>https://koreagoldmarket.com/stores</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://koreagoldmarket.com/reviews</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://koreagoldmarket.com/terms</loc>

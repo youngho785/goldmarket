@@ -14,10 +14,6 @@ import { doc, onSnapshot } from "firebase/firestore";
 import { db, registerForPush } from "@/firebase/firebase";
 import { useAuthContext } from "@/context/AuthContext";
 import MyGoldTicker from "@/components/gold/MyGoldTicker";
-import useBonusGoldBalance from "@/hooks/useBonusGoldBalance";
-import useGoldVaultDashboard from "@/hooks/useGoldVaultDashboard";
-import { DON_TO_GRAMS } from "@/lib/goldRates";
-import { computeVaultValueWon } from "@/lib/goldVaultCatalog";
 import {
   getNotificationPreferences,
   saveMarketingNotificationConsent,
@@ -34,10 +30,10 @@ const Page = styled.div`
   --line: rgba(12, 17, 22, 0.1);
 
   width: 100%;
-  padding: 0 0 clamp(44px, 7vw, 76px);
+  padding: 0 0 clamp(30px, 5vw, 52px);
 
   @media (max-width: 760px) {
-    padding-bottom: 12px;
+    padding-bottom: 10px;
   }
 
   color: ${({ theme }) => theme.colors.text};
@@ -56,21 +52,21 @@ const Shell = styled.div`
 `;
 
 const Hero = styled.section`
-  padding: clamp(18px, 3vw, 30px) 0 10px;
+  padding: clamp(12px, 2.2vw, 20px) 0 8px;
 `;
 
 const HeroCard = styled.div`
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1.08fr) minmax(260px, 0.92fr);
-  min-height: 282px;
+  min-height: 204px;
   overflow: hidden;
   border: 1px solid rgba(213, 164, 67, 0.28);
-  border-radius: 26px;
+  border-radius: 22px;
   background:
     radial-gradient(circle at 82% 18%, rgba(212, 159, 53, 0.15), transparent 24rem),
     linear-gradient(135deg, #080b0e 0%, #10161b 55%, #07090b 100%);
-  box-shadow: 0 24px 58px rgba(7, 10, 13, 0.15);
+  box-shadow: 0 18px 42px rgba(7, 10, 13, 0.13);
 
   &::after {
     content: "";
@@ -88,7 +84,7 @@ const HeroCard = styled.div`
 
   @media (max-width: 760px) {
     display: block;
-    min-height: 248px;
+    min-height: 190px;
     border-radius: 20px;
   }
 `;
@@ -99,25 +95,25 @@ const HeroCopy = styled.div`
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: clamp(22px, 4vw, 42px);
+  padding: clamp(18px, 2.6vw, 26px);
 
   @media (max-width: 760px) {
-    min-height: 248px;
+    min-height: 190px;
     justify-content: flex-start;
-    padding: 18px 92px 18px 16px;
+    padding: 15px 82px 14px 14px;
   }
 `;
 
 const Eyebrow = styled.div`
-  margin-bottom: 11px;
+  margin-bottom: 7px;
   color: var(--gold-bright);
-  font-size: 0.72rem;
+  font-size: 0.66rem;
   font-weight: 900;
   letter-spacing: 0.16em;
 
   @media (max-width: 760px) {
-    margin-bottom: 8px;
-    font-size: 0.58rem;
+    margin-bottom: 6px;
+    font-size: 0.55rem;
     letter-spacing: 0.13em;
   }
 `;
@@ -125,49 +121,49 @@ const Eyebrow = styled.div`
 const HeroTitle = styled.h1`
   margin: 0;
   color: #fff;
-  font-size: clamp(1.9rem, 4.3vw, 3.25rem);
+  font-size: clamp(1.6rem, 3.05vw, 2.3rem);
   font-weight: 900;
   line-height: 1.03;
   letter-spacing: -0.055em;
   word-break: keep-all;
 
   @media (max-width: 760px) {
-    font-size: 1.72rem;
+    font-size: 1.42rem;
     line-height: 1.04;
   }
 `;
 
 const HeroLead = styled.p`
-  margin: 11px 0 0;
+  margin: 7px 0 0;
   max-width: 520px;
   color: rgba(255, 255, 255, 0.68);
-  font-size: clamp(0.88rem, 1.7vw, 1rem);
-  line-height: 1.65;
+  font-size: clamp(0.8rem, 1.35vw, 0.92rem);
+  line-height: 1.55;
   word-break: keep-all;
 
   @media (max-width: 760px) {
-    margin-top: 7px;
+    margin-top: 5px;
     max-width: 100%;
-    font-size: 0.7rem;
+    font-size: 0.66rem;
     line-height: 1.45;
   }
 `;
 
 const HeroPriceBlock = styled.div`
-  margin-top: clamp(20px, 3vw, 30px);
+  margin-top: clamp(11px, 1.7vw, 16px);
 
   @media (max-width: 760px) {
-    margin-top: 13px;
+    margin-top: 10px;
   }
 `;
 
 const PriceLabel = styled.div`
   color: rgba(255, 255, 255, 0.72);
-  font-size: 0.82rem;
+  font-size: 0.75rem;
   font-weight: 800;
 
   @media (max-width: 760px) {
-    font-size: 0.64rem;
+    font-size: 0.6rem;
     line-height: 1.35;
   }
 `;
@@ -183,13 +179,13 @@ const HeroPrice = styled.div`
 const HeroPriceValue = styled.strong`
   color: #f2c45f;
   font-family: ${({ theme }) => theme.fonts.numeric};
-  font-size: clamp(2.55rem, 7vw, 5.15rem);
+  font-size: clamp(2.15rem, 5.1vw, 3.7rem);
   font-weight: 900;
   line-height: 0.95;
   letter-spacing: -0.055em;
 
   @media (max-width: 760px) {
-    font-size: clamp(2.25rem, 11vw, 3rem);
+    font-size: clamp(1.95rem, 9.6vw, 2.55rem);
   }
 `;
 
@@ -208,7 +204,7 @@ const ChangeLine = styled.div`
   flex-wrap: wrap;
   gap: 10px 14px;
   align-items: center;
-  margin-top: 15px;
+  margin-top: 9px;
   color: ${({ $direction }) =>
     $direction === "up"
       ? "#ff6969"
@@ -222,7 +218,7 @@ const ChangeLine = styled.div`
   @media (max-width: 760px) {
     display: grid;
     gap: 4px;
-    margin-top: 9px;
+    margin-top: 7px;
     max-width: 100%;
     font-size: 0.63rem;
     line-height: 1.35;
@@ -264,8 +260,8 @@ const GoldVisual = styled.div`
   z-index: 1;
   display: grid;
   place-items: center;
-  min-height: 282px;
-  padding: 22px;
+  min-height: 204px;
+  padding: 18px;
   background:
     linear-gradient(115deg, transparent 0 42%, rgba(255,255,255,.025) 42% 43%, transparent 43%),
     radial-gradient(circle at 50% 70%, rgba(236, 184, 73, 0.15), transparent 45%);
@@ -285,7 +281,7 @@ const GoldVisual = styled.div`
 
 const GoldBar = styled.div`
   position: relative;
-  width: clamp(138px, 20vw, 198px);
+  width: clamp(122px, 17vw, 162px);
   aspect-ratio: 0.67;
   border: 1px solid #ffd978;
   border-radius: 22px;
@@ -365,34 +361,11 @@ const BarInner = styled.div`
   }
 `;
 
-const VaultImpact = styled(Link)`
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 14px;
-  align-items: center;
-  margin: 0 0 12px;
-  padding: 15px 17px;
-  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 24%, ${({ theme }) => theme.colors.border});
-  border-radius: 18px;
-  background: linear-gradient(135deg, ${({ theme }) => theme.semantic.badgeGoldBg}, ${({ theme }) => theme.colors.surface});
-  color: ${({ theme }) => theme.colors.text};
-  text-decoration: none;
-  box-shadow: 0 8px 22px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 5%, transparent);
-
-  small { display:block; color: ${({ theme }) => theme.colors.secondaryDark}; font-size:.61rem; font-weight:950; letter-spacing:.09em; }
-  strong { display:block; margin-top:4px; color: ${({ theme }) => theme.colors.primary}; font-size:1rem; line-height:1.32; }
-  p { margin:4px 0 0; color: ${({ theme }) => theme.colors.textSecondary}; font-size:.75rem; line-height:1.45; }
-  b { color: ${({ theme }) => theme.colors.secondaryDark}; font-family: ${({ theme }) => theme.fonts.numeric}; }
-
-  > span { color: ${({ theme }) => theme.colors.primary}; font-weight:950; white-space:nowrap; }
-  @media (max-width: 600px) { grid-template-columns:1fr; padding:13px 14px; > span { font-size:.72rem; } }
-`;
-
 const Section = styled.section`
-  padding: clamp(30px, 5vw, 52px) 0 0;
+  padding: clamp(19px, 3vw, 29px) 0 0;
 
   @media (max-width: 760px) {
-    padding-top: 24px;
+    padding-top: 18px;
   }
 `;
 
@@ -422,13 +395,13 @@ const SectionKicker = styled.div`
 const SectionTitle = styled.h2`
   margin: 0;
   color: var(--ink);
-  font-size: clamp(1.45rem, 3.5vw, 2.25rem);
+  font-size: clamp(1.3rem, 2.8vw, 1.9rem);
   font-weight: 900;
   line-height: 1.15;
   letter-spacing: -0.04em;
 
   @media (max-width: 760px) {
-    font-size: 1.55rem;
+    font-size: 1.38rem;
   }
 `;
 
@@ -492,8 +465,8 @@ const MetalHead = styled.div`
   display: flex;
   align-items: center;
   gap: 13px;
-  min-height: 102px;
-  padding: 20px;
+  min-height: 80px;
+  padding: 14px 16px;
   color: ${({ $dark }) => ($dark ? "#fff" : "#17191b")};
   background: ${({ $metal }) =>
     $metal === "pure"
@@ -550,7 +523,7 @@ const MetalPurity = styled.span`
   margin-top: 5px;
   opacity: 0.72;
   font-family: ${({ theme }) => theme.fonts.numeric};
-  font-size: 0.73rem;
+  font-size: 0.69rem;
   font-weight: 750;
 
   @media (max-width: 760px) {
@@ -569,7 +542,7 @@ const CardBody = styled.div`
 
 const CardMetric = styled.div`
   min-width: 0;
-  padding: 20px 16px;
+  padding: 14px 12px;
   border-left: ${({ $right }) => ($right ? "1px solid var(--line)" : "0")};
   text-align: center;
 
@@ -741,12 +714,13 @@ const MatrixChange = styled.span`
 const AlertCard = styled.div`
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(250px, 0.8fr);
-  gap: clamp(24px, 5vw, 64px);
+  grid-template-columns: minmax(0, 1.08fr) minmax(300px, 0.92fr);
+  gap: clamp(22px, 3vw, 38px);
+  align-items: center;
   overflow: hidden;
-  padding: clamp(24px, 5vw, 48px);
+  padding: clamp(18px, 2.7vw, 24px);
   border: 1px solid rgba(199, 148, 48, 0.22);
-  border-radius: 24px;
+  border-radius: 18px;
   background:
     radial-gradient(circle at 85% 40%, rgba(212, 159, 53, 0.17), transparent 20rem),
     #fff;
@@ -754,8 +728,8 @@ const AlertCard = styled.div`
 
   @media (max-width: 760px) {
     grid-template-columns: 1fr;
-    gap: 0;
-    padding: 20px 16px 18px;
+    gap: 14px;
+    padding: 16px 14px;
     border-radius: 18px;
   }
 `;
@@ -763,7 +737,7 @@ const AlertCard = styled.div`
 const AlertTitle = styled.h2`
   margin: 0;
   color: var(--ink);
-  font-size: clamp(1.55rem, 4vw, 2.65rem);
+  font-size: clamp(1.25rem, 2.55vw, 1.7rem);
   font-weight: 900;
   line-height: 1.12;
   letter-spacing: -0.045em;
@@ -775,17 +749,17 @@ const AlertTitle = styled.h2`
   }
 
   @media (max-width: 760px) {
-    font-size: 1.55rem;
+    font-size: 1.2rem;
     line-height: 1.12;
   }
 `;
 
 const AlertText = styled.p`
-  margin: 12px 0 0;
-  max-width: 540px;
+  margin: 6px 0 0;
+  max-width: 720px;
   color: #676d72;
-  font-size: 0.87rem;
-  line-height: 1.65;
+  font-size: 0.75rem;
+  line-height: 1.5;
   word-break: keep-all;
 
   @media (max-width: 760px) {
@@ -798,8 +772,8 @@ const AlertText = styled.p`
 const AlertBullets = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 14px;
-  margin-top: 18px;
+  gap: 6px 12px;
+  margin-top: 10px;
 
   @media (max-width: 760px) {
     display: grid;
@@ -842,12 +816,14 @@ const AlertBullet = styled.span`
 
 const ActionArea = styled.div`
   display: grid;
-  gap: 10px;
-  margin-top: 22px;
-  max-width: 560px;
+  gap: 7px;
+  width: 100%;
+  max-width: 390px;
+  margin: 0 0 0 auto;
 
   @media (max-width: 760px) {
-    margin-top: 14px;
+    max-width: none;
+    margin: 0;
   }
 `;
 
@@ -857,13 +833,13 @@ const MainButton = styled.button`
   justify-content: center;
   gap: 9px;
   width: 100%;
-  min-height: 52px;
-  padding: 13px 18px;
+  min-height: 42px;
+  padding: 9px 14px;
   border: 1px solid var(--ink);
   border-radius: 12px;
   background: var(--ink);
   color: #fff;
-  font-size: 0.91rem;
+  font-size: 0.84rem;
   font-weight: 900;
   cursor: pointer;
   text-decoration: none;
@@ -884,7 +860,7 @@ const SecondaryLink = styled(Link)`
   align-items: center;
   justify-content: center;
   gap: 7px;
-  min-height: 40px;
+  min-height: 34px;
   color: #6f531f;
   font-size: 0.8rem;
   font-weight: 850;
@@ -956,175 +932,27 @@ const Status = styled.p`
   word-break: keep-all;
 `;
 
-const Phone = styled.div`
-  position: relative;
-  align-self: end;
-  width: min(100%, 286px);
-  min-height: 330px;
-  margin: 0 auto -68px;
-  padding: 17px 12px;
-  border: 7px solid #0b0e11;
-  border-radius: 38px;
-  background:
-    radial-gradient(circle at 50% 18%, rgba(232, 185, 83, 0.18), transparent 10rem),
-    linear-gradient(180deg, #151b21, #080b0e);
-  box-shadow: 0 20px 42px rgba(14, 18, 22, 0.21);
-
-  &::before {
-    content: "";
-    display: block;
-    width: 78px;
-    height: 19px;
-    margin: -6px auto 24px;
-    border-radius: 0 0 12px 12px;
-    background: #020304;
-  }
-
-  @media (max-width: 760px) {
-    display: none;
-  }
-`;
-
-const PhoneTime = styled.div`
-  color: #fff;
-  text-align: center;
-  font-family: ${({ theme }) => theme.fonts.numeric};
-  font-size: 2.15rem;
-  font-weight: 350;
-
-  @media (max-width: 760px) {
-    font-size: 1.45rem;
-  }
-`;
-
-const PhoneDate = styled.div`
-  margin-top: 3px;
-  color: rgba(255,255,255,.57);
-  text-align: center;
-  font-size: 0.68rem;
-
-  @media (max-width: 760px) {
-    font-size: 0.6rem;
-  }
-`;
-
-const PushPreview = styled.div`
-  margin-top: 56px;
-  padding: 13px 14px;
-  border: 1px solid rgba(255,255,255,.62);
-  border-radius: 17px;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 12px 30px rgba(0,0,0,.2);
-
-  @media (max-width: 760px) {
-    margin-top: 14px;
-    padding: 11px 12px;
-    border-radius: 14px;
-  }
-`;
-
-const PushHead = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #303338;
-  font-size: 0.7rem;
-  font-weight: 900;
-`;
-
-const PushIcon = styled.div`
-  display: grid;
-  place-items: center;
-  width: 25px;
-  height: 25px;
-  border-radius: 8px;
-  background: #11161a;
-  color: #e3af4a;
-`;
-
-const PushBody = styled.div`
-  margin-top: 8px;
-  color: #15181b;
-  font-size: 0.72rem;
-  line-height: 1.5;
-
-  strong {
-    display: block;
-    font-family: ${({ theme }) => theme.fonts.numeric};
-    font-size: 0.83rem;
-  }
-`;
-
-
-const MobileAlertPreview = styled.div`
-  display: none;
-
-  @media (max-width: 760px) {
-    display: grid;
-    grid-template-columns: 32px minmax(0, 1fr) auto;
-    gap: 9px;
-    align-items: center;
-    margin-top: 14px;
-    padding: 10px 11px;
-    border: 1px solid rgba(199, 148, 48, 0.2);
-    border-radius: 12px;
-    background: linear-gradient(135deg, #fffaf0, #fff);
-    box-shadow: 0 7px 18px rgba(14, 18, 22, 0.04);
-
-    .icon {
-      display: grid;
-      place-items: center;
-      width: 32px;
-      height: 32px;
-      border-radius: 10px;
-      background: #11161a;
-      color: #e4b758;
-    }
-
-    strong {
-      display: block;
-      color: #191d20;
-      font-size: 0.7rem;
-      line-height: 1.25;
-    }
-
-    span {
-      display: block;
-      margin-top: 2px;
-      color: #747a80;
-      font-size: 0.58rem;
-      line-height: 1.35;
-    }
-
-    b {
-      color: #b57c1e;
-      font-family: ${({ theme }) => theme.fonts.numeric};
-      font-size: 0.7rem;
-      white-space: nowrap;
-    }
-  }
-`;
-
 const RewardCard = styled.div`
   position: relative;
   overflow: hidden;
-  padding: clamp(24px, 5vw, 44px);
-  border-radius: 24px;
+  padding: clamp(16px, 2.6vw, 21px);
+  border: 1px solid rgba(199, 148, 48, 0.22);
+  border-radius: 18px;
   background:
-    radial-gradient(circle at 88% 20%, rgba(228,183,88,.18), transparent 20rem),
-    linear-gradient(135deg, #080b0e, #171d23);
-  color: #fff;
-  box-shadow: 0 18px 44px rgba(8, 11, 14, 0.14);
+    radial-gradient(circle at 88% 20%, rgba(228,183,88,.12), transparent 18rem),
+    linear-gradient(135deg, #fffaf0, #ffffff);
+  color: var(--ink);
+  box-shadow: 0 10px 28px rgba(8, 11, 14, 0.055);
 
   @media (max-width: 760px) {
-    padding: 19px 14px 15px;
-    border-radius: 18px;
+    padding: 14px 13px;
+    border-radius: 16px;
   }
 `;
 
 const RewardTop = styled.div`
   display: flex;
-  align-items: end;
+  align-items: center;
   justify-content: space-between;
   gap: 20px;
 
@@ -1137,8 +965,8 @@ const RewardTop = styled.div`
 
 const RewardTitle = styled.h2`
   margin: 0;
-  color: #fff;
-  font-size: clamp(1.55rem, 4vw, 2.7rem);
+  color: var(--ink);
+  font-size: clamp(1.2rem, 2.45vw, 1.6rem);
   font-weight: 900;
   line-height: 1.08;
   letter-spacing: -0.045em;
@@ -1148,16 +976,16 @@ const RewardTitle = styled.h2`
   }
 
   @media (max-width: 760px) {
-    font-size: 1.35rem;
+    font-size: 1.12rem;
     line-height: 1.12;
   }
 `;
 
 const RewardLead = styled.p`
-  margin: 10px 0 0;
-  color: rgba(255,255,255,.62);
-  font-size: 0.8rem;
-  line-height: 1.6;
+  margin: 6px 0 0;
+  color: #676d72;
+  font-size: 0.74rem;
+  line-height: 1.45;
 
   @media (max-width: 760px) {
     margin-top: 7px;
@@ -1172,8 +1000,8 @@ const QuizButton = styled(Link)`
   align-items: center;
   justify-content: center;
   gap: 7px;
-  min-height: 45px;
-  padding: 0 18px;
+  min-height: 41px;
+  padding: 0 16px;
   border: 1px solid #efbd55;
   border-radius: 999px;
   background: #efbd55;
@@ -1193,78 +1021,44 @@ const QuizButton = styled(Link)`
   }
 `;
 
-const RewardSteps = styled.div`
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 26px;
-
-  @media (max-width: 680px) {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 5px;
-    margin-top: 13px;
-  }
-`;
-
-const RewardStep = styled.div`
-  position: relative;
-  padding: 18px;
-  border: 1px solid rgba(255,255,255,.12);
-  border-radius: 16px;
-  background: rgba(255,255,255,.055);
-
-  small {
-    display: block;
-    color: rgba(255,255,255,.48);
-    font-family: ${({ theme }) => theme.fonts.numeric};
-    font-size: 0.65rem;
-    font-weight: 800;
-  }
-
-  strong {
-    display: block;
-    margin-top: 8px;
-    color: #fff;
-    font-size: 0.9rem;
-  }
+const RewardSummary = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 10px;
+  color: #676d72;
+  font-size: 0.74rem;
+  font-weight: 750;
 
   span {
-    display: block;
-    margin-top: 5px;
-    color: #efbd55;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    white-space: nowrap;
+  }
+
+  b {
+    color: #b57c1e;
     font-family: ${({ theme }) => theme.fonts.numeric};
-    font-size: 0.82rem;
-    font-weight: 900;
+    font-weight: 950;
+  }
+
+  i {
+    color: rgba(12, 17, 22, 0.22);
+    font-style: normal;
   }
 
   @media (max-width: 680px) {
-    min-width: 0;
-    min-height: 86px;
-    padding: 9px 3px;
-    border-radius: 11px;
-    text-align: center;
+    gap: 5px 7px;
+    margin-top: 9px;
+    font-size: 0.64rem;
 
-    small {
-      font-size: 0.44rem;
-      line-height: 1.2;
-      letter-spacing: -0.02em;
-      white-space: normal;
-    }
-
-    strong {
-      margin-top: 5px;
-      font-size: clamp(0.58rem, 2.7vw, 0.67rem);
-      line-height: 1.2;
-      white-space: normal;
-      word-break: keep-all;
-    }
-
+    i { display: none; }
     span {
-      margin-top: 4px;
-      font-size: clamp(0.52rem, 2.5vw, 0.6rem);
-      line-height: 1.25;
-      white-space: normal;
-      word-break: keep-all;
+      padding: 4px 7px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.72);
     }
   }
 `;
@@ -1275,17 +1069,17 @@ const CrossLink = styled(Link)`
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 24px;
-  margin-top: 20px;
-  padding: clamp(24px, 4vw, 34px);
+  margin-top: 0;
+  padding: clamp(17px, 2.8vw, 22px);
   overflow: hidden;
-  border: 1px solid rgba(225, 176, 75, 0.42);
-  border-radius: 20px;
+  border: 1px solid rgba(225, 176, 75, 0.34);
+  border-radius: 16px;
   background:
-    radial-gradient(circle at 90% 18%, rgba(232, 183, 78, 0.2), transparent 14rem),
-    linear-gradient(135deg, #090d11, #171d23);
-  color: #fff;
+    radial-gradient(circle at 90% 18%, rgba(232, 183, 78, 0.12), transparent 13rem),
+    linear-gradient(135deg, #fffaf0, #ffffff);
+  color: var(--ink);
   text-decoration: none;
-  box-shadow: 0 18px 38px rgba(8, 11, 14, 0.13);
+  box-shadow: 0 9px 24px rgba(8, 11, 14, 0.055);
 
   &::after {
     content: "";
@@ -1312,8 +1106,8 @@ const CrossLink = styled(Link)`
   strong {
     display: block;
     margin-top: 7px;
-    color: #fff;
-    font-size: clamp(1.35rem, 3vw, 1.78rem);
+    color: var(--ink);
+    font-size: clamp(1.18rem, 2.45vw, 1.5rem);
     font-weight: 950;
     line-height: 1.28;
     letter-spacing: -0.035em;
@@ -1323,8 +1117,8 @@ const CrossLink = styled(Link)`
   p {
     max-width: 760px;
     margin: 10px 0 0;
-    color: rgba(255, 255, 255, 0.72);
-    font-size: clamp(0.84rem, 1.6vw, 0.96rem);
+    color: #676d72;
+    font-size: clamp(0.76rem, 1.35vw, 0.86rem);
     line-height: 1.7;
     word-break: keep-all;
   }
@@ -1333,8 +1127,8 @@ const CrossLink = styled(Link)`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 42px;
-    margin-top: 15px;
+    min-height: 38px;
+    margin-top: 11px;
     padding: 0 15px;
     border: 1px solid rgba(239, 189, 85, 0.58);
     border-radius: 999px;
@@ -1482,8 +1276,6 @@ function compactChangeText(change) {
 export default function GoldPrice() {
   const navigate = useNavigate();
   const { user, isEmailVerified } = useAuthContext();
-  const vaultDashboard = useGoldVaultDashboard(user?.uid);
-  const bonusGold = useBonusGoldBalance(user?.uid);
 
   const [pushStatus, setPushStatus] = useState("checking");
   const [message, setMessage] = useState("");
@@ -1686,14 +1478,6 @@ export default function GoldPrice() {
 
   const pureRow = marketRows[0];
   const heroChange = changeInfo(pureRow?.buy, pureRow?.previousBuy);
-  const vaultPureGoldG = Number(vaultDashboard.summary.pureGoldG || 0) + Number(bonusGold.balanceG || 0);
-  const vaultBonusValueWon = vaultDashboard.publicPriceEnabled
-    ? computeVaultValueWon(Number(bonusGold.balanceG || 0), vaultDashboard.customerSellPricePerDon)
-    : 0;
-  const vaultCurrentValueWon = Number(vaultDashboard.summary.estimatedValueWon || 0) + vaultBonusValueWon;
-  const vaultDayImpactWon = Number.isFinite(Number(pureRow?.buy)) && Number.isFinite(Number(pureRow?.previousBuy))
-    ? Math.round(((Number(pureRow.buy) - Number(pureRow.previousBuy)) / DON_TO_GRAMS) * vaultPureGoldG)
-    : 0;
   const referenceDate = formatDateKey(
     goldData?.sourceDate || getKoreaTodayDateKey()
   );
@@ -1849,34 +1633,6 @@ export default function GoldPrice() {
           </HeroCard>
         </Hero>
 
-        {user?.uid ? (
-          <VaultImpact to="/my-gold" aria-label="오늘 시세가 내금고 가치에 미친 영향">
-            <div>
-              <small>TODAY → MY GOLD · 내금고</small>
-              {vaultPureGoldG > 0 ? (
-                <>
-                  <strong>오늘 시세로 내금고 가치는 <b>{Math.round(vaultCurrentValueWon).toLocaleString("ko-KR")}원</b></strong>
-                  <p>전일 순금 매입가 기준 영향 {vaultDayImpactWon > 0 ? "+" : ""}{vaultDayImpactWon.toLocaleString("ko-KR")}원 · 예상 순금량 {vaultPureGoldG.toFixed(2)}g</p>
-                </>
-              ) : (
-                <>
-                  <strong>내 금을 등록하면 오늘 시세가 내 자산에 미치는 변화를 바로 볼 수 있어요.</strong>
-                  <p>현재 가치 · 가격 변화 · 예상 순금량 · 교환 가능한 골드바가 내금고에 연결됩니다.</p>
-                </>
-              )}
-            </div>
-            <span>{vaultPureGoldG > 0 ? "내금고 보기 →" : "첫 금 등록 →"}</span>
-          </VaultImpact>
-        ) : (
-          <VaultImpact to="/register?from=gold-price">
-            <div>
-              <small>MAKE IT PERSONAL</small>
-              <strong>시세를 보는 것에서 끝내지 말고, 내 금의 오늘 가치를 저장하세요.</strong>
-              <p>회원가입 시 순금 0.01g · 내금고에 금을 등록하면 가치 변화와 골드바 교환 가능 상태를 계속 확인할 수 있습니다.</p>
-            </div>
-            <span>내금고 시작 →</span>
-          </VaultImpact>
-        )}
 
         <Section aria-labelledby="live-gold-price-title">
           <SectionHead>
@@ -2012,11 +1768,11 @@ export default function GoldPrice() {
             <div>
               <SectionKicker>GOLD ALERT</SectionKicker>
               <AlertTitle id="gold-price-alert-title">
-                금시세, 이제 <em>알림으로</em> 받아보세요.
+                금값이 움직일 때, <em>먼저 알려드릴게요.</em>
               </AlertTitle>
               <AlertText>
-                매번 검색하지 않아도 됩니다. 주요 시세 변동과
-                한국골드마켓의 혜택을 현재 기기로 알려드립니다.
+                매번 확인하지 않아도 주요 금시세 변동을 알려드립니다.
+                알림 설정 시 순금 0.01g 혜택까지 이어집니다.
               </AlertText>
 
               <AlertBullets>
@@ -2026,28 +1782,14 @@ export default function GoldPrice() {
                 </AlertBullet>
                 <AlertBullet>
                   <CheckCircle2 size={15} aria-hidden />
-                  금시세 확인은 회원가입 없이
+                  매일 확인하지 않아도 편하게
                 </AlertBullet>
                 <AlertBullet>
                   <ShieldCheck size={15} aria-hidden />
-                  알림 설정 시 순금 0.01g 추가 혜택
+                  알림 설정 시 순금 0.01g 혜택
                 </AlertBullet>
               </AlertBullets>
-
-              <MobileAlertPreview aria-label="금시세 알림 예시">
-                <div className="icon">
-                  <BellRing size={15} aria-hidden />
-                </div>
-                <div>
-                  <strong>한국골드마켓 · 금시세 업데이트</strong>
-                  <span>주요 시세 변동을 현재 기기로 알려드립니다.</span>
-                </div>
-                <b>
-                  {pagePriceAvailable
-                    ? `${formatWon(pureRow?.sell)}원`
-                    : "확인 중"}
-                </b>
-              </MobileAlertPreview>
+            </div>
 
               <ActionArea>
                 {pushStatus === "guest" ? (
@@ -2060,7 +1802,7 @@ export default function GoldPrice() {
                         intent: "gold-price-notification",
                       }}
                     >
-                      회원가입하고 순금 0.01g 받기
+                      회원가입하고 금시세 알림 받기
                       <ArrowRight size={18} aria-hidden />
                     </MainButton>
 
@@ -2078,12 +1820,6 @@ export default function GoldPrice() {
                       <CheckCircle2 size={18} aria-hidden />
                       금시세 알림을 받고 있습니다
                     </MainButton>
-                    <Status>
-                      {message ||
-                        (marketingFcmBrowser
-                          ? `${marketingFcmBrowser}에서 금시세 알림을 받고 있습니다.`
-                          : "금시세 알림이 켜져 있습니다.")}
-                    </Status>
                     <SecondaryLink to="/settings">
                       알림 설정 관리
                     </SecondaryLink>
@@ -2166,29 +1902,7 @@ export default function GoldPrice() {
                   </>
                 )}
               </ActionArea>
-            </div>
 
-            <Phone aria-label="금시세 알림 미리보기">
-              <PhoneTime>11:35</PhoneTime>
-              <PhoneDate>한국골드마켓 알림 미리보기</PhoneDate>
-              <PushPreview>
-                <PushHead>
-                  <PushIcon>
-                    <BellRing size={14} aria-hidden />
-                  </PushIcon>
-                  한국골드마켓
-                </PushHead>
-                <PushBody>
-                  금시세가 업데이트되었습니다.
-                  <strong>
-                    순금(24K){" "}
-                    {pagePriceAvailable
-                      ? `${formatWon(pureRow?.sell)}원`
-                      : "시세 확인 중"}
-                  </strong>
-                </PushBody>
-              </PushPreview>
-            </Phone>
           </AlertCard>
         </Section>
 
@@ -2198,12 +1912,18 @@ export default function GoldPrice() {
               <div>
                 <SectionKicker>MEMBER BENEFIT</SectionKicker>
                 <RewardTitle id="gold-benefit-title">
-                  퀵퀴즈 참여하고 <span>최대 순금 0.03g 받기</span>
+                  회원 혜택 <span>최대 순금 0.03g</span>
                 </RewardTitle>
                 <RewardLead>
-                  회원가입 + 퀵퀴즈 + 금시세 알림까지 참여하면
-                  최대 순금 0.03g 혜택을 받을 수 있습니다.
+                  회원가입 · 퀵퀴즈 · 금시세 알림에 참여하며 순금 혜택을 이어가세요.
                 </RewardLead>
+                <RewardSummary aria-label="회원 혜택 구성">
+                  <span>회원가입 <b>0.01g</b></span>
+                  <i>│</i>
+                  <span>퀵퀴즈 <b>0.01g</b></span>
+                  <i>│</i>
+                  <span>금시세 알림 <b>{notificationActive ? "수신 중" : "0.01g"}</b></span>
+                </RewardSummary>
               </div>
 
               <QuizButton to="/quiz/gold-bonus">
@@ -2212,42 +1932,21 @@ export default function GoldPrice() {
               </QuizButton>
             </RewardTop>
 
-            <RewardSteps>
-              <RewardStep>
-                <small>01</small>
-                <strong>회원가입</strong>
-                <span>순금 0.01g</span>
-              </RewardStep>
-              <RewardStep>
-                <small>02</small>
-                <strong>퀵퀴즈 풀기</strong>
-                <span>+ 순금 0.01g</span>
-              </RewardStep>
-              <RewardStep>
-                <small>03</small>
-                <strong>금시세 알림</strong>
-                <span>
-                  {notificationActive
-                    ? "알림 수신 중"
-                    : "+ 순금 0.01g"}
-                </span>
-              </RewardStep>
-            </RewardSteps>
           </RewardCard>
 
         </Section>
 
         <Section aria-label="GOLD TO GOLD 안내">
-          <CrossLink to="/gold-exchange" aria-label="GOLD TO GOLD 하러가기">
+          <CrossLink to="/gold-to-gold" aria-label="GOLD TO GOLD 알아보기">
             <div>
               <span className="gold-kicker">GOLD TO GOLD</span>
-              <strong>쓰지 않는 금, 다시 가치로.</strong>
+              <strong>쓰임은 달라져도, 금의 가치는 이어집니다.</strong>
               <p>
-                한쪽만 남은 귀걸이 · 끊어진 목걸이 · 오래 보관한 돌반지까지.
-                보유한 금을 확인하고 999.9 골드바로 이어보세요.
+                보유한 금의 가치를 999.9 GOLD로 이어가는 GOLD TO GOLD가
+                어떤 방식인지 먼저 확인해보세요.
               </p>
               <span className="gold-action">
-                999.9 골드바로 가치 저장하기
+                GOLD TO GOLD 알아보기
               </span>
             </div>
             <ArrowRight size={22} aria-hidden />

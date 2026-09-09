@@ -443,20 +443,18 @@ export default function Navbar() {
 
   const navItems = useMemo(
     () => [
+      { to: "/gold-price", label: "오늘 금시세" },
+      { to: "/my-gold", label: "MY GOLD" },
       { to: "/gold-exchange", label: "금교환" },
-      { to: "/goldbar-fee", label: "공임 안내" },
-      { to: "/stores", label: "교환 절차·매장" },
-      { to: "/my-gold", label: "내금고" },
-      {
-        to: "/my-exchanges",
-        label: "교환내역",
-        badge: formatBadge(exchangeCount),
-      },
+      { to: "/stores", label: "이용안내" },
+      ...(user
+        ? [{ to: "/my-exchanges", label: "내역", badge: formatBadge(exchangeCount) }]
+        : []),
       ...(isAdmin
         ? [{ to: "/admin/gold-exchange", label: "금교환 관리", badge: formatBadge(pendingCount) }]
         : []),
     ],
-    [exchangeCount, isAdmin, pendingCount]
+    [exchangeCount, isAdmin, pendingCount, user]
   );
 
   return (
@@ -532,7 +530,7 @@ export default function Navbar() {
         <DrawerHead>
           <Brand to="/" end>
             <BrandSeal aria-hidden>금</BrandSeal>
-            <BrandCopy><strong>한국골드마켓</strong><small>GOLD EXCHANGE</small></BrandCopy>
+            <BrandCopy><strong>한국골드마켓</strong><small>금의 가치를 이어가다</small></BrandCopy>
           </Brand>
           <DrawerClose type="button" aria-label="메뉴 닫기" onClick={() => setDrawerOpen(false)}>
             <X size={22} aria-hidden />

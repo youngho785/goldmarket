@@ -487,7 +487,7 @@ export default function AndroidAppHeader() {
               <DrawerHead>
                 <DrawerBrand>
                   <strong>한국골드마켓</strong>
-                  <small>GOLD TO GOLD</small>
+                  <small>금의 가치를 이어가다</small>
                 </DrawerBrand>
 
                 <IconButton
@@ -665,7 +665,7 @@ export default function AndroidAppHeader() {
 
           <Center>
             <strong>{titleForPath(pathname)}</strong>
-            {pathname === "/" && <small>GOLD TO GOLD</small>}
+            {pathname === "/" && <small>금의 가치를 이어가다</small>}
           </Center>
 
           <HeaderActions>
