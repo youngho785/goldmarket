@@ -107,7 +107,7 @@ const Kicker = styled.small`
   background: color-mix(in srgb, ${({ theme }) => theme.colors.goldLight} 7%, transparent);
   color: ${({ theme }) => theme.colors.goldLight};
   font-family: ${({ theme }) => theme.fonts.numeric};
-  font-size: 0.59rem;
+  font-size: 0.62rem;
   font-weight: 950;
   letter-spacing: 0.11em;
 
@@ -264,7 +264,7 @@ const Disclaimer = styled.small`
   max-width: 220px;
   color: color-mix(in srgb, ${({ theme }) => theme.on.primary} 50%, transparent);
   text-align: right;
-  font-size: 0.55rem;
+  font-size: 0.62rem;
   line-height: 1.4;
   word-break: keep-all;
 

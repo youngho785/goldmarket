@@ -60,7 +60,7 @@ const PageHeader = styled.div`
   box-shadow: 0 12px 30px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 12%, transparent);
 
   &::before {
-    content: "SETTINGS";
+    content: none;
     position: relative;
     z-index: 1;
     display: block;

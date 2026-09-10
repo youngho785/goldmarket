@@ -113,7 +113,7 @@ const NotificationBadge = styled.span`
   background: ${({ theme }) => theme.colors.error};
   color: ${({ theme }) => theme.on.error};
   font-family: ${({ theme }) => theme.fonts.numeric};
-  font-size: 0.52rem;
+  font-size: 0.62rem;
   font-weight: 900;
   line-height: 1;
 `;
@@ -539,7 +539,7 @@ export default function AndroidAppHeader() {
 
               {user && (
                 <Section>
-                  <SectionTitle>MY KGM</SectionTitle>
+                  <SectionTitle>내 메뉴</SectionTitle>
                   <MenuList>
                     <MenuLink to="/my-exchanges">
                       <span>
@@ -567,7 +567,7 @@ export default function AndroidAppHeader() {
               )}
 
               <Section>
-                <SectionTitle>SERVICE</SectionTitle>
+                <SectionTitle>서비스</SectionTitle>
                 <MenuList>
                   <MenuLink to="/gold-price">
                     <span>
@@ -627,7 +627,7 @@ export default function AndroidAppHeader() {
               </Section>
 
               <Section>
-                <SectionTitle>INFO</SectionTitle>
+                <SectionTitle>안내</SectionTitle>
                 <TextLink to="/terms">
                   <FileText aria-hidden style={{ width: 15, marginRight: 8 }} />
                   이용약관

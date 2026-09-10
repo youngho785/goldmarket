@@ -1174,7 +1174,6 @@ export default function MyExchanges() {
   if (loading) return (
     <Page>
       <PageHeader>
-        <Kicker>MY EXCHANGE LEDGER</Kicker>
         <SectionTitle>금교환 기록</SectionTitle>
         <HeaderLead>신청부터 방문·완료까지 금교환의 진행 상태와 결과를 한곳에서 기록합니다.</HeaderLead>
       </PageHeader>
@@ -1193,7 +1192,6 @@ export default function MyExchanges() {
   if (groups.length === 0) return (
     <Page>
       <PageHeader>
-        <Kicker>MY EXCHANGE LEDGER</Kicker>
         <SectionTitle>금교환 기록</SectionTitle>
         <HeaderLead>신청부터 방문·완료까지 금교환의 진행 상태와 결과를 한곳에서 기록합니다.</HeaderLead>
       </PageHeader>
@@ -1210,7 +1208,6 @@ export default function MyExchanges() {
   return (
     <Page>
       <PageHeader>
-        <Kicker>MY EXCHANGE LEDGER</Kicker>
         <SectionTitle>금교환 기록</SectionTitle>
         <HeaderLead>신청부터 방문·완료까지 금교환의 진행 상태와 결과를 한곳에서 기록합니다.</HeaderLead>
       </PageHeader>

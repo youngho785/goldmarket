@@ -74,7 +74,7 @@ const CurrentItem = styled.div`
 
   span {
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: 0.56rem;
+    font-size: 0.62rem;
     font-weight: 800;
   }
 
@@ -112,7 +112,7 @@ const GoalRow = styled.label`
     display: block;
     margin-top: 2px;
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: 0.58rem;
+    font-size: 0.62rem;
     line-height: 1.35;
     word-break: keep-all;
   }
@@ -223,7 +223,7 @@ const Details = styled.details`
   border-radius: 10px;
   background: ${({ theme }) => theme.colors.surfaceAlt};
   color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: 0.59rem;
+  font-size: 0.62rem;
   line-height: 1.55;
 
   summary {

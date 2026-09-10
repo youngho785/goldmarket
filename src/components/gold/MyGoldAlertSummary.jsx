@@ -69,7 +69,7 @@ const Status = styled.span`
   border-radius: 999px;
   background: ${({ $ready, theme }) => $ready ? theme.semantic.alertSuccessBg : theme.colors.surfaceAlt};
   color: ${({ $ready, theme }) => $ready ? theme.semantic.alertSuccessText : theme.colors.textSecondary};
-  font-size: 0.57rem;
+  font-size: 0.62rem;
   font-weight: 900;
 `;
 
@@ -88,7 +88,7 @@ const Chip = styled.span`
   border-radius: 999px;
   background: ${({ theme }) => theme.colors.surfaceAlt};
   color: ${({ theme }) => theme.colors.text};
-  font-size: 0.59rem;
+  font-size: 0.62rem;
   font-weight: 850;
 `;
 

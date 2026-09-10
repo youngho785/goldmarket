@@ -500,7 +500,6 @@ export default function WelcomeOnboarding() {
   return (
     <Page>
       <Hero>
-        <Kicker>WELCOME TO KOREA GOLD MARKET</Kicker>
         <Title>
           {allRewardsClaimed
             ? "신규회원 혜택 순금 0.03g 달성 🎉"

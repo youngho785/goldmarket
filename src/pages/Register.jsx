@@ -87,7 +87,7 @@ const BenefitStep = styled.div`
   border-radius: 12px;
   background: ${({ theme }) => theme.semantic.badgeGoldBg};
   text-align: center;
-  small { display:block; color: ${({ theme }) => theme.colors.textSecondary}; font-size:.58rem; font-weight:800; }
+  small { display:block; color: ${({ theme }) => theme.colors.textSecondary}; font-size:0.62rem; font-weight:800; }
   strong { display:block; margin-top:3px; color: ${({ theme }) => theme.colors.secondaryDark}; font-family: ${({ theme }) => theme.fonts.numeric}; font-size:.75rem; }
 `;
 const ButtonRow = styled.div`

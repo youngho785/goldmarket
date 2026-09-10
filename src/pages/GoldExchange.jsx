@@ -197,7 +197,7 @@ const FlowItem = styled.li`
 
   @media (max-width: 620px) {
     padding: 8px 3px;
-    font-size: .56rem;
+    font-size: 0.62rem;
   }
 `;
 
@@ -353,7 +353,7 @@ const MiniGoldBar = styled.div`
   text-align: center;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 8px 20px rgba(126,88,23,.18);
 
-  small { color: rgba(23,18,10,.68); font-size: .52rem; letter-spacing: .11em; }
+  small { color: rgba(23,18,10,.68); font-size: 0.62rem; letter-spacing: .11em; }
   b { display: block; margin-top: 3px; font-size: .9rem; }
   em { display: block; margin-top: 2px; font-family: ${({ theme }) => theme.fonts.numeric}; font-size: .7rem; font-style: normal; font-weight: 900; }
 `;
@@ -867,17 +867,14 @@ function StartMethodScreen({ onChoose }) {
     <>
       <StartChoiceGrid aria-label="금교환 시작 방법">
         <StartChoice type="button" onClick={() => onChoose("vault")}>
-          <small>01 · MY VAULT</small>
           <strong>MY GOLD에서 불러오기</strong>
           <span>등록한 금 종류·중량으로 바로 계산합니다.</span>
         </StartChoice>
         <StartChoice type="button" onClick={() => onChoose("manual")}>
-          <small>02 · DIRECT INPUT</small>
           <strong>직접 입력하기</strong>
           <span>14K·18K·순금의 종류와 중량을 직접 입력합니다.</span>
         </StartChoice>
         <StartChoice type="button" onClick={() => onChoose("visit")}>
-          <small>03 · IN STORE</small>
           <strong>매장에서 확인하기</strong>
           <span>순도·중량을 몰라도 됩니다. 계산 없이 방문예약으로 이동합니다.</span>
         </StartChoice>
@@ -2283,7 +2280,7 @@ export default function GoldExchange() {
   return (
     <PageContainer ref={pageTopRef}>
       <FlowHeader $compact={!showStartMethod}>
-        <PageEyebrow>GOLD EXCHANGE APPLICATION</PageEyebrow>
+        <PageEyebrow>GOLD TO GOLD</PageEyebrow>
         <PageTitle $compact={!showStartMethod}>내 금을 999.9 골드바로 교환</PageTitle>
         <PageLead $compact={!showStartMethod}>
           예상 계산과 방문 날짜·시간 선택은 로그인 없이 이용할 수 있습니다.

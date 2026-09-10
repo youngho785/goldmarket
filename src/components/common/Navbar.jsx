@@ -113,7 +113,7 @@ const BrandCopy = styled.span`
   small {
     color: ${({ theme }) => theme.colors.textLight};
     font-family: ${({ theme }) => theme.fonts.numeric};
-    font-size: .56rem;
+    font-size: 0.62rem;
     letter-spacing: .13em;
   }
 `;

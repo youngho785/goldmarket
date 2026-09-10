@@ -19,7 +19,7 @@ const Page = styled.main`
   padding: 0 18px 28px;
 
   @media (max-width: 640px) {
-    padding: 0 12px 24px;
+    padding: 0 10px 18px;
   }
 `;
 
@@ -70,8 +70,16 @@ const Hero = styled.section`
   }
 
   @media (max-width: 640px) {
-    min-height: 250px;
-    padding-inline: 4px;
+    min-height: 205px;
+    padding: 22px 4px 20px;
+
+    &::before {
+      margin-bottom: 10px;
+    }
+
+    &::after {
+      display: none;
+    }
   }
 `;
 
@@ -102,6 +110,12 @@ const HeroTitle = styled.h1`
     font-weight: 700;
     letter-spacing: -0.035em;
   }
+
+  @media (max-width: 640px) {
+    margin-top: 8px;
+    font-size: 1.62rem;
+    line-height: 1.06;
+  }
 `;
 
 const HeroCopy = styled.p`
@@ -118,34 +132,21 @@ const HeroCopy = styled.p`
     color: ${({ theme }) => theme.colors.primary};
     font-weight: 900;
   }
-`;
 
-const Discover = styled.div`
-  position: relative;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  width: fit-content;
-  margin-top: 22px;
-  color: ${({ theme }) => theme.colors.secondaryDark};
-  font-family: ${({ theme }) => theme.fonts.numeric};
-  font-size: 0.58rem;
-  font-weight: 900;
-  letter-spacing: 0.12em;
-
-  span {
-    display: inline-grid;
-    place-items: center;
-    width: 24px;
-    height: 24px;
-    border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 42%, ${({ theme }) => theme.colors.border});
-    border-radius: 999px;
+  @media (max-width: 640px) {
+    margin-top: 12px;
+    font-size: 0.81rem;
+    line-height: 1.58;
   }
 `;
 
+
 const StorySection = styled.section`
   padding: clamp(26px, 4.4vw, 44px) 0 0;
+
+  @media (max-width: 640px) {
+    padding-top: 22px;
+  }
 `;
 
 const StoryHead = styled.div`
@@ -170,6 +171,20 @@ const StoryHead = styled.div`
     letter-spacing: -0.045em;
     word-break: keep-all;
   }
+
+  @media (max-width: 640px) {
+    padding: 0 4px 12px;
+
+    small {
+      margin-bottom: 6px;
+      font-size: 0.62rem;
+    }
+
+    h2 {
+      font-size: 1.34rem;
+      line-height: 1.22;
+    }
+  }
 `;
 
 const StoryGrid = styled.div`
@@ -183,7 +198,7 @@ const StoryGrid = styled.div`
   }
 
   @media (max-width: 430px) {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
   }
 `;
 
@@ -221,7 +236,7 @@ const StoryItem = styled.article`
   small {
     color: ${({ theme }) => theme.colors.secondaryDark};
     font-family: ${({ theme }) => theme.fonts.numeric};
-    font-size: 0.54rem;
+    font-size: 0.62rem;
     font-weight: 900;
     letter-spacing: 0.08em;
   }
@@ -255,14 +270,36 @@ const StoryItem = styled.article`
   }
 
   @media (max-width: 430px) {
-    min-height: 0;
-    border-right: 0;
+    min-height: 104px;
+    padding: 13px 10px 12px;
 
-    &:nth-last-child(2) {
-      border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+    > span {
+      gap: 5px;
+      margin-bottom: 8px;
     }
 
-    &:last-child {
+    svg {
+      width: 15px;
+      height: 15px;
+    }
+
+    small {
+      font-size: 0.62rem;
+      letter-spacing: 0.05em;
+    }
+
+    strong {
+      font-size: 0.8rem;
+      line-height: 1.35;
+    }
+
+    p {
+      margin-top: 5px;
+      font-size: 0.61rem;
+      line-height: 1.42;
+    }
+
+    &:nth-last-child(2) {
       border-bottom: 0;
     }
   }
@@ -286,6 +323,12 @@ const FutureSection = styled.section`
   @media (max-width: 760px) {
     grid-template-columns: 1fr;
   }
+
+  @media (max-width: 640px) {
+    gap: 12px;
+    margin-top: 24px;
+    padding: 20px 14px;
+  }
 `;
 
 const FutureCopy = styled.div`
@@ -306,6 +349,24 @@ const FutureCopy = styled.div`
     line-height: 1.72;
     word-break: keep-all;
   }
+
+  @media (max-width: 640px) {
+    h2 {
+      margin-top: 6px;
+      font-size: 1.38rem;
+      line-height: 1.2;
+    }
+
+    p {
+      margin-top: 7px;
+      font-size: 0.69rem;
+      line-height: 1.56;
+    }
+
+    p:nth-of-type(2) {
+      display: none;
+    }
+  }
 `;
 
 const FutureQuote = styled.aside`
@@ -315,7 +376,7 @@ const FutureQuote = styled.aside`
   small {
     color: ${({ theme }) => theme.colors.secondaryDark};
     font-family: ${({ theme }) => theme.fonts.numeric};
-    font-size: 0.58rem;
+    font-size: 0.62rem;
     font-weight: 900;
     letter-spacing: 0.1em;
   }
@@ -341,6 +402,24 @@ const FutureQuote = styled.aside`
     font-weight: 850;
     line-height: 1.4;
   }
+
+  @media (max-width: 640px) {
+    padding: 10px 0 0 14px;
+
+    small {
+      display: none;
+    }
+
+    strong {
+      margin-top: 0;
+      font-size: 1.12rem;
+      line-height: 1.3;
+    }
+
+    span {
+      display: none;
+    }
+  }
 `;
 
 const DarkStory = styled.section`
@@ -349,6 +428,11 @@ const DarkStory = styled.section`
   border-radius: 18px;
   background: ${({ theme }) => theme.colors.primary};
   color: ${({ theme }) => theme.colors.white};
+
+  @media (max-width: 640px) {
+    margin-top: 24px;
+    border-radius: 16px;
+  }
 `;
 
 const DarkHead = styled.div`
@@ -380,6 +464,26 @@ const DarkHead = styled.div`
     line-height: 1.65;
     word-break: keep-all;
   }
+
+  @media (max-width: 640px) {
+    padding: 18px 16px 13px;
+
+    small {
+      font-size: 0.62rem;
+    }
+
+    h2 {
+      margin-top: 7px;
+      font-size: 1.34rem;
+      line-height: 1.18;
+    }
+
+    p {
+      margin-top: 7px;
+      font-size: 0.68rem;
+      line-height: 1.52;
+    }
+  }
 `;
 
 const Flow = styled.div`
@@ -401,14 +505,17 @@ const Flow = styled.div`
   }
 
   @media (max-width: 640px) {
-    grid-template-columns: 1fr;
-    gap: 6px;
+    grid-template-columns: 1fr auto 1fr auto 1fr;
+    gap: 4px;
+    padding: 13px 14px 15px;
 
     > svg,
     &:hover > svg {
-      transform: rotate(90deg);
-      justify-self: start;
-      margin-left: 20px;
+      width: 16px;
+      height: 16px;
+      transform: none;
+      justify-self: center;
+      margin-left: 0;
     }
   }
 `;
@@ -429,6 +536,21 @@ const FlowItem = styled.div`
     font-size: clamp(0.92rem, 1.8vw, 1.08rem);
     line-height: 1.35;
     word-break: keep-all;
+  }
+
+  @media (max-width: 640px) {
+    min-height: 0;
+    padding: 2px 0;
+
+    span {
+      display: none;
+    }
+
+    strong {
+      margin-top: 0;
+      font-size: 0.7rem;
+      line-height: 1.3;
+    }
   }
 `;
 
@@ -461,8 +583,7 @@ const DarkFooter = styled.div`
   }
 
   @media (max-width: 640px) {
-    align-items: flex-start;
-    flex-direction: column;
+    display: none;
   }
 `;
 
@@ -492,6 +613,23 @@ const CTA = styled.section`
     line-height: 1.65;
     word-break: keep-all;
   }
+
+  @media (max-width: 640px) {
+    margin-top: 24px;
+    padding: 20px 16px;
+    border-radius: 18px;
+
+    h2 {
+      font-size: 1.38rem;
+      line-height: 1.2;
+    }
+
+    > p {
+      margin-top: 8px;
+      font-size: 0.68rem;
+      line-height: 1.52;
+    }
+  }
 `;
 
 const FactRail = styled.div`
@@ -499,6 +637,13 @@ const FactRail = styled.div`
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 14px;
+
+  @media (max-width: 640px) {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    margin-top: 12px;
+  }
 `;
 
 const Fact = styled.span`
@@ -519,6 +664,22 @@ const Fact = styled.span`
     height: 14px;
     color: ${({ theme }) => theme.colors.secondaryDark};
   }
+
+  @media (max-width: 640px) {
+    justify-content: center;
+    min-height: 0;
+    padding: 7px 5px;
+    border-radius: 12px;
+    font-size: 0.62rem;
+    line-height: 1.25;
+    text-align: center;
+
+    svg {
+      width: 12px;
+      height: 12px;
+      flex: 0 0 auto;
+    }
+  }
 `;
 
 const CTAButtons = styled.div`
@@ -526,6 +687,10 @@ const CTAButtons = styled.div`
   flex-wrap: wrap;
   gap: 9px;
   margin-top: 15px;
+
+  @media (max-width: 640px) {
+    margin-top: 14px;
+  }
 `;
 
 const PrimaryAction = styled(Link)`
@@ -545,6 +710,13 @@ const PrimaryAction = styled(Link)`
   &:hover {
     color: ${({ theme }) => theme.colors.goldLight};
   }
+
+  @media (max-width: 640px) {
+    width: 100%;
+    min-height: 48px;
+    padding: 11px 13px;
+    font-size: 0.77rem;
+  }
 `;
 
 const SecondaryAction = styled(Link)`
@@ -561,6 +733,10 @@ const SecondaryAction = styled(Link)`
   font-size: 0.77rem;
   font-weight: 850;
   text-decoration: none;
+
+  @media (max-width: 640px) {
+    display: none;
+  }
 `;
 
 const TinyLink = styled(Link)`
@@ -572,6 +748,11 @@ const TinyLink = styled(Link)`
   font-size: 0.67rem;
   font-weight: 850;
   text-decoration: none;
+
+  @media (max-width: 640px) {
+    margin-top: 10px;
+    font-size: 0.62rem;
+  }
 `;
 
 export default function GoldToGoldIntro() {
@@ -589,34 +770,30 @@ export default function GoldToGoldIntro() {
         <HeroCopy>
           가지고 있는 금의 가치를 <strong>현금으로 끝내지 않고, 금으로 이어가는 방법</strong>입니다.
         </HeroCopy>
-        <Discover>
-          SCROLL TO DISCOVER <span aria-hidden>↓</span>
-        </Discover>
       </Hero>
 
       <StorySection>
         <StoryHead>
-          <small>YOUR GOLD · YOUR STORY</small>
           <h2>지금 사용하지 않는 금도<br />가치는 그대로 남아 있습니다.</h2>
         </StoryHead>
         <StoryGrid>
           <StoryItem>
-            <span><Gem aria-hidden /><small>01 · BROKEN JEWELRY</small></span>
+            <span><Gem aria-hidden /></span>
             <strong>끊어진 목걸이·팔찌</strong>
             <p>다시 착용하지 않아도 금의 가치는 남습니다.</p>
           </StoryItem>
           <StoryItem>
-            <span><Sparkles aria-hidden /><small>02 · ONE EARRING</small></span>
+            <span><Sparkles aria-hidden /></span>
             <strong>한쪽만 남은 귀걸이</strong>
             <p>한 쌍이 아니어도 금으로서의 가치는 그대로입니다.</p>
           </StoryItem>
           <StoryItem>
-            <span><CheckCircle2 aria-hidden /><small>03 · OLD JEWELRY</small></span>
+            <span><CheckCircle2 aria-hidden /></span>
             <strong>오래된 14K·18K</strong>
             <p>취향과 디자인은 달라져도 금의 가치는 남습니다.</p>
           </StoryItem>
           <StoryItem>
-            <span><CircleDollarSign aria-hidden /><small>04 · DOL RING</small></span>
+            <span><CircleDollarSign aria-hidden /></span>
             <strong>아이의 돌반지</strong>
             <p>아이의 미래를 위해 그 가치를 이어둘 수 있습니다.</p>
           </StoryItem>
@@ -625,7 +802,6 @@ export default function GoldToGoldIntro() {
 
       <FutureSection>
         <FutureCopy>
-          <Kicker>FOR THE NEXT GENERATION</Kicker>
           <h2>돌반지의 가치,<br />아이의 미래로 이어갑니다.</h2>
           <p>
             돌잔치 날 아이를 위해 받은 작은 금반지. 아이가 자라 더 이상 착용하지 않게 되어도
@@ -636,7 +812,6 @@ export default function GoldToGoldIntro() {
           </p>
         </FutureCopy>
         <FutureQuote>
-          <small>VALUE FOR THE FUTURE</small>
           <strong>추억은 마음에,<br />금의 가치는 미래에.</strong>
           <span><ShieldCheck aria-hidden /> 실물 999.9 골드바 형태로 가치 이어가기</span>
         </FutureQuote>
@@ -644,7 +819,6 @@ export default function GoldToGoldIntro() {
 
       <DarkStory>
         <DarkHead>
-          <small>SO, WHAT IS GOLD TO GOLD?</small>
           <h2>모양은 달라져도,<br />금의 가치는 이어집니다.</h2>
           <p>
             보유 금의 순금 가치를 확인해 999.9 골드바라는 새로운 형태로 이어가는 한국골드마켓의 금교환 서비스입니다.

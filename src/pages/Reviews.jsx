@@ -38,7 +38,6 @@ export default function Reviews() {
   return (
     <Page>
       <Head>
-        <Kicker>VERIFIED EXCHANGE REVIEWS</Kicker>
         <Title>교환 완료 고객 후기</Title>
         <Lead>
           실제 금교환이 완료된 고객이 직접 남긴 후기입니다.

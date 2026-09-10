@@ -58,7 +58,7 @@ const H1 = styled.h1`
   letter-spacing: -.04em;
 
   &::before {
-    content: "NOTIFICATIONS";
+    content: none;
     display: block;
     margin-bottom: 7px;
     color: ${({ theme }) => theme.colors.goldLight};

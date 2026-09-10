@@ -128,7 +128,7 @@ const AxisRow = styled.div`
   margin-top: -1px;
   color: ${({ theme }) => theme.colors.textSecondary};
   font-family: ${({ theme }) => theme.fonts.numeric};
-  font-size: 0.58rem;
+  font-size: 0.62rem;
 `;
 
 const RangeBox = styled.div`
@@ -189,7 +189,7 @@ const RangeLabels = styled.div`
   justify-content: space-between;
   gap: 12px;
   color: ${({ theme }) => theme.colors.textLight};
-  font-size: 0.56rem;
+  font-size: 0.62rem;
 `;
 
 const Metrics = styled.div`
@@ -209,7 +209,7 @@ const Metric = styled.div`
 
   span {
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: 0.56rem;
+    font-size: 0.62rem;
     font-weight: 800;
   }
 
@@ -227,7 +227,7 @@ const Metric = styled.div`
 const Note = styled.p`
   margin: 0;
   color: ${({ theme }) => theme.colors.textLight};
-  font-size: 0.58rem;
+  font-size: 0.62rem;
   line-height: 1.5;
   word-break: keep-all;
 `;

@@ -341,7 +341,7 @@ const LoopFooter = styled.div`
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   color: ${({ theme }) => theme.colors.goldLight};
   font-family: ${({ theme }) => theme.fonts.numeric};
-  font-size: 0.58rem;
+  font-size: 0.62rem;
   font-weight: 900;
   letter-spacing: 0.12em;
 `;
@@ -640,7 +640,7 @@ const BenefitBanner = styled.div`
   small {
     color: ${({ theme }) => theme.colors.secondaryDark};
     font-family: ${({ theme }) => theme.fonts.numeric};
-    font-size: 0.58rem;
+    font-size: 0.62rem;
     font-weight: 900;
     letter-spacing: 0.1em;
   }
@@ -730,7 +730,7 @@ const EmpathyItem = styled.div`
     display: block;
     color: ${({ theme }) => theme.colors.secondaryDark};
     font-family: ${({ theme }) => theme.fonts.numeric};
-    font-size: 0.54rem;
+    font-size: 0.62rem;
     font-weight: 900;
     letter-spacing: 0.07em;
   }
@@ -903,7 +903,6 @@ const serviceSchema = {
 const ACTIONS = [
   {
     to: "/gold-price",
-    kicker: "TODAY'S GOLD",
     title: "오늘의 금값 확인하기",
     description: "순금·18K·14K의 오늘 가격과 전일 대비 변화를 직관적으로 확인합니다.",
     action: "오늘 금시세",
@@ -911,7 +910,6 @@ const ACTIONS = [
   },
   {
     to: "/my-gold?add=1",
-    kicker: "VALUE CHECK",
     title: "내 금 가치 계산하기",
     description: "금 종류와 무게를 입력해 현재 가치와 예상 순금량을 바로 확인합니다.",
     action: "내 금 넣어보기",
@@ -919,7 +917,6 @@ const ACTIONS = [
   },
   {
     to: "/my-gold",
-    kicker: "MY GOLD",
     title: "내 금고 관리하기",
     description: "내가 가진 금을 기록하고 오늘 가치와 변화, 골드바 가능 상태를 계속 관리합니다.",
     action: "MY GOLD",
@@ -927,7 +924,6 @@ const ACTIONS = [
   },
   {
     to: "/gold-exchange",
-    kicker: "GOLD TO GOLD",
     title: "999.9 골드바로 이어가기",
     description: "보유 금의 예상 순금 가치를 계산하고 999.9 골드바 교환으로 이어갑니다.",
     action: "GOLD TO GOLD",
@@ -947,7 +943,7 @@ export default function LandingPage() {
 
       <Hero aria-labelledby="landing-title">
         <HeroCopy>
-          <HeroKicker>KOREA GOLD MARKET · VALUE CONTINUES</HeroKicker>
+          <HeroKicker>KOREA GOLD MARKET</HeroKicker>
           <HeroTitle id="landing-title">
             내 금의 가치,
             <br />
@@ -977,7 +973,6 @@ export default function LandingPage() {
 
         <ValueLoop aria-label="한국골드마켓 가치 흐름">
           <ValueLoopHead>
-            <small>YOUR GOLD · VALUE LOOP</small>
             <strong>금의 가치는<br />하나의 흐름으로 이어집니다.</strong>
           </ValueLoopHead>
           <ValueLoopBody>
@@ -986,19 +981,17 @@ export default function LandingPage() {
             <LoopStep><span>03</span><div><strong>관리</strong><p>가치 변화와 예상 순금량을 계속 확인합니다.</p></div></LoopStep>
             <LoopStep><span>04</span><div><strong>교환</strong><p>필요할 때 999.9 GOLD로 가치를 이어갑니다.</p></div></LoopStep>
           </ValueLoopBody>
-          <LoopFooter>CHECK → RECORD → MANAGE → CONTINUE ↺</LoopFooter>
+          <LoopFooter>확인 → 기록 → 관리 → 교환 ↺</LoopFooter>
         </ValueLoop>
       </Hero>
 
       <ActionSection aria-labelledby="action-title">
-        <Kicker>START WITH YOUR GOLD</Kicker>
         <SectionTitle id="action-title">내 금으로 무엇을 할 수 있을까요?</SectionTitle>
         <SectionLead>긴 설명보다 필요한 행동부터 시작하세요. 확인한 값은 MY GOLD와 GOLD TO GOLD로 자연스럽게 이어집니다.</SectionLead>
         <ActionGrid>
-          {ACTIONS.map(({ to, kicker, title, description, action, icon }) => (
+          {ACTIONS.map(({ to, title, description, action, icon }) => (
             <ActionCard key={to} to={to}>
               <span>{React.createElement(icon, { size: 20, "aria-hidden": true })}</span>
-              <small>{kicker}</small>
               <h3>{title}</h3>
               <p>{description}</p>
               <span className="go">{action} <ArrowRight size={14} aria-hidden /></span>
@@ -1008,7 +1001,6 @@ export default function LandingPage() {
       </ActionSection>
 
       <LiveSection aria-labelledby="live-value-title">
-        <Kicker>TODAY → MY GOLD</Kicker>
         <SectionTitle id="live-value-title">오늘 금값이 바뀌면, 내 금의 가치도 함께 바뀝니다.</SectionTitle>
         <SectionLead>
           시세는 숫자로 끝나지 않습니다. <strong>MY GOLD에 기록한 내 금의 오늘 가치와 변화</strong>로 바로 연결됩니다.
@@ -1019,7 +1011,7 @@ export default function LandingPage() {
         </LiveGrid>
         <BenefitBanner>
           <div>
-            <small>WELCOME GOLD</small>
+            <small>MEMBER GOLD</small>
             <strong>한국골드마켓을 시작하면 최대 순금 0.03g</strong>
             <p>회원가입 +0.01g · 퀵퀴즈 +0.01g · 금시세 알림 +0.01g</p>
           </div>
@@ -1030,15 +1022,14 @@ export default function LandingPage() {
       <EmpathySection aria-labelledby="empathy-title">
         <EmpathyFrame>
           <EmpathyCopy>
-            <Kicker>YOUR GOLD · YOUR STORY</Kicker>
             <h2 id="empathy-title">서랍 속에 오래 머문 금도,<br />가치는 그대로 남아 있습니다.</h2>
             <p>지금 자주 사용하지 않는 금을 떠올려보세요. GOLD TO GOLD는 그 안에 남아 있는 금의 가치를 새로운 형태로 이어가는 방법입니다.</p>
           </EmpathyCopy>
           <EmpathyRail aria-label="GOLD TO GOLD 공감 사례">
-            <EmpathyItem><small>BROKEN</small><strong>끊어진 목걸이·팔찌</strong></EmpathyItem>
-            <EmpathyItem><small>ONE EARRING</small><strong>한쪽만 남은 귀걸이</strong></EmpathyItem>
-            <EmpathyItem><small>OLD JEWELRY</small><strong>오래된 14K·18K</strong></EmpathyItem>
-            <EmpathyItem><small>FOR THE FUTURE</small><strong>아이의 돌반지</strong></EmpathyItem>
+            <EmpathyItem><strong>끊어진 목걸이·팔찌</strong></EmpathyItem>
+            <EmpathyItem><strong>한쪽만 남은 귀걸이</strong></EmpathyItem>
+            <EmpathyItem><strong>오래된 14K·18K</strong></EmpathyItem>
+            <EmpathyItem><strong>아이의 돌반지</strong></EmpathyItem>
           </EmpathyRail>
         </EmpathyFrame>
       </EmpathySection>
@@ -1058,7 +1049,6 @@ export default function LandingPage() {
           </p>
         </ContinuityVisual>
         <ContinuityCopy>
-          <Kicker>CONTINUE THE VALUE</Kicker>
           <h2 id="gold-to-gold-title">쓰임이 달라진 금,<br />999.9 GOLD로 이어보세요.</h2>
           <p>
             순도와 중량을 기준으로 예상 순금량을 확인하고, 실물 999.9 골드바라는 새로운 형태로 금의 가치를 이어갈 수 있습니다.
@@ -1073,7 +1063,6 @@ export default function LandingPage() {
         <CalculatorPanel>
           <CalculatorSummary>
             <div>
-              <Kicker>TRY IT NOW</Kicker>
               <h2 id="calculator-title">내 금은 어떤 999.9 골드바가 될까요?</h2>
               <p>필요할 때 펼쳐서 종류와 중량만 입력하면 예상 순금량과 가능한 골드바 조합을 확인할 수 있습니다.</p>
             </div>
@@ -1084,7 +1073,6 @@ export default function LandingPage() {
       </CalculatorSection>
 
       <TrustSection aria-labelledby="trust-title">
-        <Kicker>ONLINE CALCULATION · IN-STORE VERIFICATION</Kicker>
         <SectionTitle id="trust-title">온라인에서 확인하고, 실제 매장에서 다시 확인합니다.</SectionTitle>
         <SectionLead>
           온라인 결과는 예상값입니다. 최종 순도·중량·공임은 부산 범천동 원일귀금속에서 고객과 함께 확인하고 동의 후 확정합니다.
@@ -1097,7 +1085,7 @@ export default function LandingPage() {
             />
           </VerificationImage>
           <VerificationCopy>
-            <Kicker>OPERATED BY WONIL JEWELRY</Kicker>
+            <Kicker>원일귀금속 직접 운영</Kicker>
             <SectionTitle as="h3">확인하고, 그다음 결정하세요.</SectionTitle>
             <TrustList>
               <div><Scale size={20} aria-hidden /><span><strong>고객 앞에서 현장 실측</strong><p>순도와 중량을 고객이 보는 앞에서 다시 확인합니다.</p></span></div>
@@ -1119,7 +1107,7 @@ export default function LandingPage() {
       <FinalCTA aria-labelledby="final-cta-title">
         <FinalInner>
           <div>
-            <Kicker style={{ color: "#F7ECD2" }}>KOREA GOLD MARKET · VALUE CONTINUES</Kicker>
+            <Kicker style={{ color: "#F7ECD2" }}>KOREA GOLD MARKET</Kicker>
             <h2 id="final-cta-title">내 금의 가치를<br />오늘부터 이어가세요.</h2>
             <p>먼저 확인하고 기록해두세요. 오늘의 변화는 MY GOLD에서 관리하고, 필요할 때 999.9 골드바로 이어갈 수 있습니다.</p>
           </div>

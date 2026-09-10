@@ -363,14 +363,8 @@ export default function LiteCalcFromGX({ showCombo = true }) {
     <Sheet aria-label="예상 순금량 계산서">
       <DocumentHead>
         <div>
-          <Eyebrow>PRELIMINARY ASSAY NOTE</Eyebrow>
           <CalcTitle>예상 순금량 계산</CalcTitle>
         </div>
-        <DocumentNo>
-          DOCUMENT NO.
-          <br />
-          KGM-{new Date().getFullYear()}-ONLINE
-        </DocumentNo>
       </DocumentHead>
 
       <PurityTabs aria-label="금 종류 빠른 선택">
@@ -432,7 +426,7 @@ export default function LiteCalcFromGX({ showCombo = true }) {
 
       <Result>
         <div>
-          <Label>EXPECTED FINE GOLD · 예상 순금량</Label>
+          <Label>예상 순금량</Label>
           <ResultValue>
             {formatGrams(fineGrams)} <small>g</small>
           </ResultValue>

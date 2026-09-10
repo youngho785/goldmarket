@@ -1075,7 +1075,6 @@ export default function Profile() {
   return (
     <Container>
       <ProfileHero>
-        <ProfileEyebrow>MY GOLD · ACCOUNT</ProfileEyebrow>
         <ProfileHeroTitle>내 프로필</ProfileHeroTitle>
         <ProfileHeroLead>
           내금고와 연결되는 적립 순금, 계정 정보, 금교환 혜택을 한곳에서 관리합니다.

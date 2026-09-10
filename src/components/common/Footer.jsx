@@ -280,7 +280,7 @@ export default function Footer() {
 
             <Operator>
               한국골드마켓
-              <small>OPERATED BY WONIL JEWELRY</small>
+              <small>원일귀금속 직접 운영</small>
             </Operator>
           </SealRow>
 
@@ -293,7 +293,7 @@ export default function Footer() {
         </Brand>
 
         <Col>
-          <h3>SERVICE</h3>
+          <h3>서비스</h3>
 
           <LinkList>
             <Link to="/gold-price">오늘 금시세</Link>
@@ -305,7 +305,7 @@ export default function Footer() {
         </Col>
 
         <Col>
-          <h3>CONTACT</h3>
+          <h3>문의·매장</h3>
 
           <ContactList>
             <span>

@@ -12,7 +12,7 @@ import {
   query,
   where,
 } from "firebase/firestore";
-import { ArrowRight, ChevronRight, Gem, LockKeyhole, Minus, Plus, Save, Sparkles, TrendingDown, TrendingUp, X } from "lucide-react";
+import { ArrowRight, ChevronRight, Gem, Minus, Plus, Save, Sparkles, TrendingDown, TrendingUp, X } from "lucide-react";
 
 import { useAuthContext } from "@/context/AuthContext";
 import { db } from "@/firebase/firebase";
@@ -111,60 +111,6 @@ const HeroKicker = styled.div`
     width: 14px;
     height: 14px;
     color: ${({ theme }) => theme.colors.gold};
-  }
-`;
-
-const PrivacyBadge = styled.div`
-  position: relative;
-  z-index: 1;
-  display: inline-flex;
-  width: fit-content;
-  max-width: 100%;
-  align-items: center;
-  gap: 6px;
-  margin-top: -2px;
-  padding: 6px 9px;
-  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.info} 18%, ${({ theme }) => theme.colors.border});
-  border-radius: 999px;
-  background: color-mix(in srgb, ${({ theme }) => theme.colors.info} 5%, ${({ theme }) => theme.colors.surface});
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: 0.62rem;
-  font-weight: 800;
-  line-height: 1.35;
-  word-break: keep-all;
-
-  svg {
-    flex: 0 0 auto;
-    width: 13px;
-    height: 13px;
-    color: ${({ theme }) => theme.colors.info};
-  }
-
-  strong {
-    color: ${({ theme }) => theme.colors.primary};
-    font-weight: 950;
-  }
-
-  @media (max-width: 520px) {
-    padding: 5px 8px;
-    font-size: 0.59rem;
-  }
-`;
-
-const VaultDefinition = styled.p`
-  position: relative;
-  z-index: 1;
-  max-width: 680px;
-  margin: -1px 0 2px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: 0.62rem;
-  font-weight: 750;
-  line-height: 1.5;
-  word-break: keep-all;
-
-  @media (max-width: 520px) {
-    font-size: 0.59rem;
-    line-height: 1.45;
   }
 `;
 
@@ -298,7 +244,7 @@ const ReadinessPanel = styled(Link)`
   small {
     display: block;
     color: ${({ theme }) => theme.colors.secondaryDark};
-    font-size: 0.53rem;
+    font-size: 0.62rem;
     font-weight: 950;
     letter-spacing: 0.08em;
   }
@@ -316,7 +262,7 @@ const ReadinessPanel = styled(Link)`
   p {
     margin: 3px 0 0;
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: 0.57rem;
+    font-size: 0.62rem;
     line-height: 1.4;
     word-break: keep-all;
   }
@@ -464,7 +410,7 @@ const BonusStrip = styled.div`
   small {
     display: block;
     color: ${({ theme }) => theme.colors.secondaryDark};
-    font-size: 0.54rem;
+    font-size: 0.62rem;
     font-weight: 950;
     letter-spacing: 0.05em;
   }
@@ -532,7 +478,7 @@ const FormSheetHead = styled.div`
   small {
     display: block;
     color: ${({ theme }) => theme.colors.secondaryDark};
-    font-size: 0.58rem;
+    font-size: 0.62rem;
     font-weight: 950;
     letter-spacing: 0.08em;
   }
@@ -693,7 +639,7 @@ const FoldSummary = styled.summary`
     display: block;
     margin-top: 3px;
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: 0.59rem;
+    font-size: 0.62rem;
     line-height: 1.35;
   }
 
@@ -877,7 +823,7 @@ const SummaryCard = styled.div`
   span {
     display: block;
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: 0.59rem;
+    font-size: 0.62rem;
     font-weight: 850;
     letter-spacing: -0.01em;
   }
@@ -921,7 +867,7 @@ const ExchangeCta = styled(Link)`
   small {
     display: block;
     color: ${({ theme }) => theme.colors.secondaryDark};
-    font-size: 0.56rem;
+    font-size: 0.62rem;
     font-weight: 900;
     letter-spacing: 0.04em;
   }
@@ -1024,7 +970,7 @@ const PanelHead = styled.div`
     border-radius: 999px;
     background: ${({ theme }) => theme.semantic.badgeGoldBg};
     color: ${({ theme }) => theme.colors.secondaryDark};
-    font-size: 0.59rem;
+    font-size: 0.62rem;
     font-weight: 850;
     white-space: nowrap;
   }
@@ -1340,7 +1286,7 @@ const BonusBadge = styled.span`
   border-radius: 999px;
   background: ${({ theme }) => theme.colors.primary};
   color: ${({ theme }) => theme.colors.goldLight};
-  font-size: 0.55rem;
+  font-size: 0.62rem;
   font-weight: 950;
   letter-spacing: 0.04em;
 `;
@@ -1406,7 +1352,7 @@ const Notice = styled.p`
   margin: 0 4px;
   padding: 2px 4px;
   color: ${({ theme }) => theme.colors.textLight};
-  font-size: 0.59rem;
+  font-size: 0.62rem;
   line-height: 1.5;
   text-align: center;
   word-break: keep-all;
@@ -1444,7 +1390,7 @@ const GuestSaveCopy = styled.div`
   small {
     color: ${({ theme }) => theme.colors.secondaryDark};
     font-family: ${({ theme }) => theme.fonts.numeric};
-    font-size: 0.55rem;
+    font-size: 0.62rem;
     font-weight: 950;
     letter-spacing: 0.1em;
   }
@@ -1482,7 +1428,7 @@ const GuestSaveBenefits = styled.div`
     border-radius: 999px;
     background: ${({ theme }) => theme.colors.surface};
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: 0.56rem;
+    font-size: 0.62rem;
     font-weight: 800;
     white-space: nowrap;
   }
@@ -2131,20 +2077,8 @@ export default function MyGoldVault() {
         <HeroKicker>
           <Gem size={15} aria-hidden /> MY GOLD · {isGuest ? "내금고 체험" : "내금고"}
         </HeroKicker>
-        <PrivacyBadge role="note" aria-label="MY GOLD 비공개 안내">
-          <LockKeyhole aria-hidden />
-          <span>
-            <strong>{isGuest ? "가입 후에도 내 금 기록은 비공개" : "내 금 기록은 비공개입니다"}</strong>
-            {isGuest
-              ? " · 저장한 상세 기록은 다른 회원에게 공개되지 않고, 본인 계정의 MY GOLD에서만 조회됩니다."
-              : " · 등록한 종류·중량 등 상세 기록은 다른 회원에게 공개되지 않고, 본인 계정의 MY GOLD에서만 조회됩니다."}
-          </span>
-        </PrivacyBadge>
-        <VaultDefinition>
-          MY GOLD는 실물 금을 맡기는 서비스가 아니라, 내가 가진 금의 정보를 기록해 현재 가치와 변화를 확인하는 개인 관리 공간입니다.
-        </VaultDefinition>
         <HeroTitle id="my-vault-current-value-title">
-          {isGuest ? "내 금을 직접 넣어보세요." : "내 금의 오늘 가치"}
+          내 금의 오늘 가치
         </HeroTitle>
         <HeroAmount $empty={!vaultLoading && !hasVaultContent}>
           {vaultLoading
@@ -2200,7 +2134,6 @@ export default function MyGoldVault() {
           aria-label="MY GOLD 예상 순금량으로 금교환 페이지 열기"
         >
           <div>
-            <small>999.9 GOLD · VALUE INSIGHT</small>
             <strong>
               {activeSummary.itemCount > 0
                 ? barReadiness?.available
@@ -2330,7 +2263,7 @@ export default function MyGoldVault() {
 
         <BonusStrip>
           <div>
-            <small><Sparkles size={12} aria-hidden /> MEMBER GOLD{isGuest ? " · EXAMPLE" : ""}</small>
+            <small><Sparkles size={12} aria-hidden /> MEMBER GOLD{isGuest ? " · 체험" : ""}</small>
             <strong>
               {isGuest
                 ? "회원가입 · 퀵퀴즈 · 금시세 알림 혜택 최대 0.03g이 더해지는 모습도 함께 체험합니다."
@@ -2344,7 +2277,6 @@ export default function MyGoldVault() {
       {isGuest && hasPersonalizedGuestVault && activeSummary.itemCount > 0 && (
         <GuestSaveCard aria-label="MY GOLD 회원가입 저장 안내">
           <GuestSaveCopy>
-            <small>SAVE YOUR GOLD · FREE</small>
             <h2>오늘 확인한 내 금의 가치, 내일도 이어보세요.</h2>
             <p>
               지금 만든 MY GOLD 기록을 계정에 저장하면 오늘 가치와 가격 변화, 예상 순금량과

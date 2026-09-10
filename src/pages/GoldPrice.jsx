@@ -113,7 +113,7 @@ const Eyebrow = styled.div`
 
   @media (max-width: 760px) {
     margin-bottom: 6px;
-    font-size: 0.55rem;
+    font-size: 0.62rem;
     letter-spacing: 0.13em;
   }
 `;
@@ -246,11 +246,11 @@ const Source = styled.span`
   }
 
   @media (max-width: 760px) {
-    font-size: 0.58rem;
+    font-size: 0.62rem;
 
     b {
       padding: 1px 5px;
-      font-size: 0.56rem;
+      font-size: 0.62rem;
     }
   }
 `;
@@ -355,7 +355,7 @@ const BarInner = styled.div`
 
     span {
       margin-top: 5px;
-      font-size: 0.42rem;
+      font-size: 0.62rem;
       line-height: 1.45;
     }
   }
@@ -407,7 +407,7 @@ const SectionTitle = styled.h2`
 
 const SectionNote = styled.p`
   margin: 0;
-  color: #777d83;
+  color: #676d72;
   font-size: 0.78rem;
   line-height: 1.55;
   word-break: keep-all;
@@ -501,7 +501,7 @@ const MetalBadge = styled.div`
   @media (max-width: 760px) {
     width: 25px;
     height: 25px;
-    font-size: 0.58rem;
+    font-size: 0.62rem;
   }
 `;
 
@@ -548,14 +548,14 @@ const CardMetric = styled.div`
 
   span {
     display: block;
-    color: #777d83;
+    color: #676d72;
     font-size: 0.67rem;
     font-weight: 800;
 
     small {
       margin-left: 4px;
-      color: #a87418;
-      font-size: 0.58rem;
+      color: #7d5a1e;
+      font-size: 0.62rem;
       font-weight: 950;
       letter-spacing: 0.01em;
       white-space: nowrap;
@@ -579,12 +579,12 @@ const CardMetric = styled.div`
     border-top: ${({ $right }) => ($right ? "1px solid var(--line)" : "0")};
 
     span {
-      font-size: 0.48rem;
+      font-size: 0.62rem;
       line-height: 1.25;
 
       small {
         margin-left: 2px;
-        font-size: 0.42rem;
+        font-size: 0.62rem;
       }
     }
 
@@ -613,7 +613,7 @@ const CardChange = styled.div`
       ? "#d63b3b"
       : $direction === "down"
         ? "#1b6fae"
-        : "#777d83"};
+        : "#676d72"};
   font-family: ${({ theme }) => theme.fonts.numeric};
   font-size: 0.7rem;
   font-weight: 850;
@@ -671,7 +671,7 @@ const MatrixCell = styled.div`
     justify-content: center;
     background: #faf9f6;
     color: #6f757b;
-    font-size: .58rem;
+    font-size: 0.62rem;
     font-weight: 850;
     line-height: 1.25;
   `
@@ -690,7 +690,7 @@ const MatrixCell = styled.div`
   small {
     display: block;
     margin-top: 2px;
-    font-size: 0.5rem;
+    font-size: 0.62rem;
     font-weight: 800;
     line-height: 1.2;
     opacity: 0.72;
@@ -704,7 +704,7 @@ const MatrixChange = styled.span`
       ? "#d63b3b"
       : $direction === "down"
         ? "#1b6fae"
-        : "#7b8085"};
+        : "#676d72"};
   font-family: ${({ theme }) => theme.fonts.numeric};
   font-size: clamp(0.52rem, 2.4vw, 0.62rem);
   font-weight: 900;
@@ -804,7 +804,7 @@ const AlertBullet = styled.span`
     border-radius: 10px;
     background: #faf8f3;
     text-align: center;
-    font-size: 0.55rem;
+    font-size: 0.62rem;
     line-height: 1.25;
 
     svg {
@@ -1588,7 +1588,7 @@ export default function GoldPrice() {
         <Hero>
           <HeroCard>
             <HeroCopy>
-              <Eyebrow>TODAY&apos;S GOLD · KOREA GOLD MARKET</Eyebrow>
+              <Eyebrow>KOREA GOLD MARKET</Eyebrow>
               <HeroTitle>오늘의 금시세</HeroTitle>
               <HeroLead>
                 내가 팔 때 가격부터 확인하고, 오늘 시세가 내금고 가치에 미치는 변화까지 이어서 보세요.
@@ -1637,7 +1637,6 @@ export default function GoldPrice() {
         <Section aria-labelledby="live-gold-price-title">
           <SectionHead>
             <div>
-              <SectionKicker>LIVE PRICE</SectionKicker>
               <SectionTitle id="live-gold-price-title">
                 지금 금시세
               </SectionTitle>
@@ -1766,7 +1765,6 @@ export default function GoldPrice() {
         <Section aria-labelledby="gold-price-alert-title">
           <AlertCard>
             <div>
-              <SectionKicker>GOLD ALERT</SectionKicker>
               <AlertTitle id="gold-price-alert-title">
                 금값이 움직일 때, <em>먼저 알려드릴게요.</em>
               </AlertTitle>
@@ -1910,7 +1908,7 @@ export default function GoldPrice() {
           <RewardCard>
             <RewardTop>
               <div>
-                <SectionKicker>MEMBER BENEFIT</SectionKicker>
+                <SectionKicker>MEMBER GOLD</SectionKicker>
                 <RewardTitle id="gold-benefit-title">
                   회원 혜택 <span>최대 순금 0.03g</span>
                 </RewardTitle>

@@ -483,7 +483,6 @@ export default function GoldbarFee() {
   return (
     <Page>
       <Header>
-        <Kicker>GOLDBAR MAKING FEE SCHEDULE</Kicker>
         <Title>골드바 제작 공임 안내</Title>
         <Lead>
           나의 금을 <b>999.9 골드바</b>로 교환할 때 적용되는 제작 공임입니다.

@@ -52,7 +52,7 @@ const Kicker = styled.p`
 
   @media (max-width: 520px) {
     margin-bottom: 4px;
-    font-size: 0.59rem;
+    font-size: 0.62rem;
     letter-spacing: 0.12em;
   }
 `;
@@ -160,7 +160,7 @@ const HeadCell = styled(Cell)`
 
     small {
       padding: 1px 5px;
-      font-size: 0.56rem;
+      font-size: 0.62rem;
     }
   }
 `;
@@ -209,11 +209,11 @@ const Change = styled.small`
 
   @media (max-width: 520px) {
     margin-top: 2px;
-    font-size: 0.54rem;
+    font-size: 0.62rem;
   }
 
   @media (max-width: 370px) {
-    font-size: 0.51rem;
+    font-size: 0.62rem;
   }
 `;
 
@@ -560,7 +560,6 @@ export default function GoldPriceBoard() {
     <Wrap>
       <Head>
         <HeadTitle>
-          <Kicker>DAILY GOLD PRICE</Kicker>
           <Title>한국골드마켓 금시세</Title>
           {data && (
             <SourceDate>

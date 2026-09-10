@@ -335,7 +335,6 @@ export default function Stores() {
   return (
     <Page>
       <Header>
-        <Kicker>OFFLINE VERIFICATION STORE</Kicker>
         <Title>교환 절차와 매장 안내</Title>
         <Lead>
           한국골드마켓의 골드바 교환은 부산 범천동 원일귀금속에서 진행합니다.
@@ -347,7 +346,7 @@ export default function Stores() {
         <StoreInfo aria-labelledby="store-name">
           <StoreHead>
             <div>
-              <Kicker>OPERATED DIRECTLY</Kicker>
+              <Kicker>원일귀금속 직접 운영</Kicker>
               <h2 id="store-name">{STORE.name}</h2>
             </div>
             <Seal>현장확인<br />교환매장</Seal>
@@ -387,7 +386,6 @@ export default function Stores() {
         </StoreInfo>
 
         <VisitGuide aria-labelledby="visit-guide-title">
-          <Kicker>BEFORE YOUR VISIT</Kicker>
           <GuideTitle id="visit-guide-title">매장에서는 이렇게 확인합니다</GuideTitle>
           <Checklist>
             <li>

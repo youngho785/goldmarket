@@ -212,7 +212,7 @@ const GlobalStyle = createGlobalStyle`
   }
 
   @media (max-width: 768px) {
-    html { font-size: 93.75%; }
+    html { font-size: 100%; }
     body {
       line-height: 1.62;
       background-size: 24px 24px, 24px 24px, auto;

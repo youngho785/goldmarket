@@ -931,7 +931,7 @@ export default function QuizGoldBonus() {
   return (
     <Page>
       <Intro>
-        <Eyebrow>GOLD QUICK QUIZ</Eyebrow>
+        <Eyebrow>금 퀵퀴즈</Eyebrow>
         <Title>
           {benefitClaimedBefore ? "금 상식 5문제" : "5문제 풀고"}
           <br />
@@ -978,7 +978,7 @@ export default function QuizGoldBonus() {
         >
           <Category>{currentQuestion.category}</Category>
           <QuestionNumber>
-            QUESTION {String(currentIndex + 1).padStart(2, "0")} /{" "}
+            문제 {String(currentIndex + 1).padStart(2, "0")} /{" "}
             {String(TOTAL).padStart(2, "0")}
           </QuestionNumber>
           <QuestionTitle>{currentQuestion.q}</QuestionTitle>
@@ -1024,14 +1024,14 @@ export default function QuizGoldBonus() {
 
           {currentFeedback === "wrong" && (
             <Feedback $wrong>
-              <strong>ONE MORE TRY</strong>
+              <strong>다시 한번</strong>
               {currentQuestion.hint}
             </Feedback>
           )}
 
           {currentFeedback === "correct" && (
             <Feedback>
-              <strong>✓ NICE. 정답입니다</strong>
+              <strong>✓ 정답입니다</strong>
               {currentQuestion.explanation}
             </Feedback>
           )}

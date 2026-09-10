@@ -68,12 +68,12 @@ export const theme = {
 
     text: "#10243A",
     textSecondary: "#5F625F",
-    textLight: "#8B8A83",
+    textLight: "#6F716A",
     mutedText: "#686A66",
     gray: "#686A66",
 
-    border: "#D9D1C1",
-    borderStrong: "#BDB29E",
+    border: "#CEC4B2",
+    borderStrong: "#B5A891",
     dividerSubtle: "#E7E0D4",
 
     link: "#173A5D",
