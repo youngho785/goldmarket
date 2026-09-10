@@ -9,8 +9,30 @@ const root = path.resolve(here, "..");
 const read = (relativePath) =>
   fs.readFileSync(path.join(root, relativePath), "utf8");
 
+const listFilesRecursive = (relativeDirectory, extension = ".ts") => {
+  const absoluteDirectory = path.join(root, relativeDirectory);
+  const files = [];
+
+  for (const entry of fs.readdirSync(absoluteDirectory, { withFileTypes: true })) {
+    const childRelativePath = path.join(relativeDirectory, entry.name);
+
+    if (entry.isDirectory()) {
+      files.push(...listFilesRecursive(childRelativePath, extension));
+    } else if (entry.isFile() && entry.name.endsWith(extension)) {
+      files.push(childRelativePath);
+    }
+  }
+
+  return files;
+};
+
 const firebaseClient = read("src/firebase/firebase.js");
-const functionsIndex = read("functions/src/index.ts");
+const functionsRuntime = read("functions/src/core/runtime.ts");
+const functionSourceFiles = listFilesRecursive("functions/src");
+const functionSources = functionSourceFiles.map((relativePath) => ({
+  relativePath,
+  source: read(relativePath),
+}));
 const rootEnvExample = read(".env.example");
 const functionsEnvExample = read("functions/.env.example");
 const gitignore = read(".gitignore");
@@ -36,31 +58,37 @@ assert.match(
   "App Check debug token must only be enabled in Vite development mode."
 );
 
-const callableNames = [
-  ...functionsIndex.matchAll(
-    /export const\s+([A-Za-z0-9_]+)\s*=\s*onCall\b/g
-  ),
-].map((match) => match[1]);
+const callablePattern =
+  /export const\s+([A-Za-z0-9_]+)\s*=\s*onCall\b/g;
+const enforcementPattern =
+  /enforceAppCheck:\s*ENFORCE_APP_CHECK/g;
 
-const enforcementHookCount = (
-  functionsIndex.match(
-    /enforceAppCheck:\s*ENFORCE_APP_CHECK/g
-  ) || []
-).length;
+const callables = functionSources.flatMap(({ relativePath, source }) =>
+  [...source.matchAll(callablePattern)].map((match) => ({
+    name: match[1],
+    relativePath,
+  }))
+);
+
+const enforcementHookCount = functionSources.reduce(
+  (count, { source }) =>
+    count + (source.match(enforcementPattern) || []).length,
+  0
+);
 
 assert.ok(
-  callableNames.length > 0,
+  callables.length > 0,
   "No callable Cloud Functions were detected."
 );
 assert.match(
-  functionsIndex,
-  /const ENFORCE_APP_CHECK\s*=[\s\S]{0,160}?process\.env\.ENFORCE_APP_CHECK\s*===\s*"true"/,
+  functionsRuntime,
+  /export const ENFORCE_APP_CHECK\s*=\s*process\.env\.ENFORCE_APP_CHECK\s*===\s*"true"/,
   "Callable App Check enforcement must remain controlled by ENFORCE_APP_CHECK."
 );
 assert.equal(
   enforcementHookCount,
-  callableNames.length,
-  `Every callable must use the shared App Check enforcement hook. callables=${callableNames.length}, hooks=${enforcementHookCount}`
+  callables.length,
+  `Every callable must use the shared App Check enforcement hook. callables=${callables.length}, hooks=${enforcementHookCount}`
 );
 
 assert.match(
@@ -85,7 +113,10 @@ assert.match(
 );
 
 console.log(
-  `[OK] App Check policy guard: ${callableNames.length}/${callableNames.length} callable functions use the shared enforcement hook.`
+  `[OK] App Check policy guard: ${callables.length}/${callables.length} callable functions use the shared enforcement hook.`
+);
+console.log(
+  `[OK] Callable scan covers ${functionSourceFiles.length} TypeScript files under functions/src.`
 );
 console.log("[OK] Web App Check config is environment-based and debug-token values are not committed.");
 console.log("[OK] Production enforcement remains an explicit rollout decision.");
