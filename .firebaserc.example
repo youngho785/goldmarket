@@ -1,0 +1,6 @@
+{
+  "projects": {
+    "production": "goldmarket-0",
+    "staging": "YOUR_FIREBASE_STAGING_PROJECT_ID"
+  }
+}

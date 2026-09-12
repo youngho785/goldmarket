@@ -1,0 +1,388 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('disabled', false) != true &&
+        (
+          request.auth.token.get('superAdmin', false) == true ||
+          (
+            request.auth.token.get('admin', false) == true &&
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'admin') != 'user'
+          )
+        );
+    }
+
+    function validGoldVaultType(value) {
+      return value is string && value in [
+        '14k(585) 제품(팔찌,목걸이, 반지,귀걸이, 발찌 등)',
+        '18k(750) 제품(팔찌,목걸이, 반지,귀걸이, 발찌 등)',
+        '순금 995제품(목걸이,팔찌,반지,귀걸이)',
+        '순금 999제품(팔찌,목걸이, 반지,귀걸이)',
+        '순금 열쇠',
+        '순금 장식모양(거북이,두꺼비, 골프공, 핸드폰고리 등)',
+        '순금 마고자 단추 / 색상이 들어있는 제품',
+        '999,24k 순금덩어리(순도 측정후 999일 경우)'
+      ];
+    }
+
+    function validGoldVaultItem(data) {
+      return data.keys().hasAll([
+          'label', 'goldType', 'weightG', 'note', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'label', 'goldType', 'weightG', 'note', 'createdAt', 'updatedAt'
+        ]) &&
+        data.label is string && data.label.size() > 0 && data.label.size() <= 40 &&
+        validGoldVaultType(data.goldType) &&
+        (data.weightG is int || data.weightG is float) &&
+        data.weightG > 0 && data.weightG <= 10000 &&
+        data.note is string && data.note.size() <= 200;
+    }
+
+    function protectedUserFieldsUnchanged() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'role', 'admin', 'superAdmin', 'disabled', 'bonus', 'bonusGoldMilliGrams',
+        'bonusGoldG', 'bonusGoldUpdatedAt', 'roleUpdatedAt', 'roleUpdatedBy',
+        'accountStatusUpdatedAt', 'accountStatusUpdatedBy', 'nickname'
+      ]);
+    }
+
+    function userClientFieldsOnly() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'displayName', 'name', 'email', 'phone', 'profileImage',
+        'createdAt', 'updatedAt', 'consents',
+        'notificationPreferences', 'notificationPreferencesUpdatedAt',
+        'marketingFcmToken', 'marketingFcmBrowser', 'marketingFcmTokenUpdatedAt',
+        'fcmTokens', 'nativeFcmTokens', 'pushTokensUpdatedAt',
+        'myExchangesLastSeenAt'
+      ]);
+    }
+
+    function validRequiredConsent(value) {
+      return value is map &&
+        value.keys().hasOnly(['accepted', 'at']) &&
+        value.accepted == true &&
+        value.at == request.time;
+    }
+
+    function validMarketingConsent(value) {
+      return value is map &&
+        value.keys().hasOnly(['accepted', 'at']) &&
+        value.accepted is bool &&
+        value.at == request.time;
+    }
+
+    function validInitialConsents(value) {
+      return value is map &&
+        value.keys().hasOnly(['version', 'age14', 'tos', 'privacy', 'marketing']) &&
+        value.version is string &&
+        value.version.size() > 0 &&
+        value.version.size() <= 50 &&
+        validRequiredConsent(value.age14) &&
+        validRequiredConsent(value.tos) &&
+        validRequiredConsent(value.privacy) &&
+        validMarketingConsent(value.marketing);
+    }
+
+    function userCreatedAtUpdateAllowed() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['createdAt']) ||
+        (!('createdAt' in resource.data) &&
+          request.resource.data.createdAt == request.time);
+    }
+
+    function authEmailMatchesRequestedEmail() {
+      return signedIn() &&
+        ('email' in request.resource.data) &&
+        request.resource.data.email is string &&
+        ('email' in request.auth.token) &&
+        request.auth.token.email is string &&
+        request.resource.data.email == request.auth.token.email;
+    }
+
+    function userEmailUpdateAllowed() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['email']) ||
+        (!('email' in resource.data) &&
+          authEmailMatchesRequestedEmail()) ||
+        (('email' in resource.data) &&
+          ('email_verified' in request.auth.token) &&
+          request.auth.token.email_verified == true &&
+          authEmailMatchesRequestedEmail());
+    }
+
+    function userConsentsUpdateAllowed() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['consents']) ||
+        (!('consents' in resource.data) &&
+          validInitialConsents(request.resource.data.consents)) ||
+        (('consents' in resource.data) &&
+          resource.data.consents is map &&
+          request.resource.data.consents is map &&
+          request.resource.data.consents.diff(resource.data.consents).affectedKeys().hasOnly(['marketing']) &&
+          validMarketingConsent(request.resource.data.consents.marketing));
+    }
+
+    function validUserCreateMetadata() {
+      return (!('createdAt' in request.resource.data) ||
+          request.resource.data.createdAt == request.time) &&
+        (!('email' in request.resource.data) ||
+          authEmailMatchesRequestedEmail()) &&
+        (!('consents' in request.resource.data) ||
+          validInitialConsents(request.resource.data.consents));
+    }
+
+    function allowedUserCreateFieldsOnly() {
+      return request.resource.data.keys().hasOnly([
+        'displayName', 'name', 'email', 'phone', 'profileImage',
+        'createdAt', 'updatedAt', 'consents',
+        'notificationPreferences', 'notificationPreferencesUpdatedAt',
+        'marketingFcmToken', 'marketingFcmBrowser', 'marketingFcmTokenUpdatedAt',
+        'fcmTokens', 'nativeFcmTokens', 'pushTokensUpdatedAt',
+        'myExchangesLastSeenAt'
+      ]);
+    }
+
+    match /appConfig/{docId} {
+      // 고객 화면에 필요한 공개 설정만 읽을 수 있습니다.
+      allow read: if docId in ['goldRates', 'reservedSlots', 'bookingAvailability'];
+      // 환산율·예약 슬롯·예약 가능일은 검증·감사 기능이 있는 서버 함수로만 변경합니다.
+      allow write: if false;
+    }
+
+    match /goldRateHistory/{historyId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // 홈페이지 공개 시세(current), KRX 참고 시세(pending)
+    match /goldPrices/{docId} {
+      allow read: if docId == 'current' || isAdmin();
+      allow create, update: if isAdmin() && docId == 'current';
+      allow delete: if false;
+    }
+
+    // 금시세 공개 설정. 금교환 적용률(appConfig/goldRates)과 완전히 별개입니다.
+    match /goldPricePublic/{docId} {
+      allow read: if true;
+      allow create, update: if isAdmin()
+        && docId == 'config'
+        && request.resource.data.keys().hasOnly([
+          'enabled',
+          'display14kSellPrice',
+          'updatedAt',
+          'updatedBy'
+        ])
+        && request.resource.data.enabled is bool
+        && request.resource.data.display14kSellPrice is bool
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if false;
+    }
+
+    // 기존 KRX 참고 조회용 설정은 유지합니다.
+    match /goldPriceSettings/{docId} {
+      allow read: if isAdmin();
+      allow create, update: if isAdmin()
+        && docId == 'current'
+        && request.resource.data.keys().hasOnly([
+          'enabled',
+          'publishMode',
+          'roundingUnit',
+          'pureGoldBuy',
+          'pureGoldSell',
+          'gold18kBuy',
+          'gold14kBuy',
+          'updatedAt',
+          'updatedBy'
+        ])
+        && request.resource.data.enabled is bool
+        && request.resource.data.publishMode in ['approval', 'auto']
+        && request.resource.data.roundingUnit in [1, 10, 100, 1000, 10000]
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if false;
+    }
+
+    // 날짜별 최종 시세: 홈페이지 과거 조회를 위해 공개 읽기, 관리자만 쓰기
+    match /goldPriceHistory/{historyId} {
+      allow read: if true;
+      allow create, update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // KRX 원본 참고 이력은 관리자만 확인
+    match /goldPriceKrxHistory/{historyId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /users/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow create: if isOwner(uid) && allowedUserCreateFieldsOnly() && validUserCreateMetadata();
+      allow update: if isOwner(uid) &&
+        protectedUserFieldsUnchanged() &&
+        userClientFieldsOnly() &&
+        userCreatedAtUpdateAllowed() &&
+        userEmailUpdateAllowed() &&
+        userConsentsUpdateAllowed();
+      allow delete: if false;
+
+      match /ledger/{entryId} {
+        allow read: if isOwner(uid) || isAdmin();
+        allow write: if false;
+      }
+
+      match /promotions/{promotionId} {
+        allow read: if isOwner(uid) || isAdmin();
+        allow write: if false;
+      }
+    }
+
+    match /users/{uid}/goldVaultItems/{itemId} {
+      // 개인이 기록한 금제품 상세는 본인만 조회합니다.
+      // 관리자 화면은 Cloud Functions가 반환하는 개수/통계만 사용합니다.
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid) &&
+        validGoldVaultItem(request.resource.data) &&
+        request.resource.data.createdAt == request.time &&
+        request.resource.data.updatedAt == request.time;
+      allow update: if isOwner(uid) &&
+        validGoldVaultItem(request.resource.data) &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        request.resource.data.updatedAt == request.time;
+      allow delete: if isOwner(uid);
+    }
+
+    match /profiles/{uid} {
+      // 공개 회원 디렉터리를 운영하지 않으므로 본인/관리자만 조회합니다.
+      allow read: if isOwner(uid) || isAdmin();
+      allow create: if isOwner(uid) &&
+        request.resource.data.keys().hasOnly([
+          'displayName', 'photoURL'
+        ]);
+      allow update: if isOwner(uid) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'displayName', 'photoURL'
+        ]);
+      allow delete: if false;
+    }
+
+    match /nicknames/{nickname} {
+      // 중복 확인/선점은 서버 callable로만 처리합니다.
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /notifications/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow write: if false;
+
+      match /items/{itemId} {
+        allow read: if isOwner(uid) || isAdmin();
+        allow create, delete: if false;
+        allow update: if isOwner(uid) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read', 'readAt']) &&
+          request.resource.data.read == true &&
+          (!('readAt' in request.resource.data) || request.resource.data.readAt == request.time);
+      }
+    }
+
+    match /goldExchangeGroups/{groupId} {
+      allow read: if isAdmin() ||
+        (signedIn() && resource.data.ownerUid == request.auth.uid);
+      allow write: if false;
+    }
+
+    match /goldExchanges/{exchangeId} {
+      allow read: if isAdmin() ||
+        (signedIn() && (
+          resource.data.userId == request.auth.uid ||
+          (resource.data.participants is list && request.auth.uid in resource.data.participants)
+        ));
+      allow write: if false;
+    }
+
+    match /bonusGoldRedemptionRequests/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow write: if false;
+    }
+
+    // 탈퇴 후 재가입에 따른 순금 혜택 중복 지급을 막는 서버 전용 가명처리 식별 기록입니다.
+    match /benefitClaimLocks/{lockId} {
+      allow read, write: if false;
+    }
+
+    match /verifiedGoldExchangeReviews/{reviewId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /goldExchangeReviewClaims/{exchangeId} {
+      allow read: if isAdmin() ||
+        (signedIn() &&
+          get(/databases/$(database)/documents/goldExchanges/$(exchangeId)).data.userId
+            == request.auth.uid);
+      allow write: if false;
+    }
+
+    match /supportTickets/{ticketId} {
+      function validTicket(data) {
+        return data.keys().hasOnly([
+          'title', 'content', 'category', 'authorId', 'authorNickname',
+          'status', 'createdAt', 'updatedAt'
+        ]) &&
+        data.title is string && data.title.size() > 0 && data.title.size() <= 120 &&
+        data.content is string && data.content.size() > 0 && data.content.size() <= 5000 &&
+        data.category == 'inquiry' &&
+        data.authorId == request.auth.uid &&
+        data.authorNickname is string && data.authorNickname.size() <= 80 &&
+        data.status == 'open' &&
+        data.createdAt == request.time &&
+        data.updatedAt == request.time;
+      }
+
+      allow read: if isAdmin() ||
+        (signedIn() && resource.data.authorId == request.auth.uid);
+      allow create: if signedIn() && validTicket(request.resource.data);
+      allow update: if isAdmin() || (
+        signedIn() &&
+        resource.data.authorId == request.auth.uid &&
+        resource.data.status == 'open' &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'title', 'content', 'updatedAt'
+        ]) &&
+        request.resource.data.title is string &&
+        request.resource.data.title.size() > 0 &&
+        request.resource.data.title.size() <= 120 &&
+        request.resource.data.content is string &&
+        request.resource.data.content.size() > 0 &&
+        request.resource.data.content.size() <= 5000 &&
+        request.resource.data.updatedAt == request.time
+      );
+      allow delete: if isAdmin() || (
+        signedIn() &&
+        resource.data.authorId == request.auth.uid &&
+        resource.data.status == 'open'
+      );
+    }
+
+    match /adminAuditLogs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

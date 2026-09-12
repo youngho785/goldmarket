@@ -1,0 +1,17 @@
+accountVerifications
+appConfig
+board
+chats
+favorites
+goldExchangeReviews
+goldExchanges
+items
+messages
+notifications
+orders
+products
+reports
+reservedSlots
+transactionReviews
+transactions
+users

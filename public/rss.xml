@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+<channel>
+<title>한국골드마켓 — 금의 가치를 이어가다</title>
+<link>https://koreagoldmarket.com</link>
+<description>오늘 금시세, MY GOLD 기록·관리, GOLD TO GOLD와 부산 매장 이용 안내입니다.</description>
+<language>ko</language>
+<lastBuildDate>Sat, 12 Sep 2026 07:00:13 GMT</lastBuildDate>
+    <item>
+      <title><![CDATA[오늘의 한국골드마켓 금시세]]></title>
+      <link>https://koreagoldmarket.com/gold-price</link>
+      <description><![CDATA[순금·18K·14K 금시세와 전일 대비 변화를 확인합니다.]]></description>
+    </item>
+    <item>
+      <title><![CDATA[내 금 예상 중량과 골드바 조합 계산]]></title>
+      <link>https://koreagoldmarket.com/gold-exchange</link>
+      <description><![CDATA[여러 금 제품을 합산해 예상 순금 중량과 가능한 골드바 조합을 확인합니다.]]></description>
+    </item>
+    <item>
+      <title><![CDATA[MY GOLD · 내금고]]></title>
+      <link>https://koreagoldmarket.com/my-gold</link>
+      <description><![CDATA[내가 가진 금을 기록하고 오늘 가치, 변화, 예상 순금량을 관리합니다.]]></description>
+    </item>
+    <item>
+      <title><![CDATA[GOLD TO GOLD]]></title>
+      <link>https://koreagoldmarket.com/gold-to-gold</link>
+      <description><![CDATA[보유 금의 순금 가치를 999.9 골드바로 이어가는 한국골드마켓의 금교환 방식을 확인합니다.]]></description>
+    </item>
+    <item>
+      <title><![CDATA[골드바 제작 공임 안내]]></title>
+      <link>https://koreagoldmarket.com/goldbar-fee</link>
+      <description><![CDATA[규격별 골드바 제작 공임과 계산 기준을 확인합니다.]]></description>
+    </item>
+    <item>
+      <title><![CDATA[부산 범천동 원일귀금속 매장 안내]]></title>
+      <link>https://koreagoldmarket.com/stores</link>
+      <description><![CDATA[골드바 교환 매장의 주소, 영업시간과 연락처를 확인합니다.]]></description>
+    </item>
+</channel>
+</rss>
