@@ -1,12 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import styled from "styled-components";
+import { livingGoldReveal, livingGoldSweep } from "@/styles/livingGoldMotion";
 import { ArrowDownRight, ArrowUpRight, ChevronRight, Minus } from "lucide-react";
 import { doc, onSnapshot } from "firebase/firestore";
 
 import { db } from "@/firebase/firebase";
 
 const Card = styled(Link)`
+  position: relative;
   overflow: hidden;
   border: 1px solid
     color-mix(in srgb, ${({ theme }) => theme.colors.gold} 22%, ${({ theme }) => theme.colors.border});
@@ -23,6 +25,19 @@ const Card = styled(Link)`
   cursor: pointer;
   transition: transform 0.15s ease, border-color 0.15s ease;
 
+  &::after {
+    content: "";
+    position: absolute;
+    z-index: 0;
+    top: -40%;
+    bottom: -40%;
+    left: -24%;
+    width: 20%;
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, ${({ theme }) => theme.colors.goldLight} 52%, transparent), transparent);
+    pointer-events: none;
+    animation: ${livingGoldSweep} 1500ms cubic-bezier(.2,.8,.2,1) 440ms both;
+  }
+
   &:active {
     transform: translateY(1px);
   }
@@ -34,6 +49,8 @@ const Card = styled(Link)`
 `;
 
 const Inner = styled.div`
+  position: relative;
+  z-index: 1;
   padding: 10px 12px;
 `;
 
@@ -108,6 +125,7 @@ const PrimaryPrice = styled.div`
     line-height: 1;
     letter-spacing: -0.045em;
     white-space: nowrap;
+    animation: ${livingGoldReveal} 560ms cubic-bezier(.2,.8,.2,1) 160ms both;
   }
 `;
 

@@ -420,9 +420,9 @@ export default function MyGoldIntroCard() {
           <Kicker>
             <Gem size={13} aria-hidden />
             {waitingForVault
-              ? "MY GOLD · 내금고"
+              ? "MY GOLD"
               : hasVaultContent
-                ? "MY GOLD · 내금고"
+                ? "MY GOLD"
                 : showGuestSample
                   ? "MY GOLD · 체험 예시"
                   : "MY GOLD"}
@@ -430,7 +430,7 @@ export default function MyGoldIntroCard() {
 
           <Title id="my-gold-intro-title">
             {waitingForVault
-              ? "내금고를 불러오고 있어요"
+              ? "MY GOLD를 불러오고 있어요"
               : hasVaultContent || showGuestSample
                 ? "내 금의 오늘 가치"
                 : "내 금, 오늘 얼마일까요?"}
@@ -454,13 +454,13 @@ export default function MyGoldIntroCard() {
             </ValueRow>
           ) : (
             <EmptyCopy>
-              반지·목걸이·돌반지 등 <strong>금 1개만 등록하면</strong> 오늘 가치, 가격 변화, 예상 순금량, 교환 가능한 골드바를 계속 확인할 수 있습니다.
+              반지·목걸이·돌반지 등 <strong>금 1개만 기록하면</strong> 오늘 가치, 가격 변화, 예상 순금량, 교환 가능한 골드바를 계속 확인할 수 있습니다.
             </EmptyCopy>
           )}
 
           {!waitingForVault && hasVaultContent && user?.uid && (
             <BonusLine>
-              적립 순금 <strong>{bonusBalanceG.toFixed(2)}g</strong>도 금교환 가치에 함께 더해집니다.
+              MEMBER GOLD <strong>{bonusBalanceG.toFixed(2)}g</strong>도 금교환 가치에 함께 더해집니다.
             </BonusLine>
           )}
 
@@ -473,14 +473,14 @@ export default function MyGoldIntroCard() {
 
         <Aside>
           <Action to="/my-gold">
-            {hasVaultContent ? "내금고 보기" : user?.uid ? "첫 금 등록하기" : "내금고 체험하기"}
+            {hasVaultContent ? "MY GOLD 보기" : user?.uid ? "첫 금 기록하기" : "MY GOLD 체험하기"}
             <ArrowRight size={15} aria-hidden />
           </Action>
           <Disclaimer>
             {hasVaultContent
-              ? "등록한 금과 적립 순금에 현재 환산율과 공개 시세를 적용한 참고값이며 실제 교환 결과는 매장 확인 후 확정됩니다."
+              ? "기록한 금과 MEMBER GOLD에 현재 환산율과 공개 시세를 적용한 참고값이며 실제 교환 결과는 매장 확인 후 확정됩니다."
               : user?.uid
-                ? "가상의 자산 금액을 표시하지 않습니다. 금을 등록한 뒤 실제 입력값으로 오늘 가치와 예상 순금량을 계산합니다."
+                ? "가상의 자산 금액을 표시하지 않습니다. 금을 기록한 뒤 실제 입력값으로 오늘 가치와 예상 순금량을 계산합니다."
                 : "예시 금제품과 현재 공개 시세를 적용한 체험값입니다. 실제 내 금은 회원가입 후 저장할 수 있습니다."}
           </Disclaimer>
         </Aside>

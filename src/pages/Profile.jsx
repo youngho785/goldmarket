@@ -1077,7 +1077,7 @@ export default function Profile() {
       <ProfileHero>
         <ProfileHeroTitle>내 프로필</ProfileHeroTitle>
         <ProfileHeroLead>
-          내금고와 연결되는 적립 순금, 계정 정보, 금교환 혜택을 한곳에서 관리합니다.
+          MY GOLD와 연결되는 MEMBER GOLD, 계정 정보, 금교환 혜택을 한곳에서 관리합니다.
         </ProfileHeroLead>
       </ProfileHero>
 

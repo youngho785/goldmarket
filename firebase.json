@@ -194,6 +194,24 @@
         ]
       },
       {
+        "source": "/my-gold/items",
+        "headers": [
+          {
+            "key": "X-Robots-Tag",
+            "value": "noindex, nofollow, noarchive"
+          }
+        ]
+      },
+      {
+        "source": "/my-gold/trend",
+        "headers": [
+          {
+            "key": "X-Robots-Tag",
+            "value": "noindex, nofollow, noarchive"
+          }
+        ]
+      },
+      {
         "source": "/my-gold/alerts",
         "headers": [
           {

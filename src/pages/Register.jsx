@@ -504,16 +504,16 @@ export default function Register() {
         <NoticeBox role="note" aria-live="polite">
           <strong>
             {returningToGuestMyGoldImport
-              ? "가입 후 지금 만든 체험 내금고를 그대로 저장합니다"
+              ? "가입 후 지금 만든 MY GOLD 체험 기록을 그대로 저장합니다"
               : returningToMyGoldImport
-                ? "가입 후 방금 계산한 금을 내금고에 이어서 저장합니다"
+                ? "가입 후 방금 계산한 금을 MY GOLD에 이어서 저장합니다"
                 : "회원가입하고 순금 0.01g 받기"}
           </strong>
           <div>
             {returningToGuestMyGoldImport
-              ? "체험에서 추가·수정한 금 이름·종류·중량·메모가 임시 보관되어 있습니다. 가입이 끝나면 그대로 실제 내금고에 저장할 수 있고, 이메일 인증을 완료하면 회원가입 순금 0.01g 혜택도 받을 수 있습니다."
+              ? "체험에서 추가·수정한 금 이름·종류·중량·메모가 임시 보관되어 있습니다. 가입이 끝나면 그대로 MY GOLD에 저장할 수 있고, 이메일 인증을 완료하면 회원가입 순금 0.01g 혜택도 받을 수 있습니다."
               : returningToMyGoldImport
-                ? "계산한 금 종류와 중량은 임시 보관되어 있습니다. 가입이 끝나면 바로 내금고에 저장할 수 있고, 이메일 인증을 완료하면 회원가입 순금 0.01g 혜택도 받을 수 있습니다."
+                ? "계산한 금 종류와 중량은 임시 보관되어 있습니다. 가입이 끝나면 바로 MY GOLD에 저장할 수 있고, 이메일 인증을 완료하면 회원가입 순금 0.01g 혜택도 받을 수 있습니다."
                 : "각 순금 혜택은 인증 이메일 기준 1회만 지급되며, 탈퇴 후 재가입해도 중복 지급되지 않습니다. 퀵퀴즈와 광고성 정보 수신(앱푸시) 설정으로 최대 순금 0.03g까지 받을 수 있습니다."}
           </div>
         </NoticeBox>
@@ -531,7 +531,7 @@ export default function Register() {
             <>
               <StepIntro>
                 <h2>계정 만들기</h2>
-                <p>내금고에 금을 저장하고 가치 변화와 교환 가능 상태를 계속 확인할 계정을 만듭니다.</p>
+                <p>MY GOLD에 금을 기록하고 가치 변화와 교환 가능 상태를 계속 확인할 계정을 만듭니다.</p>
               </StepIntro>
 
               <FormGroup>
@@ -578,7 +578,7 @@ export default function Register() {
             <>
               <StepIntro>
                 <h2>내 정보</h2>
-                <p>방문예약과 내금고에서 사용할 기본 정보를 입력합니다.</p>
+                <p>방문예약과 MY GOLD에서 사용할 기본 정보를 입력합니다.</p>
               </StepIntro>
 
               <FormGroup>

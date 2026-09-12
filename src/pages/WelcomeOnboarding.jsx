@@ -490,7 +490,7 @@ export default function WelcomeOnboarding() {
   const finishLabel = nextPath.startsWith("/gold-exchange")
     ? "선택한 일정으로 예약 계속하기"
     : nextPath.startsWith("/my-gold?import=calculator")
-      ? "계산한 금 내금고에 저장 계속하기"
+      ? "계산한 금 MY GOLD에 저장 계속하기"
       : "한국골드마켓 시작하기";
 
   if (user?.uid && !isEmailVerified) {
@@ -561,7 +561,7 @@ export default function WelcomeOnboarding() {
             </StepTop>
             <StepDescription>
               금시세, 찾아보지 말고 받아보세요. 매번 검색할 필요 없이
-              주요 금시세 변동, 내금고 주간 리포트와 혜택을 앱푸시로 받아보세요.
+              주요 금시세 변동, MY GOLD 주간 리포트와 혜택을 앱푸시로 받아보세요.
             </StepDescription>
 
             {!status.marketingPush.claimed && (

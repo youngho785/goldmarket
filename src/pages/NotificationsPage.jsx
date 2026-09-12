@@ -241,7 +241,7 @@ function safeInternalLink(value) {
 
 const NOTIFICATION_FILTERS = [
   ["all", "전체"],
-  ["vault", "내금고"],
+  ["vault", "MY GOLD"],
   ["price", "금시세"],
   ["exchange", "금교환"],
   ["benefit", "혜택"],

@@ -1,9 +1,50 @@
 // src/components/gold/MyGoldValueTrend.jsx
 import React, { useMemo } from "react";
-import styled from "styled-components";
+import { Link } from "react-router-dom";
+import styled, { keyframes } from "styled-components";
 import { Minus, TrendingDown, TrendingUp } from "lucide-react";
 
 import useMyGoldValueTrend, { MY_GOLD_TREND_PERIODS } from "@/hooks/useMyGoldValueTrend";
+import { livingGoldPulse } from "@/styles/livingGoldMotion";
+
+const chartDraw = keyframes`
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+`;
+
+const chartAreaIn = keyframes`
+  from { opacity: 0; }
+  to { opacity: 0.08; }
+`;
+
+const AnimatedArea = styled.polygon`
+  opacity: 0.08;
+  animation: ${chartAreaIn} 520ms ease-out 260ms both;
+`;
+
+const AnimatedLine = styled.polyline`
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: ${chartDraw} 760ms cubic-bezier(.2,.8,.2,1) 80ms both;
+`;
+
+
+const CurrentHalo = styled.circle`
+  fill: none;
+  stroke: ${({ theme }) => theme.colors.gold};
+  stroke-width: 5;
+  opacity: 0.2;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ${livingGoldPulse} 3.8s ease-in-out 900ms infinite;
+`;
+
+const CurrentDot = styled.circle`
+  fill: ${({ theme }) => theme.colors.gold};
+  stroke: ${({ theme }) => theme.colors.surface};
+  stroke-width: 2;
+  filter: drop-shadow(0 2px 3px color-mix(in srgb, ${({ theme }) => theme.colors.secondaryDark} 38%, transparent));
+`;
 
 const Card = styled.section`
   display: grid;
@@ -13,6 +54,74 @@ const Card = styled.section`
   border-radius: 18px;
   background: ${({ theme }) => theme.colors.surface};
   box-shadow: 0 7px 20px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 4%, transparent);
+`;
+
+const CompactHead = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+
+  h2 {
+    margin: 0;
+    color: ${({ theme }) => theme.colors.primary};
+    font-size: 0.94rem;
+    font-weight: 950;
+    letter-spacing: -0.025em;
+  }
+
+  p {
+    margin: 3px 0 0;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: 0.62rem;
+    line-height: 1.4;
+    word-break: keep-all;
+  }
+`;
+
+const DetailsLink = styled(Link)`
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  min-height: 30px;
+  padding: 5px 9px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 999px;
+  color: ${({ theme }) => theme.colors.primary};
+  text-decoration: none;
+  font-size: 0.62rem;
+  font-weight: 900;
+`;
+
+const CompactChartWrap = styled.div`
+  position: relative;
+  min-height: 92px;
+  padding: 2px 2px 0;
+  border-radius: 12px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 28%, transparent),
+    transparent 82%
+  );
+`;
+
+const CompactSvg = styled.svg`
+  display: block;
+  width: 100%;
+  height: 78px;
+  overflow: visible;
+  color: ${({ theme }) => theme.colors.secondaryDark};
+`;
+
+const CompactEmpty = styled.div`
+  display: grid;
+  place-items: center;
+  min-height: 82px;
+  padding: 10px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 0.64rem;
+  line-height: 1.45;
+  text-align: center;
 `;
 
 const Head = styled.div`
@@ -261,7 +370,7 @@ function buildChartGeometry(points) {
   const height = 136;
   const paddingX = 12;
   const paddingY = 14;
-  if (!points.length) return { width, height, polyline: "", area: "", min: 0, max: 0 };
+  if (!points.length) return { width, height, polyline: "", area: "", min: 0, max: 0, lastPoint: null };
 
   const values = points.map((point) => Number(point.valueWon) || 0);
   let min = Math.min(...values);
@@ -288,7 +397,7 @@ function buildChartGeometry(points) {
   const baseline = height - paddingY;
   const area = `${firstX.toFixed(2)},${baseline} ${polyline} ${lastX.toFixed(2)},${baseline}`;
 
-  return { width, height, polyline, area, min, max };
+  return { width, height, polyline, area, min, max, lastPoint: coords[coords.length - 1] || null };
 }
 
 function getRangeInsight(current, low, high) {
@@ -311,6 +420,8 @@ export default function MyGoldValueTrend({
   onWeeklyChange,
   bonusOnly = false,
   bonusGoldG = 0,
+  compact = false,
+  detailsTo = "/my-gold/trend",
 }) {
   const trend = useMyGoldValueTrend({ pureGoldG, currentPricePerDon, enabled });
   const geometry = useMemo(() => buildChartGeometry(trend.points), [trend.points]);
@@ -336,14 +447,57 @@ export default function MyGoldValueTrend({
   const startLabel = formatCompactDate(trend.points[0]?.date);
   const endLabel = formatCompactDate(trend.points[trend.points.length - 1]?.date);
 
+  if (compact) {
+    return (
+      <Card id="my-gold-value-trend" aria-labelledby="my-gold-value-trend-title">
+        <CompactHead>
+          <div>
+            <h2 id="my-gold-value-trend-title">{bonusOnly ? "MEMBER GOLD 가치 변화" : "내 금 가치 변화"}</h2>
+            <p>{trend.selectedPeriod.label} 동안 내 금 가치가 어떻게 움직였는지 빠르게 확인합니다.</p>
+          </div>
+          <DetailsLink to={detailsTo}>자세히 보기</DetailsLink>
+        </CompactHead>
+
+        <ChangeLine $direction={trend.rangeChange.direction}>
+          <strong><DirectionIcon size={16} aria-hidden /> {formatSignedWon(trend.rangeChange.amount)} · {formatSignedPercent(trend.rangeChange.percent)}</strong>
+          <span>{trend.selectedPeriod.label} 첫 공개 시세 대비</span>
+        </ChangeLine>
+
+        <CompactChartWrap>
+          {trend.loading ? (
+            <CompactEmpty>과거 공개 시세를 불러오는 중입니다.</CompactEmpty>
+          ) : trend.error ? (
+            <CompactEmpty role="alert">{trend.error}</CompactEmpty>
+          ) : trend.points.length < 2 ? (
+            <CompactEmpty>비교할 과거 공개 시세가 아직 충분하지 않습니다.</CompactEmpty>
+          ) : (
+            <>
+              <CompactSvg viewBox={`0 0 ${geometry.width} ${geometry.height}`} role="img" aria-label={`${trend.selectedPeriod.label} 내 금 참고가치 변화 미리보기`} preserveAspectRatio="none">
+                <line x1="12" y1="14" x2="628" y2="14" stroke="currentColor" opacity="0.10" />
+                <line x1="12" y1="83" x2="628" y2="83" stroke="currentColor" opacity="0.08" />
+                <AnimatedArea key={`compact-area-${trend.period}-${geometry.polyline}`} points={geometry.area} fill="currentColor" />
+                <AnimatedLine key={`compact-line-${trend.period}-${geometry.polyline}`} pathLength="1" points={geometry.polyline} fill="none" stroke="currentColor" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+                {geometry.lastPoint && (<>
+                  <CurrentHalo cx={geometry.lastPoint[0]} cy={geometry.lastPoint[1]} r="7" />
+                  <CurrentDot cx={geometry.lastPoint[0]} cy={geometry.lastPoint[1]} r="4" />
+                </>)}
+              </CompactSvg>
+              <AxisRow aria-hidden><span>{startLabel}</span><span>{endLabel}</span></AxisRow>
+            </>
+          )}
+        </CompactChartWrap>
+      </Card>
+    );
+  }
+
   return (
     <Card id="my-gold-value-trend" aria-labelledby="my-gold-value-trend-title">
       <Head>
         <div>
-          <h2 id="my-gold-value-trend-title">{bonusOnly ? "적립 순금 가치 흐름" : "내금고 가치 흐름"}</h2>
-          <p>{bonusOnly ? `현재 적립 순금 ${Number(bonusGoldG || 0).toFixed(2)}g을 과거 공개 시세로 비교합니다.` : "현재 보유량은 그대로 두고 시세 변화가 내 금 가치에 미친 영향만 비교합니다."}</p>
+          <h2 id="my-gold-value-trend-title">{bonusOnly ? "MEMBER GOLD 가치 변화" : "내 금 가치 변화"}</h2>
+          <p>{bonusOnly ? `현재 MEMBER GOLD ${Number(bonusGoldG || 0).toFixed(2)}g을 과거 공개 시세로 비교합니다.` : "현재 기록한 금량은 그대로 두고 시세 변화가 내 금 가치에 미친 영향만 비교합니다."}</p>
         </div>
-        <Periods aria-label="내금고 가치 그래프 기간 선택">
+        <Periods aria-label="내 금 가치 그래프 기간 선택">
           {MY_GOLD_TREND_PERIODS.map((option) => (
             <PeriodButton
               key={option.key}
@@ -372,12 +526,16 @@ export default function MyGoldValueTrend({
           <Empty>비교할 과거 공개 시세가 아직 충분하지 않습니다.</Empty>
         ) : (
           <>
-            <Svg viewBox={`0 0 ${geometry.width} ${geometry.height}`} role="img" aria-label={`${trend.selectedPeriod.label} 내금고 참고가치 변화 그래프`} preserveAspectRatio="none">
+            <Svg viewBox={`0 0 ${geometry.width} ${geometry.height}`} role="img" aria-label={`${trend.selectedPeriod.label} 내 금 참고가치 변화 그래프`} preserveAspectRatio="none">
               <line x1="12" y1="14" x2="628" y2="14" stroke="currentColor" opacity="0.10" />
               <line x1="12" y1="83" x2="628" y2="83" stroke="currentColor" opacity="0.08" />
               <line x1="12" y1="152" x2="628" y2="152" stroke="currentColor" opacity="0.10" />
-              <polygon points={geometry.area} fill="currentColor" opacity="0.08" />
-              <polyline points={geometry.polyline} fill="none" stroke="currentColor" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+              <AnimatedArea key={`area-${trend.period}-${geometry.polyline}`} points={geometry.area} fill="currentColor" />
+              <AnimatedLine key={`line-${trend.period}-${geometry.polyline}`} pathLength="1" points={geometry.polyline} fill="none" stroke="currentColor" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+              {geometry.lastPoint && (<>
+                <CurrentHalo cx={geometry.lastPoint[0]} cy={geometry.lastPoint[1]} r="7" />
+                <CurrentDot cx={geometry.lastPoint[0]} cy={geometry.lastPoint[1]} r="4" />
+              </>)}
             </Svg>
             <AxisRow aria-hidden><span>{startLabel}</span><span>{endLabel}</span></AxisRow>
           </>
@@ -400,7 +558,7 @@ export default function MyGoldValueTrend({
       )}
 
       <Note>
-        이 그래프는 현재 내금고에 기록된 금의 양을 고정하고 과거 한국골드마켓 공개 매입 참고시세를 적용한 비교입니다. 실제 교환 순금량은 매장 실측 후 확정됩니다.
+        이 그래프는 현재 MY GOLD에 기록된 금과 MEMBER GOLD 금량을 고정하고 과거 한국골드마켓 공개 매입 참고시세를 적용한 비교입니다. 실제 교환 순금량은 매장 실측 후 확정됩니다.
       </Note>
     </Card>
   );

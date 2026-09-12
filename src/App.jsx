@@ -542,6 +542,8 @@ const router = createBrowserRouter([
       { path: "/reviews", element: <Reviews /> },
       { path: "/quiz/gold-bonus", element: <QuizGoldBonus /> },
       { path: "/my-gold", element: <MyGoldVault /> },
+      { path: "/my-gold/items", element: <MyGoldVault /> },
+      { path: "/my-gold/trend", element: <MyGoldVault /> },
       { path: "/my-gold/alerts", element: <MyGoldAlerts /> },
       { path: "/terms", element: <Terms /> },
       { path: "/privacy", element: <Privacy /> },

@@ -354,7 +354,7 @@ export default function MyGoldAlertGoals({
       } else if (hasAnyGoal) {
         setMessage("저장했습니다. 목표에 처음 도달하면 알려드릴게요.");
       } else {
-        setMessage("내금고 알림을 해제했습니다.");
+        setMessage("내 금 알림을 해제했습니다.");
       }
     } catch (saveError) {
       setError(saveError?.message || "알림을 저장하지 못했습니다.");
@@ -377,7 +377,7 @@ export default function MyGoldAlertGoals({
       }
       const result = await saveMyGoldAlertGoals({ ...EMPTY_MY_GOLD_ALERT_GOALS });
       setPushReady(result.pushReady === true);
-      setMessage("내금고 알림을 모두 해제했습니다.");
+      setMessage("내 금 알림을 모두 해제했습니다.");
     } catch (clearError) {
       setError(clearError?.message || "알림을 해제하지 못했습니다.");
     } finally {
@@ -398,9 +398,9 @@ export default function MyGoldAlertGoals({
         </Status>
       </Head>
 
-      <Current aria-label="현재 내금고 알림 기준">
+      <Current aria-label="현재 내 금 알림 기준">
         <CurrentItem>
-          <span>{bonusOnly ? "혜택 순금 가치" : "현재 내금고"}</span>
+          <span>{bonusOnly ? "MEMBER GOLD 가치" : "현재 MY GOLD"}</span>
           <strong>{metricsUnavailable ? "확인 중" : formatWon(currentValueWon)}</strong>
         </CurrentItem>
         <CurrentItem>
@@ -428,7 +428,7 @@ export default function MyGoldAlertGoals({
               placeholder="예: 10000000"
               value={form.valueTargetWon}
               onChange={(event) => setForm((prev) => ({ ...prev, valueTargetWon: event.target.value }))}
-              aria-label="내금고 가치 목표 원"
+              aria-label="MY GOLD 가치 목표 원"
             />
           </InputWrap>
         </GoalRow>
@@ -515,7 +515,7 @@ export default function MyGoldAlertGoals({
       <Details>
         <summary>알림 계산 기준 보기</summary>
         <p>
-          내금고 가치는 등록 실물 금의 교환기준 예상 순금과 회원혜택 적립 순금의 참고가치를 함께 반영합니다.
+          MY GOLD 가치는 기록한 금의 교환기준 예상 순금과 MEMBER GOLD의 참고가치를 함께 반영합니다.
           골드바 목표도 두 금량을 합산해 확인합니다.
         </p>
         <p>

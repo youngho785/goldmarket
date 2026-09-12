@@ -171,14 +171,14 @@ const Item = styled(NavLink)`
 const WEB_ITEMS = [
   { to: "/", icon: Home, label: "홈" },
   { to: "/gold-exchange", icon: Calculator, label: "금 계산" },
-  { to: "/my-gold", icon: Gem, label: "내금고" },
+  { to: "/my-gold", icon: Gem, label: "내 금" },
   { to: "/my-exchanges", icon: ClipboardList, label: "교환내역" },
   { to: "/profile", icon: User, label: "내정보" },
 ];
 
 const ANDROID_ITEMS = [
   { to: "/", icon: Home, label: "홈" },
-  { to: "/my-gold", icon: Gem, label: "내금고" },
+  { to: "/my-gold", icon: Gem, label: "내 금" },
   {
     to: "/gold-exchange",
     icon: Calculator,

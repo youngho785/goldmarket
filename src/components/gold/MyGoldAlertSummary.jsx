@@ -112,6 +112,45 @@ const Action = styled(Link)`
   }
 `;
 
+
+const CompactCard = styled(Link)`
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  min-height: 70px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 15%, ${({ theme }) => theme.colors.border});
+  border-radius: 16px;
+  background: ${({ theme }) => theme.colors.surface};
+  color: inherit;
+  text-decoration: none;
+  box-shadow: 0 7px 18px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 4%, transparent);
+
+  strong {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: ${({ theme }) => theme.colors.primary};
+    font-size: 0.86rem;
+    font-weight: 950;
+  }
+
+  p {
+    margin: 4px 0 0;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: 0.62rem;
+    line-height: 1.4;
+    word-break: keep-all;
+  }
+
+  > svg {
+    width: 18px;
+    height: 18px;
+    color: ${({ theme }) => theme.colors.secondaryDark};
+  }
+`;
+
 function formatGoalWon(value) {
   const amount = Number(value);
   if (!Number.isFinite(amount) || amount <= 0) return "";
@@ -125,7 +164,7 @@ function formatGoalWon(value) {
   return `${Math.round(amount).toLocaleString("ko-KR")}원`;
 }
 
-export default function MyGoldAlertSummary({ uid, demoMode = false }) {
+export default function MyGoldAlertSummary({ uid, demoMode = false, compact = false }) {
   const [goals, setGoals] = useState(() => demoMode ? readGuestMyGoldAlertGoals() : null);
   const [pushReady, setPushReady] = useState(false);
   const [loading, setLoading] = useState(!!uid && !demoMode);
@@ -172,12 +211,32 @@ export default function MyGoldAlertSummary({ uid, demoMode = false }) {
     return list;
   }, [goals]);
 
+  if (compact) {
+    const summaryText = loading
+      ? "알림 설정을 불러오는 중입니다."
+      : activeGoals.length > 0
+        ? `${activeGoals.length}개 조건 ${demoMode ? "체험 중" : "설정 중"}`
+        : demoMode
+          ? "가치·순금 가격·골드바 목표 알림을 체험해 보세요."
+          : "가치·순금 가격·골드바 목표를 설정할 수 있습니다.";
+
+    return (
+      <CompactCard id="my-gold-alert-summary" to="/my-gold/alerts" aria-label="내 금 알림 설정 보기">
+        <div>
+          <strong id="my-gold-alert-summary-title"><BellRing size={16} aria-hidden /> 내 금 알림</strong>
+          <p>{summaryText}{pushReady && !demoMode ? " · 푸시 ON" : ""}</p>
+        </div>
+        <ChevronRight aria-hidden />
+      </CompactCard>
+    );
+  }
+
   return (
     <Card id="my-gold-alert-summary" aria-labelledby="my-gold-alert-summary-title">
       <Main>
         <Head>
           <Title>
-            <strong id="my-gold-alert-summary-title"><BellRing size={16} aria-hidden /> 내금고 알림</strong>
+            <strong id="my-gold-alert-summary-title"><BellRing size={16} aria-hidden /> 내 금 알림</strong>
             <p>
               {loading
                 ? "설정을 불러오는 중입니다."
@@ -197,7 +256,7 @@ export default function MyGoldAlertSummary({ uid, demoMode = false }) {
         </Head>
 
         {activeGoals.length > 0 && (
-          <Chips aria-label="설정 중인 내금고 알림">
+          <Chips aria-label="설정 중인 내 금 알림">
             {activeGoals.map((label) => <Chip key={label}>{label}</Chip>)}
           </Chips>
         )}

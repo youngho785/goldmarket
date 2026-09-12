@@ -125,6 +125,19 @@ function formatWon(value) {
     : "-";
 }
 
+function formatSignedWon(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number === 0) return "0원";
+  return `${number > 0 ? "+" : "-"}${Math.abs(Math.round(number)).toLocaleString("ko-KR")}원`;
+}
+
+function formatSignedPercent(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "";
+  if (number === 0) return "0.00%";
+  return `${number > 0 ? "+" : "-"}${Math.abs(number).toFixed(2)}%`;
+}
+
 export default function MyGoldTicker() {
   const { user } = useAuthContext() || {};
   const dashboard = useGoldVaultDashboard(user?.uid);
@@ -135,8 +148,19 @@ export default function MyGoldTicker() {
   const bonusValueWon = dashboard.publicPriceEnabled
     ? computeVaultValueWon(bonusBalanceG, dashboard.customerSellPricePerDon)
     : 0;
+  const previousBonusValueWon = dashboard.publicPriceEnabled
+    ? computeVaultValueWon(bonusBalanceG, dashboard.previousCustomerSellPricePerDon)
+    : 0;
   const currentValueWon =
     Number(dashboard.summary.estimatedValueWon || 0) + bonusValueWon;
+  const previousValueWon =
+    Number(dashboard.summary.previousEstimatedValueWon || 0) + previousBonusValueWon;
+  const todayChangeWon =
+    currentValueWon > 0 && previousValueWon > 0
+      ? currentValueWon - previousValueWon
+      : 0;
+  const todayChangePercent =
+    previousValueWon > 0 ? (todayChangeWon / previousValueWon) * 100 : null;
   const loading = !!user?.uid && (dashboard.itemsLoading || bonus.loading);
 
   let content;
@@ -154,22 +178,30 @@ export default function MyGoldTicker() {
     content = (
       <>
         <Gem size={14} aria-hidden />
-        <span>MY GOLD · 내금고를 불러오는 중입니다</span>
+        <span>MY GOLD를 불러오는 중입니다</span>
       </>
     );
   } else if (pureGoldG > 0) {
     content = (
       <>
         <Gem size={14} aria-hidden />
-        <span>내금고</span>
+        <span>MY GOLD</span>
         <strong>{pureGoldG.toFixed(2)}g</strong>
         <span>·</span>
         <span>
           오늘 참고가 {dashboard.publicPriceEnabled ? formatWon(currentValueWon) : "시세 공개 대기"}
         </span>
+        {dashboard.publicPriceEnabled && Number.isFinite(todayChangePercent) && (
+          <>
+            <span>·</span>
+            <span>
+              오늘 {formatSignedWon(todayChangeWon)} · {formatSignedPercent(todayChangePercent)}
+            </span>
+          </>
+        )}
         <span>·</span>
         <span className="action">
-          내금고 보기 <ArrowRight size={13} aria-hidden />
+          MY GOLD 보기 <ArrowRight size={13} aria-hidden />
         </span>
       </>
     );
@@ -177,18 +209,18 @@ export default function MyGoldTicker() {
     content = (
       <>
         <Gem size={14} aria-hidden />
-        <span>내금고</span>
+        <span>MY GOLD</span>
         <strong>0.00g</strong>
-        <span>· 보유 금을 등록하면 오늘의 가치를 함께 볼 수 있어요 ·</span>
+        <span>· 내 금을 기록하면 오늘의 가치를 함께 볼 수 있어요 ·</span>
         <span className="action">
-          첫 금 등록하기 <ArrowRight size={13} aria-hidden />
+          첫 금 기록하기 <ArrowRight size={13} aria-hidden />
         </span>
       </>
     );
   }
 
   return (
-    <Bar aria-label="내금고 바로가기">
+    <Bar aria-label="MY GOLD 바로가기">
       <Track data-track="true">
         <Segment to="/my-gold">{content}</Segment>
         <Segment to="/my-gold" aria-hidden="true" tabIndex={-1}>

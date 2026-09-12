@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import styled from "styled-components";
+import { livingGoldPulse } from "@/styles/livingGoldMotion";
 import { Menu, X } from "lucide-react";
 import { getAuth, signOut } from "firebase/auth";
 import {
@@ -85,6 +86,7 @@ const Brand = styled(NavLink)`
 `;
 
 const BrandSeal = styled.span`
+  position: relative;
   display: grid;
   place-items: center;
   width: 44px;
@@ -97,6 +99,17 @@ const BrandSeal = styled.span`
   font-size: 1.08rem;
   box-shadow: inset 0 0 0 4px ${({ theme }) => theme.colors.background},
     inset 0 0 0 5px ${({ theme }) => theme.colors.secondary}55;
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: -5px;
+    border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 26%, transparent);
+    border-radius: 50%;
+    opacity: 0.28;
+    pointer-events: none;
+    animation: ${livingGoldPulse} 6.2s ease-in-out 1.4s infinite;
+  }
 `;
 
 const BrandCopy = styled.span`

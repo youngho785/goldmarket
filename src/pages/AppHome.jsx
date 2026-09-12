@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
 import styled from "styled-components";
+import { livingGoldReveal, livingGoldSweep } from "@/styles/livingGoldMotion";
 import {
   CalendarDays,
   Check,
@@ -14,6 +15,9 @@ import {
 import AppGoldPriceSummary from "@/components/gold/AppGoldPriceSummary";
 import AppMyGoldDashboard from "@/components/gold/AppMyGoldDashboard";
 import { useAuthContext } from "@/context/AuthContext";
+import useBonusGoldBalance from "@/hooks/useBonusGoldBalance";
+import useGoldVaultDashboard from "@/hooks/useGoldVaultDashboard";
+import { getGoldBarReadiness } from "@/utils/goldBarReadiness";
 import { getMemberBonusStatus } from "@/services/quizClient";
 import { db } from "@/firebase/firebase";
 
@@ -27,6 +31,8 @@ const Page = styled.div`
 `;
 
 const GoldToGoldCard = styled(Link)`
+  position: relative;
+  overflow: hidden;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
@@ -44,6 +50,21 @@ const GoldToGoldCard = styled(Link)`
   box-shadow: 0 7px 18px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 5%, transparent);
   color: inherit;
   text-decoration: none;
+  animation: ${livingGoldReveal} 520ms cubic-bezier(.2,.8,.2,1) 180ms both;
+
+  &::after {
+    content: "";
+    position: absolute;
+    top: -45%;
+    bottom: -45%;
+    left: -24%;
+    width: 18%;
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, ${({ theme }) => theme.colors.goldLight} 52%, transparent), transparent);
+    pointer-events: none;
+    animation: ${livingGoldSweep} 1450ms cubic-bezier(.2,.8,.2,1) 720ms both;
+  }
+
+  > * { position: relative; z-index: 1; }
 
   > svg {
     width: 17px;
@@ -105,6 +126,11 @@ const QuickLink = styled(Link)`
   background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.primary};
   text-decoration: none;
+  animation: ${livingGoldReveal} 460ms cubic-bezier(.2,.8,.2,1) both;
+
+  &:nth-child(1) { animation-delay: 250ms; }
+  &:nth-child(2) { animation-delay: 310ms; }
+  &:nth-child(3) { animation-delay: 370ms; }
 
   > span {
     display: grid;
@@ -206,6 +232,7 @@ const BenefitCard = styled.section`
   border-radius: 17px;
   background: ${({ theme }) => theme.colors.surface};
   box-shadow: 0 7px 18px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 5%, transparent);
+  animation: ${livingGoldReveal} 520ms cubic-bezier(.2,.8,.2,1) 420ms both;
 `;
 
 const BenefitHead = styled.div`
@@ -338,6 +365,8 @@ const formatReservationSchedule = (visitDate, visitTime) => {
 
 export default function AppHome() {
   const { user } = useAuthContext() || {};
+  const myGoldDashboard = useGoldVaultDashboard(user?.uid);
+  const myGoldBonus = useBonusGoldBalance(user?.uid);
   const [bonusStatus, setBonusStatus] = useState(null);
   const [upcomingReservation, setUpcomingReservation] = useState(null);
 
@@ -422,6 +451,62 @@ export default function AppHome() {
   const quizReward = rewardState(rewards.quiz);
   const marketingReward = rewardState(rewards.marketingPush);
 
+  const myGoldPureGoldG = Number(myGoldDashboard.summary.pureGoldG || 0);
+  const hasMyGold = !!user?.uid && myGoldDashboard.summary.itemCount > 0;
+  const myGoldLoading = !!user?.uid && myGoldDashboard.itemsLoading;
+  const goldBarReadiness = useMemo(
+    () => getGoldBarReadiness(myGoldPureGoldG),
+    [myGoldPureGoldG]
+  );
+
+  const goldToGoldHome = useMemo(() => {
+    if (!user?.uid) {
+      return {
+        to: "/gold-to-gold",
+        kicker: "GOLD TO GOLD",
+        title: "내 금의 가치를 999.9 GOLD로 이어가는 방법",
+      };
+    }
+
+    if (myGoldLoading) {
+      return {
+        to: "/gold-to-gold",
+        kicker: "GOLD TO GOLD · MY GOLD",
+        title: "MY GOLD와 GOLD TO GOLD를 연결하는 중입니다.",
+      };
+    }
+
+    if (!hasMyGold) {
+      return {
+        to: "/my-gold?add=1",
+        kicker: "GOLD TO GOLD · MY GOLD",
+        title: "금 하나를 기록하면 교환 가능한 999.9 GOLD를 바로 확인합니다.",
+      };
+    }
+
+    if (goldBarReadiness?.available) {
+      return {
+        to: "/gold-to-gold",
+        kicker: "GOLD TO GOLD · MY GOLD",
+        title: `예상 순금 ${myGoldPureGoldG.toFixed(2)}g · ${goldBarReadiness.label} 교환 가능`,
+      };
+    }
+
+    return {
+      to: "/gold-to-gold",
+      kicker: "GOLD TO GOLD · MY GOLD",
+      title: `${goldBarReadiness?.label || "1g 골드바"}까지 약 ${Number(
+        goldBarReadiness?.neededG || 0
+      ).toFixed(2)}g 더 필요`,
+    };
+  }, [
+    goldBarReadiness,
+    hasMyGold,
+    myGoldLoading,
+    myGoldPureGoldG,
+    user?.uid,
+  ]);
+
   const benefits = useMemo(
     () => [
       {
@@ -468,7 +553,11 @@ export default function AppHome() {
 
   return (
     <Page>
-      <AppMyGoldDashboard />
+      <AppMyGoldDashboard
+        user={user}
+        dashboard={myGoldDashboard}
+        bonus={myGoldBonus}
+      />
       <AppGoldPriceSummary />
 
       {upcomingReservation && (
@@ -489,15 +578,13 @@ export default function AppHome() {
       )}
 
       <GoldToGoldCard
-        to="/gold-to-gold"
+        to={goldToGoldHome.to}
         aria-labelledby="app-home-gold-to-gold-title"
-        aria-label="GOLD TO GOLD 알아보기"
+        aria-label="GOLD TO GOLD와 MY GOLD 연결 보기"
       >
         <GoldToGoldCopy>
-          <small>GOLD TO GOLD</small>
-          <h2 id="app-home-gold-to-gold-title">
-            내 금의 가치를 999.9 GOLD로 이어가는 방법
-          </h2>
+          <small>{goldToGoldHome.kicker}</small>
+          <h2 id="app-home-gold-to-gold-title">{goldToGoldHome.title}</h2>
         </GoldToGoldCopy>
         <ChevronRight aria-hidden />
       </GoldToGoldCard>

@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import styled from "styled-components";
+import styled, { css, keyframes } from "styled-components";
 import {
   ArrowLeft,
   BellRing,
@@ -118,7 +118,15 @@ const NotificationBadge = styled.span`
   line-height: 1;
 `;
 
+const brandHalo = keyframes`
+  0% { opacity: 0; transform: scale(0.72); }
+  38% { opacity: 0.42; transform: scale(1.2); }
+  100% { opacity: 0; transform: scale(1.48); }
+`;
+
 const BrandMark = styled(Link)`
+  position: relative;
+  z-index: 0;
   display: grid;
   place-items: center;
   width: 34px;
@@ -132,6 +140,21 @@ const BrandMark = styled(Link)`
   font-size: 0.92rem;
   font-weight: 900;
   text-decoration: none;
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: -5px;
+    z-index: -1;
+    border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 34%, transparent);
+    border-radius: 50%;
+    box-shadow: 0 0 16px color-mix(in srgb, ${({ theme }) => theme.colors.gold} 18%, transparent);
+    opacity: 0;
+    pointer-events: none;
+    animation: ${({ $myGold }) => $myGold
+      ? css`${brandHalo} 980ms cubic-bezier(.2,.8,.2,1) 90ms both`
+      : css`${brandHalo} 720ms cubic-bezier(.2,.8,.2,1) 120ms both`};
+  }
 `;
 
 const Center = styled.div`
@@ -382,6 +405,8 @@ const TOP_LEVEL_PATHS = new Set([
   "/gold-price",
   "/gold-exchange",
   "/my-gold",
+  "/my-gold/items",
+  "/my-gold/trend",
   "/my-exchanges",
   "/profile",
 ]);
@@ -390,8 +415,8 @@ function titleForPath(pathname) {
   if (pathname === "/") return "한국골드마켓";
   if (pathname === "/gold-price") return "금시세";
   if (pathname === "/gold-exchange") return "금교환";
-  if (pathname === "/my-gold") return "내금고";
-  if (pathname === "/my-gold/alerts") return "내금고 알림";
+  if (pathname === "/my-gold" || pathname === "/my-gold/items" || pathname === "/my-gold/trend") return "MY GOLD";
+  if (pathname === "/my-gold/alerts") return "내 금 알림";
   if (pathname === "/my-exchanges") return "예약";
   if (pathname === "/profile") return "내정보";
   if (pathname === "/settings") return "설정";
@@ -654,7 +679,11 @@ export default function AndroidAppHeader() {
       <Header role="banner">
         <Bar>
           {isTopLevel ? (
-            <BrandMark to="/" aria-label="한국골드마켓 홈">
+            <BrandMark
+              to="/"
+              aria-label="한국골드마켓 홈"
+              $myGold={pathname === "/my-gold" || pathname === "/my-gold/items" || pathname === "/my-gold/trend"}
+            >
               G
             </BrandMark>
           ) : (

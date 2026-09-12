@@ -122,7 +122,7 @@ export function saveGoldVaultGuestDraft(items) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
   } catch (error) {
     console.warn("[goldVaultImportDraft] guest save failed:", error?.message || error);
-    throw new Error("체험한 내금고를 임시 저장하지 못했습니다. 브라우저 저장공간 설정을 확인해 주세요.");
+    throw new Error("MY GOLD 체험 기록을 임시 저장하지 못했습니다. 브라우저 저장공간 설정을 확인해 주세요.");
   }
 
   return draft;

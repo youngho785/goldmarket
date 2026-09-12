@@ -868,7 +868,7 @@ function StartMethodScreen({ onChoose }) {
       <StartChoiceGrid aria-label="금교환 시작 방법">
         <StartChoice type="button" onClick={() => onChoose("vault")}>
           <strong>MY GOLD에서 불러오기</strong>
-          <span>등록한 금 종류·중량으로 바로 계산합니다.</span>
+          <span>MY GOLD에 기록한 금 종류·중량으로 바로 계산합니다.</span>
         </StartChoice>
         <StartChoice type="button" onClick={() => onChoose("manual")}>
           <strong>직접 입력하기</strong>
@@ -893,7 +893,7 @@ function CalcStep({
     <>
       <Card>
         <StepCenter><StepMark>스텝 1</StepMark></StepCenter>
-        <Title>{fromVault ? "내금고에서 불러온 나의 금을 확인하세요" : "내 금 종류와 무게를 입력하세요"}</Title>
+        <Title>{fromVault ? "MY GOLD에서 불러온 내 금을 확인하세요" : "내 금 종류와 무게를 입력하세요"}</Title>
         {error && <ErrorText role="alert">{error}</ErrorText>}
 
         <form onSubmit={onCalculate}>
@@ -995,7 +995,7 @@ function BarStep({
         <SectionSeparator />
         <div style={{ display: "grid", gap: 10 }}>
           <Button type="button" onClick={onGoReserve}>현장 확인 방문예약</Button>
-          <OutlineButton type="button" onClick={onSaveToMyGold}>내금고에 저장하고 가치 추적</OutlineButton>
+          <OutlineButton type="button" onClick={onSaveToMyGold}>MY GOLD에 저장하고 가치 추적</OutlineButton>
           <GhostButton type="button" onClick={() => setStep(STEP.CALC)}>이전(제품 추가)</GhostButton>
         </div>
       </Card>
@@ -1285,7 +1285,7 @@ function BarStep({
       <SectionSeparator />
       <div style={{ display: "grid", gap: 10 }}>
         <Button type="button" onClick={onGoReserve}>골드바 교환 하러가기</Button>
-        <OutlineButton type="button" onClick={onSaveToMyGold}>내금고에 저장하고 가치 추적</OutlineButton>
+        <OutlineButton type="button" onClick={onSaveToMyGold}>MY GOLD에 저장하고 가치 추적</OutlineButton>
         <HelpText style={{ margin: 0, textAlign: "center" }}>
           지금 교환하지 않아도 저장해 두면 오늘 가치와 시세 변화를 계속 확인할 수 있습니다.
         </HelpText>
@@ -1788,7 +1788,7 @@ export default function GoldExchange() {
 
         if (nextProducts.length === 0) {
           setVaultImportedCount(0);
-          setError("내금고에 등록된 실물 금이 없습니다. 먼저 금을 등록하거나 직접 입력해 주세요.");
+          setError("MY GOLD에 기록된 금이 없습니다. 먼저 금을 기록하거나 직접 입력해 주세요.");
           setProducts([createEmptyProduct()]);
         } else {
           setProducts(nextProducts);
@@ -1803,7 +1803,7 @@ export default function GoldExchange() {
         if (!active) return;
         console.error("[GoldExchange] 내금고 불러오기 실패", vaultError);
         setVaultImportLoading(false);
-        setError("내금고의 금을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.");
+        setError("MY GOLD의 금 기록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.");
       }
     );
 
@@ -2008,8 +2008,8 @@ export default function GoldExchange() {
       if (!user) {
         openGate({
           unifiedContinue: true,
-          purposeLabel: "내금고 불러오기",
-          message: "내금고에 저장한 나의 금을 불러오려면 로그인이 필요합니다.",
+          purposeLabel: "MY GOLD 불러오기",
+          message: "MY GOLD에 기록한 내 금을 불러오려면 로그인이 필요합니다.",
           requireVerified: false,
           intent: "exchange-vault-import",
           next: "/gold-exchange?mode=vault",
@@ -2051,8 +2051,8 @@ export default function GoldExchange() {
 
       openGate({
         unifiedContinue: true,
-        purposeLabel: "내금고 저장",
-        message: `계산한 금 ${draft.items.length}개의 종류와 중량을 잠시 보관했습니다. 로그인 후 내금고에서 이어서 저장할 수 있습니다.`,
+        purposeLabel: "MY GOLD 저장",
+        message: `계산한 금 ${draft.items.length}개의 종류와 중량을 잠시 보관했습니다. 로그인 후 MY GOLD에서 이어서 저장할 수 있습니다.`,
         requireVerified: false,
         intent: "my-gold-import",
         next,
@@ -2060,7 +2060,7 @@ export default function GoldExchange() {
         cancelAsText: true,
       });
     } catch (saveError) {
-      setError(saveError?.message || "내금고 저장 준비에 실패했습니다.");
+      setError(saveError?.message || "MY GOLD 저장 준비에 실패했습니다.");
     }
   };
 
@@ -2294,8 +2294,8 @@ export default function GoldExchange() {
         )}
         {fromVault && (
           <RebookNotice role="status">
-            <strong>내금고에서 등록한 나의 금 {vaultImportedCount || initialVaultProductsRef.current.length}개를 불러왔습니다.</strong><br />
-            금 종류와 등록 중량을 다시 입력하지 않고 스텝 1에서 확인한 뒤 바로 예상 교환량을 계산할 수 있습니다. 실제 인정 중량은 매장 실측 후 확정됩니다.
+            <strong>MY GOLD에 기록한 내 금 {vaultImportedCount || initialVaultProductsRef.current.length}개를 불러왔습니다.</strong><br />
+            금 종류와 기록 중량을 다시 입력하지 않고 스텝 1에서 확인한 뒤 바로 예상 교환량을 계산할 수 있습니다. 실제 인정 중량은 매장 실측 후 확정됩니다.
           </RebookNotice>
         )}
         {!showStartMethod && (
@@ -2317,7 +2317,7 @@ export default function GoldExchange() {
       </FlowHeader>
       {showStartMethod && <StartMethodScreen onChoose={chooseStartMethod} />}
       {!showStartMethod && vaultImportLoading && (
-        <Card><InfoCard role="status">내금고에서 나의 금을 불러오고 있습니다.</InfoCard></Card>
+        <Card><InfoCard role="status">MY GOLD에서 내 금 기록을 불러오고 있습니다.</InfoCard></Card>
       )}
       {!showStartMethod && step === STEP.CALC && !vaultImportLoading && (
         <CalcStep

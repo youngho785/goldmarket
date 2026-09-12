@@ -1,6 +1,8 @@
 // src/pages/GoldPrice.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import styled from "styled-components";
+import LivingGoldCompanion from "@/components/common/LivingGoldCompanion";
+import { livingGoldGlint, livingGoldReveal } from "@/styles/livingGoldMotion";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowRight,
@@ -187,6 +189,7 @@ const HeroPriceValue = styled.strong`
   @media (max-width: 760px) {
     font-size: clamp(1.95rem, 9.6vw, 2.55rem);
   }
+  animation: ${livingGoldReveal} 620ms cubic-bezier(.2,.8,.2,1) 120ms both;
 `;
 
 const Won = styled.span`
@@ -258,6 +261,7 @@ const Source = styled.span`
 const GoldVisual = styled.div`
   position: relative;
   z-index: 1;
+  pointer-events: none;
   display: grid;
   place-items: center;
   min-height: 204px;
@@ -275,12 +279,30 @@ const GoldVisual = styled.div`
     min-height: 0;
     padding: 0;
     background: radial-gradient(circle at 50% 70%, rgba(236, 184, 73, 0.1), transparent 62%);
-    pointer-events: none;
+  }
+`;
+
+
+const PriceGoldMark = styled(LivingGoldCompanion)`
+  position: absolute;
+  z-index: 6;
+  top: 18px;
+  right: clamp(112px, 19%, 184px);
+  opacity: 0.96;
+  pointer-events: auto;
+  touch-action: manipulation;
+
+  @media (max-width: 760px) {
+    top: 10px;
+    right: 10px;
+    opacity: 1;
   }
 `;
 
 const GoldBar = styled.div`
   position: relative;
+  z-index: 1;
+  overflow: hidden;
   width: clamp(122px, 17vw, 162px);
   aspect-ratio: 0.67;
   border: 1px solid #ffd978;
@@ -294,6 +316,20 @@ const GoldBar = styled.div`
     inset 0 0 0 7px rgba(255, 245, 189, 0.55),
     20px 28px 42px rgba(0, 0, 0, 0.42),
     0 0 50px rgba(222, 167, 54, 0.13);
+
+  &::before {
+    content: "";
+    position: absolute;
+    z-index: 2;
+    top: -30%;
+    bottom: -30%;
+    left: -42%;
+    width: 22%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.78), transparent);
+    filter: blur(1px);
+    animation: ${livingGoldGlint} 4.8s ease-in-out 900ms infinite;
+    pointer-events: none;
+  }
 
   &::after {
     content: "";
@@ -1583,7 +1619,7 @@ export default function GoldPrice() {
               <Eyebrow>KOREA GOLD MARKET</Eyebrow>
               <HeroTitle>오늘의 금시세</HeroTitle>
               <HeroLead>
-                내가 팔 때 가격부터 확인하고, 오늘 시세가 내금고 가치에 미치는 변화까지 이어서 보세요.
+                내가 팔 때 가격부터 확인하고, 오늘 시세가 MY GOLD 가치에 미치는 변화까지 이어서 보세요.
               </HeroLead>
 
               <HeroPriceBlock>
@@ -1608,8 +1644,15 @@ export default function GoldPrice() {
               </HeroPriceBlock>
             </HeroCopy>
 
-            <GoldVisual aria-hidden>
-              <GoldBar>
+            <PriceGoldMark
+              size={54}
+              delay={240}
+              hint
+              ariaLabel="Living Gold 반짝이기"
+            />
+
+            <GoldVisual>
+              <GoldBar aria-hidden>
                 <BarInner>
                   <strong>KGM</strong>
                   <span>

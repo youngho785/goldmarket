@@ -114,7 +114,7 @@ export function AgreementsSection({ value = {}, onChange, onOpen }) {
         />
         <Text htmlFor="agree_marketing">
           <Badge style={{ opacity: .85 }}>선택</Badge>
-          광고성 정보 수신(금시세·내금고 리포트·혜택)
+          광고성 정보 수신(금시세·MY GOLD 리포트·혜택)
           <Detail>
             광고성 정보 수신동의(선택) · 언제든 설정에서 해제할 수 있습니다.
           </Detail>

@@ -96,9 +96,9 @@ export default function MyGoldAlerts() {
 
   return (
     <Page>
-      <Back to="/my-gold"><ArrowLeft size={15} aria-hidden /> 내금고로 돌아가기</Back>
+      <Back to="/my-gold"><ArrowLeft size={15} aria-hidden /> MY GOLD로 돌아가기</Back>
       <Hero>
-        <h1><BellRing size={21} aria-hidden /> 내금고 알림{isGuest ? " 체험" : ""}</h1>
+        <h1><BellRing size={21} aria-hidden /> 내 금 알림{isGuest ? " 체험" : ""}</h1>
         <p>
           {isGuest
             ? "로그인 없이 가치·순금 가격·골드바 목표 알림을 직접 설정해볼 수 있습니다. 실제 푸시는 로그인 후 켜집니다."

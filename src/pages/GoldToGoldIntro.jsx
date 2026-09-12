@@ -2,6 +2,8 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import styled from "styled-components";
+import LivingGoldCompanion from "@/components/common/LivingGoldCompanion";
+import { livingGoldJourney } from "@/styles/livingGoldMotion";
 import {
   ArrowRight,
   CheckCircle2,
@@ -83,6 +85,39 @@ const Hero = styled.section`
   }
 `;
 
+
+const HeroGoldScene = styled.div`
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  right: clamp(14px, 4vw, 42px);
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  transform: translateY(-50%);
+  pointer-events: auto;
+
+  small {
+    color: color-mix(in srgb, ${({ theme }) => theme.colors.secondaryDark} 74%, transparent);
+    font-family: ${({ theme }) => theme.fonts.numeric};
+    font-size: 0.54rem;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+  }
+
+  @media (max-width: 640px) {
+    top: 34px;
+    right: 2px;
+    transform: none;
+
+    > span {
+      transform: scale(.7);
+      transform-origin: top right;
+    }
+    small { display: none; }
+  }
+`;
+
 const HeroTitle = styled.h1`
   position: relative;
   z-index: 1;
@@ -112,6 +147,7 @@ const HeroTitle = styled.h1`
   }
 
   @media (max-width: 640px) {
+    max-width: calc(100% - 64px);
     margin-top: 8px;
     font-size: 1.62rem;
     line-height: 1.06;
@@ -134,6 +170,7 @@ const HeroCopy = styled.p`
   }
 
   @media (max-width: 640px) {
+    max-width: calc(100% - 52px);
     margin-top: 12px;
     font-size: 0.81rem;
     line-height: 1.58;
@@ -487,12 +524,30 @@ const DarkHead = styled.div`
 `;
 
 const Flow = styled.div`
+  position: relative;
   display: grid;
+  overflow: hidden;
   grid-template-columns: 1fr auto 1fr auto 1fr;
   align-items: center;
   gap: 11px;
   padding: 16px clamp(20px, 3.4vw, 32px) 20px;
   border-top: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 18%, transparent);
+
+  &::after {
+    content: "";
+    position: absolute;
+    z-index: 2;
+    top: 1px;
+    left: 4%;
+    width: 9px;
+    height: 9px;
+    border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.goldLight} 82%, white);
+    border-radius: 50%;
+    background: ${({ theme }) => theme.gradients.gold};
+    box-shadow: 0 0 0 4px color-mix(in srgb, ${({ theme }) => theme.colors.gold} 8%, transparent), 0 2px 8px rgba(0,0,0,.18);
+    animation: ${livingGoldJourney} 4.6s cubic-bezier(.2,.8,.2,1) 900ms infinite;
+    pointer-events: none;
+  }
 
   > svg {
     color: ${({ theme }) => theme.colors.goldLight};
@@ -759,6 +814,19 @@ export default function GoldToGoldIntro() {
   return (
     <Page>
       <Hero>
+        <HeroGoldScene>
+          <LivingGoldCompanion
+            size={84}
+            delay={120}
+            hint
+            ariaLabel="Living Gold로 GOLD TO GOLD 알아보기"
+            title="금의 가치는 이어지고 있어요."
+            description="모양은 달라져도 금의 가치는 999.9 GOLD로 이어갈 수 있어요. 지금 가진 금으로 얼마나 이어지는지 확인해 보세요."
+            actionLabel="내 금으로 확인하기"
+            actionTo="/gold-exchange"
+          />
+          <small>VALUE → GOLD</small>
+        </HeroGoldScene>
         <Kicker>
           <Sparkles aria-hidden />
           KOREA GOLD MARKET · GOLD TO GOLD

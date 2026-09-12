@@ -2450,7 +2450,7 @@ export default function Settings() {
         </SectionTitle>
 
         <SectionDescription>
-          예약·교환 서비스 안내와 광고성 정보 수신(금시세·내금고 리포트·혜택)을 관리합니다.
+          예약·교환 서비스 안내와 광고성 정보 수신(금시세·MY GOLD 리포트·혜택)을 관리합니다.
         </SectionDescription>
 
         <Rows
@@ -2484,7 +2484,7 @@ export default function Settings() {
               </strong>
 
               <small>
-                주요 금시세 변동, 내금고 주간 리포트와 이벤트·혜택을 받아봅니다.
+                주요 금시세 변동, MY GOLD 주간 리포트와 이벤트·혜택을 받아봅니다.
               </small>
 
               <em>
