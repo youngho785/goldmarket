@@ -8,7 +8,7 @@
     <meta name="google-site-verification" content="ZuZt-zAD2vvbJbU85m_peJdPG5GZYY3rpVJz6RXDqQw" />
 
     <!-- 페이지 제목 -->
-    <title>한국골드마켓 | 금의 가치를 이어가다</title>
+    <title>한국골드마켓 | 내 금의 가치를 이어가는 금 생활 플랫폼</title>
 
     <!-- 네이버 소유확인 -->
     <meta name="naver-site-verification" content="7f08ac2e7a8352cc525a15aae04c0b42545baa82" />
@@ -26,7 +26,7 @@
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="ko_KR" />
     <meta property="og:site_name" content="한국골드마켓" />
-    <meta property="og:title" content="한국골드마켓 — 금의 가치를 이어가다" />
+    <meta property="og:title" content="한국골드마켓 — 내 금의 가치를 이어가다" />
     <meta
       property="og:description"
       content="내가 가진 금의 오늘 가치를 확인하고, MY GOLD에 기록하고, 필요할 때 999.9 골드바로 이어보세요."
@@ -39,22 +39,57 @@
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="한국골드마켓 — 금의 가치를 이어가다" />
+    <meta name="twitter:title" content="한국골드마켓 — 내 금의 가치를 이어가다" />
     <meta
       name="twitter:description"
       content="오늘 금시세부터 MY GOLD 기록·관리, 999.9 골드바 교환까지 내 금의 가치를 하나의 흐름으로 이어보세요."
     />
     <meta name="twitter:image" content="https://koreagoldmarket.com/og-cover.jpg" />
 
-    <!-- 구조화 데이터 -->
-    <script type="application/ld+json">
+    <!-- 사이트/운영주체 구조화 데이터 -->
+    <script id="kgm-site-schema" type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
     {
-      "@context": "https://schema.org",
-      "@type": "JewelryStore",
-      "name": "원일귀금속",
-      "alternateName": ["한국골드마켓", "Korea GoldMarket"],
+      "@type": "Brand",
+      "@id": "https://koreagoldmarket.com/#brand",
+      "name": "한국골드마켓",
+      "alternateName": [
+        "Korea Gold Market",
+        "koreagoldmarket.com"
+      ],
       "url": "https://koreagoldmarket.com/",
       "logo": "https://koreagoldmarket.com/logo.png",
+      "image": "https://koreagoldmarket.com/og-cover.jpg",
+      "slogan": "금의 가치를 이어가다",
+      "description": "오늘 금시세 확인부터 MY GOLD 기록·관리, GOLD TO GOLD 999.9 골드바 교환까지 내 금의 가치를 하나의 흐름으로 연결하는 금 생활 플랫폼"
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://koreagoldmarket.com/#website",
+      "url": "https://koreagoldmarket.com/",
+      "name": "한국골드마켓",
+      "alternateName": [
+        "Korea Gold Market",
+        "koreagoldmarket.com"
+      ],
+      "description": "오늘 금시세부터 MY GOLD 기록·관리, 999.9 골드바 교환까지 내 금의 가치를 확인하고 이어가는 금 생활 플랫폼",
+      "inLanguage": "ko-KR",
+      "about": {
+        "@id": "https://koreagoldmarket.com/#brand"
+      },
+      "publisher": {
+        "@id": "https://koreagoldmarket.com/#wonil-jewelry"
+      }
+    },
+    {
+      "@type": "JewelryStore",
+      "@id": "https://koreagoldmarket.com/#wonil-jewelry",
+      "name": "원일귀금속",
+      "url": "https://koreagoldmarket.com/stores",
+      "logo": "https://koreagoldmarket.com/logo.png",
+      "image": "https://koreagoldmarket.com/og-cover.jpg",
       "telephone": "+82-51-646-9700",
       "email": "lifeapproch@naver.com",
       "address": {
@@ -66,11 +101,23 @@
       },
       "openingHoursSpecification": {
         "@type": "OpeningHoursSpecification",
-        "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+        "dayOfWeek": [
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday"
+        ],
         "opens": "10:00",
         "closes": "18:00"
+      },
+      "brand": {
+        "@id": "https://koreagoldmarket.com/#brand"
       }
     }
+  ]
+}
     </script>
 
     <!-- 브라우저 UI 색상만 유지: PWA manifest/설치 가능 메타는 연결하지 않음 -->
@@ -83,7 +130,7 @@
     <link rel="icon" type="image/png" sizes="512x512" href="/favicon-512.png" />
 
     <!-- 인덱싱 허용 -->
-    <meta name="robots" content="index, follow" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
 
     <!-- 성능 -->
     <link rel="dns-prefetch" href="https://firestore.googleapis.com" />
@@ -97,20 +144,10 @@
     <link rel="dns-prefetch" href="https://www.gstatic.com" />
     <link rel="preconnect" href="https://www.gstatic.com" crossorigin />
 
-    <!-- noscript를 사용자에게는 숨김 -->
-    <style>
-      noscript.seo-only{display:none !important;visibility:hidden !important;}
-    </style>
   </head>
 
   <body>
     <div id="root"></div>
-
-    <!-- JS 비활성화/봇용 핵심 콘텐츠 -->
-    <noscript class="seo-only">
-      <h1>한국골드마켓 — 금의 가치를 이어가다</h1>
-      <p>오늘 금시세부터 14K·18K·순금의 현재 가치, MY GOLD 기록·관리, 999.9 골드바 교환까지 내 금의 가치를 확인하고 이어갑니다.</p>
-    </noscript>
 
     <!-- Vite entry -->
     <script type="module" src="/src/main.jsx"></script>

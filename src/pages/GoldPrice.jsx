@@ -1296,14 +1296,6 @@ export default function GoldPrice() {
   const registerPath = "/register?from=gold-price";
   const loginState = useMemo(() => ({ from: "/gold-price" }), []);
 
-  useEffect(() => {
-    const previousTitle = document.title;
-    document.title = "오늘의 금시세 | 한국골드마켓";
-    return () => {
-      document.title = previousTitle;
-    };
-  }, []);
-
   // GoldPriceBoard는 랜딩페이지 등에서 그대로 사용합니다.
   // 이 전용 페이지는 동일한 공개 시세 문서를 읽어 별도 UI로 표현합니다.
   useEffect(

@@ -29,6 +29,7 @@ import ProtectedRoute from "@/components/common/ProtectedRoute.jsx";
 import AdminRoute from "@/components/common/AdminRoute.jsx";
 import NotFound from "@/pages/NotFound.jsx";
 import SwBridge from "@/components/common/SwBridge.jsx";
+import RouteSeo from "@/components/common/RouteSeo.jsx";
 import { auth } from "@/firebase/firebase";
 import { isAndroid } from "@/platform/runtime";
 import LandingPage from "@/pages/LandingPage";
@@ -59,6 +60,7 @@ const safeLazy = (importer, namedKey) =>
     })
   );
 
+const About = lazy(() => import("@/pages/About"));
 const GoldPrice = lazy(() => import("@/pages/GoldPrice"));
 const GoldToGoldIntro = lazy(() => import("@/pages/GoldToGoldIntro"));
 const Profile = lazy(() => import("@/pages/Profile"));
@@ -515,6 +517,7 @@ function PlatformHome() {
 function RootShell() {
   return (
     <>
+      <RouteSeo />
       <SwBridge />
       <NativeAuthActionNavigationBridge />
       <NativePushNavigationBridge />
@@ -530,6 +533,7 @@ const router = createBrowserRouter([
     errorElement: <RouteError />,
     children: [
       { path: "/", element: <PlatformHome /> },
+      { path: "/about", element: <About /> },
       { path: "/gold-price", element: <GoldPrice /> },
       { path: "/gold-to-gold", element: <GoldToGoldIntro /> },
       { path: "/goldbar-fee", element: <GoldbarFee /> },

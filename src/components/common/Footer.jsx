@@ -298,7 +298,8 @@ export default function Footer() {
           <LinkList>
             <Link to="/gold-price">오늘 금시세</Link>
             <Link to="/my-gold">MY GOLD · 내금고</Link>
-            <Link to="/gold-exchange">GOLD TO GOLD</Link>
+            <Link to="/gold-to-gold">GOLD TO GOLD</Link>
+            <Link to="/gold-exchange">금교환 신청</Link>
             <Link to="/goldbar-fee">골드바 공임</Link>
             <Link to="/stores">교환 절차·매장</Link>
           </LinkList>
@@ -344,6 +345,10 @@ export default function Footer() {
         </BusinessInfo>
 
         <LegalLinks>
+          <Link to="/about">한국골드마켓 소개</Link>
+
+          <span className="divider">·</span>
+
           <Link to="/terms">이용약관</Link>
 
           <span className="divider">·</span>

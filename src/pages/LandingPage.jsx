@@ -890,16 +890,6 @@ const GoldLink = styled(Link)`
   }
 `;
 
-const serviceSchema = {
-  "@context": "https://schema.org",
-  "@type": "WebSite",
-  name: "한국골드마켓",
-  alternateName: "Korea Gold Market",
-  url: "https://koreagoldmarket.com/",
-  description:
-    "오늘 금시세부터 MY GOLD 기록·관리, 999.9 골드바 교환까지 내 금의 가치를 확인하고 이어가는 금 생활 플랫폼",
-};
-
 const ACTIONS = [
   {
     to: "/gold-price",
@@ -934,11 +924,6 @@ const ACTIONS = [
 export default function LandingPage() {
   return (
     <Page>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceSchema) }}
-      />
-
       <MyGoldTicker />
 
       <Hero aria-labelledby="landing-title">

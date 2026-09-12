@@ -1,8 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
+import { INDEXABLE_PATHS, SITE_URL } from "../src/config/seo.js";
 
 const outDir = path.resolve(process.env.SITEMAP_OUT_DIR || "public");
-const baseUrl = "https://koreagoldmarket.com";
+const baseUrl = SITE_URL;
 
 function escapeXml(value) {
   return String(value ?? "")
@@ -18,18 +19,9 @@ function cdata(value) {
 }
 
 async function generate() {
-  const staticUrls = [
-    { loc: `${baseUrl}/`, changefreq: "weekly", priority: 1.0 },
-    { loc: `${baseUrl}/gold-price`, changefreq: "daily", priority: 1.0 },
-    { loc: `${baseUrl}/gold-exchange`, changefreq: "weekly", priority: 1.0 },
-    { loc: `${baseUrl}/my-gold`, changefreq: "weekly", priority: 0.9 },
-    { loc: `${baseUrl}/gold-to-gold`, changefreq: "monthly", priority: 0.9 },
-    { loc: `${baseUrl}/goldbar-fee`, changefreq: "monthly", priority: 0.8 },
-    { loc: `${baseUrl}/stores`, changefreq: "monthly", priority: 0.8 },
-    { loc: `${baseUrl}/reviews`, changefreq: "weekly", priority: 0.6 },
-    { loc: `${baseUrl}/terms`, changefreq: "yearly", priority: 0.3 },
-    { loc: `${baseUrl}/privacy`, changefreq: "yearly", priority: 0.3 },
-  ];
+  const staticUrls = INDEXABLE_PATHS.map((pathname) =>
+    pathname === "/" ? `${baseUrl}/` : `${baseUrl}${pathname}`
+  );
 
   const sitemap =
     `<?xml version="1.0" encoding="UTF-8"?>\n` +
@@ -38,12 +30,9 @@ async function generate() {
       .map((url) =>
         [
           "  <url>",
-          `    <loc>${escapeXml(url.loc)}</loc>`,
-          `    <changefreq>${url.changefreq}</changefreq>`,
-          `    <priority>${url.priority}</priority>`,
-          url.lastmod ? `    <lastmod>${url.lastmod}</lastmod>` : null,
+          `    <loc>${escapeXml(url)}</loc>`,
           "  </url>",
-        ].filter(Boolean).join("\n")
+        ].join("\n")
       )
       .join("\n") +
     `\n</urlset>`;
