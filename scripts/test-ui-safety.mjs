@@ -16,6 +16,7 @@ const [
   goldExchangeStylesSource,
   goldExchangeUiSource,
   goldExchangeFormSource,
+  goldExchangeRemoteDataSource,
   goldExchangeFunctionsSource,
   myExchangesSource,
   appHomeSource,
@@ -32,6 +33,7 @@ const [
   read("src/components/goldExchange/GoldExchange.styles.js"),
   read("src/components/goldExchange/goldExchangeUi.js"),
   read("src/lib/goldExchangeForm.js"),
+  read("src/hooks/useGoldExchangeRemoteData.js"),
   read("functions/src/goldExchange/functions.ts"),
   read("src/pages/MyExchanges.jsx"),
   read("src/pages/AppHome.jsx"),
@@ -163,9 +165,9 @@ test("GoldExchange 진입 모드는 URL을 기준으로 한 곳에서 상태를 
 
 
 test("GoldExchange 효과 의존성은 URL mode와 환산율 변경을 빠뜨리지 않는다", () => {
-  const ratesStateIndex = goldExchangeSource.indexOf("const [rates, setRates]");
+  const marketHookIndex = goldExchangeSource.indexOf("useGoldExchangeMarketData()");
   const vaultEffectIndex = goldExchangeSource.indexOf('if (entryMode !== "vault" || importedFromMyGold) return undefined;');
-  assert.ok(ratesStateIndex >= 0 && vaultEffectIndex > ratesStateIndex, "vault import effect must run after rates state is declared");
+  assert.ok(marketHookIndex >= 0 && vaultEffectIndex > marketHookIndex, "vault import effect must run after market data is available");
   assert.match(
     goldExchangeSource,
     /\}, \[entryMode, importedFromMyGold, rates, user\?\.uid\]\);/
@@ -197,6 +199,23 @@ test("MY GOLD 비동기 불러오기는 레거시 goldType만 있어도 제품 �
     goldExchangeFormSource,
     /calculationMethod: policy\?\.calculationMethod \|\| ""/
   );
+});
+
+test("GoldExchange 원격 읽기와 프로필 초기값은 전용 hook으로 분리한다", () => {
+  assert.match(goldExchangeSource, /from "@\/hooks\/useGoldExchangeRemoteData"/);
+  assert.match(goldExchangeSource, /const \{ rates, pureGoldBuyPricePerDon \} = useGoldExchangeMarketData\(\)/);
+  assert.match(goldExchangeSource, /const status = useGoldExchangeStatus\(exchangeId\)/);
+  assert.match(goldExchangeSource, /useGoldExchangeProfileDefaults\(user, setName, setPhone\)/);
+  assert.doesNotMatch(goldExchangeSource, /from "firebase\/firestore"|fetchMyProfile|subscribeGoldRates/);
+  assert.match(goldExchangeRemoteDataSource, /export function useGoldExchangeMarketData/);
+  assert.match(goldExchangeRemoteDataSource, /subscribeGoldRates\(/);
+  assert.match(goldExchangeRemoteDataSource, /doc\(db, "goldPrices", "current"\)/);
+  assert.match(goldExchangeRemoteDataSource, /export function useGoldExchangeStatus/);
+  assert.match(goldExchangeRemoteDataSource, /doc\(db, "goldExchangeGroups", exchangeId\)/);
+  assert.match(goldExchangeRemoteDataSource, /export function useGoldExchangeProfileDefaults/);
+  assert.match(goldExchangeRemoteDataSource, /fetchMyProfile\(user\.uid\)/);
+  assert.doesNotMatch(goldExchangeRemoteDataSource, /submitGoldExchangeGroup|setProducts|saveGoldExchangeDraft/);
+  assert.ok(goldExchangeSource.split("\n").length < 780, "GoldExchange.jsx가 원격 읽기 effect를 다시 끌어안으면 안 됩니다.");
 });
 
 test("GoldExchange 제품 폼과 계산 보조 로직은 순수 모듈로 분리한다", () => {

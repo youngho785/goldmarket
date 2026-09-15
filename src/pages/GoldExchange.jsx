@@ -3,28 +3,26 @@ import React, { useEffect, useMemo, useRef, useState, useCallback } from "react"
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuthContext } from "../context/AuthContext";
 import { useLoginGate } from "@/context/LoginGateContext";
-import { db } from "../firebase/firebase";
-import { doc, onSnapshot } from "firebase/firestore";
 import "react-datepicker/dist/react-datepicker.css";
 import { format } from "date-fns";
 import { nudgeAppInstall } from "@/hooks/useInstallPrompt";
+import {
+  useGoldExchangeMarketData,
+  useGoldExchangeProfileDefaults,
+  useGoldExchangeStatus,
+} from "@/hooks/useGoldExchangeRemoteData";
 
 // 🔗 공용 goldRates 모듈
 import {
   DON_TO_GRAMS,
-  DEFAULT_PURITY,
-  DEFAULT_EXCHANGE,
-  DEFAULT_GOLD_PRODUCTS,
   roundTo3Custom,
   computeGoldPolicyResult,
   findGoldProduct,
   listGoldProducts,
-  subscribeGoldRates,
 } from "@/lib/goldRates";
 
 // ✅ callable 래퍼 사용 (클라 단 로직 최소화)
 import { submitGoldExchangeGroup } from "@/services/exchangeClient";
-import { fetchMyProfile } from "@/services/userService";
 import {
   clearGoldExchangeDraft,
   draftDateToLocalDate,
@@ -167,7 +165,6 @@ export default function GoldExchange() {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [exchangeId, setExchangeId] = useState(null); // groupId
-  const [status, setStatus] = useState("requested");
   const previousEntryModeRef = useRef(entryMode);
 
   // Keep URL mode and in-memory flow state synchronized when React Router keeps
@@ -194,7 +191,6 @@ export default function GoldExchange() {
     setPrivacyAccepted(false);
     setSubmitted(false);
     setExchangeId(null);
-    setStatus("requested");
 
     if (entryMode === "vault") {
       if (importedFromMyGold && initialVaultProductsRef.current.length > 0) {
@@ -235,12 +231,7 @@ export default function GoldExchange() {
   ]);
 
   /* 환산율 */
-  const [rates, setRates] = useState({
-    purity: DEFAULT_PURITY,
-    exchange: DEFAULT_EXCHANGE,
-    products: DEFAULT_GOLD_PRODUCTS,
-  });
-  const [pureGoldBuyPricePerDon, setPureGoldBuyPricePerDon] = useState(0);
+  const { rates, pureGoldBuyPricePerDon } = useGoldExchangeMarketData();
   const productOptions = useMemo(
     () => listGoldProducts(rates, { context: "exchange" }),
     [rates]
@@ -294,31 +285,7 @@ export default function GoldExchange() {
   }, [entryMode, importedFromMyGold, rates, user?.uid]);
 
   /* 예약 상태 구독 → 그룹 요약 문서 구독 유지 */
-  useEffect(() => {
-    if (!exchangeId) return;
-    const refDoc = doc(db, "goldExchangeGroups", exchangeId);
-    const unsub = onSnapshot(refDoc, (snap) => {
-      const s = snap.data()?.repStatus;
-      if (s) setStatus(s);
-    });
-    return () => unsub();
-  }, [exchangeId]);
-
-  /* 환산율 실시간 구독(공용 모듈 사용) */
-  useEffect(() => {
-    const unsub = subscribeGoldRates(
-      db,
-      (merged) => setRates(merged),
-      (msg, err) => console.error(msg, err)
-    );
-    return () => unsub && unsub();
-  }, []);
-
-  useEffect(() => onSnapshot(
-    doc(db, "goldPrices", "current"),
-    (snapshot) => setPureGoldBuyPricePerDon(Number(snapshot.get("market.pureGoldBuyPerDon")) || 0),
-    () => setPureGoldBuyPricePerDon(0)
-  ), []);
+  const status = useGoldExchangeStatus(exchangeId);
 
   useEffect(() => {
     setProducts((current) => syncExchangeProductsWithRates(current, rates));
@@ -358,31 +325,7 @@ export default function GoldExchange() {
   }, [isDirectRebook, isRebook, rates, pureGoldBuyPricePerDon]);
 
   /* 사용자 정보로 기본값 채우기 */
-  useEffect(() => {
-    if (!user?.uid) return undefined;
-
-    let cancelled = false;
-
-    setName((prev) => prev || user.displayName || "");
-    setPhone((prev) => prev || user.phoneNumber || "");
-
-    fetchMyProfile(user.uid)
-      .then((profile) => {
-        if (cancelled || !profile) return;
-        setName((prev) => prev || profile.displayName || profile.name || "");
-        setPhone((prev) => prev || profile.phone || "");
-      })
-      .catch((profileError) => {
-        console.warn(
-          "[GoldExchange] profile preload failed:",
-          profileError?.message || profileError
-        );
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.uid, user?.displayName, user?.phoneNumber]);
+  useGoldExchangeProfileDefaults(user, setName, setPhone);
 
   const handleProductChange = useCallback((idx, field, value) => {
     setProducts((prev) => prev.map((p, i) => (i === idx ? { ...p, [field]: value } : p)));
