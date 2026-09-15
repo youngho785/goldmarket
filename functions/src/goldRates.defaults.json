@@ -1,0 +1,151 @@
+{
+  "version": 2,
+  "donToGrams": 3.75,
+  "purity": {
+    "14k(585) 제품(팔찌,목걸이, 반지,귀걸이, 발찌 등)": 0.55,
+    "18k(750) 제품(팔찌,목걸이, 반지,귀걸이, 발찌 등)": 0.72,
+    "순금 995제품(목걸이,팔찌,반지,귀걸이)": 0.945,
+    "순금 999제품(팔찌,목걸이, 반지,귀걸이)": 0.95,
+    "순금 열쇠": 0.943,
+    "순금 장식모양(거북이,두꺼비, 골프공, 핸드폰고리 등)": 0.94,
+    "순금 마고자 단추 / 색상이 들어있는 제품": 0.93,
+    "999,24k 순금덩어리(순도 측정후 999일 경우)": 0.96
+  },
+  "exchange": {
+    "999.9골드바": 1
+  },
+  "products": {
+    "gold-14k-jewelry": {
+      "displayName": "14K(585) 제품 (반지, 팔찌, 목걸이 등)",
+      "legacyGoldType": "14k(585) 제품(팔찌,목걸이, 반지,귀걸이, 발찌 등)",
+      "calculationMethod": "rate",
+      "conversionRate": 0.55,
+      "refiningFeePerDon": 0,
+      "active": true,
+      "myGoldEnabled": true,
+      "exchangeEnabled": true,
+      "sortOrder": 10,
+      "valuationPriceBasis": "14k"
+    },
+    "gold-18k-jewelry": {
+      "displayName": "18K(750) 제품 (반지, 팔찌, 목걸이 등)",
+      "legacyGoldType": "18k(750) 제품(팔찌,목걸이, 반지,귀걸이, 발찌 등)",
+      "calculationMethod": "rate",
+      "conversionRate": 0.72,
+      "refiningFeePerDon": 0,
+      "active": true,
+      "myGoldEnabled": true,
+      "exchangeEnabled": true,
+      "sortOrder": 20,
+      "valuationPriceBasis": "18k"
+    },
+    "gold-995-product": {
+      "displayName": "순금 99.5% 제품 (돌반지, 반지, 팔찌, 목걸이 등)",
+      "legacyGoldType": "순금 995제품(목걸이,팔찌,반지,귀걸이)",
+      "calculationMethod": "refining_fee",
+      "conversionRate": 1,
+      "refiningFeePerDon": 12000,
+      "active": true,
+      "myGoldEnabled": true,
+      "exchangeEnabled": true,
+      "sortOrder": 30,
+      "valuationPriceBasis": "pure"
+    },
+    "gold-999-product": {
+      "displayName": "순금 99.9% 제품 (돌반지, 반지, 팔찌, 목걸이 등)",
+      "legacyGoldType": "순금 999제품(팔찌,목걸이, 반지,귀걸이)",
+      "calculationMethod": "refining_fee",
+      "conversionRate": 1,
+      "refiningFeePerDon": 9000,
+      "active": true,
+      "myGoldEnabled": true,
+      "exchangeEnabled": true,
+      "sortOrder": 40,
+      "valuationPriceBasis": "pure"
+    },
+    "gold-pure-key": {
+      "displayName": "순금 열쇠",
+      "legacyGoldType": "순금 열쇠",
+      "calculationMethod": "refining_fee",
+      "conversionRate": 1,
+      "refiningFeePerDon": 12000,
+      "active": true,
+      "myGoldEnabled": true,
+      "exchangeEnabled": true,
+      "sortOrder": 50,
+      "valuationPriceBasis": "pure"
+    },
+    "gold-pure-decoration": {
+      "displayName": "순금 장식제품 (거북이, 두꺼비, 골프공 등)",
+      "legacyGoldType": "순금 장식모양(거북이,두꺼비, 골프공, 핸드폰고리 등)",
+      "calculationMethod": "refining_fee",
+      "conversionRate": 1,
+      "refiningFeePerDon": 15000,
+      "active": true,
+      "myGoldEnabled": true,
+      "exchangeEnabled": true,
+      "sortOrder": 60,
+      "valuationPriceBasis": "pure"
+    },
+    "gold-pure-magoja-color": {
+      "displayName": "순금 마고자/색상 포함 제품",
+      "legacyGoldType": "순금 마고자 단추 / 색상이 들어있는 제품",
+      "calculationMethod": "refining_fee",
+      "conversionRate": 1,
+      "refiningFeePerDon": 15000,
+      "active": true,
+      "myGoldEnabled": true,
+      "exchangeEnabled": true,
+      "sortOrder": 70,
+      "valuationPriceBasis": "pure"
+    },
+    "gold-999-lump": {
+      "displayName": "999·24K 순금덩어리",
+      "legacyGoldType": "999,24k 순금덩어리(순도 측정후 999일 경우)",
+      "calculationMethod": "refining_fee",
+      "conversionRate": 1,
+      "refiningFeePerDon": 9000,
+      "active": true,
+      "myGoldEnabled": true,
+      "exchangeEnabled": true,
+      "sortOrder": 80,
+      "valuationPriceBasis": "pure"
+    },
+    "gold-9999-lump": {
+      "displayName": "순금 999.9 덩어리",
+      "legacyGoldType": "순금 999.9 덩어리",
+      "calculationMethod": "full",
+      "conversionRate": 1,
+      "refiningFeePerDon": 0,
+      "active": true,
+      "myGoldEnabled": true,
+      "exchangeEnabled": true,
+      "sortOrder": 90,
+      "valuationPriceBasis": "pure"
+    },
+    "gold-9999-bar": {
+      "displayName": "999.9 골드바",
+      "legacyGoldType": "999.9 골드바",
+      "calculationMethod": "full",
+      "conversionRate": 1,
+      "refiningFeePerDon": 0,
+      "active": true,
+      "myGoldEnabled": true,
+      "exchangeEnabled": true,
+      "sortOrder": 100,
+      "valuationPriceBasis": "pure"
+    },
+    "other-inquiry": {
+      "displayName": "기타(현장 확인)",
+      "legacyGoldType": "기타(문의)",
+      "calculationMethod": "manual",
+      "conversionRate": 0,
+      "refiningFeePerDon": 0,
+      "active": true,
+      "myGoldEnabled": false,
+      "exchangeEnabled": true,
+      "sortOrder": 999,
+      "valuationPriceBasis": "pure"
+    }
+  }
+}

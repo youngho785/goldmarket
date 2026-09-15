@@ -1,0 +1,43 @@
+{
+  "name": "functions",
+  "description": "Cloud Functions for Firebase",
+  "private": true,
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "clean": "rimraf lib",
+    "build": "tsc -p tsconfig.json",
+    "migrate:support": "npm run build && node scripts/migrate-support-tickets.mjs",
+    "migrate:quiz-bonus": "node scripts/migrate-quiz-bonus-ledger.mjs",
+    "watch": "tsc -w -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "emulators": "npm run build && firebase emulators:start --only functions",
+    "serve": "npm run emulators",
+    "shell": "firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "npm run build && firebase deploy --only functions",
+    "logs": "firebase functions:log",
+    "test:policy": "npm run build && node scripts/test-booking-policy.mjs",
+    "test:account-deletion": "npm run build && npx --yes firebase-tools@15.28.1 --config ../firebase.json --project demo-goldmarket emulators:exec --only firestore \"node scripts/test-account-deletion-security.mjs\"",
+    "test:nickname-security": "npm run build && npx --yes firebase-tools@15.28.1 --config ../firebase.json --project demo-goldmarket emulators:exec --only firestore \"node scripts/test-nickname-security.mjs\"",
+    "test:release-safety": "npm run build && npx --yes firebase-tools@15.28.1 --config ../firebase.json --project demo-goldmarket emulators:exec --only firestore \"node scripts/test-release-safety.mjs\"",
+    "audit:nicknames": "node scripts/audit-nickname-integrity.mjs",
+    "cleanup:nicknames": "npm run build && node scripts/cleanup-nickname-integrity.mjs"
+  },
+  "dependencies": {
+    "firebase-admin": "^14.3.0",
+    "firebase-functions": "^7.3.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "eslint": "^9.6.0",
+    "rimraf": "^5.0.5",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.7.0"
+  }
+}

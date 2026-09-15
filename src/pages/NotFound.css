@@ -1,0 +1,29 @@
+.not-found {
+  padding: 50px;
+  text-align: center;
+}
+
+.not-found h1 {
+  color: var(--gm-error);
+  font-size: 80px;
+}
+
+.not-found p {
+  color: var(--gm-text-secondary);
+  font-size: 18px;
+}
+
+.home-link {
+  display: inline-block;
+  margin-top: 20px;
+  padding: 10px 20px;
+  color: var(--gm-surface);
+  font-size: 16px;
+  text-decoration: none;
+  background-color: var(--gm-primary);
+  border-radius: 5px;
+}
+
+.home-link:hover {
+  background-color: var(--gm-primary-dark);
+}
