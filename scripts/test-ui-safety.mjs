@@ -15,6 +15,7 @@ const [
   goldExchangeStepsSource,
   goldExchangeStylesSource,
   goldExchangeUiSource,
+  goldExchangeFormSource,
   goldExchangeFunctionsSource,
   myExchangesSource,
   appHomeSource,
@@ -30,6 +31,7 @@ const [
   read("src/components/goldExchange/GoldExchangeSteps.jsx"),
   read("src/components/goldExchange/GoldExchange.styles.js"),
   read("src/components/goldExchange/goldExchangeUi.js"),
+  read("src/lib/goldExchangeForm.js"),
   read("functions/src/goldExchange/functions.ts"),
   read("src/pages/MyExchanges.jsx"),
   read("src/pages/AppHome.jsx"),
@@ -137,13 +139,90 @@ test("앱 홈 다가오는 예약은 진행 상태와 오늘 이후 일정만 �
   assert.match(appHomeSource, /limit\(10\)/);
 });
 
-test("GoldExchange 화면 분리는 비즈니스 로직을 페이지에 남기고 Step/UI만 모듈화한다", () => {
+test("GoldExchange 진입 모드는 URL을 기준으로 한 곳에서 상태를 전환한다", () => {
+  assert.match(
+    goldExchangeSource,
+    /const entryMode = explicitEntryMode \|\| \(importedFromMyGold \? "vault" : ""\)/
+  );
+  assert.match(goldExchangeSource, /const previousEntryModeRef = useRef\(entryMode\)/);
+  assert.match(goldExchangeSource, /if \(previousMode === entryMode\) return/);
+  assert.match(goldExchangeSource, /if \(entryMode === "manual"\)[\s\S]*setProducts\(getInitialExchangeProductsFromSearch\(location\.search\)\)[\s\S]*setStep\(STEP\.CALC\)/);
+  assert.match(goldExchangeSource, /if \(entryMode === "vault"\)[\s\S]*setVaultImportedCount\(initialVaultProductsRef\.current\.length\)/);
+  assert.match(goldExchangeSource, /const fromVault =[\s\S]*entryMode === "vault"/);
+
+  const chooseStartMethodSection = goldExchangeSource.match(
+    /const chooseStartMethod = \(mode\) => \{[\s\S]*?\n  \};/
+  )?.[0] || "";
+  assert.match(chooseStartMethodSection, /navigate\(`\/gold-exchange\?mode=\$\{nextMode\}`/);
+  assert.doesNotMatch(chooseStartMethodSection, /setProducts|setCalculated|setStep|setVaultImportedCount/);
+  assert.match(goldExchangeSource, /!showStartMethod && step === STEP\.CALC/);
+  assert.match(goldExchangeSource, /!showStartMethod && step === STEP\.BARS/);
+  assert.match(goldExchangeSource, /!showStartMethod && step === STEP\.RESERVE/);
+  assert.match(goldExchangeSource, /!showStartMethod && step === STEP\.DONE/);
+});
+
+
+test("GoldExchange 효과 의존성은 URL mode와 환산율 변경을 빠뜨리지 않는다", () => {
+  const ratesStateIndex = goldExchangeSource.indexOf("const [rates, setRates]");
+  const vaultEffectIndex = goldExchangeSource.indexOf('if (entryMode !== "vault" || importedFromMyGold) return undefined;');
+  assert.ok(ratesStateIndex >= 0 && vaultEffectIndex > ratesStateIndex, "vault import effect must run after rates state is declared");
+  assert.match(
+    goldExchangeSource,
+    /\}, \[entryMode, importedFromMyGold, rates, user\?\.uid\]\);/
+  );
+  assert.match(
+    goldExchangeSource,
+    /authDraft,[\s\S]*directReservationRequested,[\s\S]*entryMode,[\s\S]*importedFromMyGold,[\s\S]*isRebook,[\s\S]*location\.search,[\s\S]*user\?\.uid,[\s\S]*\]\);/
+  );
+});
+
+test("MY GOLD 비동기 불러오기는 레거시 goldType만 있어도 제품 선택값을 복원한다", () => {
+  assert.match(
+    goldExchangeSource,
+    /importVaultItemsToExchangeProducts\([\s\S]*items,[\s\S]*rates,[\s\S]*MAX_PRODUCTS_PER_BOOKING/
+  );
+  assert.match(
+    goldExchangeFormSource,
+    /const policy = findGoldProduct\(rates, \{[\s\S]*productId: item\?\.productId,[\s\S]*goldType: item\?\.goldType,[\s\S]*\}\)/
+  );
+  assert.match(
+    goldExchangeFormSource,
+    /productId: policy\?\.id \|\| item\?\.productId \|\| ""/
+  );
+  assert.match(
+    goldExchangeFormSource,
+    /productName: policy\?\.displayName \|\| item\?\.productName \|\| ""/
+  );
+  assert.match(
+    goldExchangeFormSource,
+    /calculationMethod: policy\?\.calculationMethod \|\| ""/
+  );
+});
+
+test("GoldExchange 제품 폼과 계산 보조 로직은 순수 모듈로 분리한다", () => {
+  assert.match(goldExchangeSource, /from "@\/lib\/goldExchangeForm"/);
+  assert.match(goldExchangeFormSource, /export function createEmptyExchangeProduct/);
+  assert.match(goldExchangeFormSource, /export function normalizeExchangeProducts/);
+  assert.match(goldExchangeFormSource, /export function getInitialExchangeProductsFromSearch/);
+  assert.match(goldExchangeFormSource, /export function importVaultItemsToExchangeProducts/);
+  assert.match(goldExchangeFormSource, /export function syncExchangeProductsWithRates/);
+  assert.match(goldExchangeFormSource, /export function validateExchangeProductsForCalculation/);
+  assert.match(goldExchangeFormSource, /export function applyExchangeFinalWeights/);
+  assert.match(goldExchangeFormSource, /export function buildReservationProducts/);
+  assert.doesNotMatch(goldExchangeFormSource, /useState|useEffect|onSnapshot|submitGoldExchangeGroup/);
+  assert.match(goldExchangeSource, /validateExchangeProductsForCalculation\(products/);
+  assert.match(goldExchangeSource, /applyExchangeFinalWeights\(prev/);
+  assert.match(goldExchangeSource, /buildReservationProducts\(products\)/);
+});
+
+test("GoldExchange 화면과 제품 보조 로직은 모듈화하고 예약 제출은 페이지에 남긴다", () => {
   assert.match(goldExchangeSource, /from "@\/components\/goldExchange\/GoldExchangeSteps"/);
   assert.match(goldExchangeSource, /from "@\/components\/goldExchange\/GoldExchange\.styles"/);
   assert.match(goldExchangeSource, /from "@\/components\/goldExchange\/goldExchangeUi"/);
-  assert.ok(goldExchangeSource.split("\n").length < 1200, "GoldExchange.jsx가 다시 비대해지면 안 됩니다.");
+  assert.ok(goldExchangeSource.split("\n").length < 850, "GoldExchange.jsx가 제품 보조 로직을 다시 끌어안으면 안 됩니다.");
   assert.match(goldExchangeSource, /submitGoldExchangeGroup/);
   assert.match(goldExchangeSource, /computeGoldPolicyResult/);
+  assert.match(goldExchangeSource, /goldExchangeForm/);
   assert.doesNotMatch(goldExchangeStepsSource, /submitGoldExchangeGroup|computeGoldPolicyResult/);
   assert.match(goldExchangeStepsSource, /export function CalcStep/);
   assert.match(goldExchangeStepsSource, /export function BarStep/);

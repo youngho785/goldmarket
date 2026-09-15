@@ -33,6 +33,16 @@ import {
 } from "@/lib/goldExchangeDraft";
 import { saveGoldVaultImportDraft } from "@/lib/goldVaultImportDraft";
 import { subscribeGoldVaultItems } from "@/services/goldVaultService";
+import {
+  applyExchangeFinalWeights,
+  buildReservationProducts,
+  createEmptyExchangeProduct,
+  getInitialExchangeProductsFromSearch,
+  importVaultItemsToExchangeProducts,
+  normalizeExchangeProducts,
+  syncExchangeProductsWithRates,
+  validateExchangeProductsForCalculation,
+} from "@/lib/goldExchangeForm";
 
 /* ── 매장 정보 ─────────────────────────────────── */
 
@@ -48,69 +58,6 @@ import {
   StartMethodScreen, CalcStep, BarStep, ReserveStep, DoneStep,
 } from "@/components/goldExchange/GoldExchangeSteps";
 
-function normalizeRebookProducts(rebook) {
-  const rawProducts = Array.isArray(rebook?.products) ? rebook.products : [];
-
-  return rawProducts
-    .slice(0, MAX_PRODUCTS_PER_BOOKING)
-    .map((product) => {
-      const productId = String(product?.productId || "").trim();
-      const goldType = String(product?.goldType || "").trim();
-      const quantity = Number(product?.quantity);
-      const inputUnit = product?.inputUnit === "don" ? "don" : "g";
-      const exchangeType = String(product?.exchangeType || "999.9골드바").trim();
-
-      if (!goldType || !Number.isFinite(quantity) || quantity <= 0) return null;
-
-      return {
-        productId,
-        goldType,
-        productName: String(product?.productName || "").trim(),
-        calculationMethod: String(product?.calculationMethod || ""),
-        quantity: String(quantity),
-        inputUnit,
-        exchangeType: exchangeType || "999.9골드바",
-        finalWeight: 0,
-      };
-    })
-    .filter(Boolean);
-}
-
-function createEmptyProduct() {
-  return {
-    productId: "",
-    productName: "",
-    calculationMethod: "",
-    goldType: "",
-    quantity: "",
-    inputUnit: "g",
-    exchangeType: "999.9골드바",
-    finalWeight: 0,
-  };
-}
-
-function getInitialProductsFromQuery() {
-  const emptyProduct = createEmptyProduct();
-  if (typeof window === "undefined") return [emptyProduct];
-
-  const params = new URLSearchParams(window.location.search);
-  const productId = String(params.get("pid") || "").trim();
-  const goldType = String(params.get("type") || "").trim();
-  const rawWeight = Number(params.get("w"));
-  const inputUnit = params.get("unit") === "don" ? "don" : "g";
-  if (!goldType || !Number.isFinite(rawWeight) || rawWeight <= 0) {
-    return [emptyProduct];
-  }
-
-  return [{
-    ...emptyProduct,
-    productId,
-    goldType,
-    quantity: String(rawWeight),
-    inputUnit,
-  }];
-}
-
 export default function GoldExchange() {
   const { user, isEmailVerified } = useAuthContext();
   const { openGate } = useLoginGate();
@@ -121,21 +68,24 @@ export default function GoldExchange() {
   const resumeRequested = searchParams.get("resume") === "reservation";
   const directReservationRequested = searchParams.get("reserve") === "1";
   const requestedEntryMode = String(searchParams.get("mode") || "").trim();
-  const entryMode = ["vault", "manual", "visit"].includes(requestedEntryMode)
+  const explicitEntryMode = ["vault", "manual", "visit"].includes(requestedEntryMode)
     ? requestedEntryMode
     : "";
   const authDraftRef = useRef(
     !rebook && resumeRequested ? readGoldExchangeDraft() : null
   );
   const authDraft = authDraftRef.current;
-  const initialRebookProductsRef = useRef(normalizeRebookProducts(rebook));
+  const initialRebookProductsRef = useRef(normalizeExchangeProducts(rebook?.products, MAX_PRODUCTS_PER_BOOKING));
   const initialVaultProductsRef = useRef(
     !rebook
-      ? normalizeRebookProducts({ products: location.state?.vaultProducts })
+      ? normalizeExchangeProducts(location.state?.vaultProducts, MAX_PRODUCTS_PER_BOOKING)
       : []
   );
   const importedFromMyGold =
     location.state?.source === "my-gold" && initialVaultProductsRef.current.length > 0;
+  // The URL mode is the primary source of truth. A MY GOLD navigation without
+  // an explicit mode is treated as the vault flow for backwards compatibility.
+  const entryMode = explicitEntryMode || (importedFromMyGold ? "vault" : "");
   const isRebook = !!rebook;
   const showStartMethod =
     !isRebook &&
@@ -173,76 +123,24 @@ export default function GoldExchange() {
       ? initialRebookProductsRef.current
       : authDraft?.products?.length
       ? authDraft.products
-      : initialVaultProductsRef.current.length > 0
+      : entryMode === "vault" && initialVaultProductsRef.current.length > 0
       ? initialVaultProductsRef.current
-      : getInitialProductsFromQuery()
+      : getInitialExchangeProductsFromSearch(location.search)
   );
   const [calculated, setCalculated] = useState(
     isRebook ? !isDirectRebook : !!authDraft?.calculated
   );
   const [vaultImportedCount, setVaultImportedCount] = useState(
-    importedFromMyGold ? initialVaultProductsRef.current.length : 0
+    entryMode === "vault" && importedFromMyGold
+      ? initialVaultProductsRef.current.length
+      : 0
   );
   const [vaultImportLoading, setVaultImportLoading] = useState(
-    entryMode === "vault" && !importedFromMyGold
+    entryMode === "vault" && !importedFromMyGold && !!user?.uid
   );
-  const fromVault = importedFromMyGold || vaultImportedCount > 0;
+  const fromVault =
+    entryMode === "vault" && (importedFromMyGold || vaultImportedCount > 0);
 
-  useEffect(() => {
-    if (entryMode !== "vault" || importedFromMyGold) return undefined;
-    if (!user?.uid) return undefined;
-
-    let active = true;
-    let unsubscribe = () => {};
-    setVaultImportLoading(true);
-    setError("");
-
-    unsubscribe = subscribeGoldVaultItems(
-      user.uid,
-      (items) => {
-        if (!active) return;
-        unsubscribe();
-        const nextProducts = (Array.isArray(items) ? items : [])
-          .slice(0, MAX_PRODUCTS_PER_BOOKING)
-          .map((item) => ({
-            ...createEmptyProduct(),
-            productId: item.productId || "",
-            goldType: item.goldType,
-            productName: item.productName || "",
-            quantity: String(Number(item.weightG || 0)),
-            inputUnit: "g",
-            exchangeType: "999.9골드바",
-            sourceItemId: item.id,
-            sourceLabel: item.label || "금제품",
-          }))
-          .filter((item) => item.goldType && Number(item.quantity) > 0);
-
-        if (nextProducts.length === 0) {
-          setVaultImportedCount(0);
-          setError("MY GOLD에 기록된 금이 없습니다. 먼저 금을 기록하거나 직접 입력해 주세요.");
-          setProducts([createEmptyProduct()]);
-        } else {
-          setProducts(nextProducts);
-          setVaultImportedCount(nextProducts.length);
-          setCalculated(false);
-          initializedChoiceRef.current = false;
-          setStep(STEP.CALC);
-        }
-        setVaultImportLoading(false);
-      },
-      (vaultError) => {
-        if (!active) return;
-        console.error("[GoldExchange] 내금고 불러오기 실패", vaultError);
-        setVaultImportLoading(false);
-        setError("MY GOLD의 금 기록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.");
-      }
-    );
-
-    return () => {
-      active = false;
-      unsubscribe();
-    };
-  }, [entryMode, importedFromMyGold, user?.uid]);
 
   /* 골드바 선택 상태 */
   const [barGroup, setBarGroup] = useState(
@@ -270,6 +168,71 @@ export default function GoldExchange() {
   const [submitted, setSubmitted] = useState(false);
   const [exchangeId, setExchangeId] = useState(null); // groupId
   const [status, setStatus] = useState("requested");
+  const previousEntryModeRef = useRef(entryMode);
+
+  // Keep URL mode and in-memory flow state synchronized when React Router keeps
+  // this page mounted. This covers start/manual/vault/visit switching as well as
+  // browser back/forward navigation without spreading reset logic across buttons.
+  useEffect(() => {
+    const previousMode = previousEntryModeRef.current;
+    if (previousMode === entryMode) return;
+    previousEntryModeRef.current = entryMode;
+
+    // Resume/rebook flows have their own persisted state and must not be reset by
+    // ordinary entry-mode transitions.
+    if (isRebook || authDraft || directReservationRequested) return;
+
+    setError("");
+    setCalculated(false);
+    setVaultImportedCount(0);
+    setVaultImportLoading(false);
+    setBarGroup("don");
+    setBarChoice({ idx: 0, qty: 1 });
+    initializedChoiceRef.current = false;
+    setVisitDate(null);
+    setVisitTime("");
+    setPrivacyAccepted(false);
+    setSubmitted(false);
+    setExchangeId(null);
+    setStatus("requested");
+
+    if (entryMode === "vault") {
+      if (importedFromMyGold && initialVaultProductsRef.current.length > 0) {
+        setProducts(initialVaultProductsRef.current.map((product) => ({ ...product })));
+        setVaultImportedCount(initialVaultProductsRef.current.length);
+      } else {
+        setProducts([createEmptyExchangeProduct()]);
+        setVaultImportLoading(!!user?.uid);
+      }
+      setStep(STEP.CALC);
+      return;
+    }
+
+    if (entryMode === "manual") {
+      setProducts(getInitialExchangeProductsFromSearch(location.search));
+      setStep(STEP.CALC);
+      return;
+    }
+
+    if (entryMode === "visit") {
+      setProducts([createEmptyExchangeProduct()]);
+      setStep(STEP.RESERVE);
+      return;
+    }
+
+    // No entry mode means the start-method chooser. Keep every previous step
+    // hidden and reset the next choice to a clean calculation flow.
+    setProducts([createEmptyExchangeProduct()]);
+    setStep(STEP.CALC);
+  }, [
+    authDraft,
+    directReservationRequested,
+    entryMode,
+    importedFromMyGold,
+    isRebook,
+    location.search,
+    user?.uid,
+  ]);
 
   /* 환산율 */
   const [rates, setRates] = useState({
@@ -282,6 +245,53 @@ export default function GoldExchange() {
     () => listGoldProducts(rates, { context: "exchange" }),
     [rates]
   );
+
+  useEffect(() => {
+    if (entryMode !== "vault" || importedFromMyGold) return undefined;
+    if (!user?.uid) return undefined;
+
+    let active = true;
+    let unsubscribe = () => {};
+    setVaultImportLoading(true);
+    setError("");
+
+    unsubscribe = subscribeGoldVaultItems(
+      user.uid,
+      (items) => {
+        if (!active) return;
+        unsubscribe();
+        const nextProducts = importVaultItemsToExchangeProducts(
+          items,
+          rates,
+          MAX_PRODUCTS_PER_BOOKING
+        );
+
+        if (nextProducts.length === 0) {
+          setVaultImportedCount(0);
+          setError("MY GOLD에 기록된 금이 없습니다. 먼저 금을 기록하거나 직접 입력해 주세요.");
+          setProducts([createEmptyExchangeProduct()]);
+        } else {
+          setProducts(nextProducts);
+          setVaultImportedCount(nextProducts.length);
+          setCalculated(false);
+          initializedChoiceRef.current = false;
+          setStep(STEP.CALC);
+        }
+        setVaultImportLoading(false);
+      },
+      (vaultError) => {
+        if (!active) return;
+        console.error("[GoldExchange] 내금고 불러오기 실패", vaultError);
+        setVaultImportLoading(false);
+        setError("MY GOLD의 금 기록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.");
+      }
+    );
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [entryMode, importedFromMyGold, rates, user?.uid]);
 
   /* 예약 상태 구독 → 그룹 요약 문서 구독 유지 */
   useEffect(() => {
@@ -311,18 +321,7 @@ export default function GoldExchange() {
   ), []);
 
   useEffect(() => {
-    setProducts((current) => current.map((row) => {
-      const policy = findGoldProduct(rates, { productId: row.productId, goldType: row.goldType });
-      if (!policy) return row;
-      if (row.productId === policy.id && row.productName === policy.displayName && row.calculationMethod === policy.calculationMethod) return row;
-      return {
-        ...row,
-        productId: policy.id,
-        productName: policy.displayName,
-        calculationMethod: policy.calculationMethod,
-        goldType: row.goldType || policy.legacyGoldType || policy.displayName,
-      };
-    }));
+    setProducts((current) => syncExchangeProductsWithRates(current, rates));
   }, [rates]);
 
   /* 취소 예약 다시 신청: 기존 제품은 유지하고 현재 환산율로 다시 계산 */
@@ -385,21 +384,6 @@ export default function GoldExchange() {
     };
   }, [user?.uid, user?.displayName, user?.phoneNumber]);
 
-  /* 계산 로직 (UI 표시용) */
-  const computeFinalWeight = ({ quantity, inputUnit, productId, goldType, exchangeType }) => {
-    const n = parseFloat(quantity);
-    if (isNaN(n) || n <= 0) return 0;
-    const grams = inputUnit === "g" ? n : n * DON_TO_GRAMS;
-    return computeGoldPolicyResult({
-      grams,
-      productId,
-      goldType,
-      exchangeType,
-      rates,
-      pureGoldBuyPricePerDon,
-    }).finalWeightG;
-  };
-
   const handleProductChange = useCallback((idx, field, value) => {
     setProducts((prev) => prev.map((p, i) => (i === idx ? { ...p, [field]: value } : p)));
   }, []);
@@ -424,7 +408,7 @@ export default function GoldExchange() {
     setError("");
     setProducts((prev) => [
       ...prev,
-      createEmptyProduct(),
+      createEmptyExchangeProduct(),
     ]);
   };
 
@@ -436,40 +420,24 @@ export default function GoldExchange() {
     e.preventDefault();
     setError("");
 
-    if (products.length > MAX_PRODUCTS_PER_BOOKING) {
-      setError(`제품은 한 예약에 최대 ${MAX_PRODUCTS_PER_BOOKING}개까지 등록할 수 있습니다.`);
+    const validation = validateExchangeProductsForCalculation(products, {
+      rates,
+      pureGoldBuyPricePerDon,
+      maxProducts: MAX_PRODUCTS_PER_BOOKING,
+      maxProductGrams: MAX_PRODUCT_GRAMS,
+    });
+    if (!validation.ok) {
+      setError(validation.error);
       return;
     }
 
-    for (const p of products) {
-      const qty = Number(p.quantity);
-      const grams = p.inputUnit === "don" ? qty * DON_TO_GRAMS : qty;
-      if ((!p.productId && !p.goldType) || !p.exchangeType || !Number.isFinite(qty) || qty <= 0) {
-        setError("모든 제품 항목을 정확히 입력해주세요.");
-        return;
-      }
-      if (!Number.isFinite(grams) || grams > MAX_PRODUCT_GRAMS) {
-        setError(`제품 한 항목의 중량은 ${MAX_PRODUCT_GRAMS.toLocaleString("ko-KR")}g 이하여야 합니다.`);
-        return;
-      }
-    }
-
-    const hasRefiningFeeProduct = products.some((p) =>
-      (findGoldProduct(rates, { productId: p.productId, goldType: p.goldType })?.calculationMethod || p.calculationMethod) === "refining_fee"
-    );
-    if (hasRefiningFeeProduct && (!Number.isFinite(Number(pureGoldBuyPricePerDon)) || Number(pureGoldBuyPricePerDon) <= 0)) {
-      setError("현재 순금 매입시세를 확인할 수 없어 정련비 적용 제품을 계산할 수 없습니다. 잠시 후 다시 시도해 주세요.");
-      return;
-    }
-
-    const hasEtc = products.some((p) => (findGoldProduct(rates, { productId: p.productId, goldType: p.goldType })?.calculationMethod || p.calculationMethod) === "manual");
-    if (hasEtc) {
+    if (validation.requiresManualCheck) {
       setCalculated(false);
       setStep(STEP.RESERVE);
       return;
     }
 
-    setProducts((prev) => prev.map((p) => ({ ...p, finalWeight: computeFinalWeight(p) })));
+    setProducts((prev) => applyExchangeFinalWeights(prev, { rates, pureGoldBuyPricePerDon }));
     setCalculated(true);
     initializedChoiceRef.current = false;
     setStep(STEP.BARS);
@@ -481,44 +449,26 @@ export default function GoldExchange() {
 
   // 비회원도 날짜/시간 선택까지 진행할 수 있습니다.
   const onGoReserveDirect = () => {
-    setCalculated(false);
-    setStep(STEP.RESERVE);
-    navigate("/gold-exchange?mode=visit");
+    navigate("/gold-exchange?mode=visit", { state: null });
   };
 
   const chooseStartMethod = (mode) => {
-    setError("");
-
-    if (mode === "vault") {
-      if (!user) {
-        openGate({
-          unifiedContinue: true,
-          purposeLabel: "MY GOLD 불러오기",
-          message: "MY GOLD에 기록한 내 금을 불러오려면 로그인이 필요합니다.",
-          requireVerified: false,
-          intent: "exchange-vault-import",
-          next: "/gold-exchange?mode=vault",
-          cancelLabel: "나중에",
-          cancelAsText: true,
-        });
-        return;
-      }
-      setCalculated(false);
-      setStep(STEP.CALC);
-      navigate("/gold-exchange?mode=vault");
+    if (mode === "vault" && !user) {
+      openGate({
+        unifiedContinue: true,
+        purposeLabel: "MY GOLD 불러오기",
+        message: "MY GOLD에 기록한 내 금을 불러오려면 로그인이 필요합니다.",
+        requireVerified: false,
+        intent: "exchange-vault-import",
+        next: "/gold-exchange?mode=vault",
+        cancelLabel: "나중에",
+        cancelAsText: true,
+      });
       return;
     }
 
-    if (mode === "visit") {
-      setCalculated(false);
-      setStep(STEP.RESERVE);
-      navigate("/gold-exchange?mode=visit");
-      return;
-    }
-
-    setCalculated(false);
-    setStep(STEP.CALC);
-    navigate("/gold-exchange?mode=manual");
+    const nextMode = ["vault", "manual", "visit"].includes(mode) ? mode : "manual";
+    navigate(`/gold-exchange?mode=${nextMode}`, { state: null });
   };
 
   const onGoReserve = () => setStep(STEP.RESERVE);
@@ -716,17 +666,7 @@ export default function GoldExchange() {
       privacyConsent: true,
       privacyConsentVersion: "reservation-v1.0",
       products: hasValidProducts
-        ? products.map((p) => {
-            const n = Number(p.quantity || 0);
-            const gramsInput = p.inputUnit === "g" ? n : roundTo3Custom(n * DON_TO_GRAMS);
-            return {
-              productId: p.productId || undefined,
-              goldType: p.goldType,
-              quantity: roundTo3Custom(gramsInput),
-              inputUnit: "g", // 서버는 g 기준
-              exchangeType: p.exchangeType,
-            };
-          })
+        ? buildReservationProducts(products)
         : [], // 비계산(현장확인) 시 빈 배열
       barsPlan: barsPlan || null,
     };
@@ -820,7 +760,7 @@ export default function GoldExchange() {
         />
       )}
 
-      {step === STEP.BARS && calculated && (
+      {!showStartMethod && step === STEP.BARS && calculated && (
         <BarStep
           products={products}
           totalGrams={totalGrams}
@@ -837,7 +777,7 @@ export default function GoldExchange() {
         />
       )}
 
-      {step === STEP.RESERVE && (
+      {!showStartMethod && step === STEP.RESERVE && (
         <ReserveStep
           user={user}
           isEmailVerified={isEmailVerified}
@@ -861,7 +801,7 @@ export default function GoldExchange() {
         />
       )}
 
-      {step === STEP.DONE && submitted && (
+      {!showStartMethod && step === STEP.DONE && submitted && (
         <DoneStep status={status} />
       )}
     </PageContainer>
