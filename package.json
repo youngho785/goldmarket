@@ -19,7 +19,10 @@
     "test:ui-safety": "node scripts/test-ui-safety.mjs",
     "app-check:status": "node scripts/app-check-status.mjs",
     "deploy": "firebase deploy --only hosting",
-    "android:prepare": "npm run build && npx cap sync android"
+    "android:prepare": "npm run build && npx cap sync android",
+    "test:e2e:setup": "npm --prefix tests/e2e run setup",
+    "test:e2e": "npm --prefix tests/e2e test",
+    "test:e2e:headed": "npm --prefix tests/e2e run test:headed"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",
