@@ -133,3 +133,81 @@ export function computeVaultMarketValueWon(item, rates = {}, market = {}) {
 export function computeVaultReplacementValueWon(pureGoldG, pureGoldSellPricePerDon) {
   return computeVaultValueWon(pureGoldG, pureGoldSellPricePerDon);
 }
+
+export function enrichGoldVaultItems(
+  items = [],
+  {
+    rates = {},
+    market = {},
+    previousMarket = {},
+    publicPriceEnabled = false,
+    pureGoldBuyPricePerDon = 0,
+    previousPureGoldBuyPricePerDon = 0,
+    pureGoldSellPricePerDon = 0,
+  } = {}
+) {
+  const sourceItems = Array.isArray(items) ? items : [];
+  return sourceItems.map((item) => {
+    const pureGoldG = computeVaultPureGoldG(item, rates, pureGoldBuyPricePerDon);
+    const previousPureGoldG = computeVaultPureGoldG(
+      item,
+      rates,
+      previousPureGoldBuyPricePerDon
+    );
+    const estimatedValueWon = publicPriceEnabled
+      ? computeVaultMarketValueWon(item, rates, market)
+      : 0;
+    const previousEstimatedValueWon = publicPriceEnabled
+      ? computeVaultMarketValueWon(item, rates, previousMarket)
+      : 0;
+    const replacementValueWon = publicPriceEnabled
+      ? computeVaultReplacementValueWon(pureGoldG, pureGoldSellPricePerDon)
+      : 0;
+
+    return {
+      ...item,
+      pureGoldG,
+      previousPureGoldG,
+      estimatedValueWon,
+      previousEstimatedValueWon,
+      replacementValueWon,
+    };
+  });
+}
+
+export function summarizeGoldVaultItems(items = []) {
+  const summary = (Array.isArray(items) ? items : []).reduce(
+    (acc, item) => ({
+      itemCount: acc.itemCount + 1,
+      totalWeightG: acc.totalWeightG + (Number(item?.weightG) || 0),
+      pureGoldG: acc.pureGoldG + (Number(item?.pureGoldG) || 0),
+      estimatedValueWon: acc.estimatedValueWon + (Number(item?.estimatedValueWon) || 0),
+      previousEstimatedValueWon:
+        acc.previousEstimatedValueWon + (Number(item?.previousEstimatedValueWon) || 0),
+      replacementValueWon:
+        acc.replacementValueWon + (Number(item?.replacementValueWon) || 0),
+    }),
+    {
+      itemCount: 0,
+      totalWeightG: 0,
+      pureGoldG: 0,
+      estimatedValueWon: 0,
+      previousEstimatedValueWon: 0,
+      replacementValueWon: 0,
+    }
+  );
+
+  const current = Number(summary.estimatedValueWon) || 0;
+  const previous = Number(summary.previousEstimatedValueWon) || 0;
+  const changeWon = current > 0 && previous > 0 ? current - previous : 0;
+  const changePercent = previous > 0 ? (changeWon / previous) * 100 : null;
+
+  return {
+    ...summary,
+    changeWon,
+    changePercent,
+    changeDirection:
+      changeWon > 0 ? "up" : changeWon < 0 ? "down" : previous > 0 ? "same" : "unknown",
+  };
+}
+

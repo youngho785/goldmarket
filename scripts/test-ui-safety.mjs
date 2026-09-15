@@ -20,6 +20,11 @@ const [
   goldExchangeFunctionsSource,
   myExchangesSource,
   appHomeSource,
+  myGoldVaultSource,
+  myGoldVaultStylesSource,
+  goldVaultDashboardSource,
+  goldVaultCatalogSource,
+  goldPriceHistoryServiceSource,
   eslintSource,
   indexesSource,
 ] = await Promise.all([
@@ -37,6 +42,11 @@ const [
   read("functions/src/goldExchange/functions.ts"),
   read("src/pages/MyExchanges.jsx"),
   read("src/pages/AppHome.jsx"),
+  read("src/pages/MyGoldVault.jsx"),
+  read("src/components/myGoldVault/MyGoldVault.styles.js"),
+  read("src/hooks/useGoldVaultDashboard.js"),
+  read("src/lib/goldVaultCatalog.js"),
+  read("src/services/goldPriceHistoryService.js"),
   read("eslint.config.js"),
   read("firestore.indexes.json"),
 ]);
@@ -264,6 +274,116 @@ test("GoldExchange 재계산과 골드바 예약계획은 순수 helper로 유�
   assert.doesNotMatch(goldExchangeFormSource, /useState|useEffect|onSnapshot|submitGoldExchangeGroup/);
 });
 
+
+
+test("MY GOLD page keeps behavior together while page-only styles stay separate", () => {
+  assert.match(myGoldVaultSource, /from "@\/components\/myGoldVault\/MyGoldVault\.styles"/);
+  assert.doesNotMatch(myGoldVaultSource, /styled-components|const viewEnter = keyframes/);
+  assert.ok(
+    myGoldVaultSource.split("\n").length < 1320,
+    "MyGoldVault.jsx should not pull page-only styles or duplicated dashboard calculations back into the page."
+  );
+  assert.match(myGoldVaultSource, /createGoldVaultItem/);
+  assert.match(myGoldVaultSource, /updateGoldVaultItem/);
+  assert.match(myGoldVaultSource, /deleteGoldVaultItem/);
+  assert.match(myGoldVaultSource, /const compareHistory = async \(\) =>/);
+  assert.match(myGoldVaultStylesSource, /export const Page = styled\.div/);
+  assert.match(myGoldVaultStylesSource, /export const FormOverlay = styled\.div/);
+  assert.match(myGoldVaultStylesSource, /export const ItemCard = styled\.article/);
+  assert.doesNotMatch(
+    myGoldVaultStylesSource,
+    /firebase\/firestore|createGoldVaultItem|useState|useEffect/,
+    "The styles module must stay presentation-only."
+  );
+});
+
+test("MY GOLD account and guest dashboards share vault calculations and history reads", () => {
+  assert.match(goldVaultCatalogSource, /export function enrichGoldVaultItems/);
+  assert.match(goldVaultCatalogSource, /export function summarizeGoldVaultItems/);
+  assert.match(goldVaultDashboardSource, /enrichGoldVaultItems\(items, \{/);
+  assert.match(goldVaultDashboardSource, /summarizeGoldVaultItems\(enrichedItems\)/);
+  assert.match(myGoldVaultSource, /enrichGoldVaultItems\(guestRawItems, \{/);
+  assert.match(myGoldVaultSource, /summarizeGoldVaultItems\(guestItems\)/);
+  assert.match(myGoldVaultSource, /getGoldPriceAtOrBefore\(key\)/);
+  assert.match(goldPriceHistoryServiceSource, /export async function getGoldPriceAtOrBefore/);
+  assert.doesNotMatch(
+    myGoldVaultSource,
+    /from "firebase\/firestore"|doc\(db, "goldPriceHistory"/,
+    "MyGoldVault should use the shared history service instead of opening duplicate Firestore reads."
+  );
+});
+
+
+
+test("Settings keeps account actions in the page and isolates the notification feature", async () => {
+  const [pageSource, stylesSource, notificationsSource] = await Promise.all([
+    readFile(new URL("../src/pages/Settings.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/settings/Settings.styles.js", import.meta.url), "utf8"),
+    readFile(
+      new URL(
+        "../src/components/settings/SettingsNotificationsSection.jsx",
+        import.meta.url
+      ),
+      "utf8"
+    ),
+  ]);
+
+  assert.match(pageSource, /export default function Settings\(\)/);
+  assert.match(pageSource, /handleDeleteAccount/);
+  assert.match(pageSource, /handlePasswordSubmit/);
+  assert.match(pageSource, /<SettingsNotificationsSection user=\{user\} \/>/);
+  assert.doesNotMatch(pageSource, /registerForPush|getNotificationPreferences|collectPushDiagnostics/);
+  assert.doesNotMatch(pageSource, /styled-components/);
+  assert.ok(
+    pageSource.split("\n").length < 750,
+    "Settings.jsx should stay focused on account/security orchestration."
+  );
+
+  assert.match(
+    notificationsSource,
+    /export default function SettingsNotificationsSection\(\{ user \}\)/
+  );
+  assert.match(notificationsSource, /getNotificationPreferences/);
+  assert.match(notificationsSource, /registerForPush/);
+  assert.match(notificationsSource, /collectPushDiagnostics/);
+  assert.match(notificationsSource, /sendCurrentDevicePushTest/);
+  assert.doesNotMatch(
+    notificationsSource,
+    /handleDeleteAccount|reauthenticateWithCredential|callDeleteMyAccount/
+  );
+
+  assert.match(stylesSource, /export const Container = styled\.div/);
+  assert.match(stylesSource, /export const SettingLink = styled\(Link\)/);
+});
+
+
+test("GoldPrice keeps public price behavior together while page-only styles stay separate", async () => {
+  const [pageSource, stylesSource] = await Promise.all([
+    read("src/pages/GoldPrice.jsx"),
+    read("src/components/goldPrice/GoldPrice.styles.js"),
+  ]);
+
+  assert.match(pageSource, /from "@\/components\/goldPrice\/GoldPrice\.styles"/);
+  assert.doesNotMatch(pageSource, /styled-components|livingGoldGlint|livingGoldReveal/);
+  assert.ok(
+    pageSource.split("\n").length < 900,
+    "GoldPrice.jsx should keep page behavior without pulling page-only styles back in."
+  );
+  assert.match(pageSource, /doc\(db, "goldPrices", "current"\)/);
+  assert.match(pageSource, /doc\(db, "goldPricePublic", "config"\)/);
+  assert.match(pageSource, /registerForPush/);
+  assert.match(pageSource, /saveMarketingNotificationConsent/);
+
+  assert.match(stylesSource, /export const Page = styled\.div/);
+  assert.match(stylesSource, /export const PriceCard = styled\.article/);
+  assert.match(stylesSource, /export const AlertCard = styled\.div/);
+  assert.match(stylesSource, /export const CrossLink = styled\(Link\)/);
+  assert.doesNotMatch(
+    stylesSource,
+    /firebase\/firestore|onSnapshot|registerForPush|useState|useEffect/,
+    "GoldPrice styles must stay presentation-only."
+  );
+});
 
 test("개발 백업은 lint 대상에서 제외되고 필요한 교환 그룹 인덱스가 선언돼 있다", () => {
   assert.match(eslintSource, /'_patch_backups\/\*\*'/);

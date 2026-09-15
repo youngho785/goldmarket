@@ -9,49 +9,10 @@ import {
   subscribeGoldRates,
 } from "@/lib/goldRates";
 import {
-  computeVaultMarketValueWon,
-  computeVaultPureGoldG,
-  computeVaultReplacementValueWon,
+  enrichGoldVaultItems,
+  summarizeGoldVaultItems,
 } from "@/lib/goldVaultCatalog";
 import { subscribeGoldVaultItems } from "@/services/goldVaultService";
-
-function summarizeItems(items = []) {
-  return items.reduce(
-    (acc, item) => ({
-      itemCount: acc.itemCount + 1,
-      totalWeightG: acc.totalWeightG + (Number(item.weightG) || 0),
-      pureGoldG: acc.pureGoldG + (Number(item.pureGoldG) || 0),
-      estimatedValueWon: acc.estimatedValueWon + (Number(item.estimatedValueWon) || 0),
-      previousEstimatedValueWon:
-        acc.previousEstimatedValueWon + (Number(item.previousEstimatedValueWon) || 0),
-      replacementValueWon:
-        acc.replacementValueWon + (Number(item.replacementValueWon) || 0),
-    }),
-    {
-      itemCount: 0,
-      totalWeightG: 0,
-      pureGoldG: 0,
-      estimatedValueWon: 0,
-      previousEstimatedValueWon: 0,
-      replacementValueWon: 0,
-    }
-  );
-}
-
-function withChange(summary) {
-  const current = Number(summary.estimatedValueWon) || 0;
-  const previous = Number(summary.previousEstimatedValueWon) || 0;
-  const changeWon = current > 0 && previous > 0 ? current - previous : 0;
-  const changePercent = previous > 0 ? (changeWon / previous) * 100 : null;
-
-  return {
-    ...summary,
-    changeWon,
-    changePercent,
-    changeDirection:
-      changeWon > 0 ? "up" : changeWon < 0 ? "down" : previous > 0 ? "same" : "unknown",
-  };
-}
 
 export default function useGoldVaultDashboard(uid) {
   const [items, setItems] = useState([]);
@@ -128,31 +89,14 @@ export default function useGoldVaultDashboard(uid) {
 
   const enrichedItems = useMemo(
     () =>
-      items.map((item) => {
-        const pureGoldG = computeVaultPureGoldG(item, rates, pureGoldBuyPricePerDon);
-        const previousPureGoldG = computeVaultPureGoldG(
-          item,
-          rates,
-          previousPureGoldBuyPricePerDon
-        );
-        const estimatedValueWon = publicPriceEnabled
-          ? computeVaultMarketValueWon(item, rates, market)
-          : 0;
-        const previousEstimatedValueWon = publicPriceEnabled
-          ? computeVaultMarketValueWon(item, rates, previousMarket)
-          : 0;
-        const replacementValueWon = publicPriceEnabled
-          ? computeVaultReplacementValueWon(pureGoldG, pureGoldSellPricePerDon)
-          : 0;
-
-        return {
-          ...item,
-          pureGoldG,
-          previousPureGoldG,
-          estimatedValueWon,
-          previousEstimatedValueWon,
-          replacementValueWon,
-        };
+      enrichGoldVaultItems(items, {
+        rates,
+        market,
+        previousMarket,
+        publicPriceEnabled,
+        pureGoldBuyPricePerDon,
+        previousPureGoldBuyPricePerDon,
+        pureGoldSellPricePerDon,
       }),
     [
       items,
@@ -166,7 +110,7 @@ export default function useGoldVaultDashboard(uid) {
     ]
   );
 
-  const summary = useMemo(() => withChange(summarizeItems(enrichedItems)), [enrichedItems]);
+  const summary = useMemo(() => summarizeGoldVaultItems(enrichedItems), [enrichedItems]);
 
   return {
     items: enrichedItems,
