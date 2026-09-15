@@ -1,6 +1,15 @@
-import React from "react";
+import React, { useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
+
+const FOCUSABLE_SELECTOR = [
+  "a[href]",
+  "button:not([disabled])",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  '[tabindex]:not([tabindex="-1"])',
+].join(",");
 
 export default function ContinueAfterLoginModal({
   open,
@@ -17,7 +26,65 @@ export default function ContinueAfterLoginModal({
   cancelLabel = "",
   cancelAsText = false,
 }) {
-  if (!open) return null;
+  const dialogRef = useRef(null);
+  const actionRef = useRef(null);
+  const titleId = useId();
+  const messageId = useId();
+
+  useEffect(() => {
+    if (!open || typeof document === "undefined") return undefined;
+
+    const previousFocus = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const focusTimer = window.setTimeout(() => {
+      (actionRef.current || dialogRef.current)?.focus?.();
+    }, 0);
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose?.();
+        return;
+      }
+
+      if (event.key !== "Tab") return;
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+
+      const focusable = Array.from(dialog.querySelectorAll(FOCUSABLE_SELECTOR)).filter(
+        (element) => !element.hasAttribute("disabled") && element.getAttribute("aria-hidden") !== "true"
+      );
+      if (focusable.length === 0) {
+        event.preventDefault();
+        dialog.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.clearTimeout(focusTimer);
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      if (previousFocus && typeof previousFocus.focus === "function") {
+        previousFocus.focus();
+      }
+    };
+  }, [open, onClose]);
+
+  if (!open || typeof document === "undefined") return null;
 
   const resolvedTitle =
     title ||
@@ -50,9 +117,7 @@ export default function ContinueAfterLoginModal({
 
   const node = (
     <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="continue-after-login-title"
+      role="presentation"
       style={{
         position: "fixed",
         inset: 0,
@@ -62,13 +127,22 @@ export default function ContinueAfterLoginModal({
         zIndex: 1000,
         padding: 16,
       }}
-      onClick={onClose}
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose?.();
+      }}
     >
       <div
-        onClick={(event) => event.stopPropagation()}
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={messageId}
+        tabIndex={-1}
         style={{
           width: "min(92vw, 420px)",
-          background: "#fff",
+          background: "var(--gm-surface)",
+          color: "var(--gm-text)",
+          border: "1px solid var(--gm-border)",
           borderRadius: 14,
           padding: 20,
           boxShadow: "0 10px 30px rgba(0,0,0,.18)",
@@ -83,8 +157,8 @@ export default function ContinueAfterLoginModal({
               marginBottom: 9,
               padding: "4px 9px",
               borderRadius: 999,
-              background: "#eef3f8",
-              color: "#1F3A5F",
+              background: "var(--gm-surface-alt)",
+              color: "var(--gm-primary)",
               fontSize: ".78rem",
               fontWeight: 850,
             }}
@@ -94,16 +168,17 @@ export default function ContinueAfterLoginModal({
         ) : null}
 
         <h2
-          id="continue-after-login-title"
+          id={titleId}
           style={{ margin: 0, fontSize: "1.2rem", lineHeight: 1.35, wordBreak: "keep-all" }}
         >
           {resolvedTitle}
         </h2>
 
         <p
+          id={messageId}
           style={{
             margin: "10px 0 16px",
-            color: "#555",
+            color: "var(--gm-text-secondary)",
             lineHeight: 1.65,
             wordBreak: "keep-all",
           }}
@@ -113,6 +188,7 @@ export default function ContinueAfterLoginModal({
 
         <div style={{ display: "grid", gap: 8 }}>
           <Link
+            ref={actionRef}
             to={actionPath}
             state={{
               from: returnTo,
@@ -123,8 +199,8 @@ export default function ContinueAfterLoginModal({
               display: "inline-block",
               textAlign: "center",
               padding: "12px 14px",
-              background: "#1F3A5F",
-              color: "#fff",
+              background: "var(--gm-primary)",
+              color: "var(--gm-surface)",
               fontWeight: 800,
               borderRadius: 10,
               textDecoration: "none",
@@ -139,9 +215,9 @@ export default function ContinueAfterLoginModal({
             style={{
               padding: useTextCancel ? "8px 12px" : "10px 12px",
               borderRadius: 10,
-              background: useTextCancel ? "transparent" : "#f3f4f6",
-              border: useTextCancel ? "none" : "1px solid #e5e7eb",
-              color: useTextCancel ? "#6b7280" : "inherit",
+              background: useTextCancel ? "transparent" : "var(--gm-surface-alt)",
+              border: useTextCancel ? "none" : "1px solid var(--gm-border)",
+              color: useTextCancel ? "var(--gm-text-secondary)" : "var(--gm-text)",
               fontWeight: 700,
               cursor: "pointer",
             }}

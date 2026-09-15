@@ -65,6 +65,17 @@ const Body = styled.p`
 const ADD = "ADD";
 const REMOVE = "REMOVE";
 
+function normalizeInternalPath(rawValue) {
+  try {
+    const url = new URL(String(rawValue || "/"), window.location.origin);
+    if (url.origin !== window.location.origin) return "/";
+    if (url.protocol !== "https:" && url.protocol !== "http:") return "/";
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return "/";
+  }
+}
+
 function reducer(state, action) {
   switch (action.type) {
     case ADD: {
@@ -221,12 +232,8 @@ export default function FCMNotifications() {
     } catch {}
 
     if (toast.clickAction) {
-      // 외부 링크는 전체 이동, 내부 경로는 SPA 네비게이션
-      if (String(toast.clickAction).startsWith("http")) {
-        window.location.href = toast.clickAction;
-      } else {
-        navigate(toast.clickAction);
-      }
+      // 알림 payload가 잘못되더라도 한국골드마켓 내부 경로만 엽니다.
+      navigate(normalizeInternalPath(toast.clickAction));
     }
 
     dispatch({ type: REMOVE, id: toast.id });
@@ -245,12 +252,21 @@ export default function FCMNotifications() {
         <ToastBox
           key={n.id}
           onClick={() => handleClick(n)}
+          onKeyDown={(event) => {
+            if (!n.clickAction) return;
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              handleClick(n);
+            }
+          }}
           $clickable={!!n.clickAction}
-          tabIndex={0}
+          role={n.clickAction ? "button" : undefined}
+          tabIndex={n.clickAction ? 0 : undefined}
         >
           <Header>
             <h4>{n.title}</h4>
             <button
+              type="button"
               aria-label="알림 닫기"
               onClick={(e) => handleDismiss(e, n.id)}
             >

@@ -26,6 +26,7 @@ jobs:
         env:
           SITEMAP_OFFLINE: "1"
       - run: npm run test:app-check
+      - run: npm run test:ui-safety
       - run: npm --prefix functions run lint
       - run: npm --prefix functions run build
       - run: node functions/scripts/test-booking-policy.mjs

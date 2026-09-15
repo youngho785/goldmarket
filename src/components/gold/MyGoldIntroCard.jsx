@@ -361,9 +361,7 @@ export default function MyGoldIntroCard() {
   }, [
     dashboard.rates,
     dashboard.publicPriceEnabled,
-    dashboard.customerSellPricePerDon,
     dashboard.market,
-    dashboard.previousCustomerSellPricePerDon,
     dashboard.previousMarket,
   ]);
 
@@ -404,9 +402,7 @@ export default function MyGoldIntroCard() {
     bonusBalanceG,
     dashboard.publicPriceEnabled,
     dashboard.customerSellPricePerDon,
-    dashboard.market,
     dashboard.previousCustomerSellPricePerDon,
-    dashboard.previousMarket,
     dashboard.summary.estimatedValueWon,
     dashboard.summary.previousEstimatedValueWon,
   ]);

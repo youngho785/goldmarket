@@ -804,6 +804,7 @@ const QuantityField = React.memo(function QuantityField({
   placeholder,
   onCommit,
   name,
+  id,
   inlineHelper = true,
 }) {
   const inputRef = useRef(null);
@@ -834,6 +835,7 @@ const QuantityField = React.memo(function QuantityField({
     <>
       <Input
         ref={inputRef}
+        id={id}
         type="text"
         inputMode="decimal"
         name={name}
@@ -890,8 +892,9 @@ function CalcStep({
         <form onSubmit={onCalculate}>
           {products.map((p, idx) => (
             <FormGroup key={`row-${idx}`}>
-              <Label>제품 종류</Label>
+              <Label htmlFor={`product-${idx}`}>제품 종류</Label>
               <Select
+                id={`product-${idx}`}
                 value={p.productId || ""}
                 onChange={(e) => handleProductSelect(idx, e.target.value)}
               >
@@ -907,9 +910,10 @@ function CalcStep({
                 </HelpText>
               )}
 
-              <Label>수량</Label>
+              <Label htmlFor={`quantity-${idx}`}>수량</Label>
               <Inline>
                 <QuantityField
+                  id={`quantity-${idx}`}
                   name={`quantity-${idx}`}
                   value={p.quantity}
                   unit={p.inputUnit}
@@ -918,6 +922,8 @@ function CalcStep({
                   inlineHelper={false}
                 />
                 <Select
+                  id={`quantity-unit-${idx}`}
+                  aria-label={`${idx + 1}번째 제품 수량 단위`}
                   value={p.inputUnit}
                   onChange={(e) => handleProductChange(idx, "inputUnit", e.target.value)}
                 >
@@ -927,8 +933,9 @@ function CalcStep({
               </Inline>
               <HelpText>{qtyHelperText(p.quantity, p.inputUnit)}</HelpText>
 
-              <Label>교환 유형</Label>
+              <Label htmlFor={`exchange-type-${idx}`}>교환 유형</Label>
               <Select
+                id={`exchange-type-${idx}`}
                 value={p.exchangeType}
                 onChange={(e) => handleProductChange(idx, "exchangeType", e.target.value)}
               >
@@ -1160,7 +1167,7 @@ function BarStep({
       </DenomGrid>
 
       <FormGroup style={{ marginTop: 12 }}>
-        <Label>수량</Label>
+        <Label htmlFor="bar-quantity">수량</Label>
         <Inline>
           <SmallButton
             type="button"
@@ -1171,6 +1178,7 @@ function BarStep({
             −
           </SmallButton>
           <Input
+            id="bar-quantity"
             type="number"
             min={1}
             max={maxSelectableQty}
@@ -1371,8 +1379,9 @@ function ReserveStep({
 
       <SubTitle>방문 예약</SubTitle>
       <FormGroup>
-        <Label>방문 날짜</Label>
+        <Label htmlFor="exchange-visit-date">방문 날짜</Label>
         <DatePicker
+          id="exchange-visit-date"
           selected={visitDate}
           onChange={(d) => { setError(""); setVisitTime(""); setVisitDate(d); }}
           dateFormat="yyyy-MM-dd"
@@ -1384,8 +1393,13 @@ function ReserveStep({
       </FormGroup>
 
       <FormGroup>
-        <Label>방문 시간</Label>
-        <Select value={visitTime} onChange={handleTimeChange} disabled={!visitDate}>
+        <Label htmlFor="exchange-visit-time">방문 시간</Label>
+        <Select
+          id="exchange-visit-time"
+          value={visitTime}
+          onChange={handleTimeChange}
+          disabled={!visitDate}
+        >
           <option value="">시간 선택</option>
           {TIME_SLOTS.map((t) => {
             const reserved = taken.has(t);
@@ -1416,8 +1430,9 @@ function ReserveStep({
         }}
       >
         <FormGroup>
-          <Label>성명</Label>
+          <Label htmlFor="exchange-name">성명</Label>
           <Input
+            id="exchange-name"
             value={name}
             maxLength={MAX_NAME_LENGTH}
             onChange={(e) => setName(e.target.value.slice(0, MAX_NAME_LENGTH))}
@@ -1427,8 +1442,9 @@ function ReserveStep({
           />
         </FormGroup>
         <FormGroup>
-          <Label>전화번호</Label>
+          <Label htmlFor="exchange-phone">전화번호</Label>
           <Input
+            id="exchange-phone"
             type="tel"
             inputMode="tel"
             placeholder="예: 010-1234-5678"

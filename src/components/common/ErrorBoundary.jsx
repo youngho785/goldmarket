@@ -55,8 +55,8 @@ export default class ErrorBoundary extends React.Component {
             </pre>
           )}
           <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-            <button onClick={() => location.reload()}>새로고침</button>
-            <button onClick={this.reset}>다시 시도</button>
+            <button type="button" onClick={() => window.location.reload()}>새로고침</button>
+            <button type="button" onClick={this.reset}>다시 시도</button>
           </div>
         </div>
       );

@@ -15,7 +15,6 @@ import {
   DON_TO_GRAMS,
   DEFAULT_PURITY,
   DEFAULT_EXCHANGE,
-  DEFAULT_GOLD_PRODUCTS,
   DEFAULT_GOLD_RATES_VERSION,
   roundTo3,
   BOOKING_TIME_SLOTS,
@@ -123,6 +122,7 @@ export const requestGoldExchangeGroup = onCall<{
   const slotsRef = db().doc("appConfig/reservedSlots");
   const availabilityRef = db().doc(BOOKING_AVAILABILITY_REF);
   const exchanges = db().collection("goldExchanges");
+  const exchangeGroups = db().collection("goldExchangeGroups");
 
   // 첫 문서 ref를 미리 만들어서 groupId로 사용
   const firstRef = exchanges.doc();
@@ -168,10 +168,12 @@ export const requestGoldExchangeGroup = onCall<{
       : null;
 
   await db().runTransaction(async (tx) => {
-    const [sSnap, availabilitySnap, userBookingsSnapshot] = await Promise.all([
+    const [sSnap, availabilitySnap, userGroupsSnapshot] = await Promise.all([
       tx.get(slotsRef),
       tx.get(availabilityRef),
-      tx.get(exchanges.where("userId", "==", uid)),
+      // 예약 한 건에 제품 문서가 여러 개 생길 수 있으므로 제품 전체 이력 대신
+      // 예약 단위 요약(goldExchangeGroups)만 읽어 진행 중 예약 수를 계산합니다.
+      tx.get(exchangeGroups.where("ownerUid", "==", uid)),
     ]);
     const sData = sSnap.exists ? (sSnap.data() as Record<string, unknown>) : {};
     assertBookingOpen(
@@ -181,12 +183,24 @@ export const requestGoldExchangeGroup = onCall<{
     );
 
     const activeGroupIds = new Set<string>();
-    userBookingsSnapshot.docs.forEach((document) => {
+    userGroupsSnapshot.docs.forEach((document) => {
       const row = document.data() || {};
-      if (ACTIVE_EXCHANGE_STATUSES.has(String(row.status || "requested"))) {
-        activeGroupIds.add(String(row.groupId || document.id));
+      if (ACTIVE_EXCHANGE_STATUSES.has(String(row.repStatus || "requested"))) {
+        activeGroupIds.add(document.id);
       }
     });
+
+    // 아주 오래된 테스트/레거시 데이터처럼 그룹 요약 문서가 하나도 없는 계정만
+    // 기존 goldExchanges 조회로 보수적으로 확인합니다. 신규 예약은 항상 그룹 요약을 함께 씁니다.
+    if (userGroupsSnapshot.empty) {
+      const legacyBookingsSnapshot = await tx.get(exchanges.where("userId", "==", uid));
+      legacyBookingsSnapshot.docs.forEach((document) => {
+        const row = document.data() || {};
+        if (ACTIVE_EXCHANGE_STATUSES.has(String(row.status || "requested"))) {
+          activeGroupIds.add(String(row.groupId || document.id));
+        }
+      });
+    }
     if (activeGroupIds.size >= MAX_ACTIVE_BOOKING_GROUPS_PER_USER) {
       throw new HttpsError(
         "resource-exhausted",

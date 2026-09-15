@@ -16,6 +16,7 @@ import {
 import { useAuthContext } from "@/context/AuthContext";
 import { db } from "@/firebase/firebase";
 import Notifications from "./Notifications";
+import usePendingGoldExchangeCount from "@/hooks/usePendingGoldExchangeCount";
 
 const Header = styled.header`
   position: sticky;
@@ -353,17 +354,63 @@ export default function Navbar() {
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [exchangeCount, setExchangeCount] = useState(0);
-  const [pendingCount, setPendingCount] = useState(0);
+  const pendingCount = usePendingGoldExchangeCount();
   const [lastSeenMs, setLastSeenMs] = useState(0);
   const wroteSeenRef = useRef(0);
+  const menuButtonRef = useRef(null);
+  const drawerRef = useRef(null);
 
-  useEffect(() => setDrawerOpen(false), [location.pathname]);
+  useEffect(() => setDrawerOpen(false), [location.pathname, location.search]);
 
   useEffect(() => {
     if (!drawerOpen) return undefined;
-    const previous = document.body.style.overflow;
+
+    const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = previous; };
+
+    const drawer = drawerRef.current;
+    const focusableSelector = [
+      'a[href]',
+      'button:not([disabled])',
+      '[tabindex]:not([tabindex="-1"])',
+    ].join(",");
+
+    const focusTimer = window.setTimeout(() => {
+      const first = drawer?.querySelector(focusableSelector);
+      first?.focus?.();
+    }, 0);
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setDrawerOpen(false);
+        return;
+      }
+      if (event.key !== "Tab" || !drawer) return;
+
+      const focusable = Array.from(drawer.querySelectorAll(focusableSelector)).filter(
+        (element) => !element.hasAttribute("disabled") && element.getAttribute("aria-hidden") !== "true"
+      );
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.clearTimeout(focusTimer);
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      menuButtonRef.current?.focus?.();
+    };
   }, [drawerOpen]);
 
   const handleLogout = async () => {
@@ -412,22 +459,6 @@ export default function Navbar() {
       () => setExchangeCount(0)
     );
   }, [lastSeenMs, user?.uid]);
-
-  useEffect(() => {
-    if (!isAdmin) {
-      setPendingCount(0);
-      return undefined;
-    }
-    const pendingQuery = query(
-      collection(db, "goldExchangeGroups"),
-      where("repStatus", "==", "requested")
-    );
-    return onSnapshot(
-      pendingQuery,
-      (snapshot) => setPendingCount(snapshot.size),
-      () => setPendingCount(0)
-    );
-  }, [isAdmin]);
 
   useEffect(() => {
     if (!user?.uid || location.pathname !== "/my-exchanges") return;
@@ -511,6 +542,7 @@ export default function Navbar() {
           )}
 
           <MobileButton
+            ref={menuButtonRef}
             type="button"
             aria-label="전체 메뉴 열기"
             aria-expanded={drawerOpen}
@@ -528,7 +560,15 @@ export default function Navbar() {
         aria-label="메뉴 닫기"
         onClick={() => setDrawerOpen(false)}
       />
-      <Drawer id="mobile-menu" $open={drawerOpen} aria-hidden={!drawerOpen}>
+      <Drawer
+        ref={drawerRef}
+        id="mobile-menu"
+        $open={drawerOpen}
+        role="dialog"
+        aria-modal="true"
+        aria-label="전체 메뉴"
+        aria-hidden={!drawerOpen}
+      >
         <DrawerHead>
           <Brand to="/" end>
             <BrandSeal aria-hidden>금</BrandSeal>
