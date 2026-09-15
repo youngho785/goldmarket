@@ -238,9 +238,8 @@ test("GoldExchange 화면과 제품 보조 로직은 모듈화하고 예약 제�
   assert.match(goldExchangeSource, /from "@\/components\/goldExchange\/GoldExchangeSteps"/);
   assert.match(goldExchangeSource, /from "@\/components\/goldExchange\/GoldExchange\.styles"/);
   assert.match(goldExchangeSource, /from "@\/components\/goldExchange\/goldExchangeUi"/);
-  assert.ok(goldExchangeSource.split("\n").length < 850, "GoldExchange.jsx가 제품 보조 로직을 다시 끌어안으면 안 됩니다.");
+  assert.ok(goldExchangeSource.split("\n").length < 720, "GoldExchange.jsx가 순수 계산 로직을 다시 끌어안으면 안 됩니다.");
   assert.match(goldExchangeSource, /submitGoldExchangeGroup/);
-  assert.match(goldExchangeSource, /computeGoldPolicyResult/);
   assert.match(goldExchangeSource, /goldExchangeForm/);
   assert.doesNotMatch(goldExchangeStepsSource, /submitGoldExchangeGroup|computeGoldPolicyResult/);
   assert.match(goldExchangeStepsSource, /export function CalcStep/);
@@ -249,6 +248,20 @@ test("GoldExchange 화면과 제품 보조 로직은 모듈화하고 예약 제�
   assert.match(goldExchangeStepsSource, /export function DoneStep/);
   assert.match(goldExchangeStylesSource, /export const Card = styled\.div/);
   assert.match(goldExchangeUiSource, /export const BAR_GROUPS =/);
+});
+
+test("GoldExchange 재계산과 골드바 예약계획은 순수 helper로 유지한다", () => {
+  assert.match(goldExchangeFormSource, /export function recalculateExchangeProducts/);
+  assert.match(goldExchangeFormSource, /export function getExchangeTotals/);
+  assert.match(goldExchangeFormSource, /computeGoldPolicyResult/);
+  assert.match(goldExchangeUiSource, /export const buildGoldBarPlan/);
+  assert.match(goldExchangeUiSource, /const maxSelectableQty = Math\.max/);
+  assert.match(goldExchangeUiSource, /autoBreakdown: extraCombo\.items\.map/);
+  assert.match(goldExchangeSource, /recalculateExchangeProducts\(prev, \{ rates, pureGoldBuyPricePerDon \}\)/);
+  assert.match(goldExchangeSource, /const \{ totalGrams, totalDon \} = getExchangeTotals\(products\)/);
+  assert.match(goldExchangeSource, /buildGoldBarPlan\(\{/);
+  assert.doesNotMatch(goldExchangeSource, /computeGoldPolicyResult|breakdownByDenoms|const totalGramsRaw/);
+  assert.doesNotMatch(goldExchangeFormSource, /useState|useEffect|onSnapshot|submitGoldExchangeGroup/);
 });
 
 

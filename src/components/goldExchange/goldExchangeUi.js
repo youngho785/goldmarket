@@ -98,3 +98,59 @@ export const bestIdxForGroup = (group, totalGrams) => {
 };
 
 /* ── 독립 입력 컴포넌트 ───────────────────────── */
+
+export const buildGoldBarPlan = ({ calculated, totalGrams, barGroup, barChoice }) => {
+  if (!calculated) return undefined;
+  if (totalGrams < MIN_BAR_GRAMS) return null;
+
+  const current = BAR_GROUPS[barGroup];
+  const idx = Math.min(barChoice.idx, current.length - 1);
+  const selectedBar = current[idx];
+  const topUpIdx = current.findIndex((denom) => denom.grams > totalGrams + 1e-9);
+  const maxVisibleIdx = topUpIdx >= 0 ? topUpIdx : current.length - 1;
+  if (idx > maxVisibleIdx) {
+    throw new Error("추가 선택은 현재 예상 중량의 바로 위 골드바 규격까지만 가능합니다.");
+  }
+
+  const maxSelectableQty = Math.max(
+    1,
+    Math.ceil((totalGrams - 1e-9) / selectedBar.grams)
+  );
+  const qty = Math.max(1, Math.trunc(Number(barChoice.qty) || 1));
+  if (qty > maxSelectableQty) {
+    throw new Error(`선택 가능한 최대 수량은 ${maxSelectableQty}개입니다.`);
+  }
+
+  const usedByChoice = roundTo3Custom(selectedBar.grams * qty);
+  const topUpGrams = roundTo3Custom(Math.max(0, usedByChoice - totalGrams));
+  const leftoverGrams = roundTo3Custom(Math.max(0, totalGrams - usedByChoice));
+  const extraCombo = breakdownByDenoms(leftoverGrams);
+  const fmtG = (value) => Number(value || 0).toFixed(2);
+  const fmtD = (value) => Number(value).toFixed(2);
+
+  return {
+    category: barGroup,
+    totalGrams: Number(fmtG(totalGrams)),
+    totalDon: Number(fmtD(totalGrams / DON_TO_GRAMS)),
+    selected: {
+      label: selectedBar.label,
+      grams: selectedBar.grams,
+      don: selectedBar.don,
+      qty,
+      usedGrams: Number(fmtG(usedByChoice)),
+      usedDon: Number(fmtD(usedByChoice / DON_TO_GRAMS)),
+    },
+    requiresTopUp: topUpGrams > 0,
+    topUpGrams: Number(fmtG(topUpGrams)),
+    topUpDon: Number(fmtD(topUpGrams / DON_TO_GRAMS)),
+    leftoverGrams: Number(fmtG(leftoverGrams)),
+    leftoverDon: Number(fmtD(leftoverGrams / DON_TO_GRAMS)),
+    autoBreakdown: extraCombo.items.map(({ denom, qty: itemQty }) => ({
+      label: denom.label,
+      grams: denom.grams,
+      don: denom.don,
+      qty: itemQty,
+    })),
+  };
+};
+

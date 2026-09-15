@@ -218,6 +218,48 @@ export function applyExchangeFinalWeights(products, options) {
   }));
 }
 
+export function recalculateExchangeProducts(products, options) {
+  const { rates, pureGoldBuyPricePerDon } = options || {};
+  return (Array.isArray(products) ? products : []).map((product) => {
+    const quantity = Number(product?.quantity);
+    if (!Number.isFinite(quantity) || quantity <= 0 || !product?.goldType) {
+      return { ...product, finalWeight: 0 };
+    }
+
+    const policy = findGoldProduct(rates, {
+      productId: product?.productId,
+      goldType: product?.goldType,
+    });
+    const finalWeight = computeExchangeFinalWeight(
+      {
+        ...product,
+        productId: policy?.id || product?.productId,
+      },
+      { rates, pureGoldBuyPricePerDon }
+    );
+
+    return {
+      ...product,
+      productId: policy?.id || product?.productId,
+      productName: policy?.displayName || product?.productName || product?.goldType,
+      calculationMethod: policy?.calculationMethod || product?.calculationMethod,
+      finalWeight,
+    };
+  });
+}
+
+export function getExchangeTotals(products) {
+  const totalGramsRaw = (Array.isArray(products) ? products : []).reduce(
+    (sum, product) => sum + (Number(product?.finalWeight) || 0),
+    0
+  );
+  const totalGrams = roundTo3Custom(totalGramsRaw);
+  return {
+    totalGrams,
+    totalDon: totalGrams / DON_TO_GRAMS,
+  };
+}
+
 export function buildReservationProducts(products) {
   return (Array.isArray(products) ? products : []).map((product) => {
     const quantity = Number(product?.quantity || 0);

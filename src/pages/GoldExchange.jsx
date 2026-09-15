@@ -14,9 +14,6 @@ import {
 
 // 🔗 공용 goldRates 모듈
 import {
-  DON_TO_GRAMS,
-  roundTo3Custom,
-  computeGoldPolicyResult,
   findGoldProduct,
   listGoldProducts,
 } from "@/lib/goldRates";
@@ -38,6 +35,8 @@ import {
   getInitialExchangeProductsFromSearch,
   importVaultItemsToExchangeProducts,
   normalizeExchangeProducts,
+  recalculateExchangeProducts,
+  getExchangeTotals,
   syncExchangeProductsWithRates,
   validateExchangeProductsForCalculation,
 } from "@/lib/goldExchangeForm";
@@ -50,7 +49,7 @@ import {
 } from "@/components/goldExchange/GoldExchange.styles";
 import {
   STEP, MAX_PRODUCTS_PER_BOOKING, MAX_PRODUCT_GRAMS, MAX_NAME_LENGTH,
-  MAX_PHONE_LENGTH, BAR_GROUPS, MIN_BAR_GRAMS, breakdownByDenoms, findBestChoice,
+  MAX_PHONE_LENGTH, BAR_GROUPS, MIN_BAR_GRAMS, findBestChoice, buildGoldBarPlan,
 } from "@/components/goldExchange/goldExchangeUi";
 import {
   StartMethodScreen, CalcStep, BarStep, ReserveStep, DoneStep,
@@ -296,29 +295,7 @@ export default function GoldExchange() {
     if (!isRebook || isDirectRebook) return;
 
     setProducts((prev) =>
-      prev.map((product) => {
-        const n = Number(product.quantity);
-        if (!Number.isFinite(n) || n <= 0 || !product.goldType) {
-          return { ...product, finalWeight: 0 };
-        }
-        const grams = product.inputUnit === "don" ? n * DON_TO_GRAMS : n;
-        const policy = findGoldProduct(rates, { productId: product.productId, goldType: product.goldType });
-        const calculation = computeGoldPolicyResult({
-          grams,
-          productId: policy?.id || product.productId,
-          goldType: product.goldType,
-          exchangeType: product.exchangeType,
-          rates,
-          pureGoldBuyPricePerDon,
-        });
-        return {
-          ...product,
-          productId: policy?.id || product.productId,
-          productName: policy?.displayName || product.productName || product.goldType,
-          calculationMethod: policy?.calculationMethod || product.calculationMethod,
-          finalWeight: calculation.finalWeightG,
-        };
-      })
+      recalculateExchangeProducts(prev, { rates, pureGoldBuyPricePerDon })
     );
     setCalculated(true);
     initializedChoiceRef.current = false;
@@ -485,9 +462,7 @@ export default function GoldExchange() {
   };
 
   /* 합계/포맷 */
-  const totalGramsRaw = products.reduce((sum, p) => sum + (p.finalWeight || 0), 0);
-  const totalGrams = roundTo3Custom(totalGramsRaw);
-  const totalDon = totalGrams / DON_TO_GRAMS;
+  const { totalGrams, totalDon } = getExchangeTotals(products);
   const fmtG = (n) => Number(n || 0).toFixed(2);
   const fmtD = (n) => Number(n).toFixed(2);
 
@@ -503,54 +478,12 @@ export default function GoldExchange() {
   }, [calculated, totalGrams]);
 
   /* barsPlan 생성 (서버 저장용) */
-  const makeBarsPlan = () => {
-    if (!calculated) return undefined;
-    if (totalGrams < MIN_BAR_GRAMS) return null;
-    const current = BAR_GROUPS[barGroup];
-    const idx = Math.min(barChoice.idx, current.length - 1);
-    const selectedBar = current[idx];
-    const topUpIdx = current.findIndex((d) => d.grams > totalGrams + 1e-9);
-    const maxVisibleIdx = topUpIdx >= 0 ? topUpIdx : current.length - 1;
-    if (idx > maxVisibleIdx) {
-      throw new Error("추가 선택은 현재 예상 중량의 바로 위 골드바 규격까지만 가능합니다.");
-    }
-    const maxSelectableQty = Math.max(1, Math.ceil((totalGrams - 1e-9) / selectedBar.grams));
-    const qty = Math.max(1, Math.trunc(Number(barChoice.qty) || 1));
-    if (qty > maxSelectableQty) {
-      throw new Error(`선택 가능한 최대 수량은 ${maxSelectableQty}개입니다.`);
-    }
-    const usedByChoice = roundTo3Custom(selectedBar.grams * qty);
-    const topUpGrams = roundTo3Custom(Math.max(0, usedByChoice - totalGrams));
-    const topUpDon = topUpGrams / DON_TO_GRAMS;
-    const leftoverGrams = roundTo3Custom(Math.max(0, totalGrams - usedByChoice));
-    const leftoverDon = leftoverGrams / DON_TO_GRAMS;
-    const extraCombo = breakdownByDenoms(leftoverGrams);
-
-    return {
-      category: barGroup,
-      totalGrams: Number(fmtG(totalGrams)),
-      totalDon: Number(fmtD(totalDon)),
-      selected: {
-        label: selectedBar.label,
-        grams: selectedBar.grams,
-        don: selectedBar.don,
-        qty,
-        usedGrams: Number(fmtG(usedByChoice)),
-        usedDon: Number(fmtD(usedByChoice / DON_TO_GRAMS)),
-      },
-      requiresTopUp: topUpGrams > 0,
-      topUpGrams: Number(fmtG(topUpGrams)),
-      topUpDon: Number(fmtD(topUpDon)),
-      leftoverGrams: Number(fmtG(leftoverGrams)),
-      leftoverDon: Number(fmtD(leftoverDon)),
-      autoBreakdown: extraCombo.items.map(({ denom, qty: q }) => ({
-        label: denom.label,
-        grams: denom.grams,
-        don: denom.don,
-        qty: q,
-      })),
-    };
-  };
+  const makeBarsPlan = () => buildGoldBarPlan({
+    calculated,
+    totalGrams,
+    barGroup,
+    barChoice,
+  });
 
   /* 스텝3: 예약 제출 (callable로 원자 처리) */
   const onSubmitReservationCore = async (e) => {
