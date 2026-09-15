@@ -1,7 +1,7 @@
 // src/pages/AppHome.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { collection, limit, onSnapshot, orderBy, query, where } from "firebase/firestore";
 import styled from "styled-components";
 import { livingGoldReveal, livingGoldSweep } from "@/styles/livingGoldMotion";
 import {
@@ -347,6 +347,13 @@ const BenefitStep = styled(Link)`
   }
 `;
 
+const toLocalDateKey = (date = new Date()) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 const formatReservationSchedule = (visitDate, visitTime) => {
   const dateParts = String(visitDate || "").split("-").map(Number);
   const timeParts = String(visitTime || "").split(":").map(Number);
@@ -376,37 +383,63 @@ export default function AppHome() {
       return undefined;
     }
 
+    const pickUpcoming = (snapshot) => {
+      const now = Date.now();
+      const candidates = snapshot.docs
+        .map((item) => ({ id: item.id, ...item.data() }))
+        .filter((item) => {
+          const status = String(item.repStatus || item.status || "requested");
+          const scheduleType = String(item.scheduleChangeType || "");
+          if (["completed", "canceled", "rejected"].includes(status)) return false;
+          if (scheduleType === "canceled") return false;
+          if (!item.visitDate || !item.visitTime) return false;
+
+          const scheduledMs = new Date(`${item.visitDate}T${item.visitTime}:00`).getTime();
+          return Number.isFinite(scheduledMs) && scheduledMs >= now;
+        })
+        .sort(
+          (a, b) =>
+            new Date(`${a.visitDate}T${a.visitTime}:00`).getTime() -
+            new Date(`${b.visitDate}T${b.visitTime}:00`).getTime()
+        );
+
+      setUpcomingReservation(candidates[0] || null);
+    };
+
     const groupsQuery = query(
       collection(db, "goldExchangeGroups"),
-      where("ownerUid", "==", user.uid)
+      where("ownerUid", "==", user.uid),
+      where("repStatus", "in", ["requested", "scheduled", "in_progress", "교환중"]),
+      where("visitDate", ">=", toLocalDateKey()),
+      orderBy("visitDate", "asc"),
+      limit(10)
     );
 
-    return onSnapshot(
+    let fallbackUnsubscribe = null;
+    let primaryUnsubscribe = null;
+    primaryUnsubscribe = onSnapshot(
       groupsQuery,
-      (snapshot) => {
-        const now = Date.now();
-        const candidates = snapshot.docs
-          .map((item) => ({ id: item.id, ...item.data() }))
-          .filter((item) => {
-            const status = String(item.repStatus || item.status || "requested");
-            const scheduleType = String(item.scheduleChangeType || "");
-            if (["completed", "canceled", "rejected"].includes(status)) return false;
-            if (scheduleType === "canceled") return false;
-            if (!item.visitDate || !item.visitTime) return false;
-
-            const scheduledMs = new Date(`${item.visitDate}T${item.visitTime}:00`).getTime();
-            return Number.isFinite(scheduledMs) && scheduledMs >= now;
-          })
-          .sort(
-            (a, b) =>
-              new Date(`${a.visitDate}T${a.visitTime}:00`).getTime() -
-              new Date(`${b.visitDate}T${b.visitTime}:00`).getTime()
-          );
-
-        setUpcomingReservation(candidates[0] || null);
-      },
-      () => setUpcomingReservation(null)
+      pickUpcoming,
+      (error) => {
+        console.warn("[AppHome] optimized reservation query failed:", error?.message || error);
+        primaryUnsubscribe?.();
+        primaryUnsubscribe = null;
+        const fallbackQuery = query(
+          collection(db, "goldExchangeGroups"),
+          where("ownerUid", "==", user.uid)
+        );
+        fallbackUnsubscribe = onSnapshot(
+          fallbackQuery,
+          pickUpcoming,
+          () => setUpcomingReservation(null)
+        );
+      }
     );
+
+    return () => {
+      primaryUnsubscribe?.();
+      fallbackUnsubscribe?.();
+    };
   }, [user?.uid]);
 
   useEffect(() => {

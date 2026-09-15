@@ -7,10 +7,13 @@ import { Menu, X } from "lucide-react";
 import {
   collection,
   doc,
+  limit,
   onSnapshot,
+  orderBy,
   query,
   serverTimestamp,
   setDoc,
+  Timestamp,
   where,
 } from "firebase/firestore";
 import { useAuthContext } from "@/context/AuthContext";
@@ -369,6 +372,7 @@ export default function Navbar() {
     document.body.style.overflow = "hidden";
 
     const drawer = drawerRef.current;
+    const menuButton = menuButtonRef.current;
     const focusableSelector = [
       'a[href]',
       'button:not([disabled])',
@@ -409,7 +413,7 @@ export default function Navbar() {
       window.clearTimeout(focusTimer);
       document.removeEventListener("keydown", handleKeyDown);
       document.body.style.overflow = previousOverflow;
-      menuButtonRef.current?.focus?.();
+      menuButton?.focus?.();
     };
   }, [drawerOpen]);
 
@@ -441,23 +445,51 @@ export default function Navbar() {
       setExchangeCount(0);
       return undefined;
     }
-    // 그룹 요약 문서를 직접 구독해 제품 문서 여러 개를 다시 그룹화하지 않습니다.
-    const exchangeQuery = query(
-      collection(db, "goldExchangeGroups"),
-      where("ownerUid", "==", user.uid)
-    );
-    return onSnapshot(
+    // 새소식 뱃지는 과거 전체 이력이 아니라 마지막 확인 이후 그룹만 구독합니다.
+    // 100건까지만 구독해 뱃지 표기(99+)에 필요한 범위 이상을 읽지 않습니다.
+    const constraints = [
+      where("ownerUid", "==", user.uid),
+      ...(lastSeenMs > 0
+        ? [where("updatedAt", ">", Timestamp.fromMillis(lastSeenMs))]
+        : []),
+      orderBy("updatedAt", "desc"),
+      limit(100),
+    ];
+    const exchangeQuery = query(collection(db, "goldExchangeGroups"), ...constraints);
+    let fallbackUnsubscribe = null;
+    let primaryUnsubscribe = null;
+
+    primaryUnsubscribe = onSnapshot(
       exchangeQuery,
-      (snapshot) => {
-        const updatedGroups = snapshot.docs.filter((item) => {
-          const data = item.data() || {};
-          const updated = tsMs(data.updatedAt) || tsMs(data.createdAt);
-          return lastSeenMs > 0 ? updated > lastSeenMs : true;
-        });
-        setExchangeCount(updatedGroups.length);
-      },
-      () => setExchangeCount(0)
+      (snapshot) => setExchangeCount(snapshot.size),
+      (error) => {
+        console.warn("[Navbar] optimized exchange badge query failed:", error?.message || error);
+        primaryUnsubscribe?.();
+        primaryUnsubscribe = null;
+
+        const fallbackQuery = query(
+          collection(db, "goldExchangeGroups"),
+          where("ownerUid", "==", user.uid)
+        );
+        fallbackUnsubscribe = onSnapshot(
+          fallbackQuery,
+          (snapshot) => {
+            const count = snapshot.docs.reduce((total, item) => {
+              const data = item.data() || {};
+              const updated = tsMs(data.updatedAt) || tsMs(data.createdAt);
+              return total + (lastSeenMs > 0 && updated <= lastSeenMs ? 0 : 1);
+            }, 0);
+            setExchangeCount(Math.min(count, 100));
+          },
+          () => setExchangeCount(0)
+        );
+      }
     );
+
+    return () => {
+      primaryUnsubscribe?.();
+      fallbackUnsubscribe?.();
+    };
   }, [lastSeenMs, user?.uid]);
 
   useEffect(() => {

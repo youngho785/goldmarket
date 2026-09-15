@@ -1,8 +1,8 @@
 // src/pages/MyExchanges.jsx
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import styled from 'styled-components';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, getDocs, limit, onSnapshot, orderBy, query, startAfter, where } from 'firebase/firestore';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { addDays, format, isValid } from 'date-fns';
@@ -32,6 +32,7 @@ const STATUS_LABEL = {
 // 대표 상태 선택 우선순위 (인덱스가 작을수록 우선)
 const STATUS_PRIORITY = ['rejected', 'canceled', 'completed', 'scheduled', 'in_progress', '교환중', 'requested'];
 const TIME_SLOTS = ['11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'];
+const GROUP_PAGE_SIZE = 20;
 
 // 필터용 그룹
 const FILTER_LABEL = {
@@ -58,6 +59,14 @@ const toJSDate = (v) => {
   if (!v) return null;
   if (typeof v?.toDate === 'function') return v.toDate();
   if (v instanceof Date) return v;
+  if (typeof v === 'number') {
+    const d = new Date(v);
+    return isValid(d) ? d : null;
+  }
+  if (typeof v === 'string') {
+    const d = new Date(v);
+    return isValid(d) ? d : null;
+  }
   return null;
 };
 
@@ -595,6 +604,35 @@ const EmptyStateAction = styled(Link)`
   }
 `;
 
+const LoadMoreRow = styled.div`
+  display: flex;
+  justify-content: center;
+  padding-top: 12px;
+`;
+
+const LoadMoreButton = styled.button`
+  min-width: 140px;
+  min-height: 42px;
+  padding: 9px 16px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 12px;
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.primary};
+  font-size: .78rem;
+  font-weight: 900;
+  cursor: pointer;
+
+  &:hover:not(:disabled) { background: ${({ theme }) => theme.colors.surfaceAlt}; }
+  &:disabled { opacity: .55; cursor: wait; }
+`;
+
+const DetailState = styled.div`
+  padding: 18px 14px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: .8rem;
+  line-height: 1.5;
+`;
+
 const PlanCard = styled.div`
   overflow: hidden;
   border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 20%, ${({ theme }) => theme.colors.border});
@@ -928,6 +966,132 @@ function ScheduleActions({ group }) {
   );
 }
 
+
+const buildExchangeGroup = ({ groupId, items = [], summary = {}, user, detailLoaded = items.length > 0 }) => {
+  const statuses = items.map((item) => item.status).filter(Boolean);
+  const itemRepStatus =
+    statuses
+      .slice()
+      .sort(
+        (a, b) => STATUS_PRIORITY.indexOf(a ?? 'requested') - STATUS_PRIORITY.indexOf(b ?? 'requested')
+      )[0] || 'requested';
+  const repStatus = String(summary.repStatus || itemRepStatus || 'requested');
+
+  const createdNs = items
+    .map((item) => toJSDate(item.createdAt)?.getTime?.())
+    .filter((value) => Number.isFinite(value));
+  const updatedNs = items
+    .map((item) => toJSDate(item.updatedAt)?.getTime?.())
+    .filter((value) => Number.isFinite(value));
+
+  const summaryCreatedAt = toJSDate(summary.createdAt);
+  const summaryUpdatedAt = toJSDate(summary.updatedAt);
+  const createdAt = summaryCreatedAt || (createdNs.length ? new Date(Math.min(...createdNs)) : null);
+  const updatedAt = summaryUpdatedAt || (updatedNs.length ? new Date(Math.max(...updatedNs)) : null);
+
+  const latestByUpdate =
+    items
+      .slice()
+      .sort(
+        (a, b) => (toJSDate(b.updatedAt)?.getTime?.() ?? 0) - (toJSDate(a.updatedAt)?.getTime?.() ?? 0)
+      )[0] || {};
+  const any = items[0] || {};
+  const visitDate = String(summary.visitDate || any.visitDate || '');
+  const visitTime = String(summary.visitTime || any.visitTime || '');
+  const scheduledAt = toJSDate(summary.scheduledAt || any.scheduledAt) ?? null;
+
+  const requester = {
+    name: latestByUpdate.name || latestByUpdate.requesterName || user?.displayName || '-',
+    phone: latestByUpdate.phone || '-',
+  };
+
+  const enrichedItems = items.map((item) => {
+    const finalWeight = Number.isFinite(Number(item.finalWeight)) ? Number(item.finalWeight) : 0;
+    const finalWeightDon = Number.isFinite(Number(item.finalWeightDon))
+      ? Number(item.finalWeightDon)
+      : finalWeight / DON_TO_GRAMS;
+    return {
+      ...item,
+      _displayOriginal: displayOriginalQty(item),
+      _finalWeight: finalWeight,
+      _finalWeightDon: finalWeightDon,
+    };
+  });
+
+  const itemTotalG = enrichedItems.reduce((sum, item) => sum + (Number(item._finalWeight) || 0), 0);
+  const summaryTotalG = Number(summary.totalG);
+  const totalG = enrichedItems.length > 0
+    ? itemTotalG
+    : Number.isFinite(summaryTotalG) ? summaryTotalG : 0;
+
+  const bonus = latestByUpdate.bonusGoldUsageStatus
+    ? {
+        status: String(latestByUpdate.bonusGoldUsageStatus),
+        amountG: Number(latestByUpdate.bonusGoldUsedG || 0),
+        finalRecognizedG: Number(latestByUpdate.finalRecognizedG || 0),
+        finalAppliedG: Number(latestByUpdate.finalAppliedG || 0),
+      }
+    : null;
+
+  const scheduleType = String(summary.scheduleChangeType || latestByUpdate.scheduleChangeType || '');
+  const scheduleActivity = scheduleType
+    ? {
+        type: scheduleType,
+        previousVisitDate: String(summary.previousVisitDate || latestByUpdate.previousVisitDate || ''),
+        previousVisitTime: String(summary.previousVisitTime || latestByUpdate.previousVisitTime || ''),
+        visitDate: String(summary.visitDate || latestByUpdate.visitDate || visitDate || ''),
+        visitTime: String(summary.visitTime || latestByUpdate.visitTime || visitTime || ''),
+        reason: String(
+          scheduleType === 'canceled'
+            ? summary.cancellationReason || latestByUpdate.cancellationReason || ''
+            : summary.scheduleChangeReason || latestByUpdate.scheduleChangeReason || ''
+        ),
+        requestedAt: toJSDate(
+          summary.scheduleChangeRequestedAt ||
+          summary.cancellationRequestedAt ||
+          latestByUpdate.scheduleChangeRequestedAt ||
+          latestByUpdate.cancellationRequestedAt
+        ),
+      }
+    : null;
+
+  const planDoc =
+    items
+      .filter((item) => item.barsPlan)
+      .sort(
+        (a, b) => (toJSDate(b.updatedAt)?.getTime?.() ?? 0) - (toJSDate(a.updatedAt)?.getTime?.() ?? 0)
+      )[0] || null;
+
+  return {
+    groupId,
+    items: enrichedItems,
+    detailsLoaded: detailLoaded || items.length > 0,
+    repStatus,
+    createdAt,
+    updatedAt,
+    visitDate,
+    visitTime,
+    scheduledAt,
+    requester,
+    totalG,
+    bonus,
+    scheduleActivity,
+    plan: planDoc?.barsPlan || summary.barsPlan || null,
+  };
+};
+
+const mergeSummaryRows = (liveRows, olderRows) => {
+  const byId = new Map();
+  [...liveRows, ...olderRows].forEach((row) => {
+    if (row?.id && !byId.has(row.id)) byId.set(row.id, row);
+  });
+  return [...byId.values()].sort((a, b) => {
+    const aTime = toJSDate(a.updatedAt)?.getTime?.() || toJSDate(a.createdAt)?.getTime?.() || 0;
+    const bTime = toJSDate(b.updatedAt)?.getTime?.() || toJSDate(b.createdAt)?.getTime?.() || 0;
+    return bTime - aTime;
+  });
+};
+
 /* 스켈레톤 */
 const Skeleton = styled.div`
   width: 100%;
@@ -945,226 +1109,286 @@ const Skeleton = styled.div`
 /* ── 메인 컴포넌트 ─────────────────────────────── */
 export default function MyExchanges() {
   const { user } = useAuthContext();
-  const [docsA, setDocsA] = useState([]); // userId == uid
-  const [docsB, setDocsB] = useState([]); // participants array-contains uid
-  const [groupSummaries, setGroupSummaries] = useState({});
+  const [liveSummaries, setLiveSummaries] = useState([]);
+  const [olderSummaries, setOlderSummaries] = useState([]);
+  const [summaryCursor, setSummaryCursor] = useState(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [legacyMode, setLegacyMode] = useState(false);
+  const [legacyDocsA, setLegacyDocsA] = useState([]);
+  const [legacyDocsB, setLegacyDocsB] = useState([]);
+  const [detailsByGroup, setDetailsByGroup] = useState({});
+  const detailUnsubscribersRef = useRef(new Map());
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState({});
-  const [statusFilter, setStatusFilter] = useState('all'); // all | active | scheduled | completed | canceled | rejected
+  const [statusFilter, setStatusFilter] = useState('all');
 
-  // 구독
   useEffect(() => {
+    detailUnsubscribersRef.current.forEach((unsubscribe) => unsubscribe?.());
+    detailUnsubscribersRef.current.clear();
+    setDetailsByGroup({});
+    setExpanded({});
+    setLiveSummaries([]);
+    setOlderSummaries([]);
+    setSummaryCursor(null);
+    setHasMore(false);
+    setLegacyMode(false);
+    setLegacyDocsA([]);
+    setLegacyDocsB([]);
+    setErr('');
+
     if (!user?.uid) {
       setLoading(false);
-      return;
+      return undefined;
     }
-    const qUser = query(collection(db, 'goldExchanges'), where('userId', '==', user.uid));
-    const qPart = query(collection(db, 'goldExchanges'), where('participants', 'array-contains', user.uid));
-    const qGroups = query(collection(db, 'goldExchangeGroups'), where('ownerUid', '==', user.uid));
 
-    const unsub1 = onSnapshot(
-      qUser,
-      (snap) => {
-        setDocsA(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-        setLoading(false);
-      },
-      (e) => {
-        console.error(e);
-        setErr('내 교환 내역을 불러오는 중 오류가 발생했습니다.');
-        setLoading(false);
+    setLoading(true);
+    let fallbackUnsubscribe = null;
+    let optimizedUnsubscribe = null;
+    let disposed = false;
+
+    const applySummarySnapshot = (snapshot, optimized) => {
+      if (disposed) return;
+      const rows = snapshot.docs.map((document) => ({ id: document.id, ...document.data() }));
+      setLiveSummaries(rows);
+      setOlderSummaries([]);
+      setLegacyMode(snapshot.empty);
+      setLoading(!snapshot.empty ? false : true);
+
+      if (optimized) {
+        setSummaryCursor(snapshot.docs.at(-1) || null);
+        setHasMore(snapshot.size === GROUP_PAGE_SIZE);
+      } else {
+        setSummaryCursor(null);
+        setHasMore(false);
       }
+    };
+
+    const startFallback = () => {
+      if (disposed || fallbackUnsubscribe) return;
+      console.warn('[MyExchanges] optimized group query unavailable; using compatibility query.');
+      const fallbackQuery = query(
+        collection(db, 'goldExchangeGroups'),
+        where('ownerUid', '==', user.uid)
+      );
+      fallbackUnsubscribe = onSnapshot(
+        fallbackQuery,
+        (snapshot) => applySummarySnapshot(snapshot, false),
+        (error) => {
+          console.error(error);
+          if (!disposed) {
+            setErr('내 교환 내역을 불러오는 중 오류가 발생했습니다.');
+            setLoading(false);
+          }
+        }
+      );
+    };
+
+    const optimizedQuery = query(
+      collection(db, 'goldExchangeGroups'),
+      where('ownerUid', '==', user.uid),
+      orderBy('updatedAt', 'desc'),
+      limit(GROUP_PAGE_SIZE)
     );
-    const unsub2 = onSnapshot(
-      qPart,
-      (snap) => setDocsB(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
-      () => {}
-    );
-    const unsub3 = onSnapshot(
-      qGroups,
-      (snap) => {
-        const next = {};
-        snap.docs.forEach((d) => {
-          next[d.id] = { id: d.id, ...d.data() };
-        });
-        setGroupSummaries(next);
-      },
-      (e) => {
-        // 레거시 그룹처럼 ownerUid가 없는 문서는 기존 goldExchanges 구독으로 계속 표시됩니다.
-        console.warn('[MyExchanges] group summary subscribe failed:', e);
+
+    optimizedUnsubscribe = onSnapshot(
+      optimizedQuery,
+      (snapshot) => applySummarySnapshot(snapshot, true),
+      (error) => {
+        console.warn('[MyExchanges] optimized group query failed:', error?.message || error);
+        optimizedUnsubscribe?.();
+        optimizedUnsubscribe = null;
+        startFallback();
       }
     );
 
     return () => {
-      unsub1?.();
-      unsub2?.();
-      unsub3?.();
+      disposed = true;
+      optimizedUnsubscribe?.();
+      fallbackUnsubscribe?.();
     };
   }, [user?.uid]);
 
-  // 병합 + 중복 제거 + 그룹핑
+  useEffect(() => {
+    if (!legacyMode || !user?.uid) return undefined;
+
+    let readyA = false;
+    let readyB = false;
+    const finish = () => {
+      if (readyA && readyB) setLoading(false);
+    };
+
+    const qUser = query(collection(db, 'goldExchanges'), where('userId', '==', user.uid));
+    const qPart = query(collection(db, 'goldExchanges'), where('participants', 'array-contains', user.uid));
+    const unsubA = onSnapshot(
+      qUser,
+      (snapshot) => {
+        setLegacyDocsA(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
+        readyA = true;
+        finish();
+      },
+      (error) => {
+        console.warn('[MyExchanges] legacy owner query failed:', error?.message || error);
+        readyA = true;
+        finish();
+      }
+    );
+    const unsubB = onSnapshot(
+      qPart,
+      (snapshot) => {
+        setLegacyDocsB(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
+        readyB = true;
+        finish();
+      },
+      () => {
+        readyB = true;
+        finish();
+      }
+    );
+
+    return () => {
+      unsubA?.();
+      unsubB?.();
+    };
+  }, [legacyMode, user?.uid]);
+
+  useEffect(() => {
+    const detailUnsubscribers = detailUnsubscribersRef.current;
+    return () => {
+      detailUnsubscribers.forEach((unsubscribe) => unsubscribe?.());
+      detailUnsubscribers.clear();
+    };
+  }, []);
+
+  const summaryRows = useMemo(
+    () => mergeSummaryRows(liveSummaries, olderSummaries),
+    [liveSummaries, olderSummaries]
+  );
+
   const groups = useMemo(() => {
-    // 1) id 기준 중복 제거
+    if (summaryRows.length > 0) {
+      return summaryRows.map((summary) => {
+        const detail = detailsByGroup[summary.id];
+        return buildExchangeGroup({
+          groupId: summary.id,
+          items: detail?.items || [],
+          summary,
+          user,
+          detailLoaded: detail?.loaded === true,
+        });
+      });
+    }
+
+    if (!legacyMode) return [];
+
     const byId = new Map();
-    for (const d of [...docsA, ...docsB]) {
-      if (!byId.has(d.id)) byId.set(d.id, d);
-    }
-    const merged = [...byId.values()];
-
-    // 2) groupId로 묶기
-    const map = new Map();
-    merged.forEach((doc) => {
-      const gid = doc.groupId || doc.id;
-      if (!map.has(gid)) map.set(gid, []);
-      map.get(gid).push(doc);
+    [...legacyDocsA, ...legacyDocsB].forEach((document) => {
+      if (!byId.has(document.id)) byId.set(document.id, document);
+    });
+    const byGroup = new Map();
+    [...byId.values()].forEach((document) => {
+      const groupId = document.groupId || document.id;
+      if (!byGroup.has(groupId)) byGroup.set(groupId, []);
+      byGroup.get(groupId).push(document);
     });
 
-    const out = [];
-    for (const [gid, items] of map) {
-      const summary = groupSummaries[gid] || {};
-      const statuses = items.map((i) => i.status).filter(Boolean);
-      const itemRepStatus =
-        statuses.sort(
-          (a, b) => STATUS_PRIORITY.indexOf(a ?? 'requested') - STATUS_PRIORITY.indexOf(b ?? 'requested')
-        )[0] || 'requested';
-      const repStatus = String(summary.repStatus || itemRepStatus || 'requested');
+    return [...byGroup.entries()]
+      .map(([groupId, items]) => buildExchangeGroup({ groupId, items, summary: {}, user }))
+      .sort((a, b) => (b.updatedAt?.getTime?.() || 0) - (a.updatedAt?.getTime?.() || 0));
+  }, [detailsByGroup, legacyDocsA, legacyDocsB, legacyMode, summaryRows, user]);
 
-      const createdNs = items
-        .map((i) => toJSDate(i.createdAt)?.getTime?.())
-        .filter((n) => Number.isFinite(n));
-      const updatedNs = items
-        .map((i) => toJSDate(i.updatedAt)?.getTime?.())
-        .filter((n) => Number.isFinite(n));
+  const subscribeGroupDetails = useCallback((groupId) => {
+    if (!user?.uid || detailUnsubscribersRef.current.has(groupId) || legacyMode) return;
 
-      const summaryCreatedAt = toJSDate(summary.createdAt);
-      const summaryUpdatedAt = toJSDate(summary.updatedAt);
-      const createdAt = summaryCreatedAt || (createdNs.length ? new Date(Math.min(...createdNs)) : null);
-      const updatedAt = summaryUpdatedAt || (updatedNs.length ? new Date(Math.max(...updatedNs)) : null);
+    setDetailsByGroup((previous) => ({
+      ...previous,
+      [groupId]: { ...(previous[groupId] || {}), loading: true, error: '' },
+    }));
 
-      const any = items[0] || {};
-      const visitDate = String(summary.visitDate || any.visitDate || '');
-      const visitTime = String(summary.visitTime || any.visitTime || '');
-      const scheduledAt = toJSDate(summary.scheduledAt || any.scheduledAt) ?? null;
+    const detailQuery = query(
+      collection(db, 'goldExchanges'),
+      where('groupId', '==', groupId)
+    );
+    const unsubscribe = onSnapshot(
+      detailQuery,
+      (snapshot) => {
+        setDetailsByGroup((previous) => ({
+          ...previous,
+          [groupId]: {
+            loading: false,
+            loaded: true,
+            error: '',
+            items: snapshot.docs.map((document) => ({ id: document.id, ...document.data() })),
+          },
+        }));
+      },
+      (error) => {
+        console.error('[MyExchanges] detail query failed:', error);
+        setDetailsByGroup((previous) => ({
+          ...previous,
+          [groupId]: {
+            ...(previous[groupId] || {}),
+            loading: false,
+            error: '상세 내역을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.',
+          },
+        }));
+      }
+    );
+    detailUnsubscribersRef.current.set(groupId, unsubscribe);
+  }, [legacyMode, user?.uid]);
 
-      const latestByUpdate =
-        items
-          .slice()
-          .sort(
-            (a, b) => (toJSDate(b.updatedAt)?.getTime?.() ?? 0) - (toJSDate(a.updatedAt)?.getTime?.() ?? 0)
-          )[0] || {};
-
-      const requester = {
-        name: latestByUpdate.name || latestByUpdate.requesterName || user?.displayName || '-',
-        phone: latestByUpdate.phone || '-',
-      };
-
-      const enrichedItems = items.map((it) => {
-        // 저장된 최종 교환중량(finalWeight, g)만 사용
-        const fwNum = Number.isFinite(Number(it.finalWeight)) ? Number(it.finalWeight) : 0;
-        const fwDon = Number.isFinite(Number(it.finalWeightDon)) ? Number(it.finalWeightDon) : fwNum / DON_TO_GRAMS;
-
-        return {
-          ...it,
-          _displayOriginal: displayOriginalQty(it),
-          _finalWeight: fwNum,
-          _finalWeightDon: fwDon,
-        };
-      });
-
-      const totalG = enrichedItems.reduce((s, i) => s + (Number(i._finalWeight) || 0), 0);
-      const bonus = latestByUpdate.bonusGoldUsageStatus
-        ? {
-            status: String(latestByUpdate.bonusGoldUsageStatus),
-            amountG: Number(latestByUpdate.bonusGoldUsedG || 0),
-            finalRecognizedG: Number(
-              latestByUpdate.finalRecognizedG || 0
-            ),
-            finalAppliedG: Number(
-              latestByUpdate.finalAppliedG || 0
-            ),
-          }
-        : null;
-      const scheduleType = String(summary.scheduleChangeType || latestByUpdate.scheduleChangeType || '');
-      const scheduleActivity = scheduleType ? {
-        type: scheduleType,
-        previousVisitDate: String(summary.previousVisitDate || latestByUpdate.previousVisitDate || ''),
-        previousVisitTime: String(summary.previousVisitTime || latestByUpdate.previousVisitTime || ''),
-        visitDate: String(summary.visitDate || latestByUpdate.visitDate || visitDate || ''),
-        visitTime: String(summary.visitTime || latestByUpdate.visitTime || visitTime || ''),
-        reason: String(
-          scheduleType === 'canceled'
-            ? (
-                summary.cancellationReason ||
-                latestByUpdate.cancellationReason ||
-                ''
-              )
-            : (
-                summary.scheduleChangeReason ||
-                latestByUpdate.scheduleChangeReason ||
-                ''
-              )
-        ),
-        requestedAt: toJSDate(
-          summary.scheduleChangeRequestedAt ||
-          summary.cancellationRequestedAt ||
-          latestByUpdate.scheduleChangeRequestedAt ||
-          latestByUpdate.cancellationRequestedAt
-        ),
-      } : null;
-
-      // 최신 barsPlan 보유 문서
-      const planDoc = items
-        .filter((i) => i.barsPlan)
-        .sort(
-          (a, b) => (toJSDate(b.updatedAt)?.getTime?.() ?? 0) - (toJSDate(a.updatedAt)?.getTime?.() ?? 0)
-        )[0] || null;
-
-      out.push({
-        groupId: gid,
-        items: enrichedItems,
-        repStatus,
-        createdAt,
-        updatedAt,
-        visitDate,
-        visitTime,
-        scheduledAt,
-        requester,
-        totalG,
-        bonus,
-        scheduleActivity,
-        plan: planDoc ? planDoc.barsPlan : null,
-      });
+  const toggle = useCallback((groupId) => {
+    const nextOpen = !expanded[groupId];
+    if (nextOpen) {
+      subscribeGroupDetails(groupId);
+    } else {
+      detailUnsubscribersRef.current.get(groupId)?.();
+      detailUnsubscribersRef.current.delete(groupId);
     }
+    setExpanded((previous) => ({ ...previous, [groupId]: nextOpen }));
+  }, [expanded, subscribeGroupDetails]);
 
-    out.sort((a, b) => {
-      const at = a.updatedAt && isValid(a.updatedAt) ? a.updatedAt.getTime() : 0;
-      const bt = b.updatedAt && isValid(b.updatedAt) ? b.updatedAt.getTime() : 0;
-      return bt - at;
-    });
+  const loadMore = useCallback(async () => {
+    if (!user?.uid || !summaryCursor || loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const nextQuery = query(
+        collection(db, 'goldExchangeGroups'),
+        where('ownerUid', '==', user.uid),
+        orderBy('updatedAt', 'desc'),
+        startAfter(summaryCursor),
+        limit(GROUP_PAGE_SIZE)
+      );
+      const snapshot = await getDocs(nextQuery);
+      const nextRows = snapshot.docs.map((document) => ({ id: document.id, ...document.data() }));
+      setOlderSummaries((previous) => mergeSummaryRows(previous, nextRows));
+      setSummaryCursor(snapshot.docs.at(-1) || null);
+      setHasMore(snapshot.size === GROUP_PAGE_SIZE);
+    } catch (error) {
+      console.error('[MyExchanges] load more failed:', error);
+      setErr('이전 교환내역을 더 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [hasMore, loadingMore, summaryCursor, user?.uid]);
 
-    return out;
-  }, [docsA, docsB, groupSummaries, user?.displayName]);
-
-  const toggle = (gid) => setExpanded((p) => ({ ...p, [gid]: !p[gid] }));
-
-  // 필터링
   const groupsFiltered = useMemo(() => {
     if (statusFilter === 'all') return groups;
     if (statusFilter === 'active') {
-      return groups.filter(g => ['requested','in_progress','교환중'].includes(g.repStatus));
+      return groups.filter((group) => ['requested', 'in_progress', '교환중'].includes(group.repStatus));
     }
-    return groups.filter(g => g.repStatus === statusFilter);
+    return groups.filter((group) => group.repStatus === statusFilter);
   }, [groups, statusFilter]);
 
-  // 필터별 카운트
   const counts = useMemo(() => {
     const base = { all: groups.length, active: 0, scheduled: 0, completed: 0, canceled: 0, rejected: 0 };
-    for (const g of groups) {
-      if (['requested','in_progress','교환중'].includes(g.repStatus)) base.active += 1;
-      if (g.repStatus === 'scheduled') base.scheduled += 1;
-      if (g.repStatus === 'completed') base.completed += 1;
-      if (g.repStatus === 'canceled') base.canceled += 1;
-      if (g.repStatus === 'rejected') base.rejected += 1;
+    for (const group of groups) {
+      if (['requested', 'in_progress', '교환중'].includes(group.repStatus)) base.active += 1;
+      if (group.repStatus === 'scheduled') base.scheduled += 1;
+      if (group.repStatus === 'completed') base.completed += 1;
+      if (group.repStatus === 'canceled') base.canceled += 1;
+      if (group.repStatus === 'rejected') base.rejected += 1;
     }
     return base;
   }, [groups]);
@@ -1213,9 +1437,9 @@ export default function MyExchanges() {
       </PageHeader>
 
       <LedgerSummary aria-label="금교환 진행 요약">
-        <LedgerMetric><small>진행 중</small><strong>{counts.active}</strong></LedgerMetric>
-        <LedgerMetric><small>예약 확정</small><strong>{counts.scheduled}</strong></LedgerMetric>
-        <LedgerMetric><small>교환 완료</small><strong>{counts.completed}</strong></LedgerMetric>
+        <LedgerMetric><small>진행 중</small><strong>{!legacyMode && hasMore ? `${counts.active}+` : counts.active}</strong></LedgerMetric>
+        <LedgerMetric><small>예약 확정</small><strong>{!legacyMode && hasMore ? `${counts.scheduled}+` : counts.scheduled}</strong></LedgerMetric>
+        <LedgerMetric><small>교환 완료</small><strong>{!legacyMode && hasMore ? `${counts.completed}+` : counts.completed}</strong></LedgerMetric>
       </LedgerSummary>
 
       <FilterBar role="tablist" aria-label="상태 필터">
@@ -1228,7 +1452,7 @@ export default function MyExchanges() {
             aria-selected={statusFilter === key}
           >
             {label}
-            <Count>{counts[key] ?? 0}</Count>
+            <Count>{!legacyMode && hasMore ? `${counts[key] ?? 0}+` : (counts[key] ?? 0)}</Count>
           </FilterChip>
         ))}
       </FilterBar>
@@ -1261,7 +1485,7 @@ export default function MyExchanges() {
                   <HeaderMeta>
                     <span>요청 {fmt(g.createdAt, 'yyyy.MM.dd')}</span>
                     <span>·</span>
-                    <span>제품 {g.items.length}건</span>
+                    <span>{g.detailsLoaded ? `제품 ${g.items.length}건` : '상세보기'}</span>
                     {g.bonus?.status === 'used' && (
                       <>
                         <span>·</span>
@@ -1303,7 +1527,15 @@ export default function MyExchanges() {
                 </HeaderRight>
               </CardHeader>
 
-              {expanded[g.groupId] && (
+              {expanded[g.groupId] && !legacyMode && detailsByGroup[g.groupId]?.loading && !g.detailsLoaded && (
+                <DetailState id={`panel-${g.groupId}`} role="status">상세 내역을 불러오는 중입니다…</DetailState>
+              )}
+
+              {expanded[g.groupId] && !legacyMode && detailsByGroup[g.groupId]?.error && (
+                <DetailState id={`panel-${g.groupId}`} role="alert">{detailsByGroup[g.groupId].error}</DetailState>
+              )}
+
+              {expanded[g.groupId] && (legacyMode || g.detailsLoaded) && (
                 <CardBody id={`panel-${g.groupId}`}>
                   {/* 예약/요청자 정보 */}
                   <MetaGrid>
@@ -1591,6 +1823,14 @@ export default function MyExchanges() {
           );
         })}
       </CardGrid>
+
+      {!legacyMode && hasMore && (
+        <LoadMoreRow>
+          <LoadMoreButton type="button" onClick={loadMore} disabled={loadingMore}>
+            {loadingMore ? '불러오는 중…' : '이전 교환내역 더보기'}
+          </LoadMoreButton>
+        </LoadMoreRow>
+      )}
     </Page>
   );
 }

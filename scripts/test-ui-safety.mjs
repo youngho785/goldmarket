@@ -12,7 +12,14 @@ const [
   loginModalSource,
   fcmSource,
   goldExchangeSource,
+  goldExchangeStepsSource,
+  goldExchangeStylesSource,
+  goldExchangeUiSource,
   goldExchangeFunctionsSource,
+  myExchangesSource,
+  appHomeSource,
+  eslintSource,
+  indexesSource,
 ] = await Promise.all([
   read("src/hooks/usePendingGoldExchangeCount.js"),
   read("src/components/common/Navbar.jsx"),
@@ -20,7 +27,14 @@ const [
   read("src/components/auth/ContinueAfterLoginModal.jsx"),
   read("src/components/common/FCMNotifications.jsx"),
   read("src/pages/GoldExchange.jsx"),
+  read("src/components/goldExchange/GoldExchangeSteps.jsx"),
+  read("src/components/goldExchange/GoldExchange.styles.js"),
+  read("src/components/goldExchange/goldExchangeUi.js"),
   read("functions/src/goldExchange/functions.ts"),
+  read("src/pages/MyExchanges.jsx"),
+  read("src/pages/AppHome.jsx"),
+  read("eslint.config.js"),
+  read("firestore.indexes.json"),
 ]);
 
 test("관리자 예약 대기 숫자는 하나의 공유 Firestore listener를 사용한다", () => {
@@ -67,15 +81,15 @@ test("금교환 핵심 입력은 label과 control id가 연결되어 있다", ()
   ];
   for (const [id, label] of pairs) {
     assert.match(
-      goldExchangeSource,
+      goldExchangeStepsSource,
       new RegExp(`<Label htmlFor=["']${id}["']>${label}<\\/Label>`)
     );
-    assert.match(goldExchangeSource, new RegExp(`id=["']${id}["']`));
+    assert.match(goldExchangeStepsSource, new RegExp(`id=["\']${id}["\']`));
   }
-  assert.match(goldExchangeSource, /htmlFor=\{`product-\$\{idx\}`\}/);
-  assert.match(goldExchangeSource, /id=\{`product-\$\{idx\}`\}/);
-  assert.match(goldExchangeSource, /htmlFor=\{`quantity-\$\{idx\}`\}/);
-  assert.match(goldExchangeSource, /id=\{`quantity-\$\{idx\}`\}/);
+  assert.match(goldExchangeStepsSource, /htmlFor=\{`product-\$\{idx\}`\}/);
+  assert.match(goldExchangeStepsSource, /id=\{`product-\$\{idx\}`\}/);
+  assert.match(goldExchangeStepsSource, /htmlFor=\{`quantity-\$\{idx\}`\}/);
+  assert.match(goldExchangeStepsSource, /id=\{`quantity-\$\{idx\}`\}/);
 });
 
 test("신규 예약의 활성 예약 확인은 예약 그룹 요약을 우선 사용한다", () => {
@@ -90,3 +104,64 @@ test("신규 예약의 활성 예약 확인은 예약 그룹 요약을 우선 �
     /legacyBookingsSnapshot = await tx\.get\(exchanges\.where\("userId",\s*"==",\s*uid\)\)/
   );
 });
+
+test("내 교환내역은 최근 그룹 요약을 먼저 읽고 펼친 그룹 상세만 구독한다", () => {
+  assert.match(myExchangesSource, /const GROUP_PAGE_SIZE = 20/);
+  assert.match(
+    myExchangesSource,
+    /where\('ownerUid',\s*'==',\s*user\.uid\)[\s\S]*orderBy\('updatedAt',\s*'desc'\)[\s\S]*limit\(GROUP_PAGE_SIZE\)/
+  );
+  assert.match(
+    myExchangesSource,
+    /where\('groupId',\s*'==',\s*groupId\)/
+  );
+  assert.match(myExchangesSource, /이전 교환내역 더보기/);
+  assert.doesNotMatch(
+    myExchangesSource,
+    /const qUser = query\(collection\(db, 'goldExchanges'\), where\('userId',[\s\S]*const qGroups/,
+    "일반 경로에서 제품 전체 이력과 그룹 요약을 동시에 상시 구독하면 안 됩니다."
+  );
+});
+
+test("Navbar 교환 새소식은 마지막 확인 이후 최대 100개 그룹만 구독한다", () => {
+  assert.match(navbarSource, /where\("updatedAt",\s*">",\s*Timestamp\.fromMillis\(lastSeenMs\)\)/);
+  assert.match(navbarSource, /orderBy\("updatedAt",\s*"desc"\)/);
+  assert.match(navbarSource, /limit\(100\)/);
+  assert.match(navbarSource, /const menuButton = menuButtonRef\.current/);
+});
+
+test("앱 홈 다가오는 예약은 진행 상태와 오늘 이후 일정만 제한 조회한다", () => {
+  assert.match(appHomeSource, /where\("repStatus",\s*"in",\s*\["requested", "scheduled", "in_progress", "교환중"\]\)/);
+  assert.match(appHomeSource, /where\("visitDate",\s*">=",\s*toLocalDateKey\(\)\)/);
+  assert.match(appHomeSource, /orderBy\("visitDate",\s*"asc"\)/);
+  assert.match(appHomeSource, /limit\(10\)/);
+});
+
+test("GoldExchange 화면 분리는 비즈니스 로직을 페이지에 남기고 Step/UI만 모듈화한다", () => {
+  assert.match(goldExchangeSource, /from "@\/components\/goldExchange\/GoldExchangeSteps"/);
+  assert.match(goldExchangeSource, /from "@\/components\/goldExchange\/GoldExchange\.styles"/);
+  assert.match(goldExchangeSource, /from "@\/components\/goldExchange\/goldExchangeUi"/);
+  assert.ok(goldExchangeSource.split("\n").length < 1200, "GoldExchange.jsx가 다시 비대해지면 안 됩니다.");
+  assert.match(goldExchangeSource, /submitGoldExchangeGroup/);
+  assert.match(goldExchangeSource, /computeGoldPolicyResult/);
+  assert.doesNotMatch(goldExchangeStepsSource, /submitGoldExchangeGroup|computeGoldPolicyResult/);
+  assert.match(goldExchangeStepsSource, /export function CalcStep/);
+  assert.match(goldExchangeStepsSource, /export function BarStep/);
+  assert.match(goldExchangeStepsSource, /export function ReserveStep/);
+  assert.match(goldExchangeStepsSource, /export function DoneStep/);
+  assert.match(goldExchangeStylesSource, /export const Card = styled\.div/);
+  assert.match(goldExchangeUiSource, /export const BAR_GROUPS =/);
+});
+
+
+test("개발 백업은 lint 대상에서 제외되고 필요한 교환 그룹 인덱스가 선언돼 있다", () => {
+  assert.match(eslintSource, /'_patch_backups\/\*\*'/);
+  const indexes = JSON.parse(indexesSource);
+  const fieldsFor = (index) => index.fields.map((field) => `${field.fieldPath}:${field.order || field.arrayConfig}`);
+  const groupIndexes = indexes.indexes
+    .filter((index) => index.collectionGroup === "goldExchangeGroups")
+    .map(fieldsFor);
+  assert.ok(groupIndexes.some((fields) => fields.join("|") === "ownerUid:ASCENDING|updatedAt:DESCENDING"));
+  assert.ok(groupIndexes.some((fields) => fields.join("|") === "ownerUid:ASCENDING|repStatus:ASCENDING|visitDate:ASCENDING"));
+});
+

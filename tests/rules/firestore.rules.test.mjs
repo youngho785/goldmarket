@@ -7,13 +7,17 @@ import {
   initializeTestEnvironment,
 } from "@firebase/rules-unit-testing";
 import {
+  collection,
   deleteDoc,
   deleteField,
   doc,
   getDoc,
+  getDocs,
+  query,
   serverTimestamp,
   setDoc,
   updateDoc,
+  where,
 } from "firebase/firestore";
 
 const projectId = "goldmarket-rules-test";
@@ -60,6 +64,22 @@ beforeEach(async () => {
         "gold-disabled": { active: false, myGoldEnabled: true, exchangeEnabled: true }
       }
     });
+    await setDoc(doc(db, "goldExchangeGroups", "group-owner"), {
+      ownerUid: "owner",
+      repStatus: "requested",
+      updatedAt: new Date(),
+    });
+    await setDoc(doc(db, "goldExchanges", "exchange-owner-1"), {
+      userId: "owner",
+      groupId: "group-owner",
+      status: "requested",
+    });
+    await setDoc(doc(db, "goldExchanges", "exchange-owner-2"), {
+      userId: "legacy-other-id",
+      participants: ["owner"],
+      groupId: "group-owner",
+      status: "requested",
+    });
   });
 });
 
@@ -80,6 +100,25 @@ test("회원은 본인 문서를 읽되 보너스 잔액은 바꿀 수 없다", 
       bonusGoldMilliGrams: 999999,
     })
   );
+});
+
+test("회원은 본인 예약 그룹의 상세 문서를 groupId로만 지연 조회할 수 있다", async () => {
+  const ownerDb = env.authenticatedContext("owner").firestore();
+  const otherDb = env.authenticatedContext("other").firestore();
+  const ownerGroupQuery = query(
+    collection(ownerDb, "goldExchanges"),
+    where("groupId", "==", "group-owner")
+  );
+  const otherGroupQuery = query(
+    collection(otherDb, "goldExchanges"),
+    where("groupId", "==", "group-owner")
+  );
+
+  const ownerSnapshot = await assertSucceeds(getDocs(ownerGroupQuery));
+  if (ownerSnapshot.size !== 2) {
+    throw new Error(`expected 2 exchange details, got ${ownerSnapshot.size}`);
+  }
+  await assertFails(getDocs(otherGroupQuery));
 });
 
 test("관리자 감사 로그는 관리자만 읽을 수 있다", async () => {

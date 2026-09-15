@@ -23,6 +23,14 @@ service cloud.firestore {
         );
     }
 
+    function ownsGoldExchangeGroup(groupId) {
+      return signedIn() &&
+        groupId is string &&
+        groupId.size() > 0 &&
+        exists(/databases/$(database)/documents/goldExchangeGroups/$(groupId)) &&
+        get(/databases/$(database)/documents/goldExchangeGroups/$(groupId)).data.ownerUid == request.auth.uid;
+    }
+
     function goldRatesDocExists() {
       return exists(/databases/$(database)/documents/appConfig/goldRates);
     }
@@ -352,7 +360,8 @@ service cloud.firestore {
       allow read: if isAdmin() ||
         (signedIn() && (
           resource.data.userId == request.auth.uid ||
-          (resource.data.participants is list && request.auth.uid in resource.data.participants)
+          (resource.data.participants is list && request.auth.uid in resource.data.participants) ||
+          ownsGoldExchangeGroup(resource.data.groupId)
         ));
       allow write: if false;
     }
