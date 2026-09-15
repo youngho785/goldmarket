@@ -532,9 +532,12 @@ test("계정삭제 호출 순서·필수 경로·로컬/CI 명령의 회귀를 �
     /notifications\/\$\{uid\}`\)\.delete\(\)\.catch/
   );
 
-  const storageStart = indexSource.indexOf("async function deleteStoragePrefix");
-  const storageEnd = indexSource.indexOf("function isActiveExchangeStatus", storageStart);
-  const storageBlock = indexSource.slice(storageStart, storageEnd);
+  // Account implementation moved out of index.ts. Keep the safety assertion
+  // attached to the real implementation module.
+  const storageStart = accountSource.indexOf("async function deleteStoragePrefix");
+  const storageEnd = accountSource.indexOf("function isActiveExchangeStatus", storageStart);
+  assert.ok(storageStart >= 0 && storageEnd > storageStart);
+  const storageBlock = accountSource.slice(storageStart, storageEnd);
   assert.match(storageBlock, /Promise\.allSettled/);
   assert.match(storageBlock, /failures\.length > 0/);
 

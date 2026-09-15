@@ -72,6 +72,21 @@ function readNotificationLink(data = {}) {
   );
 }
 
+function internalNotificationUrl(rawUrl) {
+  try {
+    const url = new URL(String(rawUrl || "/"), self.location.origin);
+    if (url.origin !== self.location.origin) {
+      return `${self.location.origin}/`;
+    }
+    if (url.protocol !== "https:" && url.protocol !== "http:") {
+      return `${self.location.origin}/`;
+    }
+    return url.href;
+  } catch {
+    return `${self.location.origin}/`;
+  }
+}
+
 // Firebase 문서 권장사항에 따라 커스텀 notificationclick은
 // Firebase Messaging 라이브러리를 import하기 전에 등록합니다.
 self.addEventListener("notificationclick", (event) => {
@@ -80,7 +95,7 @@ self.addEventListener("notificationclick", (event) => {
   const data = event.notification?.data || {};
   const chatId = data.chatId || data?.FCM_MSG?.data?.chatId || null;
   const rawUrl = readNotificationLink(data) || (chatId ? `/chat/${chatId}` : "/");
-  const absoluteUrl = new URL(rawUrl, self.location.origin).href;
+  const absoluteUrl = internalNotificationUrl(rawUrl);
 
   event.waitUntil(
     (async () => {
@@ -142,7 +157,7 @@ if (messaging?.onBackgroundMessage) {
       const body = String(data.body || notification.body || "");
       const chatId = data.chatId || null;
       const rawLink = data.link || data.url || (chatId ? `/chat/${chatId}` : "/");
-      const absoluteLink = new URL(rawLink, self.location.origin).href;
+      const absoluteLink = internalNotificationUrl(rawLink);
       const unreadCount = Number.isFinite(Number(data.unreadCount))
         ? Number(data.unreadCount)
         : undefined;

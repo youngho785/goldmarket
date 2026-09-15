@@ -21,11 +21,35 @@ function sourceSection(source, startMarker, endMarker) {
 }
 
 async function verifySourceGuards() {
-  const sourcePath = path.resolve(import.meta.dirname, "../src/index.ts");
-  const source = fs.readFileSync(sourcePath, "utf8");
+  // Functions were split into domain modules. Keep this safety test pointed at
+  // the implementation files rather than the small re-export-only index.ts.
+  const goldExchangeSource = fs.readFileSync(
+    path.resolve(import.meta.dirname, "../src/goldExchange/functions.ts"),
+    "utf8"
+  );
+  const adminSource = fs.readFileSync(
+    path.resolve(import.meta.dirname, "../src/admin/functions.ts"),
+    "utf8"
+  );
+  const notificationsSource = fs.readFileSync(
+    path.resolve(import.meta.dirname, "../src/notifications/functions.ts"),
+    "utf8"
+  );
+
+  const cancelSection = sourceSection(
+    goldExchangeSource,
+    "export const cancelGoldExchangeGroup",
+    "export const setExchangeGroupStatus"
+  );
+  assert.match(
+    cancelSection,
+    /requireVerifiedUser\(req\.auth\?\.uid\)/,
+    "customer cancellation must re-check the current verified Auth user"
+  );
+
 
   const statusSection = sourceSection(
-    source,
+    goldExchangeSource,
     "export const setExchangeGroupStatus",
     "export const aggregateGoldExchangeGroup"
   );
@@ -68,18 +92,32 @@ async function verifySourceGuards() {
   assert.match(accountSource, /balanceCarryover[\s\S]*state: "available"/);
   assert.match(accountSource, /bonusGoldCarriedOverAt/);
 
-  const roleSection = sourceSection(source, "export const setUserRole", "function adminBonusGoldGrams");
+  const roleSection = sourceSection(
+    adminSource,
+    "export const setUserRole",
+    "export const listAdminUsers"
+  );
   assert.match(roleSection, /revokeRefreshTokens\(uid\)/);
   assert.match(roleSection, /action: "user_role_changed"/);
 
   const disabledSection = sourceSection(
-    source,
+    adminSource,
     "export const setAdminUserDisabled",
     "function normalizeRateTable"
   );
   assert.match(disabledSection, /if \(disabled\)[\s\S]*revokeRefreshTokens\(uid\)/);
-  assert.doesNotMatch(source, /requireAdmin\(\(req\.auth\?\.token/);
-  assert.doesNotMatch(source, /requireSuperAdmin\(\(req\.auth\?\.token/);
+
+  // Admin authorization must always be based on a freshly verified auth user,
+  // never directly on stale token claims passed into requireAdmin helpers.
+  const implementationSources = [
+    goldExchangeSource,
+    adminSource,
+    rewardsSource,
+    accountSource,
+    notificationsSource,
+  ].join("\n");
+  assert.doesNotMatch(implementationSources, /requireAdmin\(\(req\.auth\?\.token/);
+  assert.doesNotMatch(implementationSources, /requireSuperAdmin\(\(req\.auth\?\.token/);
 }
 
 async function runCompletion(groupRef) {

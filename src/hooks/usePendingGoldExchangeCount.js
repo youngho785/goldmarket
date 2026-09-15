@@ -5,7 +5,7 @@ import { db } from "../firebase/firebase";
 import { useAuthContext } from "../context/AuthContext";
 
 /**
- * 관리자 전용: goldExchanges 중 status === "requested" 개수 실시간 구독
+ * 관리자 전용: goldExchangeGroups 중 repStatus === "requested" 그룹 개수 실시간 구독
  * - auth 로딩 완료 && isAdmin === true일 때만 구독 시작
  * - 비관리자/로그아웃/로딩 중에는 구독하지 않음(0 반환)
  */
@@ -30,18 +30,14 @@ export default function usePendingGoldExchangeCount() {
     }
 
     const q = query(
-      collection(db, "goldExchanges"),
-      where("status", "==", "requested")
+      collection(db, "goldExchangeGroups"),
+      where("repStatus", "==", "requested")
     );
 
     const unsub = onSnapshot(
       q,
       (snap) => {
-        const groups = new Set();
-        snap.forEach((item) => {
-          groups.add(item.data()?.groupId || item.id);
-        });
-        setCount(groups.size);
+        setCount(snap.size);
       },
       (err) => {
         console.warn("[usePendingGoldExchangeCount] snapshot error:", err?.code || err);

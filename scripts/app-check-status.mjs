@@ -100,17 +100,52 @@ const functionEnvStatus = functionEnvFiles.map((name) => {
   };
 });
 
-const functionsIndex = read("functions/src/index.ts");
-const callableCount = [
-  ...functionsIndex.matchAll(
-    /export const\s+([A-Za-z0-9_]+)\s*=\s*onCall\b/g
-  ),
-].length;
-const enforcementHookCount = (
-  functionsIndex.match(
-    /enforceAppCheck:\s*ENFORCE_APP_CHECK/g
-  ) || []
-).length;
+function walkFiles(directory, predicate) {
+  if (!fs.existsSync(directory)) return [];
+
+  const result = [];
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    const absolute = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      result.push(...walkFiles(absolute, predicate));
+    } else if (predicate(absolute)) {
+      result.push(absolute);
+    }
+  }
+  return result;
+}
+
+function inspectCallableAppCheck() {
+  const sourceRoot = path.join(root, "functions", "src");
+  const sourceFiles = walkFiles(sourceRoot, (file) => file.endsWith(".ts"));
+  const callables = [];
+
+  for (const absolute of sourceFiles) {
+    const source = fs.readFileSync(absolute, "utf8");
+    const matches = [...source.matchAll(/export const\s+([A-Za-z0-9_]+)\s*=\s*onCall\b/g)];
+
+    for (let index = 0; index < matches.length; index += 1) {
+      const match = matches[index];
+      const start = match.index ?? 0;
+      const nextExport = source.indexOf("export const ", start + match[0].length);
+      const end = nextExport >= 0 ? nextExport : source.length;
+      const section = source.slice(start, end);
+
+      callables.push({
+        name: match[1],
+        file: path.relative(root, absolute).replaceAll("\\", "/"),
+        enforced: /enforceAppCheck:\s*ENFORCE_APP_CHECK/.test(section),
+      });
+    }
+  }
+
+  return callables;
+}
+
+const callableAppCheck = inspectCallableAppCheck();
+const callableCount = callableAppCheck.length;
+const enforcementHookCount = callableAppCheck.filter((item) => item.enforced).length;
+const missingEnforcement = callableAppCheck.filter((item) => !item.enforced);
 
 const androidBuild = exists("android/app/build.gradle")
   ? read("android/app/build.gradle")
@@ -146,6 +181,11 @@ console.log(
 console.log(
   `Callable enforcement hooks: ${enforcementHookCount}/${callableCount}`
 );
+if (missingEnforcement.length) {
+  for (const item of missingEnforcement) {
+    console.log(`  MISSING: ${item.name} (${item.file})`);
+  }
+}
 console.log(
   `Android native App Check provider detected in repository: ${yn(
     nativeAppCheckDetected

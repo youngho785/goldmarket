@@ -20,7 +20,7 @@ jobs:
           java-version: "21"
       - run: npm ci
       - run: npm --prefix functions ci
-      - run: npm --prefix tests/rules install
+      - run: npm --prefix tests/rules ci
       - run: npm run lint
       - run: npm run build
         env:

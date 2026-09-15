@@ -4,7 +4,6 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { livingGoldPulse } from "@/styles/livingGoldMotion";
 import { Menu, X } from "lucide-react";
-import { getAuth, signOut } from "firebase/auth";
 import {
   collection,
   doc,
@@ -349,10 +348,9 @@ function tsMs(timestamp) {
 }
 
 export default function Navbar() {
-  const { user, isAdmin = false, isEmailVerified } = useAuthContext() || {};
+  const { user, isAdmin = false, isEmailVerified, logout } = useAuthContext() || {};
   const navigate = useNavigate();
   const location = useLocation();
-  const auth = getAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [exchangeCount, setExchangeCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
@@ -370,7 +368,7 @@ export default function Navbar() {
 
   const handleLogout = async () => {
     try {
-      await signOut(auth);
+      await logout?.();
       navigate("/login");
     } catch (error) {
       console.error("로그아웃 실패", error);
@@ -396,25 +394,20 @@ export default function Navbar() {
       setExchangeCount(0);
       return undefined;
     }
+    // 그룹 요약 문서를 직접 구독해 제품 문서 여러 개를 다시 그룹화하지 않습니다.
     const exchangeQuery = query(
-      collection(db, "goldExchanges"),
-      where("userId", "==", user.uid)
+      collection(db, "goldExchangeGroups"),
+      where("ownerUid", "==", user.uid)
     );
     return onSnapshot(
       exchangeQuery,
       (snapshot) => {
-        const byGroup = new Map();
-        snapshot.forEach((item) => {
+        const updatedGroups = snapshot.docs.filter((item) => {
           const data = item.data() || {};
-          const groupId = data.groupId || item.id;
           const updated = tsMs(data.updatedAt) || tsMs(data.createdAt);
-          byGroup.set(groupId, Math.max(updated, byGroup.get(groupId) || 0));
+          return lastSeenMs > 0 ? updated > lastSeenMs : true;
         });
-        setExchangeCount(
-          Array.from(byGroup.values()).filter((updated) =>
-            lastSeenMs > 0 ? updated > lastSeenMs : true
-          ).length
-        );
+        setExchangeCount(updatedGroups.length);
       },
       () => setExchangeCount(0)
     );
@@ -426,16 +419,12 @@ export default function Navbar() {
       return undefined;
     }
     const pendingQuery = query(
-      collection(db, "goldExchanges"),
-      where("status", "==", "requested")
+      collection(db, "goldExchangeGroups"),
+      where("repStatus", "==", "requested")
     );
     return onSnapshot(
       pendingQuery,
-      (snapshot) => {
-        const groups = new Set();
-        snapshot.forEach((item) => groups.add(item.data()?.groupId || item.id));
-        setPendingCount(groups.size);
-      },
+      (snapshot) => setPendingCount(snapshot.size),
       () => setPendingCount(0)
     );
   }, [isAdmin]);

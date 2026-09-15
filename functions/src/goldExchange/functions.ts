@@ -517,8 +517,8 @@ export const rescheduleGoldExchangeGroup = onCall<{
 export const cancelGoldExchangeGroup = onCall<{ groupId: string; reason: string }>(
   { region: "asia-northeast3", enforceAppCheck: ENFORCE_APP_CHECK },
   async (req) => {
-    const uid = req.auth?.uid;
-    if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+    // 예약 생성/일정변경과 동일하게 현재 Auth 계정 상태와 이메일 인증을 다시 확인합니다.
+    const uid = await requireVerifiedUser(req.auth?.uid);
 
     const groupId = String(req.data?.groupId || "").trim();
     const reason = normalizeCustomerReason(req.data?.reason);
