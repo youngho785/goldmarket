@@ -35,6 +35,7 @@ import { auth } from "@/firebase/firebase";
 import { isAndroid } from "@/platform/runtime";
 import LandingPage from "@/pages/LandingPage";
 import AppHome from "@/pages/AppHome";
+import { captureOperationalError } from "@/monitoring/operationalMonitoring";
 
 function isDynamicImportLoadError(error) {
   const message = String(
@@ -49,6 +50,16 @@ function isDynamicImportLoadError(error) {
 function RouteError() {
   const error = useRouteError();
   const dynamicImportFailed = isDynamicImportLoadError(error);
+
+  useEffect(() => {
+    void captureOperationalError(error || "React Router route error", {
+      source: "react-router",
+      area: dynamicImportFailed ? "preload" : "routing",
+      action: dynamicImportFailed ? "lazy-route-load" : "route-render",
+      level: "error",
+      recovered: false,
+    });
+  }, [dynamicImportFailed, error]);
 
   return (
     <div style={{ maxWidth: 560, margin: "48px auto", padding: 24 }}>

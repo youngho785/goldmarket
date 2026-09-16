@@ -1,5 +1,6 @@
 // src/components/common/ErrorBoundary.jsx
 import React from "react";
+import { captureOperationalError } from "@/monitoring/operationalMonitoring";
 
 /**
  * ErrorBoundary
@@ -8,8 +9,7 @@ import React from "react";
  *   - fallback?: ReactNode            // 커스텀 대체 UI
  *   - onError?: (error, info) => void // 에러 후킹(옵션)
  *
- * Sentry를 사용 중이면 글로벌로 노출된 Sentry를 자동 사용합니다.
- * (ex. main.jsx에서 sentry.client.js를 import하여 globalThis.Sentry 설정)
+ * 운영 오류는 provider-neutral monitoring 계층으로 전달합니다.
  */
 export default class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -30,11 +30,13 @@ export default class ErrorBoundary extends React.Component {
     // 콜백 훅
     try { this.props.onError?.(error, info); } catch {}
 
-    // Sentry가 전역에 있으면(선택)
-    const Sentry = globalThis?.Sentry;
-    if (Sentry?.captureException) {
-      try { Sentry.captureException(error, { extra: info }); } catch {}
-    }
+    void captureOperationalError(error, {
+      source: "react-error-boundary",
+      area: "app",
+      action: "component-render",
+      level: "fatal",
+      recovered: false,
+    });
   }
 
   // 필요 시 상태를 초기화할 수 있도록 메서드 제공

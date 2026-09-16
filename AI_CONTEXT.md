@@ -34,3 +34,11 @@ Read this file before modifying the project.
 - Do not split files merely to reduce line count.
 - Split only when responsibilities become clearer and maintenance becomes safer.
 - Keep orchestration code together when splitting it would make one user flow harder to follow.
+
+## Operational monitoring
+- Product pages/components must use the provider-neutral monitoring layer under `src/monitoring`; do not scatter vendor-specific Sentry calls through product code.
+- Monitoring is diagnostic, not analytics. Never intentionally log UID, name, email, phone, address, auth/App Check/FCM tokens, gold holdings, reservation notes, inquiry text, or URL query/hash values.
+- Client error reports use the versioned `kgmMonitoring` structured envelope in Cloud Logging. `reportClientError` must remain bounded by validation, redaction, rate limits, and max instances.
+- Sentry is planned as an adapter behind this layer; source-map upload and Sentry credentials must be deployment-time configuration, not committed secrets.
+- Do not enable Session Replay without a separate privacy review.
+

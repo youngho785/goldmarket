@@ -3,8 +3,27 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { fileURLToPath, URL } from 'node:url';
 import { Buffer } from 'node:buffer';
+import { execFileSync } from 'node:child_process';
+import process from 'node:process';
 import ogSocialCardBase64 from './src/assets/ogSocialCard.js';
 import goldVerificationImage from './src/assets/goldVerificationImage.js';
+
+function resolveMonitoringRelease() {
+  const explicitRelease = String(process.env.KGM_RELEASE || "").trim();
+  if (explicitRelease) return explicitRelease;
+
+  try {
+    const sha = execFileSync("git", ["rev-parse", "--short=12", "HEAD"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+    if (sha) return `kgm-web@${sha}`;
+  } catch {
+    // Source ZIPs used for verification may not contain .git.
+  }
+
+  return "kgm-web@local";
+}
 
 const emitBrandAssets = {
   name: 'emit-koreagoldmarket-brand-assets',
@@ -27,8 +46,12 @@ const emitBrandAssets = {
 
 export default defineConfig(({ mode }) => {
   const isProd = mode === 'production';
+  const monitoringRelease = resolveMonitoringRelease();
 
   return {
+    define: {
+      "import.meta.env.VITE_KGM_RELEASE": JSON.stringify(monitoringRelease),
+    },
     plugins: [
       // React + Babel(styled-components 최적화)
       react({

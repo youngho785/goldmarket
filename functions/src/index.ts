@@ -72,3 +72,7 @@ export {
   saveGoldPriceSettings,
   publishPendingGoldPrice,
 } from "./goldPrice/functions.js";
+
+export {
+  reportClientError,
+} from "./monitoring/clientErrorReporting.js";

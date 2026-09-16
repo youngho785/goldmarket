@@ -22,7 +22,8 @@
     "android:prepare": "npm run build && npx cap sync android",
     "test:e2e:setup": "npm --prefix tests/e2e run setup",
     "test:e2e": "npm --prefix tests/e2e test",
-    "test:e2e:headed": "npm --prefix tests/e2e run test:headed"
+    "test:e2e:headed": "npm --prefix tests/e2e run test:headed",
+    "test:monitoring": "node --test scripts/test-operational-monitoring.mjs functions/scripts/test-monitoring-security.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",

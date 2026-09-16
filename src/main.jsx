@@ -6,9 +6,20 @@ import ErrorBoundary from "./components/common/ErrorBoundary.jsx";
 import AppProviders from "./context/AppProviders.jsx";
 import { requestIdle, cancelIdle } from "./utils/idle";
 import { isWeb } from "./platform/runtime";
+import {
+  initializeOperationalMonitoring,
+  queueOperationalError,
+} from "./monitoring/operationalMonitoring";
+import { createFirebaseMonitoringTransport } from "./monitoring/firebaseMonitoringTransport";
 
 const PRELOAD_RECOVERY_KEY = "__kgm_preload_recovery_at__";
 const PRELOAD_RECOVERY_WINDOW_MS = 30 * 1000;
+
+if (import.meta.env.PROD) {
+  initializeOperationalMonitoring({
+    transport: createFirebaseMonitoringTransport(),
+  });
+}
 
 // A web tab can stay open across a new deployment or a network handoff.
 // If an old tab later opens a lazy route, Vite may fail to fetch the old chunk.
@@ -16,7 +27,17 @@ const PRELOAD_RECOVERY_WINDOW_MS = 30 * 1000;
 // Keep this web-only: the Capacitor Android app ships its chunks with the app bundle.
 if (isWeb && import.meta.env.PROD && typeof window !== "undefined") {
   window.addEventListener("vite:preloadError", (event) => {
+    const preloadError =
+      event?.payload || new Error("Vite preload error while opening a lazy route");
+
     if (navigator.onLine === false) {
+      queueOperationalError(preloadError, {
+        source: "vite.preloadError",
+        area: "preload",
+        action: "offline-lazy-load",
+        level: "warning",
+        recovered: false,
+      });
       return;
     }
 
@@ -42,9 +63,23 @@ if (isWeb && import.meta.env.PROD && typeof window !== "undefined") {
     }
 
     if (recentlyReloaded) {
+      queueOperationalError(preloadError, {
+        source: "vite.preloadError",
+        area: "preload",
+        action: "repeat-after-reload",
+        level: "error",
+        recovered: false,
+      });
       return;
     }
 
+    queueOperationalError(preloadError, {
+      source: "vite.preloadError",
+      area: "preload",
+      action: "reload-recovery",
+      level: "warning",
+      recovered: true,
+    });
     event.preventDefault();
     window.location.reload();
   });

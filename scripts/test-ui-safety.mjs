@@ -468,3 +468,51 @@ test("개발 백업은 lint 대상에서 제외되고 필요한 교환 그룹 �
   assert.ok(groupIndexes.some((fields) => fields.join("|") === "ownerUid:ASCENDING|repStatus:ASCENDING|visitDate:ASCENDING"));
 });
 
+test("운영 오류 모니터링은 공통 계층에서 React Router, ErrorBoundary, preload 복구를 수집한다", async () => {
+  const [mainSource, appSource, boundarySource, monitoringSource, privacySource, viteSource] =
+    await Promise.all([
+      read("src/main.jsx"),
+      read("src/App.jsx"),
+      read("src/components/common/ErrorBoundary.jsx"),
+      read("src/monitoring/operationalMonitoring.js"),
+      read("src/monitoring/privacy.js"),
+      read("vite.config.js"),
+    ]);
+
+  assert.match(mainSource, /initializeOperationalMonitoring/);
+  assert.match(mainSource, /createFirebaseMonitoringTransport/);
+  assert.match(mainSource, /queueOperationalError\(preloadError/);
+  assert.match(appSource, /captureOperationalError\(error \|\| "React Router route error"/);
+  assert.match(boundarySource, /captureOperationalError\(error/);
+  assert.doesNotMatch(boundarySource, /globalThis\?\.Sentry|captureException/);
+
+  assert.match(monitoringSource, /MAX_EVENTS_PER_MINUTE = 6/);
+  assert.match(monitoringSource, /MAX_EVENTS_PER_SESSION = 30/);
+  assert.match(monitoringSource, /DEDUPE_WINDOW_MS = 30 \* 1000/);
+  assert.match(monitoringSource, /window\.addEventListener\("unhandledrejection"/);
+  assert.match(privacySource, /sanitizeRoute/);
+  assert.match(privacySource, /SENSITIVE_QUERY_PATTERN/);
+  assert.match(viteSource, /import\.meta\.env\.VITE_KGM_RELEASE/);
+  assert.match(viteSource, /git", \["rev-parse", "--short=12", "HEAD"\]/);
+});
+
+test("클라이언트 오류 Cloud Function은 개인정보 대신 구조화 진단값만 제한적으로 기록한다", async () => {
+  const [reporterSource, loggerSource, indexSource] = await Promise.all([
+    read("functions/src/monitoring/clientErrorReporting.ts"),
+    read("functions/src/monitoring/structuredLogger.ts"),
+    read("functions/src/index.ts"),
+  ]);
+
+  assert.match(reporterSource, /enforceAppCheck:\s*ENFORCE_APP_CHECK/);
+  assert.match(reporterSource, /maxInstances:\s*3/);
+  assert.match(reporterSource, /RATE_LIMIT_PER_CLIENT = 30/);
+  assert.match(reporterSource, /authenticated:\s*Boolean\(request\.auth\?\.uid\)/);
+  assert.match(reporterSource, /appCheck:\s*request\.app \? "valid" : "missing"/);
+  assert.match(reporterSource, /\[redacted-email\]/);
+  assert.match(reporterSource, /\[redacted-phone\]/);
+  assert.doesNotMatch(reporterSource, /getFirestore|collection\(|addDoc|setDoc/);
+  assert.match(loggerSource, /kgmMonitoring:\s*\{/);
+  assert.match(loggerSource, /schemaVersion:\s*1/);
+  assert.match(indexSource, /reportClientError/);
+});
+
