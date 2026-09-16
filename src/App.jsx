@@ -15,6 +15,7 @@ import {
   Navigate,
   useLocation,
   useNavigate,
+  useRouteError,
 } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { PushNotifications } from "@capacitor/push-notifications";
@@ -35,13 +36,55 @@ import { isAndroid } from "@/platform/runtime";
 import LandingPage from "@/pages/LandingPage";
 import AppHome from "@/pages/AppHome";
 
+function isDynamicImportLoadError(error) {
+  const message = String(
+    error?.message || error?.statusText || error || ""
+  );
+
+  return /failed to fetch dynamically imported module|importing a module script failed|error loading dynamically imported module|unable to preload css|chunkloaderror|loading chunk .* failed/i.test(
+    message
+  );
+}
+
 function RouteError() {
+  const error = useRouteError();
+  const dynamicImportFailed = isDynamicImportLoadError(error);
+
   return (
-    <div style={{ padding: 24 }}>
+    <div style={{ maxWidth: 560, margin: "48px auto", padding: 24 }}>
       <h2 style={{ marginBottom: 8 }}>문제가 발생했습니다.</h2>
-      <p style={{ color: "#6b7280" }}>
-        잠시 후 다시 시도해 주세요. 문제가 계속되면 새로고침하거나 이전 페이지로 돌아가세요.
+      <p style={{ color: "#6b7280", lineHeight: 1.6 }}>
+        {dynamicImportFailed
+          ? "화면을 불러오는 중 연결 또는 사이트 업데이트로 문제가 발생했습니다. 최신 화면을 다시 불러와 주세요."
+          : "잠시 후 다시 시도해 주세요. 문제가 계속되면 새로고침하거나 이전 페이지로 돌아가세요."}
       </p>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 16 }}>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          style={{ padding: "10px 14px", cursor: "pointer" }}
+        >
+          {dynamicImportFailed ? "최신 화면 다시 불러오기" : "새로고침"}
+        </button>
+        <button
+          type="button"
+          onClick={() => window.history.back()}
+          style={{ padding: "10px 14px", cursor: "pointer" }}
+        >
+          이전 페이지
+        </button>
+      </div>
+      {import.meta.env.DEV && error && (
+        <pre
+          style={{
+            marginTop: 16,
+            whiteSpace: "pre-wrap",
+            color: "var(--gm-text-secondary)",
+          }}
+        >
+          {String(error?.message || error)}
+        </pre>
+      )}
     </div>
   );
 }

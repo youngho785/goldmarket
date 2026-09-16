@@ -385,6 +385,56 @@ test("GoldPrice keeps public price behavior together while page-only styles stay
   );
 });
 
+test("오래 열린 웹 탭의 지연 로딩 실패는 한 번만 복구하고 오류 화면에 재시도 동작을 제공한다", async () => {
+  const [mainSource, appSource, hostingSource] = await Promise.all([
+    read("src/main.jsx"),
+    read("src/App.jsx"),
+    read("firebase.json"),
+  ]);
+
+  assert.match(mainSource, /vite:preloadError/);
+  assert.match(mainSource, /isWeb && import\.meta\.env\.PROD/);
+  assert.match(mainSource, /navigator\.onLine === false/);
+  assert.match(mainSource, /sessionStorage\.getItem\(PRELOAD_RECOVERY_KEY\)/);
+  assert.match(mainSource, /PRELOAD_RECOVERY_WINDOW_MS = 30 \* 1000/);
+  assert.match(mainSource, /event\.preventDefault\(\)/);
+  assert.match(mainSource, /window\.location\.reload\(\)/);
+
+  assert.match(appSource, /useRouteError/);
+  assert.match(appSource, /isDynamicImportLoadError/);
+  assert.match(appSource, /최신 화면 다시 불러오기/);
+  assert.match(appSource, /window\.history\.back\(\)/);
+
+  const hosting = JSON.parse(hostingSource);
+  const indexHeaders = hosting.hosting.headers.find(
+    (entry) => entry.source === "/index.html"
+  );
+  assert.ok(indexHeaders, "index.html cache policy must stay explicit.");
+  assert.ok(
+    indexHeaders.headers.some(
+      (header) =>
+        header.key === "Cache-Control" &&
+        String(header.value).toLowerCase() === "no-cache"
+    ),
+    "index.html must remain no-cache so a recovery reload can pick up current chunks."
+  );
+});
+
+test("관리자 금교환 검색은 펼치지 않은 그룹의 상세 검색값도 필요할 때만 불러온다", async () => {
+  const source = await read("src/components/admin/ExchangeList.jsx");
+
+  assert.match(source, /if \(!qText\.trim\(\)\) return;/);
+  assert.match(source, /const missingGroups = groups\.filter/);
+  assert.match(source, /void ensureDetails\(group\.id\)/);
+  assert.match(source, /const searchDetailsPending = useMemo/);
+  assert.match(source, /요청자·전화·제품 검색 정보를 불러오는 중/);
+  assert.match(
+    source,
+    /activeGroups\.map\(async \(group\) => \{[\s\S]*?fetchAdminExchangeGroupItems\(group\.id\)/,
+    "Today reservations should keep their existing loading path in this search-only patch."
+  );
+});
+
 test("개발 백업은 lint 대상에서 제외되고 필요한 교환 그룹 인덱스가 선언돼 있다", () => {
   assert.match(eslintSource, /'_patch_backups\/\*\*'/);
   const indexes = JSON.parse(indexesSource);

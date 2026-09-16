@@ -7,6 +7,49 @@ import AppProviders from "./context/AppProviders.jsx";
 import { requestIdle, cancelIdle } from "./utils/idle";
 import { isWeb } from "./platform/runtime";
 
+const PRELOAD_RECOVERY_KEY = "__kgm_preload_recovery_at__";
+const PRELOAD_RECOVERY_WINDOW_MS = 30 * 1000;
+
+// A web tab can stay open across a new deployment or a network handoff.
+// If an old tab later opens a lazy route, Vite may fail to fetch the old chunk.
+// Recover once with a full reload so the tab picks up the current index/chunk map.
+// Keep this web-only: the Capacitor Android app ships its chunks with the app bundle.
+if (isWeb && import.meta.env.PROD && typeof window !== "undefined") {
+  window.addEventListener("vite:preloadError", (event) => {
+    if (navigator.onLine === false) {
+      return;
+    }
+
+    const now = Date.now();
+    let recentlyReloaded = false;
+
+    try {
+      const previous = Number(
+        window.sessionStorage.getItem(PRELOAD_RECOVERY_KEY) || 0
+      );
+      recentlyReloaded =
+        Number.isFinite(previous) &&
+        previous > 0 &&
+        now - previous < PRELOAD_RECOVERY_WINDOW_MS;
+
+      if (!recentlyReloaded) {
+        window.sessionStorage.setItem(PRELOAD_RECOVERY_KEY, String(now));
+      }
+    } catch {
+      // If sessionStorage is unavailable, do not risk a reload loop.
+      // Let the route error UI offer a manual reload instead.
+      return;
+    }
+
+    if (recentlyReloaded) {
+      return;
+    }
+
+    event.preventDefault();
+    window.location.reload();
+  });
+}
+
 // Service Worker는 웹/PWA 환경에서만 등록
 // Capacitor Android 앱에서는 Native Push를 사용하므로 등록하지 않음
 if (isWeb && "serviceWorker" in navigator) {

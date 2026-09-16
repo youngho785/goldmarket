@@ -970,6 +970,30 @@ export default function ExchangeList() {
     if (willOpen) await ensureDetails(groupId);
   };
 
+  // Search fields such as requester name, phone, and product live in the detail documents.
+  // Keep the normal list lazy, and hydrate only the currently loaded groups when search is used.
+  useEffect(() => {
+    if (!qText.trim()) return;
+
+    const missingGroups = groups.filter((group) => {
+      const detail = details[group.id];
+      return !detail?.loaded && !detail?.loading && !detail?.error;
+    });
+
+    missingGroups.forEach((group) => {
+      void ensureDetails(group.id);
+    });
+  }, [details, ensureDetails, groups, qText]);
+
+  const searchDetailsPending = useMemo(() => {
+    if (!qText.trim()) return false;
+
+    return groups.some((group) => {
+      const detail = details[group.id];
+      return !detail?.loaded && !detail?.error;
+    });
+  }, [details, groups, qText]);
+
   const filteredGroups = useMemo(() => {
     const term = qText.trim().toLowerCase();
     if (!term) return groups;
@@ -1274,14 +1298,16 @@ export default function ExchangeList() {
         </ToolbarButton>
         <Summary>
           {statusFilter ? `필터 ${statusFilter} · ` : ""}
-          표시 <strong>{filteredGroups.length}</strong>건 · 불러온 그룹{" "}
+          표시 <strong>{searchDetailsPending ? "…" : filteredGroups.length}</strong>건 · 불러온 그룹{" "}
           <strong>{groups.length}</strong>건
         </Summary>
       </StickyToolbar>
 
       {error && <ErrorBox role="alert">{error}</ErrorBox>}
 
-      {filteredGroups.length === 0 ? (
+      {searchDetailsPending ? (
+        <p>요청자·전화·제품 검색 정보를 불러오는 중…</p>
+      ) : filteredGroups.length === 0 ? (
         <p>조건에 맞는 금교환 요청이 없습니다.</p>
       ) : (
         filteredGroups.map((group) => {
