@@ -606,8 +606,19 @@ const EmptyStateAction = styled(Link)`
 
 const LoadMoreRow = styled.div`
   display: flex;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
+  gap: 8px;
   padding-top: 12px;
+`;
+
+const LoadMoreError = styled.p`
+  margin: 0;
+  color: ${({ theme }) => theme.colors.error};
+  font-size: .78rem;
+  line-height: 1.5;
+  text-align: center;
 `;
 
 const LoadMoreButton = styled.button`
@@ -1114,6 +1125,7 @@ export default function MyExchanges() {
   const [summaryCursor, setSummaryCursor] = useState(null);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState('');
   const [legacyMode, setLegacyMode] = useState(false);
   const [legacyDocsA, setLegacyDocsA] = useState([]);
   const [legacyDocsB, setLegacyDocsB] = useState([]);
@@ -1133,6 +1145,7 @@ export default function MyExchanges() {
     setOlderSummaries([]);
     setSummaryCursor(null);
     setHasMore(false);
+    setLoadMoreError('');
     setLegacyMode(false);
     setLegacyDocsA([]);
     setLegacyDocsB([]);
@@ -1352,6 +1365,7 @@ export default function MyExchanges() {
   const loadMore = useCallback(async () => {
     if (!user?.uid || !summaryCursor || loadingMore || !hasMore) return;
     setLoadingMore(true);
+    setLoadMoreError('');
     try {
       const nextQuery = query(
         collection(db, 'goldExchangeGroups'),
@@ -1367,7 +1381,7 @@ export default function MyExchanges() {
       setHasMore(snapshot.size === GROUP_PAGE_SIZE);
     } catch (error) {
       console.error('[MyExchanges] load more failed:', error);
-      setErr('이전 교환내역을 더 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
+      setLoadMoreError('이전 교환내역을 더 불러오지 못했습니다. 기존 내역은 그대로 유지됩니다. 다시 시도해 주세요.');
     } finally {
       setLoadingMore(false);
     }
@@ -1456,6 +1470,17 @@ export default function MyExchanges() {
           </FilterChip>
         ))}
       </FilterBar>
+
+      {groupsFiltered.length === 0 && statusFilter !== 'all' && (
+        <EmptyState role="status">
+          <EmptyStateTitle>{FILTER_LABEL[statusFilter]} 교환내역이 없습니다.</EmptyStateTitle>
+          <EmptyStateLead>
+            {!legacyMode && hasMore
+              ? `현재 불러온 교환내역에는 ${FILTER_LABEL[statusFilter]} 상태가 없습니다. 이전 교환내역을 더 확인해 주세요.`
+              : `현재 ${FILTER_LABEL[statusFilter]} 상태로 기록된 교환내역이 없습니다.`}
+          </EmptyStateLead>
+        </EmptyState>
+      )}
 
       <CardGrid>
         {groupsFiltered.map((g) => {
@@ -1824,11 +1849,14 @@ export default function MyExchanges() {
         })}
       </CardGrid>
 
-      {!legacyMode && hasMore && (
+      {!legacyMode && (hasMore || loadMoreError) && (
         <LoadMoreRow>
-          <LoadMoreButton type="button" onClick={loadMore} disabled={loadingMore}>
-            {loadingMore ? '불러오는 중…' : '이전 교환내역 더보기'}
-          </LoadMoreButton>
+          {loadMoreError && <LoadMoreError role="alert">{loadMoreError}</LoadMoreError>}
+          {hasMore && (
+            <LoadMoreButton type="button" onClick={loadMore} disabled={loadingMore}>
+              {loadingMore ? '불러오는 중…' : '이전 교환내역 더보기'}
+            </LoadMoreButton>
+          )}
         </LoadMoreRow>
       )}
     </Page>

@@ -420,6 +420,28 @@ test("오래 열린 웹 탭의 지연 로딩 실패는 한 번만 복구하고 �
   );
 });
 
+test("핵심 웹 모달은 키보드 포커스를 가두고 닫힌 뒤 원래 위치로 돌려준다", async () => {
+  const [layoutSource, myGoldSource, exchangeStepsSource] = await Promise.all([
+    read("src/components/common/MainLayout.jsx"),
+    read("src/pages/MyGoldVault.jsx"),
+    read("src/components/goldExchange/GoldExchangeSteps.jsx"),
+  ]);
+
+  assert.match(layoutSource, /role="status"/);
+  assert.match(layoutSource, /aria-live="polite"/);
+  assert.match(layoutSource, /화면을 불러오는 중입니다/);
+
+  assert.match(myGoldSource, /const formDialogRef = useRef\(null\)/);
+  assert.match(myGoldSource, /event\.key !== "Tab" \|\| !dialog/);
+  assert.match(myGoldSource, /previousFocus\?\.focus\?\.\(\)/);
+  assert.match(myGoldSource, /<FormSheet ref=\{formDialogRef\} role="dialog"/);
+
+  assert.match(exchangeStepsSource, /const privacyDialogRef = useRef\(null\)/);
+  assert.match(exchangeStepsSource, /event\.key !== "Tab" \|\| !dialog/);
+  assert.match(exchangeStepsSource, /previousFocus\.focus\(\)/);
+  assert.match(exchangeStepsSource, /ref=\{privacyDialogRef\}[\s\S]*?role="dialog"/);
+});
+
 test("관리자 금교환 검색은 펼치지 않은 그룹의 상세 검색값도 필요할 때만 불러온다", async () => {
   const source = await read("src/components/admin/ExchangeList.jsx");
 

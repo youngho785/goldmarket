@@ -170,6 +170,16 @@ const Item = styled.li`
     border-color: ${({ theme }) => theme.colors.borderStrong};
   }
 `;
+const ItemAction = styled.div`
+  display: block;
+  border-radius: 12px;
+  outline: none;
+
+  &:focus-visible {
+    outline: 3px solid ${({ theme }) => theme.colors.secondary};
+    outline-offset: 3px;
+  }
+`;
 const Title = styled.div`
   color: ${({ theme }) => theme.colors.primary};
   font-size: .9rem;
@@ -349,6 +359,12 @@ export default function NotificationsPage() {
     if (link) navigate(link);
   };
 
+  const handleItemKeyDown = (event, item) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    void openItem(item);
+  };
+
   const markAll = async () => {
     if (!uid || markingAll) return;
     setMarkingAll(true);
@@ -416,14 +432,17 @@ export default function NotificationsPage() {
         <>
           <List>
             {filteredItems.map((item) => (
-              <Item
-                key={item.id}
-                $unread={!item.read}
-                onClick={() => openItem(item)}
-              >
-                <Title>{item.title || "알림"}</Title>
-                {item.body && <Body>{item.body}</Body>}
-                <Time>{formatTimestamp(item.createdAt)}</Time>
+              <Item key={item.id} $unread={!item.read}>
+                <ItemAction
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => void openItem(item)}
+                  onKeyDown={(event) => handleItemKeyDown(event, item)}
+                >
+                  <Title>{item.title || "알림"}</Title>
+                  {item.body && <Body>{item.body}</Body>}
+                  <Time>{formatTimestamp(item.createdAt)}</Time>
+                </ItemAction>
               </Item>
             ))}
           </List>

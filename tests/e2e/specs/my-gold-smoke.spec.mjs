@@ -18,7 +18,8 @@ test("guest MY GOLD add form opens and closes without writing data", async ({ pa
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole("heading", { name: "내 금 기록" })).toBeVisible();
+  await expect(dialog.getByRole("textbox", { name: "이름" })).toBeFocused();
 
-  await dialog.getByRole("button", { name: "금 기록 창 닫기" }).click();
+  await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
 });

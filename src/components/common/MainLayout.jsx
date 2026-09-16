@@ -82,7 +82,6 @@ function RouteSkeleton() {
 
   return (
     <div
-      aria-hidden="true"
       style={{
         minHeight: "calc(100svh - 144px)",
         position: "relative",
@@ -90,9 +89,28 @@ function RouteSkeleton() {
       }}
     >
       {showIndicator && (
-        <div
-          className="gm-route-loading-track"
-          style={{
+        <>
+          <span
+            role="status"
+            aria-live="polite"
+            style={{
+              position: "absolute",
+              width: 1,
+              height: 1,
+              padding: 0,
+              margin: -1,
+              overflow: "hidden",
+              clip: "rect(0, 0, 0, 0)",
+              whiteSpace: "nowrap",
+              border: 0,
+            }}
+          >
+            화면을 불러오는 중입니다.
+          </span>
+          <div
+            aria-hidden="true"
+            className="gm-route-loading-track"
+            style={{
             position: "absolute",
             top: 0,
             left: 0,
@@ -102,17 +120,18 @@ function RouteSkeleton() {
             background: "rgba(182, 138, 58, 0.10)",
           }}
         >
-          <div
-            className="gm-route-loading-bar"
-            style={{
-              width: "32%",
-              height: "100%",
-              borderRadius: 999,
-              background: "#b68a3a",
-              animation: "gm-route-loading 1.05s ease-in-out infinite",
-            }}
-          />
-        </div>
+            <div
+              className="gm-route-loading-bar"
+              style={{
+                width: "32%",
+                height: "100%",
+                borderRadius: 999,
+                background: "#b68a3a",
+                animation: "gm-route-loading 1.05s ease-in-out infinite",
+              }}
+            />
+          </div>
+        </>
       )}
 
       <style>

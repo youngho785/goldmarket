@@ -585,21 +585,60 @@ export function ReserveStep({
     [bookingAvailabilityDates, dateKey]
   );
   const [privacyOpen, setPrivacyOpen] = useState(false);
+  const privacyDialogRef = useRef(null);
 
   useEffect(() => {
     if (!privacyOpen) return undefined;
 
-    const onKeyDown = (e) => {
-      if (e.key === "Escape") setPrivacyOpen(false);
+    const previousOverflow = document.body.style.overflow;
+    const previousFocus = document.activeElement;
+    const dialog = privacyDialogRef.current;
+    const focusableSelector = [
+      'button:not([disabled])',
+      'a[href]',
+      'iframe',
+      '[tabindex]:not([tabindex="-1"])',
+    ].join(",");
+
+    const focusTimer = window.setTimeout(() => {
+      const first = dialog?.querySelector(focusableSelector);
+      first?.focus?.();
+    }, 0);
+
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setPrivacyOpen(false);
+        return;
+      }
+      if (event.key !== "Tab" || !dialog) return;
+
+      const focusable = Array.from(dialog.querySelectorAll(focusableSelector)).filter(
+        (element) => element.getAttribute("aria-hidden") !== "true"
+      );
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
 
-    const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     window.addEventListener("keydown", onKeyDown);
 
     return () => {
+      window.clearTimeout(focusTimer);
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", onKeyDown);
+      if (previousFocus && typeof previousFocus.focus === "function") {
+        previousFocus.focus();
+      }
     };
   }, [privacyOpen]);
 
@@ -768,6 +807,7 @@ export function ReserveStep({
             }}
           >
             <PrivacyModal
+              ref={privacyDialogRef}
               role="dialog"
               aria-modal="true"
               aria-labelledby="privacy-modal-title"

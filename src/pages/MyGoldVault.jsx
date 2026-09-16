@@ -1,5 +1,5 @@
 // src/pages/MyGoldVault.jsx
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ArrowRight, ChevronRight, Gem, Minus, Plus, Save, Sparkles, TrendingDown, TrendingUp, X } from "lucide-react";
 
@@ -263,6 +263,9 @@ export default function MyGoldVault() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState("");
   const [saving, setSaving] = useState(false);
+  const formDialogRef = useRef(null);
+  const savingRef = useRef(false);
+  savingRef.current = saving;
   const [error, setError] = useState("");
   const [compareDate, setCompareDate] = useState("");
   const [historicalPrice, setHistoricalPrice] = useState(null);
@@ -304,21 +307,41 @@ export default function MyGoldVault() {
   useEffect(() => {
     if (!formOpen) return undefined;
     const previousOverflow = document.body.style.overflow;
+    const previousFocus = document.activeElement;
+    const dialog = formDialogRef.current;
+    const focusableSelector = 'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
     document.body.style.overflow = "hidden";
     const onKeyDown = (event) => {
-      if (event.key === "Escape" && !saving) {
+      if (event.key === "Escape" && !savingRef.current) {
+        event.preventDefault();
         setFormOpen(false);
         setEditingId("");
         setForm(EMPTY_FORM);
         setError("");
+        return;
+      }
+      if (event.key !== "Tab" || !dialog) return;
+      const focusable = Array.from(dialog.querySelectorAll(focusableSelector)).filter(
+        (element) => element.getAttribute("aria-hidden") !== "true"
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", onKeyDown);
+      previousFocus?.focus?.();
     };
-  }, [formOpen, saving]);
+  }, [formOpen]);
 
   const guestItems = useMemo(
     () =>
@@ -1177,7 +1200,7 @@ export default function MyGoldVault() {
 
       {formOpen && (
         <FormOverlay onMouseDown={(event) => { if (event.target === event.currentTarget) closeForm(); }}>
-          <FormSheet role="dialog" aria-modal="true" aria-labelledby="my-vault-form-title" onMouseDown={(event) => event.stopPropagation()}>
+          <FormSheet ref={formDialogRef} role="dialog" aria-modal="true" aria-labelledby="my-vault-form-title" onMouseDown={(event) => event.stopPropagation()}>
             <FormSheetHead>
               <div>
                 <small>{isGuest ? "MY GOLD · 체험" : "MY GOLD"}</small>
