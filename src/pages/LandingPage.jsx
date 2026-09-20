@@ -175,6 +175,62 @@ const TextLink = styled(Link)`
   white-space: nowrap;
 `;
 
+const GoldToGoldStory = styled.section`
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: clamp(18px, 3vw, 30px);
+  align-items: center;
+  margin: 0 0 clamp(34px, 5vw, 54px);
+  padding: clamp(22px, 3.5vw, 32px);
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 22%, ${({ theme }) => theme.colors.border});
+  border-radius: 22px;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 42%, ${({ theme }) => theme.colors.surface}),
+    ${({ theme }) => theme.colors.surface}
+  );
+
+  h2 {
+    margin: 7px 0 0;
+    color: ${({ theme }) => theme.colors.primary};
+    font-family: ${({ theme }) => theme.fonts.heading};
+    font-size: clamp(1.4rem, 2.8vw, 2rem);
+    line-height: 1.18;
+    letter-spacing: -.045em;
+    word-break: keep-all;
+  }
+
+  p {
+    max-width: 760px;
+    margin: 9px 0 0;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: .74rem;
+    line-height: 1.65;
+    word-break: keep-all;
+  }
+
+  @media (max-width: 700px) {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+`;
+
+const GoldToGoldStoryLink = styled(Link)`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 43px;
+  padding: 9px 14px;
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 42%, ${({ theme }) => theme.colors.border});
+  border-radius: 12px;
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.primary};
+  font-size: .72rem;
+  font-weight: 950;
+  text-decoration: none;
+  white-space: nowrap;
+`;
 const ExchangeTrust = styled.section`
   display: grid;
   grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr);
@@ -328,6 +384,22 @@ export default function LandingPage() {
         <GoldPriceBoard compact />
       </CompactSection>
 
+      <GoldToGoldStory aria-labelledby="gold-to-gold-story-title">
+        <div>
+          <Kicker>GOLD TO GOLD</Kicker>
+          <h2 id="gold-to-gold-story-title">쓰지 않는 금의 가치를, 다시 금으로 이어갑니다.</h2>
+          <p>
+            끊어진 목걸이, 한쪽만 남은 귀걸이, 오래된 14K·18K, 아이의 돌반지처럼
+            지금은 사용하지 않는 금도 있습니다. GOLD TO GOLD는 그 금의 예상 순금량을 확인해
+            999.9 골드바로 가치를 이어가는 한국골드마켓의 금교환 방식입니다.
+          </p>
+        </div>
+
+        <GoldToGoldStoryLink to="/gold-to-gold">
+          GOLD TO GOLD 이야기 보기
+          <ArrowRight size={15} aria-hidden />
+        </GoldToGoldStoryLink>
+      </GoldToGoldStory>
       <ExchangeTrust aria-labelledby="exchange-trust-title">
         <VerificationImage>
           <img
@@ -347,7 +419,6 @@ export default function LandingPage() {
           <StoreMeta><span><MapPin size={14} aria-hidden /> 부산광역시 부산진구 골드테마길 21</span></StoreMeta>
           <Actions>
             <GoldButton to="/gold-exchange">예상 교환 확인 <ArrowRight size={15} aria-hidden /></GoldButton>
-            <TextLink to="/gold-to-gold">GOLD TO GOLD 이야기 <ArrowRight size={15} aria-hidden /></TextLink>
             <TextLink to="/stores">매장·교환절차 보기 <ArrowRight size={15} aria-hidden /></TextLink>
           </Actions>
         </ExchangeCopy>

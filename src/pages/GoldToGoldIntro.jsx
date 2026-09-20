@@ -820,9 +820,9 @@ export default function GoldToGoldIntro() {
             delay={120}
             hint
             ariaLabel="Living Gold로 GOLD TO GOLD 알아보기"
-            title="간직하고 싶은 마음도 함께 남아 있어요."
-            description="지금은 사용하지 않아도 쉽게 팔지 못하는 금이 있습니다. 그 마음은 남겨두고, 금의 가치는 999.9 GOLD로 이어갈 수 있습니다."
-            actionLabel="내 금으로 얼마나 이어지는지 보기"
+            title="금의 가치는 이어지고 있어요."
+            description="모양은 달라져도 금의 가치는 999.9 GOLD로 이어갈 수 있어요. 지금 가진 금으로 얼마나 이어지는지 확인해 보세요."
+            actionLabel="내 금으로 확인하기"
             actionTo="/gold-exchange"
           />
           <small>VALUE → GOLD</small>
@@ -832,40 +832,38 @@ export default function GoldToGoldIntro() {
           KOREA GOLD MARKET · GOLD TO GOLD
         </Kicker>
         <HeroTitle>
-          <span>쓰지 않는 금에도,</span>
-          <em>쉽게 팔지 못하는 이유가 있습니다.</em>
+          <span>한국골드마켓의</span>
+          <em>GOLD TO GOLD란?</em>
         </HeroTitle>
         <HeroCopy>
-          끊어진 목걸이, 한쪽만 남은 귀걸이, 오래된 반지, 아이의 돌반지.
-          지금은 착용하지 않아도 그 안의 기억과 금의 가치는 남아 있습니다.
-          <strong> GOLD TO GOLD는 그 가치를 현금으로 끝내지 않고 다시 금으로 이어가는 방법입니다.</strong>
+          가지고 있는 금의 가치를 <strong>현금으로 끝내지 않고, 금으로 이어가는 방법</strong>입니다.
         </HeroCopy>
       </Hero>
 
       <StorySection>
         <StoryHead>
-          <h2>버리지는 못하고,<br />다시 쓰지는 않는 금이 있습니다.</h2>
+          <h2>지금 사용하지 않는 금도<br />가치는 그대로 남아 있습니다.</h2>
         </StoryHead>
         <StoryGrid>
           <StoryItem>
             <span><Gem aria-hidden /></span>
             <strong>끊어진 목걸이·팔찌</strong>
-            <p>모양이 달라져도 함께한 시간과 금의 가치는 남아 있습니다.</p>
+            <p>다시 착용하지 않아도 금의 가치는 남습니다.</p>
           </StoryItem>
           <StoryItem>
             <span><Sparkles aria-hidden /></span>
             <strong>한쪽만 남은 귀걸이</strong>
-            <p>다시 착용하기 어려워도 버리기 아까운 이유가 있습니다.</p>
+            <p>한 쌍이 아니어도 금으로서의 가치는 그대로입니다.</p>
           </StoryItem>
           <StoryItem>
             <span><CheckCircle2 aria-hidden /></span>
             <strong>오래된 14K·18K</strong>
-            <p>취향은 달라져도 오래 간직해 온 금의 가치는 이어집니다.</p>
+            <p>취향과 디자인은 달라져도 금의 가치는 남습니다.</p>
           </StoryItem>
           <StoryItem>
             <span><CircleDollarSign aria-hidden /></span>
             <strong>아이의 돌반지</strong>
-            <p>받았던 마음은 간직하고, 금의 가치는 아이의 미래로 이어갈 수 있습니다.</p>
+            <p>아이의 미래를 위해 그 가치를 이어둘 수 있습니다.</p>
           </StoryItem>
         </StoryGrid>
       </StorySection>
@@ -889,9 +887,9 @@ export default function GoldToGoldIntro() {
 
       <DarkStory>
         <DarkHead>
-          <h2>마음은 간직하고,<br />금의 가치는 이어갑니다.</h2>
+          <h2>모양은 달라져도,<br />금의 가치는 이어집니다.</h2>
           <p>
-            GOLD TO GOLD는 보유 금의 가치를 현금으로 끝내지 않고, 한국골드마켓 교환기준으로 예상 순금량을 확인해 999.9 실물 골드바로 이어가는 금교환 방식입니다.
+            보유 금을 현금으로 팔았다가 다시 사는 대신, 한국골드마켓 교환기준으로 예상 순금량을 확인해 999.9 골드바로 이어가는 금교환 서비스입니다.
           </p>
         </DarkHead>
         <Flow>
@@ -917,9 +915,9 @@ export default function GoldToGoldIntro() {
       </DarkStory>
 
       <CTA>
-        <h2>아직 교환을 결정하지 않아도 됩니다.<br />내 금이 얼마나 이어지는지 먼저 확인해 보세요.</h2>
+        <h2>그 금, 지금 얼마나 많은<br />999.9 GOLD가 될까요?</h2>
         <p>
-          금 종류와 중량만 입력하면 예상 순금량과 가능한 999.9 골드바 조합을 먼저 확인할 수 있습니다.
+          금 종류와 중량만 입력하면 예상 순금량과 가능한 골드바 조합을 먼저 확인할 수 있습니다.
         </p>
         <FactRail aria-label="교환 확인 절차">
           <Fact><CheckCircle2 aria-hidden /> 온라인 예상 계산</Fact>
@@ -929,7 +927,7 @@ export default function GoldToGoldIntro() {
         <CTAButtons>
           <PrimaryAction to="/gold-exchange">
             <CircleDollarSign aria-hidden />
-            내 금으로 예상 골드바 확인하기
+            내 금으로 받을 골드바 계산하기
             <ArrowRight aria-hidden />
           </PrimaryAction>
           <SecondaryAction to="/my-gold?add=1">
