@@ -6,7 +6,6 @@ import {
   CalendarDays,
   ChevronRight,
   ClipboardList,
-  Info,
   Plus,
   ReceiptText,
 } from "lucide-react";
@@ -38,26 +37,6 @@ const OverviewGrid = styled.section`
   @media (max-width: 900px) {
     grid-template-columns: 1fr;
   }
-`;
-
-const PrincipleNote = styled.p`
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin: -2px 2px 0;
-  color: ${({ theme }) => theme.colors.textLight};
-  font-size: .64rem;
-  line-height: 1.5;
-  word-break: keep-all;
-
-  svg {
-    width: 14px;
-    height: 14px;
-    flex: 0 0 auto;
-    color: ${({ theme }) => theme.colors.secondaryDark};
-  }
-
-  strong { color: ${({ theme }) => theme.colors.textSecondary}; }
 `;
 
 const GoldToGoldCard = styled(Link)`
@@ -294,30 +273,8 @@ export default function AppHome() {
   const readiness = useMemo(() => getGoldBarReadiness(pureGoldG), [pureGoldG]);
 
   const goldToGoldHome = useMemo(() => {
-    if (!user?.uid) {
-      return {
-        to: "/gold-to-gold",
-        kicker: "GOLD TO GOLD",
-        title: "기록으로 확인한 내 금을 실제 999.9 GOLD 교환으로 이어가기",
-        description: "MY GOLD의 숫자는 참고값이고, 실제 교환은 매장에서 실물을 실측한 뒤 확정합니다.",
-      };
-    }
-    if (myGoldLoading) {
-      return {
-        to: "/gold-to-gold",
-        kicker: "GOLD TO GOLD · MY GOLD",
-        title: "MY GOLD 기록을 확인하고 있습니다.",
-        description: "기록한 금을 불러와 예상 교환량을 계산할 수 있습니다.",
-      };
-    }
-    if (!hasMyGold) {
-      return {
-        to: "/my-gold/items?add=1",
-        kicker: "GOLD TO GOLD · MY GOLD",
-        title: "먼저 내가 가진 금을 기록해 보세요.",
-        description: "종류와 중량을 기록하면 예상 순금량과 교환 가능한 골드바를 확인합니다.",
-      };
-    }
+    if (!hasMyGold || myGoldLoading) return null;
+
     if (readiness?.available) {
       return {
         to: "/gold-exchange?mode=vault&auto=1",
@@ -326,13 +283,14 @@ export default function AppHome() {
         description: "사용자가 기록한 종류·중량으로 계산한 예상치입니다. 실제 교환량은 매장 실측 후 확정합니다.",
       };
     }
+
     return {
       to: "/gold-exchange?mode=vault&auto=1",
       kicker: "GOLD TO GOLD · 기록 기준 예상",
       title: `기록한 금 기준 · ${readiness?.label || "1g 골드바"}까지 약 ${Number(readiness?.neededG || 0).toFixed(2)}g 더 필요`,
       description: "사용자가 기록한 종류·중량으로 계산한 예상치입니다. 실제 교환 순금량은 매장 실측 후 확정합니다.",
     };
-  }, [hasMyGold, myGoldLoading, readiness, user?.uid]);
+  }, [hasMyGold, myGoldLoading, readiness]);
 
   return (
     <Page>
@@ -359,19 +317,20 @@ export default function AppHome() {
         />
       </OverviewGrid>
 
-      <PrincipleNote>
-        <Info aria-hidden />
-        <span><strong>MY GOLD는 개인 기록 공간입니다.</strong> 사용자가 가진 금의 정보를 기록해 보는 기능이며, 실물 금을 보관·예치하지 않습니다.</span>
-      </PrincipleNote>
 
-      <GoldToGoldCard to={goldToGoldHome.to} aria-label="GOLD TO GOLD로 이어가기">
-        <GoldToGoldCopy>
-          <small>{goldToGoldHome.kicker}</small>
-          <h2>{goldToGoldHome.title}</h2>
-          <p>{goldToGoldHome.description}</p>
-        </GoldToGoldCopy>
-        <ChevronRight aria-hidden />
-      </GoldToGoldCard>
+      {goldToGoldHome && (
+        <GoldToGoldCard
+          to={goldToGoldHome.to}
+          aria-label="기록한 금으로 금교환 예상 확인"
+        >
+          <GoldToGoldCopy>
+            <small>{goldToGoldHome.kicker}</small>
+            <h2>{goldToGoldHome.title}</h2>
+            <p>{goldToGoldHome.description}</p>
+          </GoldToGoldCopy>
+          <ChevronRight aria-hidden />
+        </GoldToGoldCard>
+      )}
 
       <QuickGrid aria-label="빠른 메뉴">
         <QuickLink to="/my-gold/items?add=1">

@@ -611,7 +611,6 @@ export default function GoldExchange() {
         <PageTitle $compact={!showStartMethod}>내 금을 999.9 골드바로 교환</PageTitle>
         <PageLead $compact={!showStartMethod}>
           예상 계산과 방문 날짜·시간 선택은 로그인 없이 이용할 수 있습니다.
-          MY GOLD에 저장된 정보는 사용자가 기록한 금 정보이며, 실제 교환 조건은 매장 실측 후 확정됩니다.
           예약 요청만 로그인 또는 회원가입 후 완료합니다.
         </PageLead>
         {isRebook && (

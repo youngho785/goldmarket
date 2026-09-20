@@ -860,9 +860,11 @@ export default function MyGoldVault() {
           <VaultSection aria-labelledby="my-gold-summary-items-title">
             <SummaryHead>
               <strong id="my-gold-summary-items-title">{isGuest ? "체험 중인 금" : "내가 기록한 금"}</strong>
-              <Link to="/my-gold/items">
-                {sortedItems.length > 0 ? `${sortedItems.length}개 전체 관리` : "금 기록하기"} <ChevronRight size={14} aria-hidden />
-              </Link>
+              {sortedItems.length > 0 && (
+                <Link to="/my-gold/items">
+                  {sortedItems.length}개 전체 관리 <ChevronRight size={14} aria-hidden />
+                </Link>
+              )}
             </SummaryHead>
 
             {vaultLoading ? (
@@ -884,39 +886,36 @@ export default function MyGoldVault() {
                 <GoldSeed aria-hidden />
                 <strong>아직 기록한 금이 없습니다.</strong>
                 <span>금 하나를 기록하면 오늘 참고가치와 가격 변화를 바로 확인할 수 있습니다.</span>
-                <AddGoldButton type="button" onClick={() => navigate("/my-gold/items?add=1")}>
-                  <Plus size={15} aria-hidden /> 첫 금 기록하기
-                </AddGoldButton>
               </Empty>
             )}
           </VaultSection>
-          <ReadinessPanel
-            to="/gold-exchange?mode=vault&auto=1"
-            state={{ source: "my-gold", vaultProducts: exchangeProducts }}
-            aria-label="MY GOLD 기록 기준 예상 교환량 확인 페이지 열기"
-          >
-            <div>
-              <small>GOLD TO GOLD · 기록 기준 예상</small>
-              <strong>기록한 금으로 예상 교환량 확인</strong>
-              <p>
-                {activeSummary.itemCount > 0
-                  ? barReadiness?.available
+          {hasVaultContent && (
+            <ReadinessPanel
+              to="/gold-exchange?mode=vault&auto=1"
+              state={{ source: "my-gold", vaultProducts: exchangeProducts }}
+              aria-label="MY GOLD 기록 기준 예상 교환량 확인 페이지 열기"
+            >
+              <div>
+                <small>GOLD TO GOLD · 기록 기준 예상</small>
+                <strong>기록한 금으로 예상 교환량 확인</strong>
+                <p>
+                  {barReadiness?.available
                     ? `현재 기록 기준으로 ${barReadiness.label} 교환 가능 예상 · 실제 교환은 매장 실측 후 확정`
-                    : `1g 골드바 예상량까지 약 ${Number(barReadiness?.neededG || 0).toFixed(2)}g 더 필요`
-                  : "금 하나를 기록하면 기록 기준 예상 교환량을 확인합니다."}
-              </p>
-              {activeSummary.itemCount > 0 && nextBarTarget && (
-                <GoalProgress>
-                  <div className="labels">
-                    <span>현재 {Number(activeSummary.pureGoldG || 0).toFixed(2)}g</span>
-                    <span>다음 {nextBarTarget.label}까지 {Math.max(0, Number(nextBarTarget.grams) - Number(activeSummary.pureGoldG || 0)).toFixed(2)}g</span>
-                  </div>
-                  <GoalTrack $progress={nextBarProgress} aria-hidden><span /></GoalTrack>
-                </GoalProgress>
-              )}
-            </div>
-            <ChevronRight aria-hidden />
-          </ReadinessPanel>
+                    : `1g 골드바 예상량까지 약 ${Number(barReadiness?.neededG || 0).toFixed(2)}g 더 필요`}
+                </p>
+                {nextBarTarget && (
+                  <GoalProgress>
+                    <div className="labels">
+                      <span>현재 {Number(activeSummary.pureGoldG || 0).toFixed(2)}g</span>
+                      <span>다음 {nextBarTarget.label}까지 {Math.max(0, Number(nextBarTarget.grams) - Number(activeSummary.pureGoldG || 0)).toFixed(2)}g</span>
+                    </div>
+                    <GoalTrack $progress={nextBarProgress} aria-hidden><span /></GoalTrack>
+                  </GoalProgress>
+                )}
+              </div>
+              <ChevronRight aria-hidden />
+            </ReadinessPanel>
+          )}
           </SummarySideStack>
         </SummaryOverviewGrid>
       )}
