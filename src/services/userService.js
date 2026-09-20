@@ -10,6 +10,20 @@ import {
 import { db } from "../firebase/firebase";
 import { claimNickname } from "@/services/nicknameClient";
 
+function formatProfileMobilePhone(value) {
+  const raw = String(value || "").trim();
+  const digits = raw.replace(/\D/g, "");
+
+  // 프로필 전화번호는 현재 UI 검증 규칙(국내 휴대전화)에 맞는 값만 저장합니다.
+  if (!/^01[016789]\d{7,8}$/.test(digits)) return "";
+
+  if (digits.length === 10) {
+    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+  }
+
+  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
+}
+
 export async function fetchUserProfile(uid) {
   if (!uid) return null;
   const snapshot = await getDoc(doc(db, "profiles", uid));
@@ -90,6 +104,51 @@ export async function updateUserProfile(uid, values = {}) {
   await batch.commit();
 }
 
+export async function saveReservationContact(uid, values = {}) {
+  if (!uid) throw new Error("로그인이 필요합니다.");
+
+  const displayName = String(values.displayName || values.name || "").trim();
+  const reservationPhone = String(values.phone || "").trim();
+  const profilePhone = formatProfileMobilePhone(reservationPhone);
+  if (!displayName || !reservationPhone) {
+    throw new Error("예약자 이름과 전화번호를 확인해 주세요.");
+  }
+
+  const profileRef = doc(db, "profiles", uid);
+  const userRef = doc(db, "users", uid);
+
+  // 예약 연락처는 최초 입력값만 프로필 기본값으로 보관합니다.
+  // 이미 사용자가 프로필에서 저장한 이름/전화번호가 있으면 예약 입력값으로 덮어쓰지 않습니다.
+  await runTransaction(db, async (transaction) => {
+    const [profileSnapshot, userSnapshot] = await Promise.all([
+      transaction.get(profileRef),
+      transaction.get(userRef),
+    ]);
+
+    const profileData = profileSnapshot.exists() ? profileSnapshot.data() || {} : {};
+    const userData = userSnapshot.exists() ? userSnapshot.data() || {} : {};
+
+    const existingPublicDisplayName = String(profileData.displayName || "").trim();
+    const existingUserDisplayName = String(userData.displayName || "").trim();
+    const existingUserName = String(userData.name || "").trim();
+    const existingPhone = String(userData.phone || "").trim();
+
+    if (!existingPublicDisplayName) {
+      transaction.set(profileRef, { displayName }, { merge: true });
+    }
+
+    const userPatch = {};
+    if (!existingUserDisplayName) userPatch.displayName = displayName;
+    if (!existingUserName) userPatch.name = displayName;
+    if (!existingPhone && profilePhone) userPatch.phone = profilePhone;
+
+    if (Object.keys(userPatch).length > 0) {
+      userPatch.updatedAt = serverTimestamp();
+      transaction.set(userRef, userPatch, { merge: true });
+    }
+  });
+}
+
 export async function ensureUserProfileOnSignup(authUser, formValues = {}) {
   if (!authUser?.uid) throw new Error("가입 사용자 정보가 없습니다.");
 
@@ -100,24 +159,15 @@ export async function ensureUserProfileOnSignup(authUser, formValues = {}) {
   const phone = String(formValues.phone || "").trim();
   const photoURL = String(authUser.photoURL || "").trim();
 
-  if (!displayName) throw new Error("가입 이름 정보가 없습니다.");
   if (!email) throw new Error("가입 이메일 정보가 없습니다.");
-  if (!phone) throw new Error("가입 휴대전화 정보가 없습니다.");
 
   const profileRef = doc(db, "profiles", authUser.uid);
   const userRef = doc(db, "users", authUser.uid);
 
   /*
-   * Android에서는 Auth 로그인 직후 Native Push가 먼저 연결되면서
-   * users/{uid} 문서가 먼저 만들어질 수 있습니다.
-   *
-   * 기존 구현은 가입 기본정보 저장 때 createdAt을 매번 다시 썼기 때문에,
-   * 이미 users 문서에 createdAt이 있으면 Firestore Rules가 업데이트를 차단했고
-   * phone/displayName/name까지 함께 저장되지 않는 문제가 있었습니다.
-   *
-   * transaction에서 최신 users 문서를 다시 읽고 createdAt이 "없는 경우에만"
-   * 최초 생성 시각을 추가합니다. 동시에 다른 쓰기가 발생하면 Firestore가
-   * transaction을 재시도하므로 Push 등록과 가입 저장의 경쟁 상태도 피합니다.
+   * 회원가입은 이메일만으로 최소 계정을 만듭니다. displayName/phone은
+   * 첫 예약이나 프로필 설정처럼 실제로 필요한 순간에 점진적으로 추가합니다.
+   * Android Push가 users/{uid}를 먼저 만들 수 있으므로 createdAt은 없을 때만 씁니다.
    */
   await runTransaction(db, async (transaction) => {
     const userSnapshot = await transaction.get(userRef);
@@ -127,44 +177,38 @@ export async function ensureUserProfileOnSignup(authUser, formValues = {}) {
       Object.prototype.hasOwnProperty.call(existingData, "createdAt");
 
     const userPatch = {
-      displayName,
-      name: displayName,
       email,
-      phone,
-      profileImage: photoURL,
       updatedAt: serverTimestamp(),
     };
 
-    if (!hasCreatedAt) {
-      userPatch.createdAt = serverTimestamp();
+    if (displayName) {
+      userPatch.displayName = displayName;
+      userPatch.name = displayName;
     }
+    if (phone) userPatch.phone = phone;
+    if (photoURL) userPatch.profileImage = photoURL;
+    if (!hasCreatedAt) userPatch.createdAt = serverTimestamp();
 
     transaction.set(userRef, userPatch, { merge: true });
   });
 
-  // nickname은 claimNickname 서버 함수가 이미 users/profiles/nicknames에 동기화합니다.
-  // 클라이언트에서는 nickname을 직접 생성/수정하지 않습니다.
-  await setDoc(
-    profileRef,
-    {
-      displayName,
-      photoURL,
-    },
-    { merge: true }
-  );
+  // 공개 프로필 문서는 실제 공개 프로필 값이 있을 때만 만듭니다.
+  if (displayName || photoURL) {
+    const publicPatch = {};
+    if (displayName) publicPatch.displayName = displayName;
+    if (photoURL) publicPatch.photoURL = photoURL;
+    await setDoc(profileRef, publicPatch, { merge: true });
+  }
 
-  // 가입 완료 전에 필수 회원정보가 실제 users 문서에 남았는지 확인합니다.
+  // 가입 완료 전에 최소 계약인 이메일이 실제 users 문서에 남았는지 확인합니다.
   const savedUserSnapshot = await getDoc(userRef);
   const savedUser = savedUserSnapshot.exists() ? savedUserSnapshot.data() || {} : {};
 
   if (
     !savedUserSnapshot.exists() ||
-    String(savedUser.displayName || "").trim() !== displayName ||
-    String(savedUser.name || "").trim() !== displayName ||
-    String(savedUser.email || "").trim().toLowerCase() !== email.toLowerCase() ||
-    String(savedUser.phone || "").trim() !== phone
+    String(savedUser.email || "").trim().toLowerCase() !== email.toLowerCase()
   ) {
-    throw new Error("회원 기본정보 저장을 확인하지 못했습니다. 다시 시도해 주세요.");
+    throw new Error("회원 계정 정보 저장을 확인하지 못했습니다. 다시 시도해 주세요.");
   }
 }
 

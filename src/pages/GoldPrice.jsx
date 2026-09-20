@@ -13,6 +13,7 @@ import { doc, onSnapshot } from "firebase/firestore";
 import { db, registerForPush } from "@/firebase/firebase";
 import { useAuthContext } from "@/context/AuthContext";
 import MyGoldTicker from "@/components/gold/MyGoldTicker";
+import QuickGoldValueCalculator from "@/components/gold/QuickGoldValueCalculator";
 import {
   getNotificationPreferences,
   saveMarketingNotificationConsent,
@@ -183,7 +184,7 @@ export default function GoldPrice() {
   const [display14kSellPrice, setDisplay14kSellPrice] = useState(false);
 
   const currentBrowserName = detectBrowserName();
-  const isMember = !!user?.uid && user.isAnonymous !== true;
+  const isMember = !!user?.uid && user.isAnonymous !== true && isEmailVerified;
   const registerPath = "/register?from=gold-price";
   const loginState = useMemo(() => ({ from: "/gold-price" }), []);
 
@@ -652,6 +653,28 @@ export default function GoldPrice() {
           </MobilePriceMatrix>
         </Section>
 
+        <Section aria-labelledby="gold-price-my-gold-title">
+          <SectionHead>
+            <div>
+              <SectionKicker>MY GOLD</SectionKicker>
+              <SectionTitle id="gold-price-my-gold-title">
+                시세를 봤다면, 이제 내 금으로 계산해 보세요.
+              </SectionTitle>
+            </div>
+            <SectionNote>
+              MY GOLD는 실물 금을 맡기는 서비스가 아니라 내가 가진 금을 기록해 참고가치와 변화를 확인하는 공간입니다.
+            </SectionNote>
+          </SectionHead>
+
+          <QuickGoldValueCalculator
+            source="gold-price"
+            eyebrow="오늘 시세 · 내 금 계산"
+            title="내 금은 오늘 얼마일까요?"
+            description="금 종류와 중량을 입력하면 오늘 공개 시세를 기준으로 참고가치와 예상 순금량을 확인합니다."
+            compact
+          />
+        </Section>
+
         <Section aria-labelledby="gold-price-alert-title">
           <AlertCard>
             <div>
@@ -660,7 +683,7 @@ export default function GoldPrice() {
               </AlertTitle>
               <AlertText>
                 매번 확인하지 않아도 주요 금시세 변동을 알려드립니다.
-                알림 설정 시 순금 0.01g 혜택까지 이어집니다.
+                알림은 MY GOLD의 가치 변화를 놓치지 않도록 돕는 보조 기능입니다.
               </AlertText>
 
               <AlertBullets>
@@ -674,7 +697,7 @@ export default function GoldPrice() {
                 </AlertBullet>
                 <AlertBullet>
                   <ShieldCheck size={15} aria-hidden />
-                  알림 설정 시 순금 0.01g 혜택
+                  알림 수신 여부는 언제든 설정에서 변경
                 </AlertBullet>
               </AlertBullets>
             </div>

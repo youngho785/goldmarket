@@ -1,46 +1,25 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { Link } from "react-router-dom";
 import styled from "styled-components";
-import { livingGoldReveal, livingGoldSweep } from "@/styles/livingGoldMotion";
 import { ArrowDownRight, ArrowUpRight, ChevronRight, Minus } from "lucide-react";
-import { doc, onSnapshot } from "firebase/firestore";
-
-import { db } from "@/firebase/firebase";
 
 const Card = styled(Link)`
-  position: relative;
+  display: block;
+  height: 100%;
   overflow: hidden;
-  border: 1px solid
-    color-mix(in srgb, ${({ theme }) => theme.colors.gold} 22%, ${({ theme }) => theme.colors.border});
-  border-radius: 17px;
-  background:
-    linear-gradient(
-      135deg,
-      color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 52%, white) 0%,
-      ${({ theme }) => theme.colors.surface} 58%
-    );
-  box-shadow: 0 7px 18px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 5%, transparent);
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 20px;
+  background: ${({ theme }) => theme.colors.surface};
   color: inherit;
   text-decoration: none;
-  cursor: pointer;
-  transition: transform 0.15s ease, border-color 0.15s ease;
+  box-shadow: 0 10px 24px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 5%, transparent);
+  transition: transform .15s ease, border-color .15s ease;
 
-  &::after {
-    content: "";
-    position: absolute;
-    z-index: 0;
-    top: -40%;
-    bottom: -40%;
-    left: -24%;
-    width: 20%;
-    background: linear-gradient(90deg, transparent, color-mix(in srgb, ${({ theme }) => theme.colors.goldLight} 52%, transparent), transparent);
-    pointer-events: none;
-    animation: ${livingGoldSweep} 1500ms cubic-bezier(.2,.8,.2,1) 440ms both;
+  &:hover {
+    border-color: color-mix(in srgb, ${({ theme }) => theme.colors.gold} 32%, ${({ theme }) => theme.colors.border});
   }
 
-  &:active {
-    transform: translateY(1px);
-  }
+  &:active { transform: translateY(1px); }
 
   &:focus-visible {
     outline: 2px solid ${({ theme }) => theme.colors.gold};
@@ -49,35 +28,37 @@ const Card = styled(Link)`
 `;
 
 const Inner = styled.div`
-  position: relative;
-  z-index: 1;
-  padding: 10px 12px;
+  display: grid;
+  align-content: start;
+  height: 100%;
+  padding: 18px 18px 16px;
 `;
 
 const Head = styled.div`
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
 `;
 
 const TitleWrap = styled.div`
-  min-width: 0;
-
   small {
     display: block;
     color: ${({ theme }) => theme.colors.secondaryDark};
-    font-size: 0.62rem;
+    font-size: .62rem;
     font-weight: 950;
-    letter-spacing: 0.1em;
+    letter-spacing: .11em;
   }
 
   h2 {
-    margin: 2px 0 0;
+    margin: 4px 0 0;
     color: ${({ theme }) => theme.colors.primary};
-    font-size: 0.8rem;
-    line-height: 1.2;
-    letter-spacing: -0.025em;
+    font-family: ${({ theme }) => theme.fonts.body};
+    font-size: 1rem;
+    font-weight: 850;
+    letter-spacing: -.025em;
   }
 `;
 
@@ -85,105 +66,71 @@ const More = styled.span`
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  flex: 0 0 auto;
-  color: ${({ theme }) => theme.colors.primary};
-  font-size: 0.62rem;
-  font-weight: 900;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: .63rem;
+  font-weight: 850;
+  white-space: nowrap;
 
-  svg {
-    width: 13px;
-    height: 13px;
-    color: ${({ theme }) => theme.colors.secondaryDark};
-  }
+  svg { width: 14px; height: 14px; color: ${({ theme }) => theme.colors.secondaryDark}; }
+`;
+
+const PriceList = styled.div`
+  display: grid;
+  margin-top: 3px;
 `;
 
 const PriceRow = styled.div`
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
   gap: 10px;
-  align-items: end;
-  margin-top: 7px;
+  align-items: center;
+  min-height: 55px;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
+
+  &:last-child { border-bottom: 0; }
 `;
 
-const PrimaryPrice = styled.div`
-  min-width: 0;
-
-  > span {
-    display: block;
-    color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: 0.62rem;
-    font-weight: 850;
-  }
-
-  > strong {
-    display: block;
-    margin-top: 2px;
-    color: ${({ theme }) => theme.colors.primary};
-    font-family: ${({ theme }) => theme.fonts.numeric};
-    font-size: clamp(1.28rem, 6.2vw, 1.7rem);
-    font-weight: 950;
-    line-height: 1;
-    letter-spacing: -0.045em;
-    white-space: nowrap;
-    animation: ${livingGoldReveal} 560ms cubic-bezier(.2,.8,.2,1) 160ms both;
-  }
+const Kind = styled.strong`
+  color: ${({ theme }) => theme.colors.primary};
+  font-size: .74rem;
+  font-weight: 900;
 `;
 
-const BuyPrice = styled.div`
-  text-align: right;
-
-  span {
-    display: block;
-    color: ${({ theme }) => theme.colors.textLight};
-    font-size: 0.62rem;
-    font-weight: 800;
-  }
-
-  strong {
-    display: block;
-    margin-top: 2px;
-    color: ${({ theme }) => theme.colors.primary};
-    font-family: ${({ theme }) => theme.fonts.numeric};
-    font-size: 0.64rem;
-    font-weight: 900;
-    white-space: nowrap;
-  }
-
-  b {
-    color: ${({ theme }) => theme.colors.secondaryDark};
-    font-size: 0.62rem;
-    font-weight: 900;
-  }
+const Price = styled.strong`
+  color: ${({ theme }) => theme.colors.primary};
+  font-family: "Segoe UI", "Malgun Gothic", Arial, sans-serif;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-size: .95rem;
+  font-weight: 800;
+  letter-spacing: -.025em;
+  white-space: nowrap;
 `;
 
-const Change = styled.div`
+const Change = styled.span`
   display: inline-flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 3px;
-  margin-top: 4px;
   color: ${({ $direction, theme }) =>
     $direction === "up"
       ? theme.colors.accentCoral
       : $direction === "down"
         ? theme.colors.info
         : theme.colors.textLight};
-  font-size: 0.62rem;
-  font-weight: 900;
+  font-size: .61rem;
+  font-weight: 850;
   white-space: nowrap;
 
-  svg {
-    width: 11px;
-    height: 11px;
-  }
+  svg { width: 11px; height: 11px; }
 `;
 
 const Empty = styled.div`
-  min-height: 58px;
   display: grid;
+  min-height: 170px;
   place-items: center;
-  padding: 12px 8px 5px;
   color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: 0.65rem;
+  font-size: .7rem;
   text-align: center;
 `;
 
@@ -197,10 +144,7 @@ function formatWon(value) {
 function getChange(current, previous) {
   const now = Number(current);
   const before = Number(previous);
-  if (!Number.isFinite(now) || !Number.isFinite(before) || before <= 0) {
-    return null;
-  }
-
+  if (!Number.isFinite(now) || !Number.isFinite(before) || before <= 0) return null;
   const diff = now - before;
   return {
     diff,
@@ -210,90 +154,46 @@ function getChange(current, previous) {
 }
 
 function ChangeView({ change }) {
-  if (!change) return <Change $direction="same">전일 비교 준비 중</Change>;
-
-  const Icon =
-    change.direction === "up"
-      ? ArrowUpRight
-      : change.direction === "down"
-        ? ArrowDownRight
-        : Minus;
-
+  if (!change) return <Change $direction="same">비교 준비</Change>;
+  const Icon = change.direction === "up" ? ArrowUpRight : change.direction === "down" ? ArrowDownRight : Minus;
   return (
     <Change $direction={change.direction}>
       <Icon aria-hidden />
-      {change.diff === 0
-        ? "보합"
-        : `${change.diff > 0 ? "+" : "-"}${Math.abs(change.diff).toLocaleString("ko-KR")}원 · ${Math.abs(change.percent).toFixed(2)}%`}
+      {change.diff === 0 ? "보합" : `${Math.abs(change.percent).toFixed(2)}%`}
     </Change>
   );
 }
 
-export default function AppGoldPriceSummary() {
-  const [data, setData] = useState(null);
-  const [enabled, setEnabled] = useState(false);
-  const [priceLoading, setPriceLoading] = useState(true);
-  const [configLoading, setConfigLoading] = useState(true);
-
-  useEffect(
-    () =>
-      onSnapshot(
-        doc(db, "goldPrices", "current"),
-        (snapshot) => {
-          setData(snapshot.exists() ? snapshot.data() : null);
-          setPriceLoading(false);
-        },
-        (error) => {
-          console.warn(
-            "[AppGoldPriceSummary] 시세 조회 실패:",
-            error?.message || error
-          );
-          setPriceLoading(false);
-        }
-      ),
-    []
+export default function AppGoldPriceSummary({
+  market = {},
+  previousMarket = {},
+  enabled = false,
+  priceLoading = false,
+  configLoading = false,
+}) {
+  const rows = useMemo(
+    () => [
+      {
+        label: "순금",
+        value: market.pureGoldBuyPerDon,
+        change: getChange(market.pureGoldBuyPerDon, previousMarket.pureGoldBuyPerDon),
+      },
+      {
+        label: "18K",
+        value: market.gold18kBuyPerDon,
+        change: getChange(market.gold18kBuyPerDon, previousMarket.gold18kBuyPerDon),
+      },
+      {
+        label: "14K",
+        value: market.gold14kBuyPerDon,
+        change: getChange(market.gold14kBuyPerDon, previousMarket.gold14kBuyPerDon),
+      },
+    ],
+    [market, previousMarket]
   );
-
-  useEffect(
-    () =>
-      onSnapshot(
-        doc(db, "goldPricePublic", "config"),
-        (snapshot) => {
-          const config = snapshot.exists() ? snapshot.data() : {};
-          setEnabled(config.enabled === true);
-          setConfigLoading(false);
-        },
-        (error) => {
-          console.warn(
-            "[AppGoldPriceSummary] 공개 설정 조회 실패:",
-            error?.message || error
-          );
-          setEnabled(false);
-          setConfigLoading(false);
-        }
-      ),
-    []
-  );
-
-  const pureGold = useMemo(() => {
-    const market = data?.market || {};
-    const previous = data?.previousMarket || {};
-
-    return {
-      buy: market.pureGoldSellPerDon,
-      sell: market.pureGoldBuyPerDon,
-      buyChange: getChange(
-        market.pureGoldSellPerDon,
-        previous.pureGoldSellPerDon
-      ),
-      sellChange: getChange(
-        market.pureGoldBuyPerDon,
-        previous.pureGoldBuyPerDon
-      ),
-    };
-  }, [data]);
 
   if (configLoading || !enabled) return null;
+  const hasPriceData = rows.some((row) => Number(row.value) > 0);
 
   return (
     <Card to="/gold-price" aria-labelledby="app-gold-price-title" aria-label="오늘 금시세 전체 보기">
@@ -301,29 +201,25 @@ export default function AppGoldPriceSummary() {
         <Head>
           <TitleWrap>
             <small>TODAY&apos;S GOLD</small>
-            <h2 id="app-gold-price-title">오늘 금시세</h2>
+            <h2 id="app-gold-price-title">오늘 금시세 · 내가 팔 때</h2>
           </TitleWrap>
-          <More>
-            시세 전체 <ChevronRight aria-hidden />
-          </More>
+          <More>전체 <ChevronRight aria-hidden /></More>
         </Head>
 
         {priceLoading ? (
           <Empty>시세를 불러오는 중입니다.</Empty>
-        ) : !data ? (
+        ) : !hasPriceData ? (
           <Empty>관리자 확인 후 금시세가 공개됩니다.</Empty>
         ) : (
-          <PriceRow>
-            <PrimaryPrice>
-              <span>순금(24K) 내가 팔 때</span>
-              <strong>{formatWon(pureGold.sell)}</strong>
-              <ChangeView change={pureGold.sellChange} />
-            </PrimaryPrice>
-            <BuyPrice>
-              <span>내가 살 때 <b>VAT 포함</b></span>
-              <strong>{formatWon(pureGold.buy)}</strong>
-            </BuyPrice>
-          </PriceRow>
+          <PriceList>
+            {rows.map((row) => (
+              <PriceRow key={row.label}>
+                <Kind>{row.label}</Kind>
+                <Price>{formatWon(row.value)}</Price>
+                <ChangeView change={row.change} />
+              </PriceRow>
+            ))}
+          </PriceList>
         )}
       </Inner>
     </Card>

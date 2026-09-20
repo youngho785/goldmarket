@@ -439,7 +439,7 @@ function titleForPath(pathname) {
 export default function AndroidAppHeader() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { user } = useAuthContext() || {};
+  const { user, isMember } = useAuthContext() || {};
   const { unreadNotifications = 0 } = useNotificationContext() || {};
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -527,8 +527,8 @@ export default function AndroidAppHeader() {
               {!user ? (
                 <AccountPanel>
                   <AccountCopy>
-                    <strong>회원가입하고 순금 0.01g 받기</strong>
-                    <p>퀵퀴즈와 금시세 알림으로 최대 순금 0.03g까지 받을 수 있어요.</p>
+                    <strong>내 금 기록을 시작해 보세요</strong>
+                    <p>MY GOLD에 내가 가진 금을 기록하고 오늘의 참고가치와 변화를 확인할 수 있어요.</p>
                   </AccountCopy>
 
                   <AccountActions>
@@ -538,7 +538,21 @@ export default function AndroidAppHeader() {
                     </AccountLink>
                     <AccountLink to="/register" $primary>
                       <UserPlus aria-hidden />
-                      순금 0.01g 받기
+                      시작하기
+                    </AccountLink>
+                  </AccountActions>
+                </AccountPanel>
+              ) : !isMember ? (
+                <AccountPanel>
+                  <AccountCopy>
+                    <strong>이메일 인증을 완료해 주세요</strong>
+                    <p>인증이 끝나면 MY GOLD와 예약·회원 기능이 바로 열립니다.</p>
+                  </AccountCopy>
+
+                  <AccountActions>
+                    <AccountLink to="/verify-email" $primary>
+                      <ShieldCheck aria-hidden />
+                      이메일 인증
                     </AccountLink>
                   </AccountActions>
                 </AccountPanel>
@@ -562,7 +576,7 @@ export default function AndroidAppHeader() {
                 </AccountPanel>
               )}
 
-              {user && (
+              {isMember && (
                 <Section>
                   <SectionTitle>내 메뉴</SectionTitle>
                   <MenuList>
@@ -698,7 +712,7 @@ export default function AndroidAppHeader() {
           </Center>
 
           <HeaderActions>
-            {user && (
+            {isMember && (
               <NotificationLink
                 to="/notifications"
                 aria-label={

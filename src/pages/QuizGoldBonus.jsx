@@ -747,6 +747,22 @@ export default function QuizGoldBonus() {
 
     const pending = readPendingQuizBonus();
 
+    // Auth 세션이 있어도 이메일 미인증이면 회원용 보너스 상태 함수를 호출하지 않습니다.
+    // 퀴즈 결과는 로컬에 보존하고 인증 완료 뒤 서버가 다시 채점해 지급합니다.
+    if (!isEmailVerified) {
+      if (pending?.answers) {
+        setResult({
+          ok: false,
+          needVerification: true,
+          score: pending.score || TOTAL,
+        });
+      }
+      setStatusLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
     (async () => {
       setStatusLoading(true);
       setError("");
@@ -755,7 +771,7 @@ export default function QuizGoldBonus() {
       try {
         // 이메일 인증이 끝난 뒤에만 서버 지급 함수를 호출합니다.
         // 답안은 서버가 다시 채점하므로 localStorage 값 자체를 신뢰하지 않습니다.
-        if (isEmailVerified && pending?.answers) {
+        if (pending?.answers) {
           const res = await claimGoldQuizBonus({
             answers: pending.answers,
           });
@@ -776,13 +792,6 @@ export default function QuizGoldBonus() {
           setBenefitClaimedBefore(true);
         }
 
-        if (!isEmailVerified && pending?.answers) {
-          setResult({
-            ok: false,
-            needVerification: true,
-            score: pending.score || TOTAL,
-          });
-        }
       } catch (loadError) {
         if (!cancelled) {
           setError(

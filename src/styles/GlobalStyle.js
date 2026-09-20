@@ -68,6 +68,22 @@ const GlobalStyle = createGlobalStyle`
     padding-bottom: env(safe-area-inset-bottom);
   }
 
+  /*
+   * Edge-to-edge WebView에서 스크롤 본문이
+   * Android 상태바 뒤로 비치지 않도록 safe-area를 보호한다.
+   */
+  body::before {
+    content: "";
+    position: fixed;
+    z-index: 970;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: env(safe-area-inset-top, 0px);
+    background: ${({ theme }) => theme.colors.surface};
+    pointer-events: none;
+  }
+
   #root {
     min-height: 100%;
     display: flex;

@@ -1,11 +1,16 @@
 // src/pages/GoldbarFee.js
 import React, { useMemo, useState, useEffect } from "react";
 import styled, { keyframes } from "styled-components";
+import {
+  getGoldBarFee,
+  formatGoldBarFee,
+  GOLD_BAR_FEE_DON_TO_GRAMS,
+} from "@/lib/goldBarFee";
 
 /* ================================
    기본 상수
 ================================== */
-const DON_TO_GRAMS = 3.75;
+const DON_TO_GRAMS = GOLD_BAR_FEE_DON_TO_GRAMS;
 
 const GRAM_BARS = [1, 2, 3, 5, 10, 20, 30, 50, 100, 500]; // g 규격(2g 포함)
 const DON_BARS  = [1, 2, 3, 5, 10, 15, 20];               // 돈 규격(15돈 포함)
@@ -15,53 +20,9 @@ const DON_BARS  = [1, 2, 3, 5, 10, 15, 20];               // 돈 규격(15돈 �
    - 우선순위: g 특별규격 → 돈(특별) → 돈(구간) → 문의
    - 전 구간 +10,000원 추가 인상 적용 (요청 반영)
 ================================== */
-// g 기준 특별 규격 (각 항목 +10,000원 추가 인상)
-const SPECIAL_GRAM_FEES = new Map([
-  [1,   40000],
-  [2,   40000],
-  [3,   40000],   // 3g 40,000원
-  [50,  60000],
-  [500, 150000],  // 500g 150,000원
-]);
+// 공임 계산 규칙은 GOLD TO GOLD와 동일한 공용 모듈을 사용합니다.
 
-// 돈 기준 특별 규격 (각 항목 +10,000원 추가 인상)
-const SPECIAL_DON_FEES = new Map([
-  [3,  40000],    // 3돈 40,000원 (구간 규칙보다 우선)
-  [15, 70000],
-]);
-
-// 돈 기준 구간 규칙 (각 구간 +10,000원 추가 인상, 경계: 하위 상한 미포함, 상위 하한 포함)
-const FEE_RULES_DON = [
-  { test: (d) => d >= 1 && d < 3,    fee: 40000 },  // 1 ~ 3 미만
-  { test: (d) => d >= 3 && d <= 10,  fee: 50000 },  // 3 ~ 10 (단, 3돈은 SPECIAL_DON_FEES로 40,000원)
-  { test: (d) => d >= 20 && d <= 30, fee: 70000 },  // 20 ~ 30
-  { test: (d) => Math.abs(d - 50) < 1e-6, fee: 100000 }, // 정확히 50돈
-];
-
-const approxEq = (a, b, eps = 1e-6) => Math.abs(a - b) < eps;
-
-/** 범위 포함 체크 (양끝 포함, 부동소수 여유) */
-const inRange = (x, a, b, eps = 1e-6) => x > a - eps && x < b + eps;
-
-const getFee = (donVal, gramVal) => {
-  // 1) g-특별규격
-  for (const [g, fee] of SPECIAL_GRAM_FEES.entries()) {
-    if (approxEq(gramVal, g)) return fee;
-  }
-  // 2) 돈-특별규격
-  for (const [d, fee] of SPECIAL_DON_FEES.entries()) {
-    if (approxEq(donVal, d)) return fee;
-  }
-  // 3) 돈-구간 규칙
-  for (const rule of FEE_RULES_DON) {
-    if (rule.test(donVal)) return rule.fee;
-  }
-  // 4) 없으면 문의
-  return null;
-};
-
-const formatKRW = (n) =>
-  typeof n === "number" ? `${n.toLocaleString("ko-KR")}원` : n;
+const formatKRW = (n) => formatGoldBarFee(n);
 
 const toDon = (grams) => grams / DON_TO_GRAMS;
 const toGrams = (don) => don * DON_TO_GRAMS;
@@ -438,12 +399,8 @@ export default function GoldbarFee() {
     const grams = unit === "g" ? n : n * DON_TO_GRAMS;
 
     // 기본 규칙
-    let fee = getFee(don, grams);
+    let fee = getGoldBarFee(don, grams, { calculatorRangeOverride: true });
 
-    // ✅ 계산기 전용 오버라이드: 환산값이 11~14돈이면 60,000원 (기존 50,000 → +10,000 반영)
-    if (inRange(don, 11, 14)) {
-      fee = 60000;
-    }
 
     return {
       don: round2(don),
@@ -457,7 +414,7 @@ export default function GoldbarFee() {
   const gramRows = useMemo(() => {
     return GRAM_BARS.map((g) => {
       const d = toDon(g);
-      const fee = getFee(d, g);
+      const fee = getGoldBarFee(d, g);
       return {
         label: `${g} g 골드바`,
         grams: round3(g),
@@ -470,7 +427,7 @@ export default function GoldbarFee() {
   const donRows = useMemo(() => {
     return DON_BARS.map((d) => {
       const g = toGrams(d);
-      const fee = getFee(d, g);
+      const fee = getGoldBarFee(d, g);
       return {
         label: `${d}돈 골드바`,
         grams: round3(g),

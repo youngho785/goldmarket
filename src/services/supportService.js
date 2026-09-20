@@ -42,14 +42,18 @@ async function getAuthorNickname(authorId) {
   );
 }
 
-export async function createPost({ title, content, authorId }) {
+export async function createPost({ title, content, authorId, relatedGroupId = "" }) {
   const cleanTitle = String(title || "").trim();
   const cleanContent = String(content || "").trim();
+  const cleanRelatedGroupId = String(relatedGroupId || "").trim();
   if (!authorId || !cleanTitle || !cleanContent) {
     throw new Error("문의 제목과 내용을 입력해 주세요.");
   }
+  if (cleanRelatedGroupId.length > 120) {
+    throw new Error("연결된 교환건 정보가 올바르지 않습니다.");
+  }
 
-  return addDoc(tickets, {
+  const payload = {
     title: cleanTitle,
     content: cleanContent,
     category: "inquiry",
@@ -58,7 +62,10 @@ export async function createPost({ title, content, authorId }) {
     status: "open",
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
-  });
+  };
+  if (cleanRelatedGroupId) payload.relatedGroupId = cleanRelatedGroupId;
+
+  return addDoc(tickets, payload);
 }
 
 export async function fetchPostById(postId) {

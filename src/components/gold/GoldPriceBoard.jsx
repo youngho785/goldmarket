@@ -15,7 +15,7 @@ import {
 import { db } from "@/firebase/firebase";
 
 const Wrap = styled.section`
-  width: min(1120px, calc(100% - 32px));
+  width: ${({ $compact }) => ($compact ? "100%" : "min(1120px, calc(100% - 32px))")};
   margin: 0 auto 0;
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 0;
@@ -23,13 +23,13 @@ const Wrap = styled.section`
   background: ${({ theme }) => theme.colors.surface};
 
   @media (max-width: 680px) {
-    width: calc(100% - 20px);
+    width: ${({ $compact }) => ($compact ? "100%" : "calc(100% - 20px)")};
     margin: 0 auto;
   }
 `;
 
 const Head = styled.div`
-  padding: 17px 24px 15px;
+  padding: ${({ $compact }) => ($compact ? "12px 16px 10px" : "17px 24px 15px")};
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   text-align: center;
 
@@ -95,7 +95,7 @@ const PriceTable = styled.div`
 const TableHead = styled.div`
   display: grid;
   grid-template-columns: 86px minmax(0, 1fr) minmax(0, 1fr);
-  min-height: 44px;
+  min-height: ${({ $compact }) => ($compact ? "34px" : "44px")};
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   background: ${({ theme }) => theme.colors.surfaceAlt};
 
@@ -108,7 +108,7 @@ const TableHead = styled.div`
 const TableRow = styled.div`
   display: grid;
   grid-template-columns: 86px minmax(0, 1fr) minmax(0, 1fr);
-  min-height: 62px;
+  min-height: ${({ $compact }) => ($compact ? "46px" : "62px")};
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
 
   @media (max-width: 520px) {
@@ -123,7 +123,7 @@ const Cell = styled.div`
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 8px 6px;
+  padding: 6px 6px;
   border-left: ${({ $first, theme }) =>
     $first ? "0" : `1px solid ${theme.colors.border}`};
   text-align: center;
@@ -177,7 +177,9 @@ const Kind = styled.strong`
 
 const Value = styled.strong`
   color: ${({ theme }) => theme.colors.primary};
-  font-family: ${({ theme }) => theme.fonts.numeric};
+  font-family: "Segoe UI", "Malgun Gothic", Arial, sans-serif;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
   font-size: ${({ $compact }) =>
     $compact ? "clamp(0.95rem, 1.8vw, 1.1rem)" : "clamp(1rem, 2vw, 1.2rem)"};
   font-weight: 900;
@@ -412,7 +414,7 @@ function changeText(change, prefix = false) {
   return prefix ? `전일 대비 ${text}` : text;
 }
 
-export default function GoldPriceBoard() {
+export default function GoldPriceBoard({ compact = false }) {
   const [data, setData] = useState(null);
   const [enabled, setEnabled] = useState(false);
   const [display14kSellPrice, setDisplay14kSellPrice] = useState(false);
@@ -557,8 +559,8 @@ export default function GoldPriceBoard() {
   if (configLoading || !enabled) return null;
 
   return (
-    <Wrap>
-      <Head>
+    <Wrap $compact={compact}>
+      {!compact && <Head $compact={compact}>
         <HeadTitle>
           <Title>한국골드마켓 금시세</Title>
           {data && (
@@ -567,7 +569,7 @@ export default function GoldPriceBoard() {
             </SourceDate>
           )}
         </HeadTitle>
-      </Head>
+      </Head>}
 
       {priceLoading ? (
         <Empty>시세를 불러오는 중입니다.</Empty>
@@ -576,7 +578,7 @@ export default function GoldPriceBoard() {
       ) : (
         <>
           <PriceTable>
-            <TableHead>
+            <TableHead $compact={compact}>
               <HeadCell $first>종류</HeadCell>
               <HeadCell>
                 내가 살 때
@@ -593,7 +595,7 @@ export default function GoldPriceBoard() {
                 !display14kSellPrice;
 
               return (
-                <TableRow key={row.label}>
+                <TableRow key={row.label} $compact={compact}>
                   <Cell $first>
                     <Kind>{row.label}</Kind>
                   </Cell>
@@ -623,7 +625,7 @@ export default function GoldPriceBoard() {
             })}
           </PriceTable>
 
-          <HistoryToggle
+          {!compact && <HistoryToggle
             type="button"
             $open={historyOpen}
             aria-expanded={historyOpen}
@@ -631,9 +633,9 @@ export default function GoldPriceBoard() {
           >
             <span>과거 시세 조회</span>
             <span>▼</span>
-          </HistoryToggle>
+          </HistoryToggle>}
 
-          {historyOpen && (
+          {!compact && historyOpen && (
             <>
               <Search>
                 <input
@@ -699,10 +701,12 @@ export default function GoldPriceBoard() {
             </>
           )}
 
-          <Notice>
-            1돈(3.75g) 기준 · 내가 살 때 가격은 VAT 포함 · 시세는 시장
-            상황에 따라 변경될 수 있습니다.
-          </Notice>
+          {!compact && (
+            <Notice>
+              1돈(3.75g) 기준 · 내가 살 때 가격은 VAT 포함 · 시세는 시장
+              상황에 따라 변경될 수 있습니다.
+            </Notice>
+          )}
         </>
       )}
     </Wrap>

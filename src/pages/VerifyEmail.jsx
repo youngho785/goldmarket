@@ -693,9 +693,15 @@ export default function VerifyEmail() {
                       새 이메일 <strong>{pendingEmail}</strong>로 변경 확인 메일을 보냈습니다.
                     </Message>
                   ) : (
-                    <Button onClick={handleResend} disabled={checking || resending}>
-                      {resending ? "재전송 중…" : "인증메일 재전송"}
-                    </Button>
+                    <>
+                      {/* 인증 상태 자동 폴링 중에도 재전송은 가능해야 합니다. */}
+                      <Button
+                        onClick={handleResend}
+                        disabled={resending}
+                      >
+                        {resending ? "재전송 중…" : "인증메일 재전송"}
+                      </Button>
+                    </>
                   )}
 
                   <SecondaryButton

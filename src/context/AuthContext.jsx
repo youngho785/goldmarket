@@ -48,6 +48,8 @@ const AuthContext = createContext({
   isAdmin: false,
   isSuperAdmin: false,
   isEmailVerified: false,
+  isMember: false,
+  memberUser: null,
   login: async () => {},
   signUp: async () => {},
   logout: async () => {},
@@ -89,14 +91,15 @@ export const AuthProvider = ({ children }) => {
             const tokenResult =
               await getIdTokenResult(currentUser);
 
+            const verified = currentUser.emailVerified === true;
             const superAdmin =
-              tokenResult.claims.superAdmin === true;
+              verified && tokenResult.claims.superAdmin === true;
 
             setIsSuperAdmin(superAdmin);
 
             setIsAdmin(
-              tokenResult.claims.admin === true ||
-                superAdmin
+              verified &&
+                (tokenResult.claims.admin === true || superAdmin)
             );
           } catch {
             setIsAdmin(false);
@@ -249,7 +252,7 @@ export const AuthProvider = ({ children }) => {
     const initialize = async () => {
       try {
         const result = await initializeNativePush(
-          user?.uid || ""
+          isEmailVerified ? user?.uid || "" : ""
         );
 
         if (cancelled) {
@@ -263,7 +266,7 @@ export const AuthProvider = ({ children }) => {
           console.log(
             "[AuthContext] Native Push initialized:",
             {
-              uid: user?.uid || null,
+              uid: isEmailVerified ? user?.uid || null : null,
               permission:
                 result.permission || "unknown",
               hasToken: !!result.token,
@@ -285,7 +288,7 @@ export const AuthProvider = ({ children }) => {
     return () => {
       cancelled = true;
     };
-  }, [loading, user?.uid]);
+  }, [loading, user?.uid, isEmailVerified]);
 
   /*
    * 컨텍스트 value 메모이즈
@@ -307,7 +310,7 @@ export const AuthProvider = ({ children }) => {
       phone,
       continueUrl = "",
     }) => {
-      const user = await authSignUp({
+      const result = await authSignUp({
         email,
         password,
         displayName,
@@ -316,8 +319,9 @@ export const AuthProvider = ({ children }) => {
         continueUrl,
       });
 
-      // 기존 화면과의 호환 위해 유사한 형태로 반환
-      return { user };
+      // 신규 계정인지 미인증 가입 재개인지 함께 반환합니다.
+      // 현재 Context 가입 UI는 없지만 서비스 계약을 Register와 동일하게 유지합니다.
+      return result;
     };
 
     /*
@@ -363,25 +367,31 @@ export const AuthProvider = ({ children }) => {
         auth.currentUser
       );
 
+      const verified = auth.currentUser.emailVerified === true;
       const superAdmin =
-        res.claims.superAdmin === true;
+        verified && res.claims.superAdmin === true;
 
       setIsSuperAdmin(superAdmin);
 
       setIsAdmin(
-        res.claims.admin === true ||
-          superAdmin
+        verified &&
+          (res.claims.admin === true || superAdmin)
       );
 
       return true;
     };
 
+    const isMember = Boolean(user && isEmailVerified);
+    const memberUser = isMember ? user : null;
+
     return {
       user,
+      memberUser,
       loading,
       isAdmin,
       isSuperAdmin,
       isEmailVerified,
+      isMember,
       login,
       signUp,
       logout,

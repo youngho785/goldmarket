@@ -617,8 +617,225 @@ export const cancelGoldExchangeGroup = onCall<{ groupId: string; reason: string 
   }
 );
 
+
+export const saveExchangeMeasurement = onCall<{
+  groupId: string;
+  items: Array<{
+    id: string;
+    measuredWeightG: number;
+    measuredPurityPercent?: number | null;
+    confirmedPureGoldG: number;
+  }>;
+  barsPlan: Record<string, unknown>;
+  finalFeeWon: number;
+  customerConsentConfirmed: boolean;
+}>(
+  { region: "asia-northeast3", enforceAppCheck: ENFORCE_APP_CHECK },
+  async (req) => {
+    await requireCurrentAdmin(req.auth?.uid);
+
+    const groupId = String(req.data?.groupId || "").trim();
+    const inputItems = Array.isArray(req.data?.items) ? req.data.items : [];
+    const finalFeeWon = Number(req.data?.finalFeeWon);
+    const customerConsentConfirmed = req.data?.customerConsentConfirmed === true;
+    const rawBarsPlan = req.data?.barsPlan;
+
+    if (!groupId) {
+      throw new HttpsError("invalid-argument", "교환 그룹을 확인해 주세요.");
+    }
+    if (!inputItems.length || inputItems.length > 50) {
+      throw new HttpsError("invalid-argument", "실측할 제품을 확인해 주세요.");
+    }
+    if (!Number.isFinite(finalFeeWon) || finalFeeWon < 0 || finalFeeWon > 100_000_000) {
+      throw new HttpsError("invalid-argument", "최종 제작공임을 확인해 주세요.");
+    }
+
+    const normalizedItems = inputItems.map((item, index) => {
+      const id = String(item?.id || "").trim();
+      const measuredWeightG = roundTo3(Number(item?.measuredWeightG));
+      const confirmedPureGoldG = roundTo3(Number(item?.confirmedPureGoldG));
+      const purityRaw = item?.measuredPurityPercent;
+      const measuredPurityPercent =
+        purityRaw == null
+          ? null
+          : Math.round(Number(purityRaw) * 1000) / 1000;
+
+      if (!id) {
+        throw new HttpsError("invalid-argument", `${index + 1}번째 제품 식별값을 확인해 주세요.`);
+      }
+      if (!Number.isFinite(measuredWeightG) || measuredWeightG < 0 || measuredWeightG > 1_000_000) {
+        throw new HttpsError("invalid-argument", `${index + 1}번째 실측 중량을 확인해 주세요.`);
+      }
+      if (
+        !Number.isFinite(confirmedPureGoldG) ||
+        confirmedPureGoldG < 0 ||
+        confirmedPureGoldG > measuredWeightG + 0.001
+      ) {
+        throw new HttpsError(
+          "invalid-argument",
+          `${index + 1}번째 확정 순금량은 0 이상이며 실측 중량을 넘을 수 없습니다.`
+        );
+      }
+      if (
+        measuredPurityPercent != null &&
+        (!Number.isFinite(measuredPurityPercent) ||
+          measuredPurityPercent <= 0 ||
+          measuredPurityPercent > 100)
+      ) {
+        throw new HttpsError("invalid-argument", `${index + 1}번째 확인 순도를 확인해 주세요.`);
+      }
+
+      return {
+        id,
+        measuredWeightG,
+        measuredPurityPercent,
+        confirmedPureGoldG,
+      };
+    });
+
+    if (new Set(normalizedItems.map((item) => item.id)).size !== normalizedItems.length) {
+      throw new HttpsError("invalid-argument", "중복된 실측 제품이 있습니다.");
+    }
+
+    const groupMetaRef = db().doc(`goldExchangeGroups/${groupId}`);
+    const exchanges = db().collection("goldExchanges");
+    const now = FieldValue.serverTimestamp();
+    const adminUid = req.auth?.uid || "system";
+
+    const result = await db().runTransaction(async (tx) => {
+      const [groupMetaSnap, groupSnapshot] = await Promise.all([
+        tx.get(groupMetaRef),
+        tx.get(exchanges.where("groupId", "==", groupId)),
+      ]);
+
+      let documents: FirebaseFirestore.DocumentSnapshot[] = [...groupSnapshot.docs];
+      if (documents.length === 0) {
+        const direct = await tx.get(exchanges.doc(groupId));
+        if (direct.exists) documents = [direct];
+      }
+      if (documents.length === 0) {
+        throw new HttpsError("not-found", "교환 그룹을 찾을 수 없습니다.");
+      }
+
+      const statuses = documents.map((document) =>
+        normalizeExchangeStatus(String(document.get("status") || "requested"))
+      );
+      if (statuses.some((value) => value !== "in_progress")) {
+        throw new HttpsError(
+          "failed-precondition",
+          "매장 확인 중 상태에서만 실측 결과를 저장할 수 있습니다."
+        );
+      }
+
+      const documentIds = new Set(documents.map((document) => document.id));
+      const inputIds = new Set(normalizedItems.map((item) => item.id));
+      if (
+        documentIds.size !== inputIds.size ||
+        [...documentIds].some((id) => !inputIds.has(id))
+      ) {
+        throw new HttpsError(
+          "failed-precondition",
+          "현재 교환 제품 목록이 변경되었습니다. 화면을 새로고침한 뒤 다시 입력해 주세요."
+        );
+      }
+
+      const finalRecognizedG = roundTo3(
+        normalizedItems.reduce((sum, item) => sum + item.confirmedPureGoldG, 0)
+      );
+      if (finalRecognizedG <= 0) {
+        throw new HttpsError("invalid-argument", "확정 순금량 합계는 0g보다 커야 합니다.");
+      }
+
+      const bonusUsageStatus = String(groupMetaSnap.get("bonusGoldUsageStatus") || "");
+      const existingRecognizedG = roundTo3(Number(groupMetaSnap.get("finalRecognizedG") || 0));
+      if (
+        bonusUsageStatus === "used" &&
+        existingRecognizedG > 0 &&
+        Math.abs(existingRecognizedG - finalRecognizedG) > 0.001
+      ) {
+        throw new HttpsError(
+          "failed-precondition",
+          "적립 순금 사용 확정 시 입력한 현장 인정 중량과 실측 확정 순금량이 다릅니다. 두 값을 먼저 일치시켜 주세요."
+        );
+      }
+      const bonusGoldUsedG =
+        bonusUsageStatus === "used"
+          ? roundTo3(Number(groupMetaSnap.get("bonusGoldUsedG") || 0))
+          : 0;
+      const finalAppliedG = roundTo3(finalRecognizedG + bonusGoldUsedG);
+      const finalBarsPlan = buildValidatedBarsPlan(rawBarsPlan, finalAppliedG);
+      if (!finalBarsPlan) {
+        throw new HttpsError("invalid-argument", "최종 골드바 규격과 수량을 선택해 주세요.");
+      }
+
+      const previousMeasurementStatus = String(groupMetaSnap.get("measurementStatus") || "");
+      if (previousMeasurementStatus === "confirmed" && !customerConsentConfirmed) {
+        throw new HttpsError(
+          "failed-precondition",
+          "이미 고객 동의가 확정된 실측 결과는 임시 저장 상태로 되돌릴 수 없습니다."
+        );
+      }
+
+      normalizedItems.forEach((measurement) => {
+        const ref = documents.find((document) => document.id === measurement.id)?.ref;
+        if (!ref) return;
+        tx.update(ref, {
+          measuredWeightG: measurement.measuredWeightG,
+          measuredPurityPercent: measurement.measuredPurityPercent,
+          confirmedPureGoldG: measurement.confirmedPureGoldG,
+          measurementStatus: customerConsentConfirmed ? "confirmed" : "draft",
+          measurementUpdatedAt: now,
+          measurementUpdatedBy: adminUid,
+          updatedAt: now,
+          ...(customerConsentConfirmed
+            ? {
+                customerConsentConfirmed: true,
+                customerConsentConfirmedAt: now,
+                customerConsentConfirmedBy: adminUid,
+              }
+            : {}),
+        } as FirebaseFirestore.DocumentData);
+      });
+
+      tx.set(
+        groupMetaRef,
+        {
+          finalRecognizedG,
+          finalAppliedG,
+          finalBarsPlan,
+          finalFeeWon: Math.round(finalFeeWon),
+          measurementStatus: customerConsentConfirmed ? "confirmed" : "draft",
+          measurementUpdatedAt: now,
+          measurementUpdatedBy: adminUid,
+          ...(customerConsentConfirmed
+            ? {
+                customerConsentConfirmed: true,
+                customerConsentConfirmedAt: now,
+                customerConsentConfirmedBy: adminUid,
+              }
+            : {}),
+          updatedAt: now,
+        } as FirebaseFirestore.DocumentData,
+        { merge: true }
+      );
+
+      return {
+        finalRecognizedG,
+        finalAppliedG,
+        finalBarsPlan,
+        finalFeeWon: Math.round(finalFeeWon),
+        measurementStatus: customerConsentConfirmed ? "confirmed" : "draft",
+        measurements: normalizedItems,
+      };
+    });
+
+    return { ok: true, ...result };
+  }
+);
+
+
 /* ─────────────────────────────────────────────────────────────
- * 4) 그룹 상태 일괄 변경 (관리자)
+ * 4) 관리자 그룹 상태 변경
  * ───────────────────────────────────────────────────────────── */
 export const setExchangeGroupStatus = onCall<{
   groupId: string;
@@ -666,6 +883,29 @@ export const setExchangeGroupStatus = onCall<{
           "failed-precondition",
           "적립 순금 사용 신청을 먼저 확정하거나 취소해 주세요."
         );
+      }
+      if (status === "completed") {
+        const measurementStatus = String(groupMetaSnap.get("measurementStatus") || "");
+        const finalRecognizedG = Number(groupMetaSnap.get("finalRecognizedG") || 0);
+        const finalAppliedG = Number(groupMetaSnap.get("finalAppliedG") || 0);
+        const finalFeeWon = Number(groupMetaSnap.get("finalFeeWon"));
+        const finalBarsPlan = groupMetaSnap.get("finalBarsPlan");
+
+        if (
+          measurementStatus !== "confirmed" ||
+          !Number.isFinite(finalRecognizedG) ||
+          finalRecognizedG <= 0 ||
+          !Number.isFinite(finalAppliedG) ||
+          finalAppliedG <= 0 ||
+          !Number.isFinite(finalFeeWon) ||
+          finalFeeWon < 0 ||
+          !finalBarsPlan
+        ) {
+          throw new HttpsError(
+            "failed-precondition",
+            "실측 결과·최종 골드바·공임을 저장하고 고객 동의를 확인한 뒤 교환 완료 처리해 주세요."
+          );
+        }
       }
 
       let documents: FirebaseFirestore.DocumentSnapshot[] = [...groupSnapshot.docs];
@@ -722,6 +962,7 @@ export const setExchangeGroupStatus = onCall<{
       }
 
       const targetUid = String(rows.find((row) => row.userId)?.userId || "");
+
       const scheduleRow =
         rows.find((row) => String(row.scheduleChangeType || "") === "rescheduled") ||
         rows.find((row) => row.scheduleChangeType);
@@ -758,6 +999,24 @@ export const setExchangeGroupStatus = onCall<{
         }
       } else if (status === "canceled" || status === "rejected") {
         nextSlots = setReservedTime(slots, visitDate, visitTime, false);
+      }
+
+      // Firestore 트랜잭션은 모든 read(tx.get)를 write(tx.set/update)보다 먼저 끝내야 합니다.
+      // 위에서 그룹/단건 fallback/예약슬롯/예약설정 읽기를 모두 완료한 뒤,
+      // 완료 상태와 고객 알림을 같은 트랜잭션에 원자적으로 기록합니다.
+      if (status === "completed" && targetUid) {
+        const completionNotificationRef = db().doc(
+          `notifications/${targetUid}/items/exchange-completed-${groupId}`
+        );
+        tx.set(completionNotificationRef, {
+          type: "exchange_completed",
+          title: "GOLD TO GOLD 교환이 완료되었습니다",
+          body: "매장에서 확인한 최종 교환 결과를 교환내역에서 확인할 수 있습니다.",
+          link: "/my-exchanges",
+          meta: { groupId, newStatus: "completed" },
+          createdAt: now,
+          read: false,
+        });
       }
 
       if (nextSlots !== slots) {
@@ -835,7 +1094,9 @@ export const setExchangeGroupStatus = onCall<{
       });
     }
 
-    if (result.targetUid) {
+    // completed 알림은 상태 변경과 같은 트랜잭션에서 이미 생성합니다.
+    // 나머지 상태 알림만 여기서 비동기로 생성합니다.
+    if (result.targetUid && status !== "completed") {
       const visitSchedule = [result.visitDate, result.visitTime].filter(Boolean).join(" ");
       const notifications = {
         requested: {
@@ -865,11 +1126,6 @@ export const setExchangeGroupStatus = onCall<{
           type: "exchange_in_progress",
           title: "금 교환을 확인하고 있습니다",
           body: "순도·중량과 골드바 교환 내용을 확인하고 있습니다.",
-        },
-        completed: {
-          type: "exchange_completed",
-          title: "금 교환이 완료되었습니다",
-          body: "교환 내역을 확인하고 후기를 남길 수 있습니다.",
         },
         canceled: {
           type: "exchange_canceled",

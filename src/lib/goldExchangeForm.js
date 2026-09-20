@@ -5,6 +5,21 @@ import {
   roundTo3Custom,
 } from "./goldRates.js";
 
+export const GOLD_TO_GOLD_EXCLUDED_PRODUCT_IDS = Object.freeze([
+  "gold-9999-lump",
+  "gold-9999-bar",
+]);
+
+const GOLD_TO_GOLD_EXCLUDED_SET = new Set(GOLD_TO_GOLD_EXCLUDED_PRODUCT_IDS);
+
+export function isGoldToGoldInputProduct(productOrId) {
+  const id = typeof productOrId === "string"
+    ? String(productOrId || "").trim()
+    : String(productOrId?.id || productOrId?.productId || "").trim();
+  if (!id) return true;
+  return !GOLD_TO_GOLD_EXCLUDED_SET.has(id);
+}
+
 export function createEmptyExchangeProduct() {
   return {
     productId: "",
@@ -84,6 +99,8 @@ export function importVaultItemsToExchangeProducts(items, rates, maxProducts) {
         goldType: item?.goldType,
       });
 
+      if (!isGoldToGoldInputProduct(policy || item?.productId)) return null;
+
       return {
         ...createEmptyExchangeProduct(),
         productId: policy?.id || item?.productId || "",
@@ -97,7 +114,7 @@ export function importVaultItemsToExchangeProducts(items, rates, maxProducts) {
         sourceLabel: item?.label || "금제품",
       };
     })
-    .filter((item) => item.goldType && Number(item.quantity) > 0);
+    .filter((item) => item && item.goldType && Number(item.quantity) > 0);
 }
 
 export function syncExchangeProductsWithRates(products, rates) {
@@ -156,6 +173,18 @@ export function validateExchangeProductsForCalculation(
   }
 
   for (const product of source) {
+    const policy = findGoldProduct(rates, {
+      productId: product?.productId,
+      goldType: product?.goldType,
+    });
+    if (!isGoldToGoldInputProduct(policy || product?.productId)) {
+      return {
+        ok: false,
+        error: "순금 999.9 덩어리와 999.9 골드바는 GOLD TO GOLD 교환 대상 제품에서 제외됩니다.",
+        requiresManualCheck: false,
+      };
+    }
+
     const quantity = Number(product?.quantity);
     const grams = product?.inputUnit === "don" ? quantity * DON_TO_GRAMS : quantity;
     if (

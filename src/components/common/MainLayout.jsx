@@ -19,6 +19,8 @@ import { useAuthContext } from "@/context/AuthContext";
 import { isAndroid } from "@/platform/runtime";
 
 const MainContent = styled.main`
+  position: relative;
+  z-index: 0;
   width: 100%;
   flex: 1 0 auto;
   padding-bottom: ${({ $hideBottomNav, $android, $home, $compactDesktop }) =>

@@ -1,14 +1,14 @@
 // src/components/common/Footer.jsx
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import styled from "styled-components";
-import { Clock3, Mail, MapPin, Phone } from "lucide-react";
+import { Clock3, Mail, MapPin, MessageCircle, Phone } from "lucide-react";
+import { useAuthContext } from "@/context/AuthContext";
 
 const OPERATOR = {
   company: "원일귀금속",
   representative: "나영호",
   registrationNumber: "865-41-00244",
-  address: "부산광역시 부산진구 골드테마길 21 (범천동) 원일귀금속",
   hours: "월–토 10:00–18:00",
   phone: "051-646-9700",
   mobile: "010-7713-3739",
@@ -16,18 +16,22 @@ const OPERATOR = {
 };
 
 const FooterWrap = styled.footer`
-  margin-top: auto;
+  margin-top: ${({ $joinLanding }) => ($joinLanding ? "-20px" : "auto")};
   background: ${({ theme }) => theme.colors.primary};
   color: ${({ theme }) => theme.colors.goldLight};
+
+  @media (max-width: 768px) {
+    margin-top: ${({ $joinLanding }) => ($joinLanding ? "0" : "auto")};
+  }
 `;
 
 const Top = styled.div`
   display: grid;
-  grid-template-columns: minmax(280px, 1.35fr) repeat(2, minmax(160px, 0.65fr));
-  gap: clamp(38px, 6vw, 90px);
+  grid-template-columns: minmax(240px, 1.05fr) repeat(2, minmax(170px, 0.72fr));
+  gap: clamp(32px, 5vw, 72px);
   max-width: 1440px;
   margin: 0 auto;
-  padding: clamp(52px, 7vw, 88px) clamp(16px, 4vw, 64px) 44px;
+  padding: clamp(42px, 5vw, 60px) clamp(16px, 4vw, 64px) 34px;
 
   @media (max-width: 820px) {
     grid-template-columns: 1fr 1fr;
@@ -43,7 +47,7 @@ const Top = styled.div`
 `;
 
 const Brand = styled.div`
-  max-width: 470px;
+  max-width: 380px;
 
   h2 {
     margin: 0 0 12px;
@@ -51,21 +55,9 @@ const Brand = styled.div`
     font-size: 1.65rem;
   }
 
-  p {
-    margin: 0;
-    color: color-mix(in srgb, ${({ theme }) => theme.on.primary} 78%, transparent);
-    line-height: 1.8;
-    word-break: keep-all;
-  }
-
   @media (max-width: 560px) {
     h2 {
       font-size: 1.45rem;
-    }
-
-    p {
-      font-size: 0.9rem;
-      line-height: 1.7;
     }
   }
 `;
@@ -74,7 +66,7 @@ const SealRow = styled.div`
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 24px;
+  margin-bottom: 18px;
 `;
 
 const Seal = styled.span`
@@ -270,9 +262,78 @@ const LegalLinks = styled.div`
   }
 `;
 
+
+const CompactFooter = styled.footer`
+  margin-top: auto;
+  border-top: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.textSecondary};
+`;
+
+const CompactInner = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 18px clamp(16px, 3vw, 28px);
+  font-size: .68rem;
+  line-height: 1.6;
+
+  > strong {
+    color: ${({ theme }) => theme.colors.primary};
+    font-size: .72rem;
+  }
+
+  nav {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+  }
+
+  a {
+    color: ${({ theme }) => theme.colors.textSecondary};
+    text-decoration: none;
+  }
+
+  a:hover { color: ${({ theme }) => theme.colors.primary}; }
+
+  @media (max-width: 700px) {
+    align-items: flex-start;
+    flex-direction: column;
+    padding-bottom: calc(102px + env(safe-area-inset-bottom));
+
+    nav { justify-content: flex-start; }
+  }
+`;
+
 export default function Footer() {
+  const { pathname } = useLocation();
+  const { isMember = false } = useAuthContext() || {};
+  const joinLanding = pathname === "/";
+
+  if (isMember) {
+    return (
+      <CompactFooter>
+        <CompactInner>
+          <strong>한국골드마켓</strong>
+          <nav aria-label="하단 안내">
+            <Link to="/support/new">1:1 문의</Link>
+            <Link to="/terms">이용약관</Link>
+            <Link to="/privacy">개인정보처리방침</Link>
+            <span>{OPERATOR.company} · 대표 {OPERATOR.representative}</span>
+            <span>© {new Date().getFullYear()} KOREA GOLD MARKET</span>
+          </nav>
+        </CompactInner>
+      </CompactFooter>
+    );
+  }
+
   return (
-    <FooterWrap>
+    <FooterWrap $joinLanding={joinLanding}>
       <Top>
         <Brand>
           <SealRow>
@@ -280,20 +341,15 @@ export default function Footer() {
 
             <Operator>
               한국골드마켓
-              <small>원일귀금속 직접 운영</small>
+              <small>KOREA GOLD MARKET</small>
             </Operator>
           </SealRow>
 
           <h2>금의 가치를 이어가다</h2>
-
-          <p>
-            오늘 금시세부터 MY GOLD 기록·관리, 999.9 골드바 교환까지.
-            내가 가진 금의 가치를 하나의 흐름으로 이어갑니다.
-          </p>
         </Brand>
 
         <Col>
-          <h3>서비스</h3>
+          <h3>바로가기</h3>
 
           <LinkList>
             <Link to="/gold-price">오늘 금시세</Link>
@@ -301,41 +357,43 @@ export default function Footer() {
             <Link to="/gold-to-gold">GOLD TO GOLD</Link>
             <Link to="/gold-exchange">금교환 신청</Link>
             <Link to="/goldbar-fee">골드바 공임</Link>
-            <Link to="/stores">교환 절차·매장</Link>
           </LinkList>
         </Col>
 
         <Col>
-          <h3>문의·매장</h3>
+          <h3>문의 · 안내</h3>
 
           <ContactList>
-            <span>
-              <MapPin size={15} aria-hidden />
-              {OPERATOR.address}
-            </span>
+            <a href={`tel:${OPERATOR.phone.replaceAll("-", "")}`}>
+              <Phone size={15} aria-hidden />
+              {OPERATOR.phone}
+            </a>
+
+            <Link to="/support/new">
+              <MessageCircle size={15} aria-hidden />
+              1:1 문의
+            </Link>
+
+            <a href={`mailto:${OPERATOR.email}`}>
+              <Mail size={15} aria-hidden />
+              {OPERATOR.email}
+            </a>
 
             <span>
               <Clock3 size={15} aria-hidden />
               {OPERATOR.hours}
             </span>
 
-            <a href={`tel:${OPERATOR.phone.replaceAll("-", "")}`}>
-              <Phone size={15} aria-hidden />
-              {OPERATOR.phone}
-            </a>
-
-            <a href={`mailto:${OPERATOR.email}`}>
-              <Mail size={15} aria-hidden />
-              {OPERATOR.email}
-            </a>
+            <Link to="/stores">
+              <MapPin size={15} aria-hidden />
+              매장 안내
+            </Link>
           </ContactList>
         </Col>
       </Top>
 
       <Notice>
-        <strong>서비스 고지:</strong> 한국골드마켓의 골드바 교환은 원일귀금속이
-        직접 제공합니다. 온라인 계산은 예상값이며, 최종 순도·중량·공임은 매장에서
-        안내하고 고객 동의 후 확정합니다.
+        <strong>안내:</strong> 온라인 계산은 예상값이며, 최종 순도·중량·공임은 매장 확인 후 고객 동의로 확정됩니다.
       </Notice>
 
       <Bottom>

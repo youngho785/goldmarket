@@ -5,7 +5,6 @@ import { NavLink, useLocation } from "react-router-dom";
 import styled, { css } from "styled-components";
 import {
   Calculator,
-  ClipboardList,
   Gem,
   Home,
   Scale,
@@ -157,9 +156,25 @@ const Item = styled(NavLink)`
             stroke-width: 1.8;
           }
 
+          ${$center &&
+          css`
+            color: ${theme.colors.primary};
+            font-weight: 950;
+
+            ${IconShell} {
+              background: ${theme.semantic.badgeGoldBg};
+              color: ${theme.colors.primary};
+            }
+          `}
+
           &.active {
             background: ${theme.colors.primary};
             color: ${theme.colors.white};
+          }
+
+          &.active ${IconShell} {
+            background: ${$center ? theme.colors.goldLight : "transparent"};
+            color: ${$center ? theme.colors.primaryDark : theme.colors.white};
           }
         `}
 
@@ -170,55 +185,45 @@ const Item = styled(NavLink)`
 
 const MEMBER_WEB_ITEMS = [
   { to: "/", icon: Home, label: "홈" },
-  { to: "/gold-exchange", icon: Calculator, label: "금 계산" },
-  { to: "/my-gold", icon: Gem, label: "내 금" },
-  { to: "/my-exchanges", icon: ClipboardList, label: "교환내역" },
-  { to: "/profile", icon: User, label: "내정보" },
+  { to: "/gold-price", icon: Scale, label: "금시세" },
+  { to: "/my-gold", icon: Gem, label: "MY GOLD", center: true },
+  { to: "/gold-exchange", icon: Calculator, label: "금교환" },
+  { to: "/profile", icon: User, label: "MY" },
 ];
 
 const GUEST_WEB_ITEMS = [
   { to: "/", icon: Home, label: "홈" },
   { to: "/gold-price", icon: Scale, label: "금시세" },
-  { to: "/my-gold", icon: Gem, label: "MY GOLD" },
-  { to: "/gold-exchange", icon: Calculator, label: "금 계산" },
+  { to: "/my-gold", icon: Gem, label: "MY GOLD", center: true },
+  { to: "/gold-exchange", icon: Calculator, label: "금교환" },
   { to: "/login", icon: User, label: "로그인" },
 ];
 
 const MEMBER_ANDROID_ITEMS = [
   { to: "/", icon: Home, label: "홈" },
-  { to: "/my-gold", icon: Gem, label: "내 금" },
-  {
-    to: "/gold-exchange",
-    icon: Calculator,
-    label: "금교환",
-    center: true,
-  },
-  { to: "/my-exchanges", icon: ClipboardList, label: "내역" },
-  { to: "/profile", icon: User, label: "내정보" },
+  { to: "/gold-price", icon: Scale, label: "금시세" },
+  { to: "/my-gold", icon: Gem, label: "MY GOLD", center: true },
+  { to: "/gold-exchange", icon: Calculator, label: "금교환" },
+  { to: "/profile", icon: User, label: "MY" },
 ];
 
 const GUEST_ANDROID_ITEMS = [
   { to: "/", icon: Home, label: "홈" },
   { to: "/gold-price", icon: Scale, label: "금시세" },
-  {
-    to: "/gold-exchange",
-    icon: Calculator,
-    label: "금교환",
-    center: true,
-  },
-  { to: "/my-gold", icon: Gem, label: "MY GOLD" },
+  { to: "/my-gold", icon: Gem, label: "MY GOLD", center: true },
+  { to: "/gold-exchange", icon: Calculator, label: "금교환" },
   { to: "/login", icon: User, label: "로그인" },
 ];
 
 export default function BottomNav() {
   const { pathname } = useLocation();
-  const { user } = useAuthContext() || {};
+  const { isMember } = useAuthContext() || {};
 
   if (typeof document === "undefined") return null;
 
   const items = isAndroid
-    ? (user ? MEMBER_ANDROID_ITEMS : GUEST_ANDROID_ITEMS)
-    : (user ? MEMBER_WEB_ITEMS : GUEST_WEB_ITEMS);
+    ? (isMember ? MEMBER_ANDROID_ITEMS : GUEST_ANDROID_ITEMS)
+    : (isMember ? MEMBER_WEB_ITEMS : GUEST_WEB_ITEMS);
 
   return createPortal(
     <Nav $android={isAndroid}>

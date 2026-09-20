@@ -7,9 +7,9 @@ import { Minus, TrendingDown, TrendingUp } from "lucide-react";
 import useMyGoldValueTrend, { MY_GOLD_TREND_PERIODS } from "@/hooks/useMyGoldValueTrend";
 import { livingGoldPulse } from "@/styles/livingGoldMotion";
 
-const chartDraw = keyframes`
-  from { stroke-dashoffset: 1; }
-  to { stroke-dashoffset: 0; }
+const chartLineIn = keyframes`
+  from { opacity: 0; }
+  to { opacity: 1; }
 `;
 
 const chartAreaIn = keyframes`
@@ -23,9 +23,8 @@ const AnimatedArea = styled.polygon`
 `;
 
 const AnimatedLine = styled.polyline`
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  animation: ${chartDraw} 760ms cubic-bezier(.2,.8,.2,1) 80ms both;
+  opacity: 1;
+  animation: ${chartLineIn} 180ms ease-out both;
 `;
 
 
@@ -463,8 +462,8 @@ export default function MyGoldValueTrend({
       <Card id="my-gold-value-trend" aria-labelledby="my-gold-value-trend-title">
         <CompactHead>
           <div>
-            <h2 id="my-gold-value-trend-title">{bonusOnly ? "MEMBER GOLD 가치 변화" : "내 금 가치 변화"}</h2>
-            <p>{trend.selectedPeriod.label} 동안 내 금 가치가 어떻게 움직였는지 빠르게 확인합니다.</p>
+            <h2 id="my-gold-value-trend-title">{bonusOnly ? "MEMBER GOLD 가치 변화" : "내 금 참고가치 변화"}</h2>
+            <p>{trend.selectedPeriod.label} 동안 내 금 참고가치가 어떻게 움직였는지 빠르게 확인합니다.</p>
           </div>
           <DetailsLink to={detailsTo}>자세히 보기</DetailsLink>
         </CompactHead>
@@ -487,7 +486,7 @@ export default function MyGoldValueTrend({
                 <line x1="12" y1="14" x2="628" y2="14" stroke="currentColor" opacity="0.10" />
                 <line x1="12" y1="83" x2="628" y2="83" stroke="currentColor" opacity="0.08" />
                 <AnimatedArea key={`compact-area-${trend.period}-${geometry.polyline}`} points={geometry.area} fill="currentColor" />
-                <AnimatedLine key={`compact-line-${trend.period}-${geometry.polyline}`} pathLength="1" points={geometry.polyline} fill="none" stroke="currentColor" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+                <AnimatedLine key={`compact-line-${trend.period}-${geometry.polyline}`} points={geometry.polyline} fill="none" stroke="currentColor" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
                 {geometry.lastPoint && (<>
                   <CurrentHalo cx={geometry.lastPoint[0]} cy={geometry.lastPoint[1]} r="7" />
                   <CurrentDot cx={geometry.lastPoint[0]} cy={geometry.lastPoint[1]} r="4" />
@@ -505,10 +504,10 @@ export default function MyGoldValueTrend({
     <Card id="my-gold-value-trend" aria-labelledby="my-gold-value-trend-title">
       <Head>
         <div>
-          <h2 id="my-gold-value-trend-title">{bonusOnly ? "MEMBER GOLD 가치 변화" : "내 금 가치 변화"}</h2>
-          <p>{bonusOnly ? `현재 MEMBER GOLD ${Number(bonusGoldG || 0).toFixed(2)}g을 과거 공개 시세로 비교합니다.` : "현재 기록한 금량은 그대로 두고 시세 변화가 내 금 가치에 미친 영향만 비교합니다."}</p>
+          <h2 id="my-gold-value-trend-title">{bonusOnly ? "MEMBER GOLD 가치 변화" : "내 금 참고가치 변화"}</h2>
+          <p>{bonusOnly ? `현재 MEMBER GOLD ${Number(bonusGoldG || 0).toFixed(2)}g을 과거 공개 시세로 비교합니다.` : "현재 기록한 금량은 그대로 두고 시세 변화가 내 금 참고가치에 미친 영향만 비교합니다."}</p>
         </div>
-        <Periods aria-label="내 금 가치 그래프 기간 선택">
+        <Periods aria-label="내 금 참고가치 그래프 기간 선택">
           {MY_GOLD_TREND_PERIODS.map((option) => (
             <PeriodButton
               key={option.key}
@@ -542,7 +541,7 @@ export default function MyGoldValueTrend({
               <line x1="12" y1="83" x2="628" y2="83" stroke="currentColor" opacity="0.08" />
               <line x1="12" y1="152" x2="628" y2="152" stroke="currentColor" opacity="0.10" />
               <AnimatedArea key={`area-${trend.period}-${geometry.polyline}`} points={geometry.area} fill="currentColor" />
-              <AnimatedLine key={`line-${trend.period}-${geometry.polyline}`} pathLength="1" points={geometry.polyline} fill="none" stroke="currentColor" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+              <AnimatedLine key={`line-${trend.period}-${geometry.polyline}`} points={geometry.polyline} fill="none" stroke="currentColor" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
               {geometry.lastPoint && (<>
                 <CurrentHalo cx={geometry.lastPoint[0]} cy={geometry.lastPoint[1]} r="7" />
                 <CurrentDot cx={geometry.lastPoint[0]} cy={geometry.lastPoint[1]} r="4" />

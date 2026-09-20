@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ArrowRight, ChevronRight, Gem, Minus, Plus, Save, Sparkles, TrendingDown, TrendingUp, X } from "lucide-react";
 
 import { useAuthContext } from "@/context/AuthContext";
+import { trackProductEventOncePerSession } from "@/analytics/productAnalytics";
 import {
   Page,
   VaultHero,
@@ -26,13 +27,13 @@ import {
   ViewTab,
   ViewPanel,
   ViewIntro,
+  SummaryOverviewGrid,
+  SummarySideStack,
   SummaryHead,
   SummaryItems,
   SummaryItem,
   GoalProgress,
   GoalTrack,
-  SectionHead,
-  SectionActions,
   AddGoldButton,
   FormOverlay,
   FormSheet,
@@ -45,7 +46,6 @@ import {
   CompareButton,
   ComparisonResult,
   CompareError,
-  ExchangeCta,
   Form,
   Field,
   Input,
@@ -61,11 +61,6 @@ import {
   Button,
   GhostButton,
   ErrorText,
-  ItemList,
-  ItemCard,
-  ItemMain,
-  ItemMetrics,
-  ItemActions,
   GoldSeed,
   Empty,
   SaveFeedback,
@@ -74,18 +69,17 @@ import {
   GuestSaveCopy,
   GuestSaveAction,
 } from "@/components/myGoldVault/MyGoldVault.styles";
-import useBonusGoldBalance from "@/hooks/useBonusGoldBalance";
 import useGoldVaultDashboard from "@/hooks/useGoldVaultDashboard";
 import MyGoldValueTrend from "@/components/gold/MyGoldValueTrend";
 import MyGoldAlertSummary from "@/components/gold/MyGoldAlertSummary";
 import MyGoldImportPrompt from "@/components/gold/MyGoldImportPrompt";
+import MyGoldItemsSection from "@/components/myGoldVault/MyGoldItemsSection";
 import { DON_TO_GRAMS, findGoldProduct } from "@/lib/goldRates";
 import {
   GOLD_VAULT_MAX_ITEMS,
   GOLD_VAULT_MAX_LABEL_LENGTH,
   GOLD_VAULT_MAX_NOTE_LENGTH,
   computeVaultMarketValueWon,
-  computeVaultValueWon,
   enrichGoldVaultItems,
   getGoldVaultProductOptions,
   getGoldVaultTypeLabel,
@@ -109,7 +103,6 @@ import {
 } from "@/lib/goldVaultImportDraft";
 import {
   DEFAULT_GUEST_MY_GOLD_ITEMS,
-  GUEST_MY_GOLD_BONUS_G,
   clearGuestMyGoldDemo,
   readGuestMyGoldItems,
   resetGuestMyGoldItems,
@@ -135,11 +128,6 @@ function weightInputToGrams(form) {
   return form?.weightUnit === "don" ? value * DON_TO_GRAMS : value;
 }
 
-function formatGramsAndDon(value) {
-  const grams = Number(value);
-  if (!Number.isFinite(grams) || grams <= 0) return "-";
-  return `${grams.toFixed(2)}g · ${(grams / DON_TO_GRAMS).toFixed(2)}돈`;
-}
 
 function formatDateKey(value) {
   const text = String(value || "");
@@ -241,7 +229,7 @@ function getGoldBarReadiness(pureGoldG) {
 }
 
 export default function MyGoldVault() {
-  const { user } = useAuthContext();
+  const { memberUser: user } = useAuthContext();
   const navigate = useNavigate();
   const location = useLocation();
   const {
@@ -256,7 +244,6 @@ export default function MyGoldVault() {
     rates,
     summary,
   } = useGoldVaultDashboard(user?.uid);
-  const bonus = useBonusGoldBalance(user?.uid);
   const isGuest = !user?.uid;
   const [guestRawItems, setGuestRawItems] = useState(() => readGuestMyGoldItems());
   const [form, setForm] = useState(EMPTY_FORM);
@@ -307,10 +294,12 @@ export default function MyGoldVault() {
   useEffect(() => {
     if (!formOpen) return undefined;
     const previousOverflow = document.body.style.overflow;
+    const previousHideBottomNav = document.body.dataset.hideBottomNav;
     const previousFocus = document.activeElement;
     const dialog = formDialogRef.current;
     const focusableSelector = 'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
     document.body.style.overflow = "hidden";
+    document.body.dataset.hideBottomNav = "1";
     const onKeyDown = (event) => {
       if (event.key === "Escape" && !savingRef.current) {
         event.preventDefault();
@@ -338,6 +327,11 @@ export default function MyGoldVault() {
     window.addEventListener("keydown", onKeyDown);
     return () => {
       document.body.style.overflow = previousOverflow;
+      if (previousHideBottomNav === undefined) {
+        delete document.body.dataset.hideBottomNav;
+      } else {
+        document.body.dataset.hideBottomNav = previousHideBottomNav;
+      }
       window.removeEventListener("keydown", onKeyDown);
       previousFocus?.focus?.();
     };
@@ -377,8 +371,7 @@ export default function MyGoldVault() {
     if (!isGuest || guestRawItems.length === 0) return false;
     return guestVaultFingerprint(guestRawItems) !== guestVaultFingerprint(DEFAULT_GUEST_MY_GOLD_ITEMS);
   }, [guestRawItems, isGuest]);
-  const bonusBalanceG = isGuest ? GUEST_MY_GOLD_BONUS_G : Number(bonus.balanceG || 0);
-  const vaultLoading = isGuest ? false : itemsLoading || bonus.loading;
+  const vaultLoading = isGuest ? false : itemsLoading;
   const canAddMore = activeItems.length < GOLD_VAULT_MAX_ITEMS || !!editingId;
 
   useEffect(() => {
@@ -397,13 +390,25 @@ export default function MyGoldVault() {
       return;
     }
 
-    setForm(EMPTY_FORM);
+    const quickGoldItem = location.state?.quickGoldItem;
+    setForm(
+      quickGoldItem
+        ? {
+            label: quickGoldItem.label || "",
+            productId: quickGoldItem.productId || "",
+            goldType: quickGoldItem.goldType || "",
+            weightValue: String(quickGoldItem.weightG || ""),
+            weightUnit: "g",
+            note: quickGoldItem.note || "",
+          }
+        : EMPTY_FORM
+    );
     setEditingId("");
     setError("");
     setFormOpen(true);
     navigate(
       { pathname: location.pathname, search: nextSearch ? `?${nextSearch}` : "" },
-      { replace: true }
+      { replace: true, state: null }
     );
   }, [
     addRequested,
@@ -412,6 +417,7 @@ export default function MyGoldVault() {
     formOpen,
     location.pathname,
     location.search,
+    location.state,
     navigate,
   ]);
 
@@ -444,19 +450,12 @@ export default function MyGoldVault() {
     return `${value.toFixed(2)}g = ${(value / DON_TO_GRAMS).toFixed(2)}돈`;
   }, [form.weightUnit, form.weightValue]);
 
-  const bonusCurrentValueWon =
-    publicPriceEnabled && bonusBalanceG > 0
-      ? computeVaultValueWon(bonusBalanceG, customerSellPricePerDon)
-      : 0;
-  const bonusPreviousValueWon =
-    publicPriceEnabled && bonusBalanceG > 0
-      ? computeVaultValueWon(bonusBalanceG, previousCustomerSellPricePerDon)
-      : 0;
-  const vaultValueWon = Number(activeSummary.estimatedValueWon || 0) + bonusCurrentValueWon;
-  const previousVaultValueWon =
-    Number(activeSummary.previousEstimatedValueWon || 0) + bonusPreviousValueWon;
-  const vaultPureGoldG = Number(activeSummary.pureGoldG || 0) + bonusBalanceG;
-  const hasVaultContent = activeSummary.itemCount > 0 || bonusBalanceG > 0;
+  // MY GOLD는 사용자가 실제로 보유한 금을 기록해 보는 개인 기록 공간입니다.
+  // MEMBER GOLD(회원 혜택 적립금)는 별도 잔액이며 MY GOLD 가치/순금량에 합산하지 않습니다.
+  const vaultValueWon = Number(activeSummary.estimatedValueWon || 0);
+  const previousVaultValueWon = Number(activeSummary.previousEstimatedValueWon || 0);
+  const vaultPureGoldG = Number(activeSummary.pureGoldG || 0);
+  const hasVaultContent = activeSummary.itemCount > 0;
   const barReadiness = useMemo(
     () => getGoldBarReadiness(activeSummary.pureGoldG),
     [activeSummary.pureGoldG]
@@ -487,16 +486,11 @@ export default function MyGoldVault() {
         : Minus;
   const historicalValueWon = useMemo(() => {
     if (!historicalMeta?.market || !historicalPrice || historicalPrice <= 0) return 0;
-    const registeredValue = activeItems.reduce(
+    return activeItems.reduce(
       (sum, item) => sum + computeVaultMarketValueWon(item, rates, historicalMeta.market),
       0
     );
-    const bonusValue = computeVaultValueWon(
-      Math.max(0, Number(bonusBalanceG) || 0),
-      Number(historicalMeta.market.pureGoldBuyPerDon) || 0
-    );
-    return registeredValue + bonusValue;
-  }, [activeItems, bonusBalanceG, historicalMeta, historicalPrice, rates]);
+  }, [activeItems, historicalMeta, historicalPrice, rates]);
   const historicalChange = historicalPrice
     ? getValueChange(vaultValueWon, historicalValueWon)
     : null;
@@ -531,7 +525,7 @@ export default function MyGoldVault() {
     setImportSaving(true);
     setImportError("");
     try {
-      await createGoldVaultItems(user.uid, pendingItems);
+      const wasFirstAccountRecord = !itemsLoading && items.length === 0; await createGoldVaultItems(user.uid, pendingItems); if (wasFirstAccountRecord) trackProductEventOncePerSession("mygold_first_item_created", { source: draft?.source === "guest-my-gold" ? "guest_import" : "calculator_import" }, "mygold-first-item-created");
       clearGoldVaultImportDraft();
       if (draft?.source === "guest-my-gold") clearGuestMyGoldDemo();
       setImportDraft(null);
@@ -556,43 +550,6 @@ export default function MyGoldVault() {
     navigate("/my-gold", { replace: true });
   };
 
-  const openSingleItemExchange = (item) => {
-    if (!item) return;
-    navigate("/gold-exchange", {
-      state: {
-        source: "my-gold",
-        vaultProducts: [
-          {
-            productId: item.productId || "",
-            goldType: item.goldType,
-            quantity: Number(item.weightG || 0),
-            inputUnit: "g",
-            exchangeType: "999.9골드바",
-            sourceItemId: item.id,
-            sourceLabel: item.label || "금제품",
-          },
-        ],
-      },
-    });
-  };
-
-  const openAllItemsExchange = () => {
-    if (sortedItems.length === 0) return;
-    if (sortedItems.length > GOLD_EXCHANGE_MAX_PRODUCTS) {
-      setError(
-        `\uAE08\uAD50\uD658\uC740 \uD55C \uBC88\uC5D0 \uCD5C\uB300 ${GOLD_EXCHANGE_MAX_PRODUCTS}\uAC1C\uAE4C\uC9C0 \uC9C4\uD589\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4. \uAE30\uB85D\uC744 ${GOLD_EXCHANGE_MAX_PRODUCTS}\uAC1C \uC774\uD558\uB85C \uC815\uB9AC\uD55C \uB4A4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.`
-      );
-      return;
-    }
-
-    setError("");
-    navigate("/gold-exchange", {
-      state: {
-        source: "my-gold",
-        vaultProducts: exchangeProducts,
-      },
-    });
-  };
 
   const resetForm = () => {
     setForm(EMPTY_FORM);
@@ -649,7 +606,7 @@ export default function MyGoldVault() {
       } else if (editingId) {
         await updateGoldVaultItem(user.uid, editingId, values);
       } else {
-        await createGoldVaultItem(user.uid, values);
+        const wasFirstAccountRecord = items.length === 0; await createGoldVaultItem(user.uid, values); if (wasFirstAccountRecord) trackProductEventOncePerSession("mygold_first_item_created", { source: "manual" }, "mygold-first-item-created");
       }
       resetForm();
       setFormOpen(false);
@@ -793,7 +750,8 @@ export default function MyGoldVault() {
       </ViewTabs>
 
       {isSummaryView && (
-        <VaultHero aria-labelledby="my-vault-current-value-title">
+        <SummaryOverviewGrid aria-label="MY GOLD 요약">
+          <VaultHero aria-labelledby="my-vault-current-value-title">
           <HeroGoldMark
             size={62}
             delay={80}
@@ -809,10 +767,10 @@ export default function MyGoldVault() {
             }
             description={
               vaultLoading
-                ? "MY GOLD의 오늘 가치를 불러오고 있습니다."
+                ? "MY GOLD의 오늘 참고가치를 불러오고 있습니다."
                 : hasVaultContent && publicPriceEnabled
                   ? `${Number.isFinite(currentChange.percent) ? `어제보다 ${formatSignedWon(currentChange.amount)} · ` : ""}예상 순금 ${Number(activeSummary.pureGoldG || 0).toFixed(2)}g`
-                  : "금 하나를 기록하면 오늘 가치와 변화가 이 작은 금빛에 이어집니다."
+                  : "금 하나를 기록하면 오늘 참고가치와 변화가 이 작은 금빛에 이어집니다."
             }
             actionLabel={hasVaultContent ? "내 금 자세히 보기" : "첫 금 기록하기"}
             actionTo={hasVaultContent ? "/my-gold/items" : "/my-gold/items?add=1"}
@@ -820,7 +778,7 @@ export default function MyGoldVault() {
           <HeroKicker>
             <Gem size={15} aria-hidden /> {isGuest ? "MY GOLD · 체험" : "MY GOLD"}
           </HeroKicker>
-          <HeroTitle id="my-vault-current-value-title">내 금의 오늘 가치</HeroTitle>
+          <HeroTitle id="my-vault-current-value-title">내 금의 오늘 참고가치</HeroTitle>
           <HeroAmount $empty={!vaultLoading && !hasVaultContent}>
             {vaultLoading
               ? "불러오는 중"
@@ -832,17 +790,9 @@ export default function MyGoldVault() {
           </HeroAmount>
           {!vaultLoading && hasVaultContent && publicPriceEnabled && (
             <HeroValueNote>
-              {bonusBalanceG > 0
-                ? "MY GOLD에 기록한 금과 MEMBER GOLD를 합산한 오늘 참고가치입니다."
-                : "MY GOLD에 기록한 금의 오늘 참고가치입니다."}
+              내가 가진 금을 직접 기록한 정보를 기준으로 계산한 오늘 참고가치입니다.
             </HeroValueNote>
           )}
-          {!vaultLoading && activeSummary.itemCount > 0 && publicPriceEnabled && Number(activeSummary.replacementValueWon) > 0 && (
-            <HeroValueNote>
-              기록한 금의 예상 순금과 같은 양의 999.9를 오늘 새로 구입하면 {formatWon(activeSummary.replacementValueWon)} · 골드바 공임 제외
-            </HeroValueNote>
-          )}
-
           {!vaultLoading && hasVaultContent && publicPriceEnabled && (
             <HeroChangeGroup>
               <HeroChange $direction={currentChange.direction}>
@@ -866,7 +816,7 @@ export default function MyGoldVault() {
             </HeroChangeGroup>
           )}
 
-          <HeroStats $hasBonus={bonusBalanceG > 0}>
+          <HeroStats $hasBonus>
             <HeroStat>
               <span>기록 중량</span>
               <strong>{Number(activeSummary.totalWeightG || 0).toFixed(2)}g</strong>
@@ -875,12 +825,10 @@ export default function MyGoldVault() {
               <span>예상 순금</span>
               <strong>{Number(activeSummary.pureGoldG || 0).toFixed(2)}g</strong>
             </HeroStat>
-            {bonusBalanceG > 0 && (
-              <HeroStat>
-                <span>MEMBER GOLD</span>
-                <strong>{bonusBalanceG.toFixed(3)}g</strong>
-              </HeroStat>
-            )}
+            <HeroStat>
+              <span>기록한 금</span>
+              <strong>{Number(activeSummary.itemCount || 0)}개</strong>
+            </HeroStat>
           </HeroStats>
 
           <HeroActions>
@@ -891,9 +839,14 @@ export default function MyGoldVault() {
             >
               <Plus aria-hidden /> 금 추가
             </HeroAddAction>
-            <HeroExchangeAction to="/my-gold/trend" aria-label="내 금 가치 변화 자세히 보기">
+            <HeroExchangeAction to="/my-gold/items" aria-label="내가 기록한 금 전체 관리">
+              <Gem aria-hidden />
+              내 금 관리
+              <ArrowRight aria-hidden />
+            </HeroExchangeAction>
+            <HeroExchangeAction to="/my-gold/trend" aria-label="내 금 참고가치 변화 자세히 보기">
               <TrendingUp aria-hidden />
-              가치 변화 보기
+              가치 변화
               <ArrowRight aria-hidden />
             </HeroExchangeAction>
           </HeroActions>
@@ -902,7 +855,70 @@ export default function MyGoldVault() {
               로그인 없이 MY GOLD를 체험할 수 있습니다. 실제 계정 저장과 푸시 알림은 로그인 후 연결됩니다.
             </GuestModeNote>
           )}
-        </VaultHero>
+          </VaultHero>
+          <SummarySideStack>
+          <VaultSection aria-labelledby="my-gold-summary-items-title">
+            <SummaryHead>
+              <strong id="my-gold-summary-items-title">{isGuest ? "체험 중인 금" : "내가 기록한 금"}</strong>
+              <Link to="/my-gold/items">
+                {sortedItems.length > 0 ? `${sortedItems.length}개 전체 관리` : "금 기록하기"} <ChevronRight size={14} aria-hidden />
+              </Link>
+            </SummaryHead>
+
+            {vaultLoading ? (
+              <Empty>MY GOLD 기록을 불러오는 중입니다.</Empty>
+            ) : previewItems.length > 0 ? (
+              <SummaryItems>
+                {previewItems.map((item) => (
+                  <SummaryItem key={item.id}>
+                    <div className="copy">
+                      <strong>{item.label}</strong>
+                      <small>{getGoldVaultTypeLabel(item.goldType, rates, item.productId)} · {Number(item.weightG || 0).toFixed(2)}g</small>
+                    </div>
+                    <span className="value">{publicPriceEnabled ? formatWon(item.estimatedValueWon) : `${Number(item.pureGoldG || 0).toFixed(2)}g`}</span>
+                  </SummaryItem>
+                ))}
+              </SummaryItems>
+            ) : (
+              <Empty>
+                <GoldSeed aria-hidden />
+                <strong>아직 기록한 금이 없습니다.</strong>
+                <span>금 하나를 기록하면 오늘 참고가치와 가격 변화를 바로 확인할 수 있습니다.</span>
+                <AddGoldButton type="button" onClick={() => navigate("/my-gold/items?add=1")}>
+                  <Plus size={15} aria-hidden /> 첫 금 기록하기
+                </AddGoldButton>
+              </Empty>
+            )}
+          </VaultSection>
+          <ReadinessPanel
+            to="/gold-exchange?mode=vault&auto=1"
+            state={{ source: "my-gold", vaultProducts: exchangeProducts }}
+            aria-label="MY GOLD 기록 기준 예상 교환량 확인 페이지 열기"
+          >
+            <div>
+              <small>GOLD TO GOLD · 기록 기준 예상</small>
+              <strong>기록한 금으로 예상 교환량 확인</strong>
+              <p>
+                {activeSummary.itemCount > 0
+                  ? barReadiness?.available
+                    ? `현재 기록 기준으로 ${barReadiness.label} 교환 가능 예상 · 실제 교환은 매장 실측 후 확정`
+                    : `1g 골드바 예상량까지 약 ${Number(barReadiness?.neededG || 0).toFixed(2)}g 더 필요`
+                  : "금 하나를 기록하면 기록 기준 예상 교환량을 확인합니다."}
+              </p>
+              {activeSummary.itemCount > 0 && nextBarTarget && (
+                <GoalProgress>
+                  <div className="labels">
+                    <span>현재 {Number(activeSummary.pureGoldG || 0).toFixed(2)}g</span>
+                    <span>다음 {nextBarTarget.label}까지 {Math.max(0, Number(nextBarTarget.grams) - Number(activeSummary.pureGoldG || 0)).toFixed(2)}g</span>
+                  </div>
+                  <GoalTrack $progress={nextBarProgress} aria-hidden><span /></GoalTrack>
+                </GoalProgress>
+              )}
+            </div>
+            <ChevronRight aria-hidden />
+          </ReadinessPanel>
+          </SummarySideStack>
+        </SummaryOverviewGrid>
       )}
 
       {Number(location.state?.myGoldImportSuccess || 0) > 0 && (
@@ -930,45 +946,12 @@ export default function MyGoldVault() {
 
       {isSummaryView && (
         <>
-          <VaultSection aria-labelledby="my-gold-summary-items-title">
-            <SummaryHead>
-              <strong id="my-gold-summary-items-title">{isGuest ? "체험 중인 금" : "내가 기록한 금"}</strong>
-              <Link to="/my-gold/items">
-                {sortedItems.length > 0 ? `${sortedItems.length}개 전체 관리` : "금 기록하기"} <ChevronRight size={14} aria-hidden />
-              </Link>
-            </SummaryHead>
-
-            {vaultLoading ? (
-              <Empty>MY GOLD 기록을 불러오는 중입니다.</Empty>
-            ) : previewItems.length > 0 ? (
-              <SummaryItems>
-                {previewItems.map((item) => (
-                  <SummaryItem key={item.id}>
-                    <div className="copy">
-                      <strong>{item.label}</strong>
-                      <small>{getGoldVaultTypeLabel(item.goldType, rates, item.productId)} · {Number(item.weightG || 0).toFixed(2)}g</small>
-                    </div>
-                    <span className="value">{publicPriceEnabled ? formatWon(item.estimatedValueWon) : `${Number(item.pureGoldG || 0).toFixed(2)}g`}</span>
-                  </SummaryItem>
-                ))}
-              </SummaryItems>
-            ) : (
-              <Empty>
-                <GoldSeed aria-hidden />
-                <strong>아직 기록한 금이 없습니다.</strong>
-                <span>금 하나를 기록하면 오늘 가치와 가격 변화를 바로 확인할 수 있습니다.</span>
-                <AddGoldButton type="button" onClick={() => navigate("/my-gold/items?add=1")}>
-                  <Plus size={15} aria-hidden /> 첫 금 기록하기
-                </AddGoldButton>
-              </Empty>
-            )}
-          </VaultSection>
 
           {isGuest && hasPersonalizedGuestVault && activeSummary.itemCount > 0 && (
             <GuestSaveCard aria-label="MY GOLD 회원가입 저장 안내">
               <GuestSaveCopy>
                 <h2>오늘 확인한 내 금, MY GOLD에 이어두세요.</h2>
-                <p>지금 입력한 금 기록을 그대로 저장하면 다음에도 오늘 가치와 변화, 예상 순금량을 이어서 확인할 수 있습니다.</p>
+                <p>지금 입력한 금 기록을 그대로 저장하면 다음에도 오늘 참고가치와 변화, 예상 순금량을 이어서 확인할 수 있습니다.</p>
               </GuestSaveCopy>
               <GuestSaveAction type="button" onClick={saveGuestVaultToAccount}>
                 <Save aria-hidden /> MY GOLD 기록 저장하기 <ArrowRight aria-hidden />
@@ -983,8 +966,8 @@ export default function MyGoldVault() {
               currentMarket={market}
               enabled={!vaultLoading && hasVaultContent && publicPriceEnabled}
               onWeeklyChange={handleWeeklyTrendChange}
-              bonusOnly={activeSummary.itemCount === 0 && bonusBalanceG > 0}
-              bonusGoldG={bonusBalanceG}
+              bonusOnly={false}
+              bonusGoldG={0}
               items={activeItems}
               rates={rates}
               compact
@@ -992,41 +975,6 @@ export default function MyGoldVault() {
             />
           )}
 
-          <ReadinessPanel
-            to="/gold-exchange"
-            state={{ source: "my-gold", vaultProducts: exchangeProducts }}
-            aria-label="MY GOLD 예상 순금량으로 금교환 페이지 열기"
-          >
-            <div>
-              <small>GOLD TO GOLD</small>
-              <strong>
-                {activeSummary.itemCount > 0
-                  ? barReadiness?.available
-                    ? `${barReadiness.label} 교환 가능`
-                    : `1g 골드바까지 약 ${Number(barReadiness?.neededG || 0).toFixed(2)}g 더 필요`
-                  : "금 하나를 기록하면 교환 가능한 999.9 GOLD를 확인합니다."}
-              </strong>
-              {activeSummary.itemCount > 0 && nextBarTarget && (
-                <GoalProgress>
-                  <div className="labels">
-                    <span>현재 {Number(activeSummary.pureGoldG || 0).toFixed(2)}g</span>
-                    <span>다음 {nextBarTarget.label}까지 {Math.max(0, Number(nextBarTarget.grams) - Number(activeSummary.pureGoldG || 0)).toFixed(2)}g</span>
-                  </div>
-                  <GoalTrack $progress={nextBarProgress} aria-hidden><span /></GoalTrack>
-                </GoalProgress>
-              )}
-            </div>
-            <ChevronRight aria-hidden />
-          </ReadinessPanel>
-
-          <ExchangeCta to={isGuest ? "/register" : "/profile"} aria-label="MEMBER GOLD 회원 혜택 보기">
-            <div>
-              <small><Sparkles size={12} aria-hidden /> MEMBER GOLD{isGuest ? " · 체험" : ""}</small>
-              <strong>순금 {bonusBalanceG.toFixed(2)}g</strong>
-              <p>{isGuest ? "회원 혜택 순금이 MY GOLD 가치에 반영되는 모습을 체험하고 있습니다." : "회원 혜택으로 적립된 금이며 MY GOLD 오늘 참고가치와 가치 변화에 함께 반영됩니다."}</p>
-            </div>
-            <ChevronRight aria-hidden />
-          </ExchangeCta>
 
           <MyGoldAlertSummary uid={user?.uid} demoMode={isGuest} compact />
         </>
@@ -1037,74 +985,30 @@ export default function MyGoldVault() {
           <ViewIntro>
             <div>
               <h1>{isGuest ? "체험 중인 금 관리" : "내가 기록한 금"}</h1>
-              <p>금마다 이름을 붙이고 종류와 중량을 기록해 오늘 가치와 예상 순금량을 관리합니다.</p>
+              <p>금마다 이름을 붙이고 종류와 중량을 기록해 오늘 참고가치와 예상 순금량을 관리합니다.</p>
             </div>
             <AddGoldButton type="button" onClick={openAddForm} disabled={!canAddMore}>
               <Plus size={15} aria-hidden /> 금 추가
             </AddGoldButton>
           </ViewIntro>
 
-          <VaultSection aria-labelledby="my-vault-items-title">
-            <SectionHead>
-              <div>
-                <h2 id="my-vault-items-title">기록 목록</h2>
-                <p>
-                  {isGuest
-                    ? "예시 금을 수정하거나 내 금을 새로 기록해 보세요. 변경한 내용이 MY GOLD 요약과 가치 변화에 바로 반영됩니다."
-                    : `현재 ${sortedItems.length}개 · 기록 중량 ${Number(activeSummary.totalWeightG || 0).toFixed(2)}g · 예상 순금 ${Number(activeSummary.pureGoldG || 0).toFixed(2)}g`}
-                </p>
-              </div>
-              <SectionActions>
-                {sortedItems.length > 0 && (
-                  <AddGoldButton
-                    type="button"
-                    onClick={openAllItemsExchange}
-                    aria-label={"\uAE30\uB85D\uB41C \uAE08 \uC804\uCCB4\uB97C \uAE08\uAD50\uD658\uC73C\uB85C \uB118\uAE30\uAE30"}
-                  >
-                    {"\uC804\uCCB4 \uAD50\uD658"} ({sortedItems.length})
-                  </AddGoldButton>
-                )}
-                {isGuest && <AddGoldButton type="button" onClick={resetGuestDemo}>예시 초기화</AddGoldButton>}
-              </SectionActions>
-            </SectionHead>
-
-            {error && !formOpen && <ErrorText role="alert">{error}</ErrorText>}
-
-            {vaultLoading ? (
-              <Empty>MY GOLD 기록을 불러오는 중입니다.</Empty>
-            ) : sortedItems.length > 0 ? (
-              <ItemList>
-                {sortedItems.map((item) => (
-                  <ItemCard key={item.id}>
-                    <ItemMain>
-                      <h3>{item.label}</h3>
-                      <p>{getGoldVaultTypeLabel(item.goldType, rates, item.productId)}{item.note ? ` · ${item.note}` : ""}</p>
-                      <ItemMetrics>
-                        <span>기록 <strong>{formatGramsAndDon(item.weightG)}</strong></span>
-                        <span>예상 순금량 <strong>{Number(item.pureGoldG || 0).toFixed(2)}g</strong></span>
-                        {publicPriceEnabled && <span>오늘 가치 <strong>{formatWon(item.estimatedValueWon)}</strong></span>}
-                        {publicPriceEnabled && Number(item.replacementValueWon) > 0 && (
-                          <span>같은 양의 999.9 신규구매가 <strong>{formatWon(item.replacementValueWon)}</strong></span>
-                        )}
-                      </ItemMetrics>
-                    </ItemMain>
-                    <ItemActions>
-                      <button type="button" data-variant="exchange" onClick={() => openSingleItemExchange(item)} aria-label={`${item.label} 금교환 계산`} title="금교환 계산">교환</button>
-                      <button type="button" onClick={() => startEdit(item)} aria-label={`${item.label} 수정`} title="수정">수정</button>
-                      <button type="button" data-variant="danger" onClick={() => remove(item)} aria-label={`${item.label} 삭제`} title="삭제">삭제</button>
-                    </ItemActions>
-                  </ItemCard>
-                ))}
-              </ItemList>
-            ) : (
-              <Empty>
-                <GoldSeed aria-hidden />
-                <strong>아직 기록한 금이 없습니다.</strong>
-                <span>금 하나를 기록하면 오늘 가치와 가격 변화를 바로 확인할 수 있습니다.</span>
-                <AddGoldButton type="button" onClick={openAddForm}><Plus size={15} aria-hidden /> 첫 금 기록하기</AddGoldButton>
-              </Empty>
-            )}
-          </VaultSection>
+          <MyGoldItemsSection
+            isGuest={isGuest}
+            sortedItems={sortedItems}
+            activeSummary={activeSummary}
+            rates={rates}
+            publicPriceEnabled={publicPriceEnabled}
+            vaultLoading={vaultLoading}
+            error={error}
+            formOpen={formOpen}
+            exchangeProducts={exchangeProducts}
+            maxExchangeProducts={GOLD_EXCHANGE_MAX_PRODUCTS}
+            onError={setError}
+            onAdd={openAddForm}
+            onEdit={startEdit}
+            onRemove={remove}
+            onResetGuest={resetGuestDemo}
+          />
 
           {isGuest && hasPersonalizedGuestVault && activeSummary.itemCount > 0 && (
             <GuestSaveCard aria-label="MY GOLD 회원가입 저장 안내">
@@ -1129,15 +1033,15 @@ export default function MyGoldVault() {
               currentMarket={market}
               enabled={!vaultLoading && hasVaultContent && publicPriceEnabled}
               onWeeklyChange={handleWeeklyTrendChange}
-              bonusOnly={activeSummary.itemCount === 0 && bonusBalanceG > 0}
-              bonusGoldG={bonusBalanceG}
+              bonusOnly={false}
+              bonusGoldG={0}
               items={activeItems}
               rates={rates}
             />
           ) : (
             <Empty>
               <TrendingUp size={28} aria-hidden />
-              <strong>가치 변화를 보려면 먼저 금을 기록해 주세요.</strong>
+              <strong>참고가치 변화를 보려면 먼저 금을 기록해 주세요.</strong>
               <AddGoldButton type="button" onClick={() => navigate("/my-gold/items?add=1")}><Plus size={15} aria-hidden /> 금 기록하기</AddGoldButton>
             </Empty>
           )}
@@ -1156,7 +1060,7 @@ export default function MyGoldVault() {
                     type="date"
                     value={compareDate}
                     max={koreaTodayInputDate()}
-                    aria-label="내 금 가치 비교 기준 날짜"
+                    aria-label="내 금 참고가치 비교 기준 날짜"
                     onChange={(event) => {
                       setCompareDate(event.target.value);
                       setHistoricalPrice(null);
@@ -1192,9 +1096,9 @@ export default function MyGoldVault() {
 
       <Notice>
         {isGuest ? (
-          <>체험 중 입력한 금 기록은 이 기기에만 임시 보관되며 <strong>MY GOLD 기록 저장</strong>을 선택하기 전에는 계정에 저장되지 않습니다. MY GOLD는 실물 금 보관 서비스가 아닙니다. 회원혜택 0.03g은 체험 예시이며, 예상 순금량과 금액은 참고값입니다. 실제 교환은 매장 실측 후 확정됩니다.</>
+          <>체험 중 입력한 금 기록은 이 기기에만 임시 보관되며 <strong>MY GOLD 기록 저장</strong> 전에는 계정에 저장되지 않습니다. MY GOLD는 <strong>실물 금을 보관·예치하는 서비스가 아닙니다.</strong> 기록한 금의 참고가치와 예상 순금량을 확인하는 개인 기록 공간이며, 실제 교환량은 매장 실측 후 확정됩니다.</>
         ) : (
-          <>MY GOLD는 <strong>실물 금 보관 서비스가 아닙니다.</strong> 기록한 금 정보는 사용자가 가진 금제품의 개인 기록이며, <strong>MEMBER GOLD</strong>는 한국골드마켓에서 적립된 별도 잔액입니다. 현재 가치는 제품별 공개 매입시세를 적용한 참고값이고, 예상 순금량은 한국골드마켓 교환기준을 적용한 참고값입니다. 실제 교환 순금량과 비용은 매장에서 순도·중량을 실측한 뒤 최종 확정합니다.</>
+          <>MY GOLD는 <strong>실물 금을 보관·예치하는 서비스가 아닙니다.</strong> 기록한 금의 참고가치와 예상 순금량을 확인하는 개인 기록 공간이며, 실제 교환량은 매장 실측 후 확정됩니다. <strong>MEMBER GOLD는 별도 회원혜택으로 MY GOLD 참고가치에 포함되지 않습니다.</strong></>
         )}
       </Notice>
 
@@ -1277,7 +1181,7 @@ export default function MyGoldVault() {
                 <BonusStrip aria-live="polite">
                   <div>
                     <small>기록 후 자동 계산</small>
-                    <strong>현재 교환 기준의 예상 순금량과 오늘 가치가 MY GOLD에 바로 반영됩니다.</strong>
+                    <strong>현재 교환 기준의 예상 순금량과 오늘 참고가치가 MY GOLD에 바로 반영됩니다.</strong>
                   </div>
                   <ChevronRight size={20} aria-hidden />
                 </BonusStrip>

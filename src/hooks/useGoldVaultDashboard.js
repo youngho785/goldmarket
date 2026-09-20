@@ -20,7 +20,9 @@ export default function useGoldVaultDashboard(uid) {
   const [rates, setRates] = useState({ purity: DEFAULT_PURITY, exchange: DEFAULT_EXCHANGE, products: {} });
   const [market, setMarket] = useState({});
   const [previousMarket, setPreviousMarket] = useState({});
+  const [marketLoading, setMarketLoading] = useState(true);
   const [publicPriceEnabled, setPublicPriceEnabled] = useState(false);
+  const [publicPriceLoading, setPublicPriceLoading] = useState(true);
 
   useEffect(() => {
     if (!uid) {
@@ -64,10 +66,12 @@ export default function useGoldVaultDashboard(uid) {
           setPreviousMarket(
             data.previousMarket && typeof data.previousMarket === "object" ? data.previousMarket : {}
           );
+          setMarketLoading(false);
         },
         () => {
           setMarket({});
           setPreviousMarket({});
+          setMarketLoading(false);
         }
       ),
     []
@@ -77,8 +81,14 @@ export default function useGoldVaultDashboard(uid) {
     () =>
       onSnapshot(
         doc(db, "goldPricePublic", "config"),
-        (snapshot) => setPublicPriceEnabled(snapshot.exists() && snapshot.data()?.enabled === true),
-        () => setPublicPriceEnabled(false)
+        (snapshot) => {
+          setPublicPriceEnabled(snapshot.exists() && snapshot.data()?.enabled === true);
+          setPublicPriceLoading(false);
+        },
+        () => {
+          setPublicPriceEnabled(false);
+          setPublicPriceLoading(false);
+        }
       ),
     []
   );
@@ -118,7 +128,9 @@ export default function useGoldVaultDashboard(uid) {
     rates,
     market,
     previousMarket,
+    marketLoading,
     publicPriceEnabled,
+    publicPriceLoading,
     pureGoldBuyPricePerDon,
     previousPureGoldBuyPricePerDon,
     pureGoldSellPricePerDon,

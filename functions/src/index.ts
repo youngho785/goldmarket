@@ -15,6 +15,7 @@ export {
   rescheduleGoldExchangeGroup,
   cancelGoldExchangeGroup,
   setExchangeGroupStatus,
+  saveExchangeMeasurement,
   aggregateGoldExchangeGroup,
   setBookingAvailability,
 } from "./goldExchange/functions.js";
@@ -72,6 +73,11 @@ export {
   saveGoldPriceSettings,
   publishPendingGoldPrice,
 } from "./goldPrice/functions.js";
+
+export {
+  onSupportTicketCreate,
+  onSupportTicketAnswered,
+} from "./support/functions.js";
 
 export {
   reportClientError,

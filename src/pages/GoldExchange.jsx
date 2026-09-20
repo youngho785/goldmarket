@@ -1,8 +1,12 @@
-// src/pages/GoldExchange.jsx
+﻿// src/pages/GoldExchange.jsx
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuthContext } from "../context/AuthContext";
 import { useLoginGate } from "@/context/LoginGateContext";
+import {
+  trackProductEvent,
+  trackProductEventOncePerSession,
+} from "@/analytics/productAnalytics";
 import "react-datepicker/dist/react-datepicker.css";
 import { format } from "date-fns";
 import { nudgeAppInstall } from "@/hooks/useInstallPrompt";
@@ -11,6 +15,8 @@ import {
   useGoldExchangeProfileDefaults,
   useGoldExchangeStatus,
 } from "@/hooks/useGoldExchangeRemoteData";
+import useGoldExchangeAutoVault from "@/hooks/useGoldExchangeAutoVault";
+import useGoldExchangeVaultImport from "@/hooks/useGoldExchangeVaultImport";
 
 // 🔗 공용 goldRates 모듈
 import {
@@ -20,6 +26,7 @@ import {
 
 // ✅ callable 래퍼 사용 (클라 단 로직 최소화)
 import { submitGoldExchangeGroup } from "@/services/exchangeClient";
+import { saveReservationContact } from "@/services/userService";
 import {
   clearGoldExchangeDraft,
   draftDateToLocalDate,
@@ -27,13 +34,12 @@ import {
   saveGoldExchangeDraft,
 } from "@/lib/goldExchangeDraft";
 import { saveGoldVaultImportDraft } from "@/lib/goldVaultImportDraft";
-import { subscribeGoldVaultItems } from "@/services/goldVaultService";
 import {
   applyExchangeFinalWeights,
   buildReservationProducts,
   createEmptyExchangeProduct,
   getInitialExchangeProductsFromSearch,
-  importVaultItemsToExchangeProducts,
+  isGoldToGoldInputProduct,
   normalizeExchangeProducts,
   recalculateExchangeProducts,
   getExchangeTotals,
@@ -45,7 +51,7 @@ import {
 
 import {
   PageContainer, FlowHeader, PageEyebrow, PageTitle, PageLead, RebookNotice,
-  FlowTrack, FlowItem, InfoCard, Card,
+  FlowTrack, FlowItem, EstimateBoundary, InfoCard, Card,
 } from "@/components/goldExchange/GoldExchange.styles";
 import {
   STEP, MAX_PRODUCTS_PER_BOOKING, MAX_PRODUCT_GRAMS, MAX_NAME_LENGTH,
@@ -56,7 +62,7 @@ import {
 } from "@/components/goldExchange/GoldExchangeSteps";
 
 export default function GoldExchange() {
-  const { user, isEmailVerified } = useAuthContext();
+  const { memberUser: user, isEmailVerified } = useAuthContext();
   const { openGate } = useLoginGate();
   const location = useLocation();
   const navigate = useNavigate();
@@ -65,6 +71,7 @@ export default function GoldExchange() {
   const resumeRequested = searchParams.get("resume") === "reservation";
   const directReservationRequested = searchParams.get("reserve") === "1";
   const requestedEntryMode = String(searchParams.get("mode") || "").trim();
+  const autoVaultRequested = searchParams.get("auto") === "1";
   const explicitEntryMode = ["vault", "manual", "visit"].includes(requestedEntryMode)
     ? requestedEntryMode
     : "";
@@ -135,8 +142,18 @@ export default function GoldExchange() {
   const [vaultImportLoading, setVaultImportLoading] = useState(
     entryMode === "vault" && !importedFromMyGold && !!user?.uid
   );
+  const [vaultImportNotice, setVaultImportNotice] = useState("");
   const fromVault =
     entryMode === "vault" && (importedFromMyGold || vaultImportedCount > 0);
+  const analyticsSourceMode = isRebook
+    ? "rebook"
+    : authDraft
+      ? "resume"
+      : fromVault
+        ? "vault"
+        : entryMode === "visit"
+          ? "visit"
+          : "manual";
 
 
   /* 골드바 선택 상태 */
@@ -182,6 +199,7 @@ export default function GoldExchange() {
     setCalculated(false);
     setVaultImportedCount(0);
     setVaultImportLoading(false);
+    setVaultImportNotice("");
     setBarGroup("don");
     setBarChoice({ idx: 0, qty: 1 });
     initializedChoiceRef.current = false;
@@ -232,56 +250,25 @@ export default function GoldExchange() {
   /* 환산율 */
   const { rates, pureGoldBuyPricePerDon } = useGoldExchangeMarketData();
   const productOptions = useMemo(
-    () => listGoldProducts(rates, { context: "exchange" }),
+    () => listGoldProducts(rates, { context: "exchange" }).filter(isGoldToGoldInputProduct),
     [rates]
   );
 
-  useEffect(() => {
-    if (entryMode !== "vault" || importedFromMyGold) return undefined;
-    if (!user?.uid) return undefined;
-
-    let active = true;
-    let unsubscribe = () => {};
-    setVaultImportLoading(true);
-    setError("");
-
-    unsubscribe = subscribeGoldVaultItems(
-      user.uid,
-      (items) => {
-        if (!active) return;
-        unsubscribe();
-        const nextProducts = importVaultItemsToExchangeProducts(
-          items,
-          rates,
-          MAX_PRODUCTS_PER_BOOKING
-        );
-
-        if (nextProducts.length === 0) {
-          setVaultImportedCount(0);
-          setError("MY GOLD에 기록된 금이 없습니다. 먼저 금을 기록하거나 직접 입력해 주세요.");
-          setProducts([createEmptyExchangeProduct()]);
-        } else {
-          setProducts(nextProducts);
-          setVaultImportedCount(nextProducts.length);
-          setCalculated(false);
-          initializedChoiceRef.current = false;
-          setStep(STEP.CALC);
-        }
-        setVaultImportLoading(false);
-      },
-      (vaultError) => {
-        if (!active) return;
-        console.error("[GoldExchange] 내금고 불러오기 실패", vaultError);
-        setVaultImportLoading(false);
-        setError("MY GOLD의 금 기록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.");
-      }
-    );
-
-    return () => {
-      active = false;
-      unsubscribe();
-    };
-  }, [entryMode, importedFromMyGold, rates, user?.uid]);
+  useGoldExchangeVaultImport({
+    entryMode,
+    importedFromMyGold,
+    userId: user?.uid,
+    rates,
+    maxProducts: MAX_PRODUCTS_PER_BOOKING,
+    setProducts,
+    setVaultImportedCount,
+    setVaultImportLoading,
+    setVaultImportNotice,
+    setCalculated,
+    setError,
+    setStep,
+    initializedChoiceRef,
+  });
 
   /* 예약 상태 구독 → 그룹 요약 문서 구독 유지 */
   const status = useGoldExchangeStatus(exchangeId);
@@ -360,6 +347,14 @@ export default function GoldExchange() {
     setProducts((prev) => applyExchangeFinalWeights(prev, { rates, pureGoldBuyPricePerDon }));
     setCalculated(true);
     initializedChoiceRef.current = false;
+    trackProductEventOncePerSession(
+      "exchange_calculated",
+      {
+        source_mode: analyticsSourceMode,
+        product_count: Math.min(products.length, MAX_PRODUCTS_PER_BOOKING),
+      },
+      "exchange-calculated"
+    );
     setStep(STEP.BARS);
     window.setTimeout(() => nudgeAppInstall("calculation-complete"), 1400);
   };
@@ -367,28 +362,46 @@ export default function GoldExchange() {
   // 예상 중량 계산은 로그인 없이 이용할 수 있습니다.
   const onCalculate = onCalculateCore;
 
+  const handleAutoVaultCalculated = useCallback(() => {
+    trackProductEventOncePerSession(
+      "exchange_calculated",
+      {
+        source_mode: "vault",
+        product_count: Math.min(products.length, MAX_PRODUCTS_PER_BOOKING),
+      },
+      "exchange-calculated"
+    );
+  }, [products.length]);
+
+  useGoldExchangeAutoVault({
+    enabled: autoVaultRequested,
+    entryMode,
+    vaultImportLoading,
+    products,
+    rates,
+    pureGoldBuyPricePerDon,
+    maxProducts: MAX_PRODUCTS_PER_BOOKING,
+    maxProductGrams: MAX_PRODUCT_GRAMS,
+    step,
+    setError,
+    setProducts,
+    setCalculated,
+    setStep,
+    initializedChoiceRef,
+    onCalculated: handleAutoVaultCalculated,
+  });
+
   // 비회원도 날짜/시간 선택까지 진행할 수 있습니다.
   const onGoReserveDirect = () => {
     navigate("/gold-exchange?mode=visit", { state: null });
   };
 
   const chooseStartMethod = (mode) => {
-    if (mode === "vault" && !user) {
-      openGate({
-        unifiedContinue: true,
-        purposeLabel: "MY GOLD 불러오기",
-        message: "MY GOLD에 기록한 내 금을 불러오려면 로그인이 필요합니다.",
-        requireVerified: false,
-        intent: "exchange-vault-import",
-        next: "/gold-exchange?mode=vault",
-        cancelLabel: "나중에",
-        cancelAsText: true,
-      });
-      return;
-    }
-
     const nextMode = ["vault", "manual", "visit"].includes(mode) ? mode : "manual";
-    navigate(`/gold-exchange?mode=${nextMode}`, { state: null });
+    const nextPath = nextMode === "vault"
+      ? "/gold-exchange?mode=vault&auto=1"
+      : `/gold-exchange?mode=${nextMode}`;
+    navigate(nextPath, { state: null });
   };
 
   const onGoReserve = () => setStep(STEP.RESERVE);
@@ -407,8 +420,8 @@ export default function GoldExchange() {
       openGate({
         unifiedContinue: true,
         purposeLabel: "MY GOLD 저장",
-        message: `계산한 금 ${draft.items.length}개의 종류와 중량을 잠시 보관했습니다. 로그인 후 MY GOLD에서 이어서 저장할 수 있습니다.`,
-        requireVerified: false,
+        message: `계산한 금 ${draft.items.length}개의 종류와 중량을 잠시 보관했습니다. 로그인과 이메일 인증 후 MY GOLD에서 이어서 저장할 수 있습니다.`,
+        requireVerified: true,
         intent: "my-gold-import",
         next,
         cancelLabel: "나중에",
@@ -484,6 +497,7 @@ export default function GoldExchange() {
     barGroup,
     barChoice,
   });
+  const barsPlanPreview = calculated ? makeBarsPlan() : null;
 
   /* 스텝3: 예약 제출 (callable로 원자 처리) */
   const onSubmitReservationCore = async (e) => {
@@ -552,6 +566,17 @@ export default function GoldExchange() {
       const res = await submitGoldExchangeGroup(payload);
       if (!res?.ok || !res?.groupId) throw new Error("서버 응답이 올바르지 않습니다.");
       clearGoldExchangeDraft();
+      void saveReservationContact(user.uid, {
+        displayName: nameTrim,
+        phone: phoneTrim,
+      }).catch((profileError) => {
+        // 예약 자체는 이미 성공했으므로 연락처 저장 실패가 완료 화면을 막지 않게 합니다.
+        console.warn("[GoldExchange] reservation contact save failed:", profileError);
+      });
+      void trackProductEvent("reservation_completed", {
+        source_mode: analyticsSourceMode,
+        calculation_mode: calculated ? "calculated" : "visit_only",
+      });
       setExchangeId(res.groupId);
       setSubmitted(true);
       setStep(STEP.DONE);
@@ -586,6 +611,7 @@ export default function GoldExchange() {
         <PageTitle $compact={!showStartMethod}>내 금을 999.9 골드바로 교환</PageTitle>
         <PageLead $compact={!showStartMethod}>
           예상 계산과 방문 날짜·시간 선택은 로그인 없이 이용할 수 있습니다.
+          MY GOLD에 저장된 정보는 사용자가 기록한 금 정보이며, 실제 교환 조건은 매장 실측 후 확정됩니다.
           예약 요청만 로그인 또는 회원가입 후 완료합니다.
         </PageLead>
         {isRebook && (
@@ -597,7 +623,7 @@ export default function GoldExchange() {
         {fromVault && (
           <RebookNotice role="status">
             <strong>MY GOLD에 기록한 내 금 {vaultImportedCount || initialVaultProductsRef.current.length}개를 불러왔습니다.</strong><br />
-            금 종류와 기록 중량을 다시 입력하지 않고 스텝 1에서 확인한 뒤 바로 예상 교환량을 계산할 수 있습니다. 실제 인정 중량은 매장 실측 후 확정됩니다.
+            저장된 금 종류와 중량으로 예상 교환량을 바로 계산합니다. 필요하면 이전 버튼에서 언제든 수정할 수 있으며, 실제 인정 중량은 매장 실측 후 확정됩니다.
           </RebookNotice>
         )}
         {!showStartMethod && (
@@ -616,6 +642,11 @@ export default function GoldExchange() {
             )}
           </FlowTrack>
         )}
+        {!showStartMethod && (
+          <EstimateBoundary>
+            온라인 화면은 예상값입니다. 실제 순도·중량·골드바 제작공임과 교환 조건은 매장에서 실물을 확인하고 고객이 동의한 뒤 확정됩니다.
+          </EstimateBoundary>
+        )}
       </FlowHeader>
       {showStartMethod && <StartMethodScreen onChoose={chooseStartMethod} />}
       {!showStartMethod && vaultImportLoading && (
@@ -633,6 +664,7 @@ export default function GoldExchange() {
           removeProduct={removeProduct}
           onGoReserveDirect={onGoReserveDirect}
           fromVault={fromVault}
+          vaultImportNotice={vaultImportNotice}
         />
       )}
 
@@ -674,6 +706,7 @@ export default function GoldExchange() {
           loading={loading}
           calculated={calculated}
           setStep={setStep}
+          barsPlan={barsPlanPreview}
         />
       )}
 

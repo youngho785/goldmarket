@@ -307,7 +307,7 @@ function changePercentView(changePercent, direction) {
 }
 
 export default function MyGoldIntroCard() {
-  const { user } = useAuthContext() || {};
+  const { memberUser: user } = useAuthContext() || {};
   const dashboard = useGoldVaultDashboard(user?.uid);
   const bonus = useBonusGoldBalance(user?.uid);
   const bonusBalanceG = Number(bonus.balanceG || 0);

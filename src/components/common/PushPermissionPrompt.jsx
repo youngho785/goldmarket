@@ -35,7 +35,7 @@ export default function PushPermissionPrompt({
   snoozeDays = 1,
   variant = "inline",
 }) {
-  const { user } = useAuthContext();
+  const { memberUser } = useAuthContext();
   const [dismissed, setDismissed] = useState(false);
   const [installOpen, setInstallOpen] = useState(
     typeof window !== "undefined" ? window[PROMO_LOCK] === "install" : false
@@ -56,7 +56,7 @@ export default function PushPermissionPrompt({
     };
   }, []);
 
-  if (!user?.uid || dismissed) return null;
+  if (!memberUser?.uid || dismissed) return null;
 
   const isIOS = detectIOS();
   const isStandalone = detectStandalone();

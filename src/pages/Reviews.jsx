@@ -3,11 +3,15 @@ import styled from "styled-components";
 import GoldExchangeReviewList from "@/components/reviews/GoldExchangeReviewList";
 
 const Page = styled.main`
-  padding: clamp(42px, 6vw, 72px) 0 80px;
+  padding: clamp(28px, 4vw, 48px) 0 clamp(48px, 6vw, 72px);
+
+  @media (max-width: 620px) {
+    padding: 20px 0 48px;
+  }
 `;
 
 const Head = styled.header`
-  margin-bottom: 28px;
+  margin-bottom: 20px;
 `;
 
 const Kicker = styled.p`
@@ -21,7 +25,7 @@ const Kicker = styled.p`
 const Title = styled.h1`
   margin: 0;
   color: ${({ theme }) => theme.colors.primary};
-  font-size: clamp(2rem, 4vw, 3rem);
+  font-size: clamp(1.65rem, 3.4vw, 2.5rem);
   line-height: 1.2;
 `;
 

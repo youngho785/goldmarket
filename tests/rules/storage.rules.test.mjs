@@ -22,6 +22,9 @@ const rules = fs.readFileSync(
 
 let env;
 
+const verifiedContext = (uid, claims = {}) =>
+  env.authenticatedContext(uid, { email_verified: true, ...claims });
+
 const imageBytes = () => new Uint8Array([0xff, 0xd8, 0xff, 0xd9]);
 
 async function seedObject(objectPath, contentType = "image/jpeg") {
@@ -48,10 +51,9 @@ test("프로필 사진은 비로그인·다른 회원이 읽지 못하고 본인
   await seedObject(objectPath);
 
   const publicStorage = env.unauthenticatedContext().storage();
-  const ownerStorage = env.authenticatedContext("owner").storage();
-  const otherStorage = env.authenticatedContext("other").storage();
-  const adminStorage = env
-    .authenticatedContext("admin", { admin: true })
+  const ownerStorage = verifiedContext("owner").storage();
+  const otherStorage = verifiedContext("other").storage();
+  const adminStorage = verifiedContext("admin", { admin: true })
     .storage();
 
   await assertFails(getBytes(ref(publicStorage, objectPath)));
@@ -63,9 +65,8 @@ test("프로필 사진은 비로그인·다른 회원이 읽지 못하고 본인
 test("프로필 사진 디렉터리는 클라이언트가 목록 조회할 수 없다", async () => {
   await seedObject("profilePhotos/owner/list-blocked.jpg");
 
-  const ownerStorage = env.authenticatedContext("owner").storage();
-  const adminStorage = env
-    .authenticatedContext("admin", { admin: true })
+  const ownerStorage = verifiedContext("owner").storage();
+  const adminStorage = verifiedContext("admin", { admin: true })
     .storage();
 
   await assertFails(listAll(ref(ownerStorage, "profilePhotos/owner")));
@@ -73,7 +74,7 @@ test("프로필 사진 디렉터리는 클라이언트가 목록 조회할 수 �
 });
 
 test("회원은 자신의 프로필 경로에만 이미지 파일을 업로드할 수 있다", async () => {
-  const ownerStorage = env.authenticatedContext("owner").storage();
+  const ownerStorage = verifiedContext("owner").storage();
 
   await assertSucceeds(
     uploadBytes(
@@ -105,10 +106,9 @@ test("레거시 profiles 경로도 동일하게 본인·관리자만 직접 읽�
   await seedObject(objectPath);
 
   const publicStorage = env.unauthenticatedContext().storage();
-  const ownerStorage = env.authenticatedContext("owner").storage();
-  const otherStorage = env.authenticatedContext("other").storage();
-  const adminStorage = env
-    .authenticatedContext("admin", { superAdmin: true })
+  const ownerStorage = verifiedContext("owner").storage();
+  const otherStorage = verifiedContext("other").storage();
+  const adminStorage = verifiedContext("admin", { superAdmin: true })
     .storage();
 
   await assertFails(getBytes(ref(publicStorage, objectPath)));
@@ -125,10 +125,9 @@ test("프로필 사진 삭제는 본인·관리자에게만 허용된다", async
   await seedObject(otherDeniedPath);
   await seedObject(adminPath);
 
-  const ownerStorage = env.authenticatedContext("owner").storage();
-  const otherStorage = env.authenticatedContext("other").storage();
-  const adminStorage = env
-    .authenticatedContext("admin", { admin: true })
+  const ownerStorage = verifiedContext("owner").storage();
+  const otherStorage = verifiedContext("other").storage();
+  const adminStorage = verifiedContext("admin", { admin: true })
     .storage();
 
   await assertSucceeds(deleteObject(ref(ownerStorage, ownerPath)));
@@ -136,8 +135,23 @@ test("프로필 사진 삭제는 본인·관리자에게만 허용된다", async
   await assertSucceeds(deleteObject(ref(adminStorage, adminPath)));
 });
 
+test("미인증 계정은 자신의 프로필 이미지에도 접근할 수 없다", async () => {
+  const objectPath = "profilePhotos/owner/unverified-blocked.jpg";
+  await seedObject(objectPath);
+  const storage = verifiedContext("owner", { email_verified: false }).storage();
+
+  await assertFails(getBytes(ref(storage, objectPath)));
+  await assertFails(
+    uploadBytes(
+      ref(storage, "profilePhotos/owner/unverified-upload.jpg"),
+      imageBytes(),
+      { contentType: "image/jpeg" }
+    )
+  );
+});
+
 test("정의되지 않은 Storage 경로는 계속 거부된다", async () => {
-  const ownerStorage = env.authenticatedContext("owner").storage();
+  const ownerStorage = verifiedContext("owner").storage();
 
   await assertFails(
     uploadBytes(

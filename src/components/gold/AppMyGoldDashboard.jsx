@@ -14,7 +14,6 @@ import {
   TrendingUp,
 } from "lucide-react";
 
-import { computeVaultValueWon } from "@/lib/goldVaultCatalog";
 
 const Card = styled.section`
   position: relative;
@@ -48,10 +47,12 @@ const Card = styled.section`
 
 const SummaryShell = styled.div`
   position: relative;
+  height: 100%;
 `;
 
 const SummaryCard = styled(Card)`
   display: block;
+  height: 100%;
   color: ${({ theme }) => theme.on.primary};
   text-decoration: none;
   cursor: pointer;
@@ -71,6 +72,19 @@ const Inner = styled.div`
   position: relative;
   z-index: 1;
   padding: 12px 13px;
+`;
+
+const SummaryInner = styled(Inner)`
+  display: flex;
+  min-height: 242px;
+  height: 100%;
+  flex-direction: column;
+  padding: 18px;
+
+  @media (max-width: 560px) {
+    min-height: 190px;
+    padding: 16px 18px 15px;
+  }
 `;
 
 const Topline = styled.div`
@@ -117,9 +131,11 @@ const Value = styled.strong`
   display: block;
   margin-top: 8px;
   color: ${({ theme }) => theme.colors.goldLight};
-  font-family: ${({ theme }) => theme.fonts.numeric};
-  font-size: clamp(1.9rem, 9vw, 2.5rem);
-  font-weight: 950;
+  font-family: "Segoe UI", "Malgun Gothic", Arial, sans-serif;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-size: clamp(2rem, 6vw, 2.7rem);
+  font-weight: 800;
   line-height: 1;
   letter-spacing: -0.055em;
   white-space: nowrap;
@@ -136,7 +152,9 @@ const Change = styled.div`
       : $direction === "down"
         ? "#C7E5FF"
         : `color-mix(in srgb, ${theme.on.primary} 68%, transparent)`};
-  font-family: ${({ theme }) => theme.fonts.numeric};
+  font-family: "Segoe UI", "Malgun Gothic", Arial, sans-serif;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
   font-size: 0.63rem;
   font-weight: 900;
 
@@ -151,8 +169,8 @@ const SummaryMeta = styled.div`
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 10px;
-  padding-top: 9px;
+  margin-top: auto;
+  padding-top: 12px;
   border-top: 1px solid color-mix(in srgb, ${({ theme }) => theme.on.primary} 11%, transparent);
   color: color-mix(in srgb, ${({ theme }) => theme.on.primary} 70%, transparent);
   font-size: 0.62rem;
@@ -161,14 +179,16 @@ const SummaryMeta = styled.div`
   strong {
     margin-left: 4px;
     color: ${({ theme }) => theme.on.primary};
-    font-family: ${({ theme }) => theme.fonts.numeric};
+    font-family: "Segoe UI", "Malgun Gothic", Arial, sans-serif;
+    font-variant-numeric: tabular-nums lining-nums;
+    font-feature-settings: "tnum" 1, "lnum" 1;
     font-size: 0.64rem;
     font-weight: 900;
   }
 
   span:last-child {
-    color: ${({ theme }) => theme.colors.goldLight};
-    font-weight: 900;
+    color: color-mix(in srgb, ${({ theme }) => theme.colors.gold} 62%, white);
+    font-weight: 950;
     white-space: nowrap;
   }
 `;
@@ -248,20 +268,13 @@ function formatSignedPercent(value) {
   return `${number > 0 ? "+" : "-"}${Math.abs(number).toFixed(2)}%`;
 }
 
-export default function AppMyGoldDashboard({ user, dashboard, bonus }) {
-  const bonusBalanceG = Number(bonus.balanceG || 0);
+export default function AppMyGoldDashboard({ user, dashboard }) {
   const hasRealGold = !!user?.uid && dashboard.summary.itemCount > 0;
-  const loading = !!user?.uid && (dashboard.itemsLoading || bonus.loading);
+  const loading = !!user?.uid && dashboard.itemsLoading;
 
   const totals = useMemo(() => {
-    const bonusCurrentValue = dashboard.publicPriceEnabled
-      ? computeVaultValueWon(bonusBalanceG, dashboard.customerSellPricePerDon)
-      : 0;
-    const bonusPreviousValue = dashboard.publicPriceEnabled
-      ? computeVaultValueWon(bonusBalanceG, dashboard.previousCustomerSellPricePerDon)
-      : 0;
-    const current = Number(dashboard.summary.estimatedValueWon || 0) + bonusCurrentValue;
-    const previous = Number(dashboard.summary.previousEstimatedValueWon || 0) + bonusPreviousValue;
+    const current = Number(dashboard.summary.estimatedValueWon || 0);
+    const previous = Number(dashboard.summary.previousEstimatedValueWon || 0);
     const amount = current > 0 && previous > 0 ? current - previous : 0;
 
     return {
@@ -271,10 +284,6 @@ export default function AppMyGoldDashboard({ user, dashboard, bonus }) {
       direction: amount > 0 ? "up" : amount < 0 ? "down" : previous > 0 ? "same" : "unknown",
     };
   }, [
-    bonusBalanceG,
-    dashboard.customerSellPricePerDon,
-    dashboard.previousCustomerSellPricePerDon,
-    dashboard.publicPriceEnabled,
     dashboard.summary.estimatedValueWon,
     dashboard.summary.previousEstimatedValueWon,
   ]);
@@ -297,7 +306,7 @@ export default function AppMyGoldDashboard({ user, dashboard, bonus }) {
           </Kicker>
           <EmptyTitle id="app-my-gold-title">내 금은 오늘 얼마일까요?</EmptyTitle>
           <EmptyCopy>
-            금의 종류와 중량만 입력하면 오늘 가치를 바로 확인할 수 있습니다.
+            내가 실제로 가진 금의 종류와 중량을 기록해 오늘 참고가치를 확인합니다. 실물을 맡기는 서비스가 아닙니다.
           </EmptyCopy>
           <ActionRow>
             <PrimaryAction to="/my-gold?add=1">
@@ -338,7 +347,7 @@ export default function AppMyGoldDashboard({ user, dashboard, bonus }) {
           </Kicker>
           <EmptyTitle>아직 기록한 금이 없습니다.</EmptyTitle>
           <EmptyCopy>
-            금 하나만 기록하면 오늘 가치와 변화를 바로 확인할 수 있습니다.
+            금 하나만 기록하면 오늘 가치와 변화를 바로 확인할 수 있습니다. MY GOLD는 개인 금 기록 공간입니다.
           </EmptyCopy>
           <ActionRow>
             <PrimaryAction to="/my-gold?add=1">
@@ -364,7 +373,7 @@ export default function AppMyGoldDashboard({ user, dashboard, bonus }) {
         to="/my-gold"
         aria-label="MY GOLD 상세 보기"
       >
-        <Inner>
+        <SummaryInner>
           <Topline>
             <SummaryKicker><span>MY GOLD</span></SummaryKicker>
             <ChevronRight aria-hidden />
@@ -386,15 +395,13 @@ export default function AppMyGoldDashboard({ user, dashboard, bonus }) {
               예상 순금
               <strong>{Number(dashboard.summary.pureGoldG || 0).toFixed(2)}g</strong>
             </span>
-            {bonusBalanceG > 0 && (
-              <span>
-                MEMBER GOLD
-                <strong>{bonusBalanceG.toFixed(3)}g</strong>
-              </span>
-            )}
+            <span>
+              기록한 금
+              <strong>{Number(dashboard.summary.itemCount || 0)}개</strong>
+            </span>
             <span>MY GOLD 보기</span>
           </SummaryMeta>
-        </Inner>
+        </SummaryInner>
       </SummaryCard>
       <SummaryGoldCompanion
         size={28}

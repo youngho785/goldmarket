@@ -17,7 +17,7 @@ export const PageContainer = styled.div`
 export const FlowHeader = styled.header`
   position: relative;
   width: 100%;
-  max-width: 960px;
+  max-width: 1160px;
   margin-bottom: 8px;
   padding: ${({ $compact }) => ($compact ? "14px 18px" : "clamp(18px, 3vw, 25px)")};
   overflow: hidden;
@@ -168,7 +168,7 @@ export const InfoCard = styled.div`
 export const Card = styled.div`
   position: relative;
   width: 100%;
-  max-width: 960px;
+  max-width: 1160px;
   margin-bottom: 10px;
   padding: clamp(16px, 3vw, 23px);
   overflow: hidden;
@@ -197,7 +197,7 @@ export const Card = styled.div`
 
 export const StartChoiceGrid = styled.div`
   width: 100%;
-  max-width: 960px;
+  max-width: 1160px;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 7px;
@@ -656,3 +656,101 @@ export const StepMark = styled.div`
   letter-spacing: .25px;
 `;
 
+
+
+export const EstimateBoundary = styled.div`
+  position: relative;
+  z-index: 1;
+  margin-top: 9px;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.goldLight} 18%, transparent);
+  border-radius: 11px;
+  background: color-mix(in srgb, ${({ theme }) => theme.on.primary} 6%, transparent);
+  color: color-mix(in srgb, ${({ theme }) => theme.on.primary} 78%, transparent);
+  font-size: .7rem;
+  font-weight: 750;
+  line-height: 1.45;
+  text-align: center;
+  word-break: keep-all;
+`;
+
+export const ReservationSummary = styled.div`
+  margin: 0 0 16px;
+  padding: 15px 16px;
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 28%, ${({ theme }) => theme.colors.border});
+  border-radius: 16px;
+  background: linear-gradient(135deg, ${({ theme }) => theme.semantic.badgeGoldBg}, ${({ theme }) => theme.colors.surface});
+
+  small {
+    display: block;
+    color: ${({ theme }) => theme.colors.secondaryDark};
+    font-family: ${({ theme }) => theme.fonts.numeric};
+    font-size: .63rem;
+    font-weight: 950;
+    letter-spacing: .09em;
+  }
+  strong {
+    display: block;
+    margin-top: 5px;
+    color: ${({ theme }) => theme.colors.primary};
+    font-size: 1rem;
+    line-height: 1.4;
+  }
+  p {
+    margin: 5px 0 0;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: .74rem;
+    line-height: 1.5;
+  }
+`;
+
+export const FeeSummary = styled.div`
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  margin: 10px 0 15px;
+  padding: 13px 14px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 14px;
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+
+  small {
+    display: block;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: .68rem;
+  }
+  strong {
+    display: block;
+    margin-top: 3px;
+    color: ${({ theme }) => theme.colors.primary};
+    font-family: ${({ theme }) => theme.fonts.numeric};
+    font-size: 1rem;
+  }
+
+  @media (max-width: 520px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+export const FeeLink = styled.a`
+  color: ${({ theme }) => theme.colors.primary};
+  font-size: .72rem;
+  font-weight: 900;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+`;
+
+export const PendingBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin: 0 0 10px;
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: ${({ theme }) => theme.semantic.badgeGoldBg};
+  color: ${({ theme }) => theme.colors.secondaryDark};
+  font-size: .7rem;
+  font-weight: 950;
+`;

@@ -60,3 +60,8 @@ _patch_backups/
 
 # Local automatic patch backups
 _backups/
+test-results/
+test-system-backup/
+CURRENT_STATE_MANIFEST.txt
+KGM_TEST_REDESIGN_PHASE1_NOTES.md
+scripts/run-full-integration-test.ps1

@@ -18,7 +18,6 @@ import {
 } from "firebase/auth";
 import { auth, functions } from "../firebase/firebase";
 import { httpsCallable } from "firebase/functions";
-import { ensureUserProfileOnSignup } from "./userService";
 import { buildEmailActionSettings } from "../lib/emailActionUrl";
 
 /* ────────────────────────────────────────────────────────────────────────── *
@@ -92,17 +91,17 @@ export async function tryResumeUnverifiedSignup(email, password) {
 /**
  * 회원가입
  * 1) 신규 Auth 계정 생성 또는 동일 미인증 계정 재개
- * 2) Auth.displayName 설정 + 인증메일 발송
+ * 2) 선택된 Auth.displayName 설정 + 인증메일 발송
  * 3) 신규 계정의 인증메일 단계 실패 시 Auth 자동 롤백
- * 4) 서버에서 닉네임 원자 선점/멱등 복구
- * 5) Firestore profiles/users 생성
+ * 4) 닉네임이 전달된 경우에만 서버에서 원자 선점/멱등 복구
+ * 5) Firestore 회원 문서/동의는 Register에서 한 번의 저장으로 기록
+ * 6) Register가 신규/재개를 구분해 불필요한 가입 직후 Firestore 읽기를 피할 수 있도록 상태 반환
  */
 export async function signUp({
   email,
   password,
   displayName = "",
   nickname = "",
-  phone = "",
   continueUrl = "",
   // nicknameLower 등 추가 파라미터가 와도 무시(하위호환)
 }) {
@@ -141,7 +140,9 @@ export async function signUp({
   // Auth 프로필 + 인증메일.
   // 신규 Auth를 방금 만든 경우에만 setup 실패 시 Auth를 롤백합니다.
   try {
-    await _updateAuthProfile(user, { displayName: safeName });
+    if (safeName && user.displayName !== safeName) {
+      await _updateAuthProfile(user, { displayName: safeName });
+    }
     if (!user.emailVerified) {
       await sendEmailVerification(user, buildEmailActionSettings(continueUrl));
     }
@@ -156,41 +157,26 @@ export async function signUp({
     throw setupError;
   }
 
-  // 닉네임은 서버 트랜잭션으로 최초 1회 선점합니다.
-  // 재개된 동일 UID + 동일 닉네임이면 멱등 성공합니다.
-  try {
-    const claim = httpsCallable(functions, "claimNickname");
-    await claim({ nickname: (nickname || "").trim() });
-  } catch (claimError) {
-    // 신규 Auth를 이번 요청에서 만들었고 닉네임 선점이 실패했다면 계정만 롤백합니다.
-    // claimNickname 자체는 트랜잭션이므로 실패 시 부분 nickname 쓰기가 남지 않습니다.
-    if (createdNow) {
-      try {
-        await deleteUser(user);
-      } catch (rollbackError) {
-        console.error("닉네임 선점 실패 후 Auth 롤백 실패:", rollbackError);
+  const safeNickname = (nickname || "").trim();
+  // 닉네임은 가입 필수가 아닙니다. 사용자가 프로필에서 설정했거나
+  // 레거시 가입 흐름이 값을 전달한 경우에만 서버 트랜잭션으로 선점합니다.
+  if (safeNickname) {
+    try {
+      const claim = httpsCallable(functions, "claimNickname");
+      await claim({ nickname: safeNickname });
+    } catch (claimError) {
+      if (createdNow) {
+        try {
+          await deleteUser(user);
+        } catch (rollbackError) {
+          console.error("닉네임 선점 실패 후 Auth 롤백 실패:", rollbackError);
+        }
       }
+      throw claimError;
     }
-    throw claimError;
   }
 
-  // Firestore 문서 보장 — nickname 자체는 서버 claimNickname만 기록합니다.
-  // 이름/휴대전화 등 필수 회원정보 저장에 실패하면 가입 완료로 넘기지 않습니다.
-  try {
-    await ensureUserProfileOnSignup(user, {
-      displayName: safeName,
-      nickname: (nickname || "").trim(),
-      phone,
-      email: emailTrim,
-    });
-  } catch (profileError) {
-    console.error("회원 기본정보 저장 실패:", profileError);
-    throw new Error(
-      "회원 기본정보 저장에 실패했습니다. 같은 이메일과 비밀번호로 다시 가입을 진행해 주세요."
-    );
-  }
-
-  return user;
+  return { user, createdNow };
 }
 
 /** 로그아웃 */

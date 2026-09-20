@@ -56,11 +56,11 @@ function isGranted() {
  * ──────────────────────────────────────────────────────────── */
 
 export default function useFCM() {
-  const { user } =
+  const { memberUser } =
     useAuthContext();
 
   const uid =
-    user?.uid || "";
+    memberUser?.uid || "";
 
 
   const [fcmToken, setFcmToken] =

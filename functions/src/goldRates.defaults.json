@@ -119,7 +119,7 @@
       "refiningFeePerDon": 0,
       "active": true,
       "myGoldEnabled": true,
-      "exchangeEnabled": true,
+      "exchangeEnabled": false,
       "sortOrder": 90,
       "valuationPriceBasis": "pure"
     },
@@ -131,7 +131,7 @@
       "refiningFeePerDon": 0,
       "active": true,
       "myGoldEnabled": true,
-      "exchangeEnabled": true,
+      "exchangeEnabled": false,
       "sortOrder": 100,
       "valuationPriceBasis": "pure"
     },

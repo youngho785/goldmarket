@@ -101,6 +101,13 @@ function writeStore(patch) {
   }
 }
 
+
+export function readSavedGuestMyGoldItems() {
+  const stored = readStore();
+  if (!Array.isArray(stored?.items)) return [];
+  return sanitizeItems(stored.items);
+}
+
 export function readGuestMyGoldItems() {
   const stored = readStore();
   if (Array.isArray(stored?.items)) return sanitizeItems(stored.items);

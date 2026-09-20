@@ -110,17 +110,22 @@ const Badge = styled.span`
   line-height: 1;
 `;
 
+const AttentionStack = styled.div`
+  display: grid;
+  gap: 10px;
+  margin: -4px 0 16px;
+`;
+
 const UrgentCard = styled(NavLink)`
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  margin: -4px 0 16px;
   padding: 14px 16px;
-  border: 1px solid ${({ theme }) => theme.colors.error};
+  border: 1px solid ${({ $warning, theme }) => $warning ? theme.colors.warning : theme.colors.error};
   border-radius: 14px;
-  background: ${({ theme }) => theme.semantic.alertErrorBg};
-  color: ${({ theme }) => theme.semantic.alertErrorText};
+  background: ${({ $warning, theme }) => $warning ? theme.semantic.alertWarningBg : theme.semantic.alertErrorBg};
+  color: ${({ $warning, theme }) => $warning ? theme.semantic.alertWarningText : theme.semantic.alertErrorText};
   text-decoration: none;
 
   strong {
@@ -173,14 +178,27 @@ export default function AdminDashboard() {
     <Container>
       <Title>관리자 대시보드</Title>
 
-      {pendingGoldExchangeCount > 0 && (
-        <UrgentCard to="gold-exchange?status=requested">
-          <span>
-            <strong>신규 금교환 요청 {pendingGoldExchangeCount}건</strong>
-            접수 순서대로 확인하고 방문 일정을 승인해 주세요.
-          </span>
-          <b>바로 처리 →</b>
-        </UrgentCard>
+      {(pendingGoldExchangeCount > 0 || pendingInquiryCount > 0) && (
+        <AttentionStack aria-label="우선 처리 업무">
+          {pendingGoldExchangeCount > 0 && (
+            <UrgentCard to="gold-exchange?status=requested">
+              <span>
+                <strong>신규 금교환 요청 {pendingGoldExchangeCount}건</strong>
+                접수 순서대로 확인하고 방문 일정을 승인해 주세요.
+              </span>
+              <b>바로 처리 →</b>
+            </UrgentCard>
+          )}
+          {pendingInquiryCount > 0 && (
+            <UrgentCard to="support" $warning>
+              <span>
+                <strong>답변 대기 문의 {pendingInquiryCount}건</strong>
+                고객이 기다리고 있는 문의를 확인해 주세요.
+              </span>
+              <b>답변하기 →</b>
+            </UrgentCard>
+          )}
+        </AttentionStack>
       )}
 
       <Menu>

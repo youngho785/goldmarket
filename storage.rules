@@ -6,12 +6,16 @@ service firebase.storage {
       return request.auth != null;
     }
 
+    function verifiedSignedIn() {
+      return signedIn() && request.auth.token.get('email_verified', false) == true;
+    }
+
     function isOwner(uid) {
-      return signedIn() && request.auth.uid == uid;
+      return verifiedSignedIn() && request.auth.uid == uid;
     }
 
     function isAdmin() {
-      return signedIn() &&
+      return verifiedSignedIn() &&
         (request.auth.token.get('admin', false) == true ||
           request.auth.token.get('superAdmin', false) == true);
     }

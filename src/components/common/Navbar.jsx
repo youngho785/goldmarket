@@ -1,5 +1,5 @@
 //src\components\common\Navbar.jsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { livingGoldPulse } from "@/styles/livingGoldMotion";
@@ -24,7 +24,9 @@ import usePendingGoldExchangeCount from "@/hooks/usePendingGoldExchangeCount";
 const Header = styled.header`
   position: sticky;
   top: 0;
-  z-index: 1000;
+  z-index: 1400;
+  overflow: visible;
+  isolation: isolate;
   background: color-mix(in srgb, ${({ theme }) => theme.colors.background} 94%, transparent);
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   backdrop-filter: blur(16px);
@@ -202,6 +204,86 @@ const AccountLink = styled(NavLink)`
   font-weight: 800;
 `;
 
+const AccountMenuWrap = styled.div`
+  position: relative;
+  z-index: 1450;
+`;
+
+const AccountMenuButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 8px 13px;
+  border: 1px solid ${({ theme }) => theme.colors.borderStrong};
+  border-radius: 0;
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.primary};
+  box-shadow: none;
+  font-size: .82rem;
+  font-weight: 800;
+
+  &:hover:not(:disabled) {
+    transform: none;
+    box-shadow: none;
+    border-color: ${({ theme }) => theme.colors.secondary};
+  }
+`;
+
+const AccountMenu = styled.div`
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 1500;
+  pointer-events: auto;
+  display: ${({ $open }) => ($open ? "grid" : "none")};
+  width: 210px;
+  padding: 8px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.background};
+  box-shadow: ${({ theme }) => theme.shadows.lg};
+`;
+
+const AccountMenuItem = styled(NavLink)`
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+  padding: 9px 10px;
+  color: ${({ theme }) => theme.colors.text};
+  font-size: .84rem;
+  font-weight: 720;
+
+  &:hover, &:focus-visible, &.active {
+    background: ${({ theme }) => theme.colors.surface};
+    color: ${({ theme }) => theme.colors.primary};
+  }
+`;
+
+const AccountMenuLogout = styled.button`
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 42px;
+  margin-top: 6px;
+  padding: 9px 10px;
+  border: 0;
+  border-top: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
+  border-radius: 0;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  box-shadow: none;
+  font-size: .84rem;
+  font-weight: 720;
+  text-align: left;
+
+  &:hover:not(:disabled), &:focus-visible {
+    transform: none;
+    box-shadow: none;
+    background: ${({ theme }) => theme.colors.surface};
+    color: ${({ theme }) => theme.colors.error};
+  }
+`;
+
 const Badge = styled.span`
   display: inline-grid;
   place-items: center;
@@ -352,7 +434,7 @@ function tsMs(timestamp) {
 }
 
 export default function Navbar() {
-  const { user, isAdmin = false, isEmailVerified, logout } = useAuthContext() || {};
+  const { user, memberUser, isMember, isAdmin = false, logout } = useAuthContext() || {};
   const navigate = useNavigate();
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -362,8 +444,42 @@ export default function Navbar() {
   const wroteSeenRef = useRef(0);
   const menuButtonRef = useRef(null);
   const drawerRef = useRef(null);
+  const accountMenuRef = useRef(null);
+  const accountMenuButtonRef = useRef(null);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
 
-  useEffect(() => setDrawerOpen(false), [location.pathname, location.search]);
+  // Route transitions must close transient navigation UI before the next paint.
+  // Using a normal effect can race with an immediate user click after login/navigation:
+  // the user opens MY, then the still-pending route effect closes it again.
+  useLayoutEffect(() => {
+    setDrawerOpen(false);
+    setAccountMenuOpen(false);
+  }, [location.pathname, location.search]);
+
+  useEffect(() => {
+    if (!accountMenuOpen) return undefined;
+
+    const handlePointerDown = (event) => {
+      const menu = accountMenuRef.current;
+      const button = accountMenuButtonRef.current;
+      if (menu?.contains(event.target) || button?.contains(event.target)) return;
+      setAccountMenuOpen(false);
+    };
+
+    const handleKeyDown = (event) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      setAccountMenuOpen(false);
+      accountMenuButtonRef.current?.focus?.();
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [accountMenuOpen]);
 
   useEffect(() => {
     if (!drawerOpen) return undefined;
@@ -425,30 +541,31 @@ export default function Navbar() {
       console.error("로그아웃 실패", error);
     } finally {
       setDrawerOpen(false);
+      setAccountMenuOpen(false);
     }
   };
 
   useEffect(() => {
-    if (!user?.uid) {
+    if (!memberUser?.uid) {
       setLastSeenMs(0);
       return undefined;
     }
     return onSnapshot(
-      doc(db, "users", user.uid),
+      doc(db, "users", memberUser.uid),
       (snapshot) => setLastSeenMs(tsMs(snapshot.data()?.myExchangesLastSeenAt)),
       () => setLastSeenMs(0)
     );
-  }, [user?.uid]);
+  }, [memberUser?.uid]);
 
   useEffect(() => {
-    if (!user?.uid) {
+    if (!memberUser?.uid) {
       setExchangeCount(0);
       return undefined;
     }
     // 새소식 뱃지는 과거 전체 이력이 아니라 마지막 확인 이후 그룹만 구독합니다.
     // 100건까지만 구독해 뱃지 표기(99+)에 필요한 범위 이상을 읽지 않습니다.
     const constraints = [
-      where("ownerUid", "==", user.uid),
+      where("ownerUid", "==", memberUser.uid),
       ...(lastSeenMs > 0
         ? [where("updatedAt", ">", Timestamp.fromMillis(lastSeenMs))]
         : []),
@@ -469,7 +586,7 @@ export default function Navbar() {
 
         const fallbackQuery = query(
           collection(db, "goldExchangeGroups"),
-          where("ownerUid", "==", user.uid)
+          where("ownerUid", "==", memberUser.uid)
         );
         fallbackUnsubscribe = onSnapshot(
           fallbackQuery,
@@ -490,37 +607,39 @@ export default function Navbar() {
       primaryUnsubscribe?.();
       fallbackUnsubscribe?.();
     };
-  }, [lastSeenMs, user?.uid]);
+  }, [lastSeenMs, memberUser?.uid]);
 
   useEffect(() => {
-    if (!user?.uid || location.pathname !== "/my-exchanges") return;
+    if (!memberUser?.uid || location.pathname !== "/my-exchanges") return;
     const now = Date.now();
     if (now - wroteSeenRef.current < 5000) return;
     wroteSeenRef.current = now;
     setDoc(
-      doc(db, "users", user.uid),
+      doc(db, "users", memberUser.uid),
       { myExchangesLastSeenAt: serverTimestamp() },
       { merge: true }
     ).catch((error) =>
       console.warn("[Navbar] lastSeen write failed:", error?.message || error)
     );
-  }, [location.pathname, user?.uid]);
+  }, [location.pathname, memberUser?.uid]);
 
-  const navItems = useMemo(
-    () => [
-      { to: "/gold-price", label: "오늘 금시세" },
+  const navItems = useMemo(() => {
+    if (isMember) {
+      return [
+        { to: "/my-gold", label: "MY GOLD" },
+        { to: "/gold-price", label: "금시세" },
+        { to: "/gold-exchange", label: "GOLD TO GOLD" },
+        { to: "/my-exchanges", label: "교환내역", badge: formatBadge(exchangeCount) },
+      ];
+    }
+
+    return [
+      { to: "/gold-price", label: "금시세" },
       { to: "/my-gold", label: "MY GOLD" },
-      { to: "/gold-exchange", label: "금교환" },
-      { to: "/stores", label: "이용안내" },
-      ...(user
-        ? [{ to: "/my-exchanges", label: "내역", badge: formatBadge(exchangeCount) }]
-        : []),
-      ...(isAdmin
-        ? [{ to: "/admin/gold-exchange", label: "금교환 관리", badge: formatBadge(pendingCount) }]
-        : []),
-    ],
-    [exchangeCount, isAdmin, pendingCount, user]
-  );
+      { to: "/gold-exchange", label: "GOLD TO GOLD" },
+      { to: "/stores", label: "매장안내" },
+    ];
+  }, [exchangeCount, isMember]);
 
   return (
     <Header role="banner">
@@ -553,21 +672,65 @@ export default function Navbar() {
           {!user ? (
             <>
               <MenuLink to="/login" end>로그인</MenuLink>
-              <AccountLink to="/register">회원가입</AccountLink>
+              <AccountLink to="/register">시작하기</AccountLink>
+            </>
+          ) : !isMember ? (
+            <>
+              <MenuLink to="/verify-email" end>이메일 인증</MenuLink>
+              <TextButton type="button" onClick={handleLogout}>로그아웃</TextButton>
             </>
           ) : (
             <>
               <Notifications />
-              {!isEmailVerified && <MenuLink to="/verify-email">이메일 인증</MenuLink>}
-              <MenuLink to="/settings" end>설정</MenuLink>
-              <TextButton type="button" onClick={handleLogout}>로그아웃</TextButton>
-              <AccountLink to="/profile">내 정보</AccountLink>
+              {isAdmin && (
+                <MenuLink to="/admin/gold-exchange" end>
+                  관리{formatBadge(pendingCount) && <Badge aria-label={`대기 교환 ${formatBadge(pendingCount)}건`}>{formatBadge(pendingCount)}</Badge>}
+                </MenuLink>
+              )}
+              <AccountMenuWrap>
+                <AccountMenuButton
+                  ref={accountMenuButtonRef}
+                  type="button"
+                  aria-label="MY 계정 메뉴"
+                  aria-haspopup="menu"
+                  aria-expanded={accountMenuOpen}
+                  aria-controls="desktop-account-menu"
+                  onClick={() => setAccountMenuOpen((open) => !open)}
+                >
+                  MY
+                </AccountMenuButton>
+                <AccountMenu
+                  ref={accountMenuRef}
+                  id="desktop-account-menu"
+                  $open={accountMenuOpen}
+                  role="menu"
+                  aria-hidden={!accountMenuOpen}
+                >
+                  <AccountMenuItem to="/profile" role="menuitem" tabIndex={accountMenuOpen ? 0 : -1}>
+                    내 정보
+                  </AccountMenuItem>
+                  <AccountMenuItem to="/settings" role="menuitem" tabIndex={accountMenuOpen ? 0 : -1}>
+                    설정
+                  </AccountMenuItem>
+                  <AccountMenuItem to="/support" role="menuitem" tabIndex={accountMenuOpen ? 0 : -1}>
+                    1:1 문의
+                  </AccountMenuItem>
+                  <AccountMenuLogout
+                    type="button"
+                    role="menuitem"
+                    tabIndex={accountMenuOpen ? 0 : -1}
+                    onClick={handleLogout}
+                  >
+                    로그아웃
+                  </AccountMenuLogout>
+                </AccountMenu>
+              </AccountMenuWrap>
             </>
           )}
         </Account>
 
         <MobileActions>
-          {user && (
+          {isMember && (
             <MobileNotificationSlot>
               <Notifications />
             </MobileNotificationSlot>
@@ -620,18 +783,27 @@ export default function Navbar() {
           {!user ? (
             <>
               <DrawerAction to="/login" tabIndex={drawerOpen ? 0 : -1}>로그인</DrawerAction>
-              <DrawerAction to="/register" tabIndex={drawerOpen ? 0 : -1}>회원가입</DrawerAction>
+              <DrawerAction to="/register" tabIndex={drawerOpen ? 0 : -1}>시작하기</DrawerAction>
             </>
-          ) : (
+          ) : !isMember ? (
             <>
-              <DrawerAction to="/notifications" tabIndex={drawerOpen ? 0 : -1}>
-                알림
-              </DrawerAction>
-              <DrawerAction to="/profile" tabIndex={drawerOpen ? 0 : -1}>내 정보</DrawerAction>
-              <DrawerAction to="/settings" tabIndex={drawerOpen ? 0 : -1}>설정</DrawerAction>
+              <DrawerAction to="/verify-email" tabIndex={drawerOpen ? 0 : -1}>이메일 인증 완료하기</DrawerAction>
               <TextButton type="button" onClick={handleLogout} tabIndex={drawerOpen ? 0 : -1}>
                 로그아웃
               </TextButton>
+            </>
+          ) : (
+            <>
+              <DrawerAction to="/notifications" tabIndex={drawerOpen ? 0 : -1}>알림</DrawerAction>
+              <DrawerAction to="/profile" tabIndex={drawerOpen ? 0 : -1}>MY</DrawerAction>
+              <DrawerAction to="/support" tabIndex={drawerOpen ? 0 : -1}>고객지원 · 1:1 문의</DrawerAction>
+              <DrawerAction to="/settings" tabIndex={drawerOpen ? 0 : -1}>설정</DrawerAction>
+              {isAdmin && (
+                <DrawerAction to="/admin/gold-exchange" tabIndex={drawerOpen ? 0 : -1}>
+                  관리자 · 금교환 관리 {formatBadge(pendingCount) ? `(${formatBadge(pendingCount)})` : ""}
+                </DrawerAction>
+              )}
+              <TextButton type="button" onClick={handleLogout} tabIndex={drawerOpen ? 0 : -1}>로그아웃</TextButton>
             </>
           )}
         </DrawerAccount>

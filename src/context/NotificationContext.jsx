@@ -28,8 +28,8 @@ const defaultValue = {
 export const NotificationContext = createContext(defaultValue);
 
 export function NotificationProvider({ children }) {
-  const { user } = useAuthContext();
-  const uid = user?.uid || "";
+  const { memberUser } = useAuthContext();
+  const uid = memberUser?.uid || "";
   const [latestNotifications, setLatestNotifications] = useState([]);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [loading, setLoading] = useState(false);

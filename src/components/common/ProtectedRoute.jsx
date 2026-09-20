@@ -85,12 +85,12 @@ export default function ProtectedRoute({
         {!isOpen && (
           <div style={{ maxWidth: 520, margin: "48px auto", padding: 20, textAlign: "center" }}>
             <h2 style={{ marginBottom: 8 }}>
-              {user ? "이메일 인증이 필요합니다" : "회원가입하고 순금 0.01g 받기"}
+              {user ? "이메일 인증이 필요합니다" : "MY GOLD 기록을 이어가세요"}
             </h2>
             <p style={{ color: "var(--gm-text-secondary)" }}>
               {user
                 ? "이메일 인증을 완료하면 바로 계속할 수 있습니다."
-                : "이메일 인증 완료 후 순금 0.01g이 적립됩니다. 퀵퀴즈와 금시세 알림으로 최대 순금 0.03g까지 받을 수 있습니다."}
+                : "로그인하거나 회원가입하면 내가 가진 금의 기록과 오늘 가치 확인을 이어갈 수 있습니다."}
             </p>
             <div style={{ marginTop: 16, display: "flex", gap: 8, justifyContent: "center" }}>
               <Link

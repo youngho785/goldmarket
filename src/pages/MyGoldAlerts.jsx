@@ -63,7 +63,7 @@ const Hero = styled.header`
 `;
 
 export default function MyGoldAlerts() {
-  const { user } = useAuthContext();
+  const { memberUser: user } = useAuthContext();
   const {
     itemsLoading,
     publicPriceEnabled,

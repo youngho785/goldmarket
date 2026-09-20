@@ -6,12 +6,20 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function verifiedSignedIn() {
+      return signedIn() && request.auth.token.get('email_verified', false) == true;
+    }
+
     function isOwner(uid) {
       return signedIn() && request.auth.uid == uid;
     }
 
+    function isVerifiedOwner(uid) {
+      return verifiedSignedIn() && request.auth.uid == uid;
+    }
+
     function isAdmin() {
-      return signedIn() &&
+      return verifiedSignedIn() &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('disabled', false) != true &&
         (
@@ -24,7 +32,7 @@ service cloud.firestore {
     }
 
     function ownsGoldExchangeGroup(groupId) {
-      return signedIn() &&
+      return verifiedSignedIn() &&
         groupId is string &&
         groupId.size() > 0 &&
         exists(/databases/$(database)/documents/goldExchangeGroups/$(groupId)) &&
@@ -120,6 +128,18 @@ service cloud.firestore {
         'marketingFcmToken', 'marketingFcmBrowser', 'marketingFcmTokenUpdatedAt',
         'fcmTokens', 'nativeFcmTokens', 'pushTokensUpdatedAt',
         'myExchangesLastSeenAt'
+      ]);
+    }
+
+    function unverifiedUserClientFieldsOnly() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'email', 'createdAt', 'updatedAt', 'consents'
+      ]);
+    }
+
+    function unverifiedUserCreateFieldsOnly() {
+      return request.resource.data.keys().hasOnly([
+        'email', 'createdAt', 'updatedAt', 'consents'
       ]);
     }
 
@@ -280,23 +300,29 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
-      allow read: if isOwner(uid) || isAdmin();
-      allow create: if isOwner(uid) && allowedUserCreateFieldsOnly() && validUserCreateMetadata();
+      // 가입 직후 미인증 세션은 최소 가입 문서/동의만 기록할 수 있고 읽기는 차단합니다.
+      // 이메일 인증이 끝난 뒤에만 회원 문서와 회원 전용 하위 데이터를 조회합니다.
+      allow read: if isVerifiedOwner(uid) || isAdmin();
+      allow create: if isOwner(uid) &&
+        ((verifiedSignedIn() && allowedUserCreateFieldsOnly()) ||
+          (!verifiedSignedIn() && unverifiedUserCreateFieldsOnly())) &&
+        validUserCreateMetadata();
       allow update: if isOwner(uid) &&
         protectedUserFieldsUnchanged() &&
-        userClientFieldsOnly() &&
+        ((verifiedSignedIn() && userClientFieldsOnly()) ||
+          (!verifiedSignedIn() && unverifiedUserClientFieldsOnly())) &&
         userCreatedAtUpdateAllowed() &&
         userEmailUpdateAllowed() &&
         userConsentsUpdateAllowed();
       allow delete: if false;
 
       match /ledger/{entryId} {
-        allow read: if isOwner(uid) || isAdmin();
+        allow read: if isVerifiedOwner(uid) || isAdmin();
         allow write: if false;
       }
 
       match /promotions/{promotionId} {
-        allow read: if isOwner(uid) || isAdmin();
+        allow read: if isVerifiedOwner(uid) || isAdmin();
         allow write: if false;
       }
     }
@@ -304,26 +330,26 @@ service cloud.firestore {
     match /users/{uid}/goldVaultItems/{itemId} {
       // 개인이 기록한 금제품 상세는 본인만 조회합니다.
       // 관리자 화면은 Cloud Functions가 반환하는 개수/통계만 사용합니다.
-      allow read: if isOwner(uid);
-      allow create: if isOwner(uid) &&
+      allow read: if isVerifiedOwner(uid);
+      allow create: if isVerifiedOwner(uid) &&
         validGoldVaultCreate(request.resource.data) &&
         request.resource.data.createdAt == request.time &&
         request.resource.data.updatedAt == request.time;
-      allow update: if isOwner(uid) &&
+      allow update: if isVerifiedOwner(uid) &&
         validGoldVaultUpdate(request.resource.data) &&
         request.resource.data.createdAt == resource.data.createdAt &&
         request.resource.data.updatedAt == request.time;
-      allow delete: if isOwner(uid);
+      allow delete: if isVerifiedOwner(uid);
     }
 
     match /profiles/{uid} {
       // 공개 회원 디렉터리를 운영하지 않으므로 본인/관리자만 조회합니다.
-      allow read: if isOwner(uid) || isAdmin();
-      allow create: if isOwner(uid) &&
+      allow read: if isVerifiedOwner(uid) || isAdmin();
+      allow create: if isVerifiedOwner(uid) &&
         request.resource.data.keys().hasOnly([
           'displayName', 'photoURL'
         ]);
-      allow update: if isOwner(uid) &&
+      allow update: if isVerifiedOwner(uid) &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'displayName', 'photoURL'
         ]);
@@ -337,13 +363,13 @@ service cloud.firestore {
     }
 
     match /notifications/{uid} {
-      allow read: if isOwner(uid) || isAdmin();
+      allow read: if isVerifiedOwner(uid) || isAdmin();
       allow write: if false;
 
       match /items/{itemId} {
-        allow read: if isOwner(uid) || isAdmin();
+        allow read: if isVerifiedOwner(uid) || isAdmin();
         allow create, delete: if false;
-        allow update: if isOwner(uid) &&
+        allow update: if isVerifiedOwner(uid) &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read', 'readAt']) &&
           request.resource.data.read == true &&
           (!('readAt' in request.resource.data) || request.resource.data.readAt == request.time);
@@ -352,13 +378,13 @@ service cloud.firestore {
 
     match /goldExchangeGroups/{groupId} {
       allow read: if isAdmin() ||
-        (signedIn() && resource.data.ownerUid == request.auth.uid);
+        (verifiedSignedIn() && resource.data.ownerUid == request.auth.uid);
       allow write: if false;
     }
 
     match /goldExchanges/{exchangeId} {
       allow read: if isAdmin() ||
-        (signedIn() && (
+        (verifiedSignedIn() && (
           resource.data.userId == request.auth.uid ||
           (resource.data.participants is list && request.auth.uid in resource.data.participants) ||
           ownsGoldExchangeGroup(resource.data.groupId)
@@ -367,7 +393,7 @@ service cloud.firestore {
     }
 
     match /bonusGoldRedemptionRequests/{uid} {
-      allow read: if isOwner(uid) || isAdmin();
+      allow read: if isVerifiedOwner(uid) || isAdmin();
       allow write: if false;
     }
 
@@ -383,7 +409,7 @@ service cloud.firestore {
 
     match /goldExchangeReviewClaims/{exchangeId} {
       allow read: if isAdmin() ||
-        (signedIn() &&
+        (verifiedSignedIn() &&
           get(/databases/$(database)/documents/goldExchanges/$(exchangeId)).data.userId
             == request.auth.uid);
       allow write: if false;
@@ -393,7 +419,7 @@ service cloud.firestore {
       function validTicket(data) {
         return data.keys().hasOnly([
           'title', 'content', 'category', 'authorId', 'authorNickname',
-          'status', 'createdAt', 'updatedAt'
+          'status', 'createdAt', 'updatedAt', 'relatedGroupId'
         ]) &&
         data.title is string && data.title.size() > 0 && data.title.size() <= 120 &&
         data.content is string && data.content.size() > 0 && data.content.size() <= 5000 &&
@@ -401,15 +427,21 @@ service cloud.firestore {
         data.authorId == request.auth.uid &&
         data.authorNickname is string && data.authorNickname.size() <= 80 &&
         data.status == 'open' &&
+        (!('relatedGroupId' in data) || (
+          data.relatedGroupId is string &&
+          data.relatedGroupId.size() > 0 &&
+          data.relatedGroupId.size() <= 120 &&
+          ownsGoldExchangeGroup(data.relatedGroupId)
+        )) &&
         data.createdAt == request.time &&
         data.updatedAt == request.time;
       }
 
       allow read: if isAdmin() ||
-        (signedIn() && resource.data.authorId == request.auth.uid);
-      allow create: if signedIn() && validTicket(request.resource.data);
+        (verifiedSignedIn() && resource.data.authorId == request.auth.uid);
+      allow create: if verifiedSignedIn() && validTicket(request.resource.data);
       allow update: if isAdmin() || (
-        signedIn() &&
+        verifiedSignedIn() &&
         resource.data.authorId == request.auth.uid &&
         resource.data.status == 'open' &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly([
@@ -424,7 +456,7 @@ service cloud.firestore {
         request.resource.data.updatedAt == request.time
       );
       allow delete: if isAdmin() || (
-        signedIn() &&
+        verifiedSignedIn() &&
         resource.data.authorId == request.auth.uid &&
         resource.data.status == 'open'
       );

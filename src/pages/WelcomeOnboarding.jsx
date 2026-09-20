@@ -251,6 +251,27 @@ const FooterActions = styled.div`
   margin-top: 18px;
 `;
 
+const ContinueCard = styled.section`
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 30%, ${({ theme }) => theme.colors.border});
+  border-radius: 14px;
+  background: ${({ theme }) => theme.semantic.badgeGoldBg};
+
+  strong {
+    display: block;
+    color: ${({ theme }) => theme.colors.primary};
+    font-size: 1rem;
+  }
+
+  p {
+    margin: 5px 0 0;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: .9rem;
+    line-height: 1.55;
+  }
+`;
+
 
 function deviceName() {
   if (isAndroid) return "한국골드마켓 앱";
@@ -467,13 +488,7 @@ export default function WelcomeOnboarding() {
 
   const handleFinish = () => {
     clearMemberOnboardingPending();
-
-    const continueToRequestedFlow =
-      nextPath.startsWith("/gold-exchange") ||
-      nextPath.startsWith("/my-gold?import=calculator");
-    const destination = continueToRequestedFlow ? nextPath : "/";
-
-    navigate(destination, { replace: true });
+    navigate(nextPath || "/", { replace: true });
   };
 
   const claimedCount =
@@ -487,11 +502,20 @@ export default function WelcomeOnboarding() {
   const progress = Math.round((claimedCount / 3) * 100);
   const allRewardsClaimed = claimedCount === 3;
 
+  const hasRequestedFlow = nextPath !== "/";
   const finishLabel = nextPath.startsWith("/gold-exchange")
-    ? "선택한 일정으로 예약 계속하기"
-    : nextPath.startsWith("/my-gold?import=calculator")
-      ? "계산한 금 MY GOLD에 저장 계속하기"
-      : "한국골드마켓 시작하기";
+    ? "계산·예약 계속하기"
+    : nextPath.startsWith("/my-gold")
+      ? "MY GOLD 계속하기"
+      : nextPath.startsWith("/profile")
+        ? "내 정보 계속하기"
+        : "한국골드마켓 시작하기";
+
+  const finishDescription = nextPath.startsWith("/gold-exchange")
+    ? "가입 전에 계산하거나 선택한 예약 흐름으로 바로 돌아갑니다."
+    : nextPath.startsWith("/my-gold")
+      ? "가입 전에 기록하거나 계산한 내 금 흐름을 그대로 이어갑니다."
+      : "가입 전에 하던 작업으로 먼저 돌아갑니다.";
 
   if (user?.uid && !isEmailVerified) {
     return null;
@@ -543,6 +567,17 @@ export default function WelcomeOnboarding() {
         </ProgressTrack>
       </Hero>
 
+      {hasRequestedFlow && (
+        <ContinueCard aria-label="가입 전 작업 계속하기">
+          <strong>하던 일을 먼저 이어가세요.</strong>
+          <p>{finishDescription}</p>
+          <ActionButton type="button" onClick={handleFinish}>
+            {finishLabel}
+            <ChevronRight />
+          </ActionButton>
+        </ContinueCard>
+      )}
+
       <Steps>
         <StepCard $done={status.marketingPush.claimed}>
           <StepIcon $done={status.marketingPush.claimed}>
@@ -550,7 +585,7 @@ export default function WelcomeOnboarding() {
           </StepIcon>
           <StepBody>
             <StepTop>
-              <h2>1. 광고성 정보 수신(앱푸시) 켜고 순금 0.01g 더 받기</h2>
+              <h2>1. 금시세·MY GOLD 알림 받아보기</h2>
               <b>
                 {status.marketingPush.claimed
                   ? status.marketingPush.receivedThisAccount
@@ -560,8 +595,9 @@ export default function WelcomeOnboarding() {
               </b>
             </StepTop>
             <StepDescription>
-              금시세, 찾아보지 말고 받아보세요. 매번 검색할 필요 없이
-              주요 금시세 변동, MY GOLD 주간 리포트와 혜택을 앱푸시로 받아보세요.
+              금시세를 매번 찾아보지 않아도 주요 변동, MY GOLD 주간 리포트와
+              혜택을 앱푸시로 받아볼 수 있습니다. 광고성 정보 수신은 선택이며,
+              직접 알림 받기를 눌렀을 때만 기기 권한을 요청합니다.
             </StepDescription>
 
             {!status.marketingPush.claimed && (
@@ -574,7 +610,7 @@ export default function WelcomeOnboarding() {
                   <BellRing />
                   {marketingBusy
                     ? "알림 설정 중…"
-                    : "광고성 정보 수신 켜고 순금 0.01g 더 받기"}
+                    : "알림 받고 순금 0.01g 혜택 받기"}
                 </ActionButton>
               </>
             )}
@@ -621,12 +657,14 @@ export default function WelcomeOnboarding() {
         </Message>
       )}
 
-      <FooterActions>
-        <ActionButton type="button" onClick={handleFinish}>
-          {finishLabel}
-          <ChevronRight />
-        </ActionButton>
-      </FooterActions>
+      {!hasRequestedFlow && (
+        <FooterActions>
+          <ActionButton type="button" onClick={handleFinish}>
+            {finishLabel}
+            <ChevronRight />
+          </ActionButton>
+        </FooterActions>
+      )}
     </Page>
   );
 }

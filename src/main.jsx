@@ -11,6 +11,7 @@ import {
   queueOperationalError,
 } from "./monitoring/operationalMonitoring";
 import { createFirebaseMonitoringTransport } from "./monitoring/firebaseMonitoringTransport";
+import { initializeProductAnalytics } from "./analytics/productAnalytics";
 
 const PRELOAD_RECOVERY_KEY = "__kgm_preload_recovery_at__";
 const PRELOAD_RECOVERY_WINDOW_MS = 30 * 1000;
@@ -20,6 +21,11 @@ if (import.meta.env.PROD) {
     transport: createFirebaseMonitoringTransport(),
   });
 }
+
+// Product Analytics is production-on by default and development-off unless
+// VITE_PRODUCT_ANALYTICS_ENABLED/DEBUG explicitly enables it. Automatic
+// page_view collection is disabled inside the analytics service.
+void initializeProductAnalytics();
 
 // A web tab can stay open across a new deployment or a network handoff.
 // If an old tab later opens a lazy route, Vite may fail to fetch the old chunk.

@@ -42,13 +42,14 @@ export const Page = styled.div`
   display: grid;
   gap: 14px;
   width: 100%;
-  max-width: 880px;
+  max-width: 1160px;
   margin: 0 auto;
   padding: 8px 0 28px;
 `;
 
 export const VaultHero = styled.section`
   position: relative;
+  min-height: 100%;
   display: grid;
   overflow: hidden;
   gap: 10px;
@@ -231,6 +232,7 @@ export const HeroStat = styled.div`
 
 export const ReadinessPanel = styled(Link)`
   position: relative;
+  min-height: 100%;
   z-index: 1;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -291,6 +293,10 @@ export const ReadinessPanel = styled(Link)`
     height: 18px;
     color: ${({ theme }) => theme.colors.secondaryDark};
   }
+
+  @media (max-width: 900px) {
+    min-height: auto;
+  }
 `;
 
 export const HeroActions = styled.div`
@@ -315,6 +321,7 @@ export const HeroAddAction = styled.button`
   font-size: 0.73rem;
   font-weight: 950;
   cursor: pointer;
+  grid-column: 1 / -1;
 
   svg {
     width: 16px;
@@ -410,6 +417,25 @@ export const ViewTab = styled(Link)`
     outline: 2px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 48%, transparent);
     outline-offset: 2px;
   }
+`;
+
+
+export const SummaryOverviewGrid = styled.div`
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(300px, 0.75fr);
+  gap: 14px;
+  align-items: stretch;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+export const SummarySideStack = styled.div`
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 14px;
+  min-width: 0;
 `;
 
 export const ViewPanel = styled.div`
@@ -1424,24 +1450,113 @@ export const ItemList = styled.div`
 
 export const ItemCard = styled.article`
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: ${({ $selecting }) => ($selecting ? "auto minmax(0, 1fr)" : "minmax(0, 1fr) auto")};
   gap: 10px;
   padding: 11px 12px;
   border-bottom: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
-  background: transparent;
-  transition: background ${({ theme }) => theme.transitions.base};
+  background: ${({ theme, $selected }) =>
+    $selected
+      ? `color-mix(in srgb, ${theme.semantic.badgeGoldBg} 74%, ${theme.colors.surface})`
+      : "transparent"};
+  transition:
+    background ${({ theme }) => theme.transitions.base},
+    box-shadow ${({ theme }) => theme.transitions.base};
 
   &:last-child {
     border-bottom: 0;
   }
 
   &:hover {
-    background: color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 26%, transparent);
+    background: ${({ theme, $selected }) =>
+      $selected
+        ? `color-mix(in srgb, ${theme.semantic.badgeGoldBg} 86%, ${theme.colors.surface})`
+        : `color-mix(in srgb, ${theme.semantic.badgeGoldBg} 26%, transparent)`};
   }
 
+  ${({ theme, $selected }) =>
+    $selected
+      ? `box-shadow: inset 3px 0 0 ${theme.colors.gold};`
+      : ""}
+
   @media (max-width: 460px) {
-    grid-template-columns: 1fr;
+    grid-template-columns: ${({ $selecting }) => ($selecting ? "auto minmax(0, 1fr)" : "1fr")};
     padding-inline: 9px;
+  }
+`;
+
+export const ItemSelectToggle = styled.label`
+  display: grid;
+  place-items: start center;
+  width: 38px;
+  min-height: 38px;
+  padding-top: 2px;
+  cursor: pointer;
+
+  input {
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    accent-color: ${({ theme }) => theme.colors.primary};
+    cursor: pointer;
+  }
+`;
+
+export const ExchangeSelectionBar = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 10px;
+  padding: 11px 12px;
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 34%, ${({ theme }) => theme.colors.border});
+  border-radius: 13px;
+  background: color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 54%, ${({ theme }) => theme.colors.surface});
+
+  > div {
+    min-width: 0;
+    display: grid;
+    gap: 3px;
+  }
+
+  strong {
+    color: ${({ theme }) => theme.colors.primary};
+    font-size: 0.76rem;
+    font-weight: 950;
+  }
+
+  span {
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: 0.64rem;
+    line-height: 1.4;
+  }
+
+  button {
+    flex: 0 0 auto;
+    min-height: 38px;
+    padding: 8px 12px;
+    border: 1px solid ${({ theme }) => theme.colors.primary};
+    border-radius: 11px;
+    background: ${({ theme }) => theme.colors.primary};
+    color: ${({ theme }) => theme.colors.surface};
+    font-size: 0.68rem;
+    font-weight: 950;
+    cursor: pointer;
+  }
+
+  button:disabled {
+    border-color: ${({ theme }) => theme.colors.border};
+    background: ${({ theme }) => theme.colors.surfaceAlt};
+    color: ${({ theme }) => theme.colors.textSecondary};
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 620px) {
+    align-items: stretch;
+    flex-direction: column;
+
+    button {
+      width: 100%;
+    }
   }
 `;
 

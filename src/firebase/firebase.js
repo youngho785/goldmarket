@@ -9,15 +9,17 @@ import {
   browserSessionPersistence,
   onIdTokenChanged,
   signOut,
+  connectAuthEmulator,
 } from "firebase/auth";
 import {
   initializeFirestore,
   doc,
   setDoc,
   arrayRemove,
+  connectFirestoreEmulator,
 } from "firebase/firestore";
 import { getDatabase } from "firebase/database";
-import { getStorage } from "firebase/storage";
+import { getStorage, connectStorageEmulator } from "firebase/storage";
 import {
   getMessaging,
   getToken,
@@ -25,13 +27,30 @@ import {
   isSupported,
   deleteToken,
 } from "firebase/messaging";
-import { getFunctions, httpsCallable } from "firebase/functions";
+import { getFunctions, httpsCallable, connectFunctionsEmulator } from "firebase/functions";
 import firebaseConfig from "./firebaseConfig.js";
 
 /* ────────────────────────────────────────────────────────────
  * App init (모듈러 SDK만 사용)
  * ──────────────────────────────────────────────────────────── */
 export const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+
+// Local Auth E2E is explicitly isolated from production Firebase.
+// This flag is injected only by tests/e2e/start-auth-e2e-vite.mjs.
+// Production builds and ordinary local development remain unchanged.
+export const FIREBASE_EMULATOR_MODE =
+  !!import.meta.env.DEV &&
+  String(import.meta.env?.VITE_USE_FIREBASE_EMULATORS || "")
+    .trim()
+    .toLowerCase() === "true";
+
+const emulatorHost = (name, fallback) =>
+  String(import.meta.env?.[name] || fallback).trim() || fallback;
+
+const emulatorPort = (name, fallback) => {
+  const value = Number(import.meta.env?.[name]);
+  return Number.isInteger(value) && value > 0 ? value : fallback;
+};
 
 const APP_CHECK_SITE_KEY = String(
   import.meta.env?.VITE_FIREBASE_APPCHECK_SITE_KEY || ""
@@ -72,6 +91,15 @@ export const auth = initializeAuth(app, {
   ],
 });
 
+if (FIREBASE_EMULATOR_MODE) {
+  // Firebase Auth requires the emulator connection immediately after initializeAuth().
+  connectAuthEmulator(
+    auth,
+    `http://${emulatorHost("VITE_FIREBASE_AUTH_EMULATOR_HOST", "127.0.0.1")}:${emulatorPort("VITE_FIREBASE_AUTH_EMULATOR_PORT", 9099)}`,
+    { disableWarnings: true }
+  );
+}
+
 try {
   auth.languageCode = "ko";
 } catch {
@@ -91,12 +119,33 @@ export const db = initializeFirestore(app, {
   experimentalForceLongPolling: FORCE_LONG_POLLING,
 });
 
+if (FIREBASE_EMULATOR_MODE) {
+  connectFirestoreEmulator(
+    db,
+    emulatorHost("VITE_FIRESTORE_EMULATOR_HOST", "127.0.0.1"),
+    emulatorPort("VITE_FIRESTORE_EMULATOR_PORT", 8080)
+  );
+}
+
 /* ────────────────────────────────────────────────────────────
  * RTDB / Storage / Functions
  * ──────────────────────────────────────────────────────────── */
 export const database = getDatabase(app);
 export const storage = getStorage(app);
 export const functions = getFunctions(app, "asia-northeast3");
+
+if (FIREBASE_EMULATOR_MODE) {
+  connectStorageEmulator(
+    storage,
+    emulatorHost("VITE_FIREBASE_STORAGE_EMULATOR_HOST", "127.0.0.1"),
+    emulatorPort("VITE_FIREBASE_STORAGE_EMULATOR_PORT", 9199)
+  );
+  connectFunctionsEmulator(
+    functions,
+    emulatorHost("VITE_FIREBASE_FUNCTIONS_EMULATOR_HOST", "127.0.0.1"),
+    emulatorPort("VITE_FIREBASE_FUNCTIONS_EMULATOR_PORT", 5001)
+  );
+}
 
 /* ────────────────────────────────────────────────────────────
  * Messaging (FCM)
@@ -105,17 +154,19 @@ const DEV = !!import.meta.env.DEV;
 
 let messaging = null;
 
-try {
-  messaging = getMessaging(app);
-} catch {
-  // 메시징 미지원 브라우저에서는 푸시 기능만 비활성화합니다.
+if (!FIREBASE_EMULATOR_MODE) {
+  try {
+    messaging = getMessaging(app);
+  } catch {
+    // 메시징 미지원 브라우저에서는 푸시 기능만 비활성화합니다.
+  }
 }
 
 export { messaging };
 
 const VAPID_KEY = String(import.meta.env.VITE_VAPID_KEY || "").trim();
 
-if (DEV && !VAPID_KEY) {
+if (DEV && !FIREBASE_EMULATOR_MODE && !VAPID_KEY) {
   console.warn("VITE_VAPID_KEY 가 설정되어 있지 않습니다.");
 }
 

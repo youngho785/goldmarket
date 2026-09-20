@@ -21,12 +21,13 @@ const DON_TO_GRAMS = 3.75;
 
 const STATUS_LABEL = {
   requested: '예약 확인 대기',
-  in_progress: '교환중',
-  교환중: '교환중',
+  in_progress: '매장 확인 중',
+  교환중: '매장 확인 중',
   scheduled: '예약 확정',
-  completed: '교환완료',
+  completed: '교환 완료',
   canceled: '취소',
   rejected: '거절',
+  attention: '방문일 경과 · 확인 필요',
 };
 
 // 대표 상태 선택 우선순위 (인덱스가 작을수록 우선)
@@ -39,6 +40,7 @@ const FILTER_LABEL = {
   all: '전체',
   active: '진행중',     // requested / in_progress(교환중)
   scheduled: '예약',
+  attention: '확인 필요',
   completed: '완료',
   canceled: '취소',
   rejected: '거절',
@@ -54,6 +56,29 @@ const displayCustomerStatus = (status, scheduleActivity) => {
   }
   return STATUS_LABEL[normalized] || normalized;
 };
+
+const normalizeStatus = (status) =>
+  status === '교환중' ? 'in_progress' : String(status || 'requested');
+
+const getCustomerStatusKey = (group, todayKey) => {
+  const normalized = normalizeStatus(group?.repStatus);
+  const visitDate = String(group?.visitDate || '');
+  const hasComparableVisitDate = /^\d{4}-\d{2}-\d{2}$/.test(visitDate);
+  const overdue =
+    ['requested', 'scheduled'].includes(normalized) &&
+    hasComparableVisitDate &&
+    visitDate < todayKey;
+  return overdue ? 'attention' : normalized;
+};
+
+const EXCHANGE_PROGRESS_STEPS = [
+  '요청 접수',
+  '확인 대기',
+  '예약 확정',
+  '방문 예정',
+  '매장 확인',
+  '교환 완료',
+];
 
 const toJSDate = (v) => {
   if (!v) return null;
@@ -184,11 +209,11 @@ const HeaderLead = styled.p`
 
 const LedgerSummary = styled.div`
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 7px;
   margin: 0 0 10px;
 
-  @media (max-width: 560px) { grid-template-columns: repeat(3, 1fr); }
+  @media (max-width: 720px) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 `;
 const LedgerMetric = styled.div`
   padding: 11px 10px;
@@ -237,7 +262,11 @@ const FilterChip = styled.button`
   color: ${({ $active, theme }) =>
     $active ? theme.colors.goldLight : theme.colors.textSecondary};
   font-size: .74rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-weight: 850;
+  text-decoration: none;
   cursor: pointer;
   white-space: nowrap;
 `;
@@ -376,6 +405,7 @@ const StatusBadge = styled.span`
   font-weight: 850;
   font-size: .72rem;
   background: ${({ $status, theme }) => {
+    if ($status === 'attention') return theme.semantic.alertErrorBg;
     if ($status === 'requested') return theme.semantic.alertWarningBg;
     if ($status === 'scheduled') return theme.semantic.alertSuccessBg;
     if ($status === 'completed') return theme.semantic.badgeGoldBg;
@@ -384,6 +414,7 @@ const StatusBadge = styled.span`
     return theme.colors.surfaceAlt;
   }};
   color: ${({ $status, theme }) => {
+    if ($status === 'attention') return theme.semantic.alertErrorText;
     if ($status === 'requested') return theme.semantic.alertWarningText;
     if ($status === 'scheduled') return theme.semantic.alertSuccessText;
     if ($status === 'completed') return theme.colors.primary;
@@ -670,6 +701,91 @@ const PlanValue = styled.span`
   overflow-wrap: anywhere;
 `;
 
+const StatusFlow = styled.ol`
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  @media (max-width: 720px) {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+`;
+
+const StatusStep = styled.li`
+  position: relative;
+  min-width: 0;
+  padding: 9px 8px;
+  border: 1px solid ${({ $active, theme }) =>
+    $active
+      ? `color-mix(in srgb, ${theme.colors.gold} 48%, ${theme.colors.border})`
+      : theme.colors.dividerSubtle};
+  border-radius: 10px;
+  background: ${({ $active, $current, theme }) =>
+    $current
+      ? theme.semantic.badgeGoldBg
+      : $active
+        ? `color-mix(in srgb, ${theme.semantic.badgeGoldBg} 48%, ${theme.colors.surface})`
+        : theme.colors.surfaceAlt};
+  color: ${({ $active, theme }) => $active ? theme.colors.primary : theme.colors.textSecondary};
+  font-size: .72rem;
+  font-weight: 850;
+  text-align: center;
+
+  &::before {
+    content: "${({ $index }) => String($index + 1).padStart(2, '0')}";
+    display: block;
+    margin-bottom: 3px;
+    color: ${({ $active, theme }) => $active ? theme.colors.secondaryDark : theme.colors.textSecondary};
+    font-family: ${({ theme }) => theme.fonts.numeric};
+    font-size: .62rem;
+  }
+
+  @media (max-width: 720px) {
+    display: grid;
+    grid-template-columns: 2.7em 1fr;
+    align-items: center;
+    text-align: left;
+    &::before { margin: 0; }
+  }
+`;
+
+const AttentionNotice = styled.div`
+  padding: 12px 13px;
+  border: 1px solid ${({ theme }) => theme.semantic.alertWarningBorder || theme.colors.warning};
+  border-radius: 12px;
+  background: ${({ theme }) => theme.semantic.alertWarningBg};
+  color: ${({ theme }) => theme.semantic.alertWarningText};
+  font-size: .8rem;
+  line-height: 1.55;
+  strong { display: block; margin-bottom: 3px; }
+`;
+
+const RequestDetails = styled.details`
+  border: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
+  border-radius: 12px;
+  background: ${({ theme }) => theme.colors.surface};
+  overflow: hidden;
+
+  summary {
+    padding: 10px 12px;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: .78rem;
+    font-weight: 850;
+    cursor: pointer;
+    list-style: none;
+  }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "＋"; float: right; }
+  &[open] summary::after { content: "－"; }
+  ${MetaGrid} {
+    margin: 0 10px 10px;
+  }
+`;
+
 const ScheduleActivity = styled.div`
   padding: .8rem .9rem;
   border-left: 3px solid ${({ $type, theme }) =>
@@ -710,12 +826,24 @@ const ScheduleButtonRow = styled.div`
 const ScheduleButton = styled.button`
   min-height: 40px;
   padding: 8px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.primary};
+  border: 1px solid ${({ $variant, theme }) =>
+    $variant === 'danger' ? theme.colors.error : theme.colors.primary};
   border-radius: 10px;
-  background: ${({ theme }) => theme.colors.primary};
-  color: ${({ theme }) => theme.on.primary};
+  background: ${({ $variant, theme }) =>
+    $variant === 'danger' ? 'transparent' : theme.colors.primary};
+  color: ${({ $variant, theme }) =>
+    $variant === 'danger' ? theme.colors.error : theme.on.primary};
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-weight: 850;
+  text-decoration: none;
   cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: ${({ $variant, theme }) =>
+      $variant === 'danger' ? theme.semantic.alertErrorBg : theme.colors.primaryDark};
+  }
 
   &:disabled {
     opacity: .55;
@@ -886,7 +1014,7 @@ function ScheduleActions({ group }) {
         <ScheduleButton type="button" onClick={() => openMode('reschedule')} disabled={busy}>
           일정 변경
         </ScheduleButton>
-        <ScheduleButton type="button" $danger onClick={() => openMode('cancel')} disabled={busy}>
+        <ScheduleButton type="button" $variant="danger" onClick={() => openMode('cancel')} disabled={busy}>
           예약 취소
         </ScheduleButton>
       </ScheduleButtonRow>
@@ -944,7 +1072,7 @@ function ScheduleActions({ group }) {
             <ScheduleButton type="button" onClick={submitReschedule} disabled={busy}>
               {busy ? '변경 요청 중…' : '변경 요청 보내기'}
             </ScheduleButton>
-            <ScheduleButton type="button" $danger onClick={closeMode} disabled={busy}>닫기</ScheduleButton>
+            <ScheduleButton type="button" onClick={closeMode} disabled={busy}>닫기</ScheduleButton>
           </ScheduleButtonRow>
         </ScheduleForm>
       )}
@@ -966,7 +1094,7 @@ function ScheduleActions({ group }) {
           </ScheduleMessage>
           {error && <ScheduleMessage $error role="alert">{error}</ScheduleMessage>}
           <ScheduleButtonRow>
-            <ScheduleButton type="button" $danger onClick={submitCancellation} disabled={busy}>
+            <ScheduleButton type="button" $variant="danger" onClick={submitCancellation} disabled={busy}>
               {busy ? '취소 처리 중…' : '예약 취소 확정'}
             </ScheduleButton>
             <ScheduleButton type="button" onClick={closeMode} disabled={busy}>돌아가기</ScheduleButton>
@@ -1021,11 +1149,13 @@ const buildExchangeGroup = ({ groupId, items = [], summary = {}, user, detailLoa
     const finalWeightDon = Number.isFinite(Number(item.finalWeightDon))
       ? Number(item.finalWeightDon)
       : finalWeight / DON_TO_GRAMS;
+    const confirmedPureGoldG = Number(item.confirmedPureGoldG);
     return {
       ...item,
       _displayOriginal: displayOriginalQty(item),
       _finalWeight: finalWeight,
       _finalWeightDon: finalWeightDon,
+      _confirmedPureGoldG: Number.isFinite(confirmedPureGoldG) ? confirmedPureGoldG : null,
     };
   });
 
@@ -1073,6 +1203,27 @@ const buildExchangeGroup = ({ groupId, items = [], summary = {}, user, detailLoa
         (a, b) => (toJSDate(b.updatedAt)?.getTime?.() ?? 0) - (toJSDate(a.updatedAt)?.getTime?.() ?? 0)
       )[0] || null;
 
+  const measurementStatus = String(
+    summary.measurementStatus || latestByUpdate.measurementStatus || ''
+  );
+  const measurement = measurementStatus
+    ? {
+        status: measurementStatus,
+        finalRecognizedG: Number(
+          summary.finalRecognizedG ?? latestByUpdate.finalRecognizedG ?? 0
+        ),
+        finalAppliedG: Number(
+          summary.finalAppliedG ?? latestByUpdate.finalAppliedG ?? 0
+        ),
+        finalFeeWon: Number(
+          summary.finalFeeWon ?? latestByUpdate.finalFeeWon ?? 0
+        ),
+        customerConsentConfirmed:
+          summary.customerConsentConfirmed === true ||
+          latestByUpdate.customerConsentConfirmed === true,
+      }
+    : null;
+
   return {
     groupId,
     items: enrichedItems,
@@ -1086,8 +1237,14 @@ const buildExchangeGroup = ({ groupId, items = [], summary = {}, user, detailLoa
     requester,
     totalG,
     bonus,
+    measurement,
     scheduleActivity,
-    plan: planDoc?.barsPlan || summary.barsPlan || null,
+    plan:
+      summary.finalBarsPlan ||
+      latestByUpdate.finalBarsPlan ||
+      planDoc?.barsPlan ||
+      summary.barsPlan ||
+      null,
   };
 };
 
@@ -1387,25 +1544,32 @@ export default function MyExchanges() {
     }
   }, [hasMore, loadingMore, summaryCursor, user?.uid]);
 
+  const todayKey = format(new Date(), 'yyyy-MM-dd');
+
   const groupsFiltered = useMemo(() => {
     if (statusFilter === 'all') return groups;
     if (statusFilter === 'active') {
-      return groups.filter((group) => ['requested', 'in_progress', '교환중'].includes(group.repStatus));
+      return groups.filter((group) => {
+        const status = getCustomerStatusKey(group, todayKey);
+        return ['requested', 'in_progress'].includes(status);
+      });
     }
-    return groups.filter((group) => group.repStatus === statusFilter);
-  }, [groups, statusFilter]);
+    return groups.filter((group) => getCustomerStatusKey(group, todayKey) === statusFilter);
+  }, [groups, statusFilter, todayKey]);
 
   const counts = useMemo(() => {
-    const base = { all: groups.length, active: 0, scheduled: 0, completed: 0, canceled: 0, rejected: 0 };
+    const base = { all: groups.length, active: 0, scheduled: 0, attention: 0, completed: 0, canceled: 0, rejected: 0 };
     for (const group of groups) {
-      if (['requested', 'in_progress', '교환중'].includes(group.repStatus)) base.active += 1;
-      if (group.repStatus === 'scheduled') base.scheduled += 1;
-      if (group.repStatus === 'completed') base.completed += 1;
-      if (group.repStatus === 'canceled') base.canceled += 1;
-      if (group.repStatus === 'rejected') base.rejected += 1;
+      const status = getCustomerStatusKey(group, todayKey);
+      if (['requested', 'in_progress'].includes(status)) base.active += 1;
+      if (status === 'scheduled') base.scheduled += 1;
+      if (status === 'attention') base.attention += 1;
+      if (status === 'completed') base.completed += 1;
+      if (status === 'canceled') base.canceled += 1;
+      if (status === 'rejected') base.rejected += 1;
     }
     return base;
-  }, [groups]);
+  }, [groups, todayKey]);
 
   /* ── 렌더 ───────────────────────────────────── */
   if (!user) return <Page><Empty>로그인이 필요합니다.</Empty></Page>;
@@ -1453,6 +1617,7 @@ export default function MyExchanges() {
       <LedgerSummary aria-label="금교환 진행 요약">
         <LedgerMetric><small>진행 중</small><strong>{!legacyMode && hasMore ? `${counts.active}+` : counts.active}</strong></LedgerMetric>
         <LedgerMetric><small>예약 확정</small><strong>{!legacyMode && hasMore ? `${counts.scheduled}+` : counts.scheduled}</strong></LedgerMetric>
+        <LedgerMetric><small>확인 필요</small><strong>{!legacyMode && hasMore ? `${counts.attention}+` : counts.attention}</strong></LedgerMetric>
         <LedgerMetric><small>교환 완료</small><strong>{!legacyMode && hasMore ? `${counts.completed}+` : counts.completed}</strong></LedgerMetric>
       </LedgerSummary>
 
@@ -1484,16 +1649,31 @@ export default function MyExchanges() {
 
       <CardGrid>
         {groupsFiltered.map((g) => {
-          const statusKey = g.repStatus === '교환중' ? 'in_progress' : g.repStatus;
+          const rawStatusKey = normalizeStatus(g.repStatus);
+          const statusKey = getCustomerStatusKey(g, todayKey);
+          const isOverdue = statusKey === 'attention';
+          const isFinalized =
+            rawStatusKey === 'completed' ||
+            g.measurement?.status === 'confirmed' ||
+            g.bonus?.status === 'used';
           const visitLine =
             [g.visitDate, g.visitTime]
               .filter(Boolean)
               .join(' ') || '-';
           const isBonusUsed = g.bonus?.status === 'used';
+          const finalDisplayG = Number(
+            g.measurement?.status === 'confirmed'
+              ? g.measurement.finalAppliedG || g.measurement.finalRecognizedG || g.totalG
+              : isBonusUsed
+                ? g.bonus.finalAppliedG || g.totalG
+                : g.totalG
+          );
           const planBasisG = Number(
-            isBonusUsed
-              ? g.bonus.finalAppliedG || g.plan?.totalGrams || g.totalG
-              : g.plan?.totalGrams || g.totalG
+            g.measurement?.status === 'confirmed'
+              ? g.measurement.finalAppliedG || g.plan?.totalGrams || g.totalG
+              : isBonusUsed
+                ? g.bonus.finalAppliedG || g.plan?.totalGrams || g.totalG
+                : g.plan?.totalGrams || g.totalG
           );
 
           return (
@@ -1525,23 +1705,11 @@ export default function MyExchanges() {
                 <HeaderRight>
                   <FinalWeight>
                     <small>
-                      {g.bonus?.status === 'used'
-                        ? '최종 적용 중량'
-                        : '예상 순금량'}
+                      {isFinalized ? '확정 순금량' : '예상 순금량'}
                     </small>
                     <strong>
-                      {fmtG3(
-                        g.bonus?.status === 'used'
-                          ? g.bonus.finalAppliedG
-                          : g.totalG
-                      )}g ·{' '}
-                      {fmtD2(
-                        Number(
-                          g.bonus?.status === 'used'
-                            ? g.bonus.finalAppliedG
-                            : g.totalG
-                        ) / DON_TO_GRAMS
-                      )}돈
+                      {fmtG3(finalDisplayG)}g ·{' '}
+                      {fmtD2(finalDisplayG / DON_TO_GRAMS)}돈
                     </strong>
                   </FinalWeight>
 
@@ -1562,34 +1730,66 @@ export default function MyExchanges() {
 
               {expanded[g.groupId] && (legacyMode || g.detailsLoaded) && (
                 <CardBody id={`panel-${g.groupId}`}>
-                  {/* 예약/요청자 정보 */}
-                  <MetaGrid>
-                    <Field>
-                      <Label>요청 번호</Label>
-                      <Value>{g.groupId}</Value>
-                    </Field>
-                    <Field>
-                      <Label>최근 변경</Label>
-                      <Value>{fmt(g.updatedAt)}</Value>
-                    </Field>
-                    <Field>
-                      <Label>요청자</Label>
-                      <Value>{g.requester.name}</Value>
-                    </Field>
-                    <Field>
-                      <Label>연락처</Label>
-                      <Value>{g.requester.phone}</Value>
-                    </Field>
-                  </MetaGrid>
+                  {!['canceled', 'rejected'].includes(rawStatusKey) && (
+                    <StatusFlow aria-label="교환 진행 단계">
+                      {EXCHANGE_PROGRESS_STEPS.map((label, index) => {
+                        const progressIndex =
+                          rawStatusKey === 'completed' ? 5
+                            : rawStatusKey === 'in_progress' ? 4
+                              : rawStatusKey === 'scheduled' ? 3
+                                : 1;
+                        return (
+                          <StatusStep
+                            key={label}
+                            $index={index}
+                            $active={index <= progressIndex}
+                            $current={index === progressIndex}
+                          >
+                            {label}
+                          </StatusStep>
+                        );
+                      })}
+                    </StatusFlow>
+                  )}
+
+                  {isOverdue && (
+                    <AttentionNotice role="status">
+                      <strong>방문 예정일이 지났지만 완료·취소 처리가 확인되지 않았습니다.</strong>
+                      실제 방문 여부나 예약 상태 확인이 필요한 기록입니다. 지난 일정은 온라인에서 변경·취소하지 않고, 아래 문의 기능으로 확인해 주세요.
+                    </AttentionNotice>
+                  )}
+
+                  {/* 요청 식별 정보는 필요할 때만 확인 */}
+                  <RequestDetails>
+                    <summary>요청 상세정보</summary>
+                    <MetaGrid>
+                      <Field>
+                        <Label>요청 번호</Label>
+                        <Value>{g.groupId}</Value>
+                      </Field>
+                      <Field>
+                        <Label>최근 변경</Label>
+                        <Value>{fmt(g.updatedAt)}</Value>
+                      </Field>
+                      <Field>
+                        <Label>요청자</Label>
+                        <Value>{g.requester.name}</Value>
+                      </Field>
+                      <Field>
+                        <Label>연락처</Label>
+                        <Value>{g.requester.phone}</Value>
+                      </Field>
+                    </MetaGrid>
+                  </RequestDetails>
 
                   {g.scheduleActivity && (
                     <ScheduleActivity $type={g.scheduleActivity.type}>
                       <strong>
                         {g.scheduleActivity.type === 'canceled'
                           ? '예약 취소'
-                          : statusKey === 'requested'
+                          : rawStatusKey === 'requested'
                             ? '일정 변경 확인 대기'
-                            : statusKey === 'scheduled'
+                            : rawStatusKey === 'scheduled'
                               ? '변경된 예약 확정'
                               : '최근 일정 변경'}
                       </strong>
@@ -1617,7 +1817,7 @@ export default function MyExchanges() {
                           <th style={{width: '30%'}}>요청 수량</th>
                           <th data-col="exchangeType" style={{width: '20%'}}>교환 유형</th>
                           <th data-col="status" style={{width: '16%'}}>상태</th>
-                          <th style={{width: '10%'}}>교환 중량</th>
+                          <th style={{width: '10%'}}>{isFinalized ? '확정 순금량' : '예상 순금량'}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1636,8 +1836,20 @@ export default function MyExchanges() {
                               <td data-col="status">{STATUS_LABEL[it.status] || it.status || '-'}</td>
                               <td>
                                 <Chips>
-                                  <Chip $tone="grams">{fmtG3(it._finalWeight)} g</Chip>
-                                  <Chip $tone="don">{fmtD2(it._finalWeightDon)} 돈</Chip>
+                                  <Chip $tone="grams">
+                                    {fmtG3(
+                                      isFinalized && it._confirmedPureGoldG != null
+                                        ? it._confirmedPureGoldG
+                                        : it._finalWeight
+                                    )} g
+                                  </Chip>
+                                  <Chip $tone="don">
+                                    {fmtD2(
+                                      (isFinalized && it._confirmedPureGoldG != null
+                                        ? it._confirmedPureGoldG
+                                        : it._finalWeight) / DON_TO_GRAMS
+                                    )} 돈
+                                  </Chip>
                                 </Chips>
                               </td>
                             </tr>
@@ -1647,13 +1859,58 @@ export default function MyExchanges() {
                     </TableWrap>
 
                     <TotalRow>
-                      합계(순금 중량):
+                      {isFinalized ? '확정 순금량 합계:' : '예상 순금량 합계:'}
                       <Chips>
-                        <Chip $tone="grams">{fmtG3(g.totalG)} g</Chip>
-                        <Chip $tone="don">{fmtD2((g.totalG || 0) / DON_TO_GRAMS)} 돈</Chip>
+                        <Chip $tone="grams">
+                          {fmtG3(
+                            isFinalized && g.measurement?.finalRecognizedG
+                              ? g.measurement.finalRecognizedG
+                              : g.totalG
+                          )} g
+                        </Chip>
+                        <Chip $tone="don">
+                          {fmtD2(
+                            Number(
+                              isFinalized && g.measurement?.finalRecognizedG
+                                ? g.measurement.finalRecognizedG
+                                : g.totalG || 0
+                            ) / DON_TO_GRAMS
+                          )} 돈
+                        </Chip>
                       </Chips>
                     </TotalRow>
                   </div>
+
+                  {g.measurement?.status === 'confirmed' && rawStatusKey === 'completed' && (
+                    <>
+                      <Divider />
+                      <PlanCard aria-label="매장 실측 확정 내역">
+                        <strong>매장 실측 확정</strong>
+                        <PlanRow>
+                          <PlanLabel>실측 확정 순금량</PlanLabel>
+                          <PlanValue>
+                            {fmtG3(g.measurement.finalRecognizedG)} g /{' '}
+                            {fmtD2(Number(g.measurement.finalRecognizedG || 0) / DON_TO_GRAMS)} 돈
+                          </PlanValue>
+                        </PlanRow>
+                        <PlanRow>
+                          <PlanLabel>최종 적용량</PlanLabel>
+                          <PlanValue>
+                            <strong>{fmtG3(g.measurement.finalAppliedG)} g</strong>
+                          </PlanValue>
+                        </PlanRow>
+                        <PlanRow>
+                          <PlanLabel>최종 제작공임</PlanLabel>
+                          <PlanValue>
+                            {Number(g.measurement.finalFeeWon || 0).toLocaleString('ko-KR')}원
+                          </PlanValue>
+                        </PlanRow>
+                        <Help>
+                          매장에서 실물 확인과 고객 동의를 거쳐 관리자가 완료 처리한 최종 기록입니다. 고객이 온라인에서 별도로 완료 확인할 필요는 없습니다.
+                        </Help>
+                      </PlanCard>
+                    </>
+                  )}
 
                   {g.bonus?.status === "used" && (
                     <>
@@ -1680,7 +1937,7 @@ export default function MyExchanges() {
                       <Divider />
                       <PlanCard>
                         <strong>
-                          {isBonusUsed
+                          {isFinalized
                             ? '최종 교환 계획'
                             : '예상 교환 계획'}
                         </strong>
@@ -1721,7 +1978,7 @@ export default function MyExchanges() {
                           </>
                         ) : (
                           <PlanRow>
-                            <PlanLabel>계산 기준</PlanLabel>
+                            <PlanLabel>{isFinalized ? '최종 적용 기준' : '계산 기준'}</PlanLabel>
                             <PlanValue>
                               {fmtG3(planBasisG)} g /{' '}
                               {fmtD2(
@@ -1752,16 +2009,18 @@ export default function MyExchanges() {
                         </PlanRow>
                         {g.plan.requiresTopUp || Number(g.plan.topUpGrams) > 0 ? (
                           <PlanRow>
-                            <PlanLabel>추가 예정</PlanLabel>
+                            <PlanLabel>{isBonusUsed ? '부족분' : '부족 예상'}</PlanLabel>
                             <PlanValue>
-                              <strong>+{fmtG3(g.plan.topUpGrams)} g / {fmtD2(g.plan.topUpDon)} 돈</strong>
-                              {' · '}방문 시 실측 후 당일 순금 판매시세 기준으로 최종 정산
+                              <strong>{fmtG3(g.plan.topUpGrams)} g / {fmtD2(g.plan.topUpDon)} 돈</strong>
+                              {' · '}골드바 총중량이 현재 계산 기준보다 많은 양입니다. {isBonusUsed
+                                ? '확정된 부족분은 안내된 정산 기준을 따릅니다.'
+                                : '매장 실측 후 부족분을 당일 적용 기준으로 정산합니다.'}
                             </PlanValue>
                           </PlanRow>
                         ) : (
                           <PlanRow>
                             <PlanLabel>
-                              {isBonusUsed ? '최종 잔여' : '예상 잔여'}
+                              {isBonusUsed ? '최종 잔여' : '잔여 예상'}
                             </PlanLabel>
                             <PlanValue>
                               {fmtG2Min(
@@ -1790,11 +2049,11 @@ export default function MyExchanges() {
                     </>
                   )}
 
-                  {['requested', 'scheduled'].includes(statusKey) && (
+                  {['requested', 'scheduled'].includes(rawStatusKey) && !isOverdue && (
                     <ScheduleActions group={g} />
                   )}
 
-                  {statusKey === 'canceled' && (
+                  {rawStatusKey === 'canceled' && (
                     <ScheduleActionsPanel aria-label="취소된 예약 다시 신청">
                       <ScheduleActionTitle>다시 예약하시겠어요?</ScheduleActionTitle>
                       <ScheduleActionLead>
@@ -1838,9 +2097,18 @@ export default function MyExchanges() {
                     </ScheduleActionsPanel>
                   )}
 
+                  <ScheduleButtonRow style={{ marginTop: '.75rem' }}>
+                    <ScheduleButton
+                      as={Link}
+                      to={`/support/new?groupId=${encodeURIComponent(g.groupId)}`}
+                    >
+                      이 교환건 문의하기
+                    </ScheduleButton>
+                  </ScheduleButtonRow>
+
                   <GoldExchangeReviewForm
                     exchangeId={g.groupId}
-                    status={statusKey}
+                    status={rawStatusKey}
                   />
                 </CardBody>
               )}

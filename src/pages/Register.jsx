@@ -1,29 +1,22 @@
 // src/pages/Register.jsx
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import styled from "styled-components";
-import { useNavigate, useLocation } from "react-router-dom";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { useLocation, useNavigate } from "react-router-dom";
+import { doc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import { FiEye, FiEyeOff } from "react-icons/fi";
-import { db, auth } from "../firebase/firebase";
-import { signUp, tryResumeUnverifiedSignup } from "../services/authService";
+import { db } from "../firebase/firebase";
+import { signUp } from "../services/authService";
 import { AgreementsSection } from "../components/AgreementsSection";
-import { checkNicknameAvailability, claimNickname } from "@/services/nicknameClient";
-import { ensureUserProfileOnSignup } from "../services/userService";
-import {
-  buildVerifyEmailPath,
-  getAuthReturnPath,
-} from "@/lib/authReturn";
+import { trackProductEventOncePerSession } from "@/analytics/productAnalytics";
+import { buildVerifyEmailPath, getAuthReturnPath } from "@/lib/authReturn";
 import {
   buildMemberOnboardingPath,
   markMemberOnboardingPending,
 } from "@/lib/memberOnboarding";
 
-// Register 폼 복구용 세션 키 (보조 용도)
 const REGISTER_FORM_KEY = "registerFormData";
-// 현재 필수 동의 문서 조합 버전 (이용약관 + 개인정보처리방침)
 const CURRENT_CONSENT_VERSION = "terms-v2.0_privacy-v2.6";
 
-/* ───────────── Styled ───────────── */
 const Container = styled.div`
   display: flex;
   justify-content: center;
@@ -55,55 +48,48 @@ const Card = styled.div`
 `;
 const Title = styled.h1`
   text-align: center;
-  margin-bottom: 20px;
+  margin: 0 0 9px;
   font-size: clamp(26px, 5vw, 34px);
   color: ${({ theme }) => theme.colors.text};
+  word-break: keep-all;
+`;
+const Lead = styled.p`
+  margin: 0 0 18px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  text-align: center;
+  line-height: 1.65;
+  word-break: keep-all;
 `;
 const NoticeBox = styled.div`
-  background: ${({ theme }) => theme.semantic.alertWarningBg};
-  border: 1px solid ${({ theme }) => theme.colors.secondary}55;
-  color: ${({ theme }) => theme.semantic.alertWarningText};
-  border-radius: 12px;
+  background: ${({ theme }) => theme.semantic.badgeGoldBg};
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 28%, ${({ theme }) => theme.colors.border});
+  color: ${({ theme }) => theme.colors.text};
+  border-radius: 14px;
   padding: 13px 14px;
-  font-size: 0.95rem;
-  line-height: 1.55;
-  margin-bottom: 16px;
-`;
+  font-size: 0.91rem;
+  line-height: 1.6;
+  margin-bottom: 18px;
 
-const StepIntro = styled.div`
-  margin-bottom: 15px;
-  h2 { margin: 0; color: ${({ theme }) => theme.colors.primary}; font-size: 1.05rem; }
-  p { margin: 5px 0 0; color: ${({ theme }) => theme.colors.textSecondary}; font-size: .8rem; line-height: 1.5; }
+  strong {
+    display: block;
+    color: ${({ theme }) => theme.colors.primary};
+    margin-bottom: 3px;
+  }
 `;
 const BenefitJourney = styled.div`
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px;
-  margin: 0 0 18px;
+  margin: 18px 0 0;
 `;
 const BenefitStep = styled.div`
   padding: 9px 7px;
-  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 24%, ${({ theme }) => theme.colors.border});
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 18%, ${({ theme }) => theme.colors.border});
   border-radius: 12px;
-  background: ${({ theme }) => theme.semantic.badgeGoldBg};
+  background: ${({ theme }) => theme.colors.surfaceAlt};
   text-align: center;
   small { display:block; color: ${({ theme }) => theme.colors.textSecondary}; font-size:0.62rem; font-weight:800; }
   strong { display:block; margin-top:3px; color: ${({ theme }) => theme.colors.secondaryDark}; font-family: ${({ theme }) => theme.fonts.numeric}; font-size:.75rem; }
-`;
-const ButtonRow = styled.div`
-  display: grid;
-  grid-template-columns: ${({ $single }) => ($single ? "1fr" : "minmax(0, .72fr) minmax(0, 1.28fr)")};
-  gap: 8px;
-`;
-const SecondaryButton = styled.button`
-  min-height: 48px;
-  padding: 12px 16px;
-  border: 1px solid ${({ theme }) => theme.colors.borderStrong};
-  border-radius: ${({ theme }) => theme.radii.small};
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.primary};
-  font-weight: 850;
-  cursor: pointer;
 `;
 const Form = styled.form`
   display: flex;
@@ -130,17 +116,7 @@ const Input = styled.input`
   font-size: 1rem;
 
   &::-ms-reveal,
-  &::-ms-clear {
-    display: none;
-  }
-
-  &::-webkit-credentials-auto-fill-button,
-  &::-webkit-contacts-auto-fill-button {
-    visibility: hidden;
-    display: none !important;
-    pointer-events: none;
-  }
-
+  &::-ms-clear { display: none; }
   &:disabled { background: ${({ theme }) => theme.colors.surfaceAlt}; }
 `;
 const ToggleButton = styled.button`
@@ -166,28 +142,27 @@ const ErrorText = styled.p`
   border-radius: 10px;
   padding: 10px 12px;
   font-size: 0.9rem;
-  margin: 0 0 8px;
+  margin: 0;
 `;
 const Button = styled.button`
-  min-height: 48px;
+  min-height: 50px;
   padding: 12px 16px;
   font-size: 1rem;
   background: ${({ theme }) => theme.gradients.primary};
   color: ${({ theme }) => theme.on.primary};
   border: 1px solid transparent;
   border-radius: ${({ theme }) => theme.radii.small};
-  font-weight: 800;
+  font-weight: 850;
   cursor: pointer;
-  transition: background 0.2s;
   &:disabled { opacity: .55; cursor: not-allowed; }
   &:hover:enabled { filter: brightness(.96); }
 `;
-const SmallText = styled.span`
-  font-size: 0.85rem;
+const Helper = styled.p`
+  margin: -7px 0 0;
   color: ${({ theme }) => theme.colors.textSecondary};
-  margin-top: -8px;
+  font-size: .79rem;
+  line-height: 1.5;
 `;
-/* 🔒 시각적으로 숨기는 인풋: 접근성/자동완성용 */
 const VisuallyHidden = styled.input`
   position: absolute !important;
   height: 1px;
@@ -200,7 +175,6 @@ const VisuallyHidden = styled.input`
   margin: -1px;
 `;
 
-/* ───────────── Helpers ───────────── */
 function toKoreanError(msg) {
   if (!msg) return "오류가 발생했습니다.";
   const m = String(msg);
@@ -223,269 +197,167 @@ function validatePassword(pw) {
     /[!@#$%^&*()_+{};':",.<>/?\\|`~-]/.test(pw)
   );
 }
-function validatePhone(phone) {
-  return /^01[016789]-\d{3,4}-\d{4}$/.test(phone);
-}
-function formatPhone(input) {
-  const digits = input.replace(/\D/g, "").slice(0, 11);
-  if (digits.length <= 3) return digits;
-  if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
-  if (digits.length === 10) {
-    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
-  }
-  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
-}
-function normalizeNickname(n) {
-  const value = (n || "").trim();
-  const valid = /^[\p{Script=Hangul}A-Za-z0-9 _]{2,16}$/u.test(value);
-  return { value, valid, lower: value.toLowerCase() };
-}
-async function isNicknameDuplicated(nick) {
-  if (!nick) return false;
-  try {
-    return !(await checkNicknameAvailability(nick));
-  } catch (err) {
-    console.warn("[register] nickname availability check failed:", err?.message || err);
-    // 서버 확인 실패를 "사용 가능"으로 처리하지 않습니다.
-    throw new Error("닉네임 사용 가능 여부를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.");
-  }
-}
 
-/* ───────────── Component ───────────── */
 export default function Register() {
   const navigate = useNavigate();
   const location = useLocation();
-
-  // 로그인과 동일한 공용 복귀 규칙을 사용합니다.
   const returnTo = getAuthReturnPath(location, "/");
   const returningToGuestMyGoldImport = returnTo.startsWith("/my-gold?import=guest");
-  const returningToMyGoldImport =
-    returningToGuestMyGoldImport || returnTo.startsWith("/my-gold?import=calculator");
-  const returnAllowsUnverified =
-    returnTo === "/my-gold" ||
-    returnTo.startsWith("/my-gold?") ||
-    returnTo.startsWith("/my-gold/alerts") ||
-    returnTo.startsWith("/gold-exchange?mode=vault");
+  const returningToMyGold = returnTo === "/my-gold" || returnTo.startsWith("/my-gold?") || returnTo.startsWith("/my-gold/");
+  const returningToExchange = returnTo.startsWith("/gold-exchange");
   const onboardingPath = buildMemberOnboardingPath(returnTo);
 
-  const [displayName, setDisplayName]         = useState("");
-  const [email, setEmail]                     = useState(location.state?.email || "");
-  const [password, setPassword]               = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [nickname, setNickname]               = useState("");
-  const [phone, setPhone]                     = useState("");
-
+  const [email, setEmail] = useState(location.state?.email || "");
+  const [password, setPassword] = useState("");
   const [agreements, setAgreements] = useState({
     age14: false,
     tos: false,
     privacy: false,
     marketing: false,
   });
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-  const [error, setError]                     = useState(null);
-  const [checkingNick, setCheckingNick]       = useState(false);
-  const [isNickDuplicate, setIsNickDuplicate] = useState(false);
-  const [loading, setLoading]                 = useState(false);
-
-  const [showPassword, setShowPassword]               = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [step, setStep] = useState(1);
-
-  // 폼 자동 저장/복구 (옵션)
   useEffect(() => {
     const raw = sessionStorage.getItem(REGISTER_FORM_KEY);
-    if (raw) {
-      try {
-        const saved = JSON.parse(raw);
-        setDisplayName(saved.displayName || "");
-        setEmail(saved.email || "");
-        setNickname(saved.nickname || "");
-        setPhone(saved.phone || "");
-      } catch {
-        sessionStorage.removeItem(REGISTER_FORM_KEY);
-      }
+    if (!raw) return;
+    try {
+      const saved = JSON.parse(raw);
+      setEmail((current) => current || saved.email || "");
+    } catch {
+      sessionStorage.removeItem(REGISTER_FORM_KEY);
     }
   }, []);
-  useEffect(() => {
-    const payload = { displayName, email, nickname, phone };
-    sessionStorage.setItem(REGISTER_FORM_KEY, JSON.stringify(payload));
-  }, [displayName, email, nickname, phone]);
 
-  const handleNicknameBlur = async () => {
-    const { value, valid } = normalizeNickname(nickname);
-    if (!value) return;
-    if (!valid) {
-      setIsNickDuplicate(false);
-      setError("닉네임은 2~16자, 한글/영문/숫자/공백/밑줄만 가능합니다.");
+  useEffect(() => {
+    sessionStorage.setItem(REGISTER_FORM_KEY, JSON.stringify({ email }));
+  }, [email]);
+
+  const copy = useMemo(() => {
+    if (returningToGuestMyGoldImport) {
+      return {
+        title: "지금 만든 MY GOLD를 이어두세요",
+        lead: "체험에서 기록한 금은 그대로 두고, 계정만 간단히 만들어 다음에도 이어서 확인할 수 있습니다.",
+        noticeTitle: "입력한 금 정보는 다시 묻지 않습니다",
+        noticeBody: "이메일 인증 후 지금 만든 금 이름·종류·중량·메모를 MY GOLD에 그대로 이어 저장합니다.",
+        button: "내 금 저장하고 시작하기",
+      };
+    }
+    if (returningToMyGold) {
+      return {
+        title: "내 금의 가치를 계속 이어보세요",
+        lead: "이메일과 비밀번호로 계정을 만들고 이메일 인증까지 마치면 MY GOLD 기록을 계속 관리할 수 있습니다.",
+        noticeTitle: "MY GOLD 흐름을 그대로 이어갑니다",
+        noticeBody: "이메일 인증이 끝나면 가입 전에 하던 MY GOLD 화면으로 돌아가 그대로 이어집니다.",
+        button: "내 금 저장하고 시작하기",
+      };
+    }
+    if (returningToExchange) {
+      return {
+        title: "계산한 내용 그대로 예약을 이어가세요",
+        lead: "계정을 만든 뒤 이메일 인증까지 완료하면 계산 결과와 선택한 일정으로 돌아가 예약을 계속할 수 있습니다.",
+        noticeTitle: "계산과 일정은 다시 입력하지 않습니다",
+        noticeBody: "예약 확정 전 이메일 인증이 필요하지만, 지금까지 선택한 내용은 그대로 이어집니다.",
+        button: "계산 결과 이어서 예약하기",
+      };
+    }
+    return {
+      title: "한국골드마켓 시작하기",
+      lead: "내 금을 기록하고 오늘 가치와 예상 순금량을 계속 확인할 계정을 간단히 만듭니다.",
+      noticeTitle: "가입은 간단하게, 완료는 이메일 인증까지",
+      noticeBody: "이메일·비밀번호와 필수동의 후 인증메일을 확인하면 가입이 완료됩니다. 이름·휴대전화·닉네임은 필요한 순간에만 추가합니다.",
+      button: "한국골드마켓 시작하기",
+    };
+  }, [returningToExchange, returningToGuestMyGoldImport, returningToMyGold]);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (loading) return;
+    setError(null);
+
+    const normalizedEmail = String(email || "").trim().toLowerCase();
+    if (!normalizedEmail) {
+      setError("이메일을 입력해 주세요.");
       return;
     }
-    setCheckingNick(true);
-    try {
-      const dup = await isNicknameDuplicated(value);
-      setIsNickDuplicate(dup);
-      if (dup) setError("이미 사용 중인 닉네임입니다.");
-    } catch (checkError) {
-      setIsNickDuplicate(false);
-      setError(checkError?.message || "닉네임 확인에 실패했습니다.");
-    } finally {
-      setCheckingNick(false);
-    }
-  };
-
-  const goAccountNext = () => {
-    setError(null);
-    const normalizedEmail = (email || "").trim().toLowerCase();
-    if (!normalizedEmail) { setError("이메일을 입력해주세요."); return; }
-    if (password !== confirmPassword) { setError("비밀번호가 일치하지 않습니다."); return; }
     if (!validatePassword(password)) {
       setError("비밀번호는 8자 이상, 영문/숫자/특수문자를 포함해야 합니다.");
       return;
     }
-    setStep(2);
-  };
-
-  const goProfileNext = async () => {
-    setError(null);
-    if (!displayName.trim()) { setError("이름을 입력해주세요."); return; }
-    if (!validatePhone(phone)) {
-      setError("휴대전화 번호를 010-1234-5678 형식으로 입력해주세요.");
-      return;
-    }
-    const { value, valid } = normalizeNickname(nickname);
-    if (!value || !valid) {
-      setError("닉네임은 2~16자, 한글/영문/숫자/공백/밑줄만 가능합니다.");
-      return;
-    }
-    setCheckingNick(true);
-    try {
-      const dup = await isNicknameDuplicated(value);
-      setIsNickDuplicate(dup);
-      if (dup) { setError("이미 사용 중인 닉네임입니다."); return; }
-      setStep(3);
-    } catch (checkError) {
-      setError(checkError?.message || "닉네임 확인에 실패했습니다.");
-    } finally {
-      setCheckingNick(false);
-    }
-  };
-
-  const handleSubmit = async e => {
-    e.preventDefault();
-    if (loading) return;
-    setError(null);
-
-    const normalizedEmail = (email || "").trim().toLowerCase();
-    if (!displayName.trim()) { setError("이름을 입력해주세요."); return; }
-    if (!normalizedEmail)   { setError("이메일을 입력해주세요."); return; }
-    if (password !== confirmPassword) { setError("비밀번호가 일치하지 않습니다."); return; }
-    if (!validatePassword(password))  { setError("비밀번호는 8자 이상, 영문/숫자/특수문자를 포함해야 합니다."); return; }
-    if (!validatePhone(phone))        { setError("휴대전화 번호를 010-1234-5678 형식으로 입력해주세요."); return; }
-
     if (!agreements.age14 || !agreements.tos || !agreements.privacy) {
       setError("만 14세 이상 확인과 필수 약관(이용약관/개인정보)에 동의해 주세요.");
       return;
     }
 
-    const { value: trimmedNick, lower: nickLower, valid: nickValid } = normalizeNickname(nickname);
-    if (!trimmedNick) { setError("닉네임을 입력해주세요."); return; }
-    if (!nickValid)   { setError("닉네임은 2~16자, 한글/영문/숫자/공백/밑줄만 가능합니다."); return; }
-
-    setCheckingNick(true);
-    try {
-      let dup = await isNicknameDuplicated(trimmedNick);
-
-      if (dup) {
-        // 이전 가입 시도의 Auth 계정이 살아 있지만 로컬 세션이 사라진 경우,
-        // 사용자가 입력한 동일 이메일/비밀번호로 미인증 계정을 재개한 뒤
-        // 같은 UID 소유 닉네임인지 다시 확인합니다.
-        const resumed = await tryResumeUnverifiedSignup(
-          normalizedEmail,
-          password
-        );
-        if (resumed) {
-          dup = await isNicknameDuplicated(trimmedNick);
-        }
-      }
-
-      if (dup) {
-        setIsNickDuplicate(true);
-        setError("이미 사용 중인 닉네임입니다.");
-        return;
-      }
-      setIsNickDuplicate(false);
-    } catch (checkError) {
-      setError(checkError?.message || "닉네임 확인에 실패했습니다.");
-      return;
-    } finally {
-      setCheckingNick(false);
-    }
-
     setLoading(true);
     try {
-      let user;
-      const currentUser = auth.currentUser;
-      const canResumePendingSignup =
-        !!currentUser &&
-        !currentUser.emailVerified &&
-        String(currentUser.email || "").trim().toLowerCase() === normalizedEmail;
-
-      if (canResumePendingSignup) {
-        // 앞선 가입 시도에서 Auth/닉네임 선점까지 완료된 경우
-        // 새 Auth 계정을 만들지 않고 동일 UID의 가입 절차를 이어갑니다.
-        await claimNickname(trimmedNick);
-        await ensureUserProfileOnSignup(currentUser, {
-          displayName: displayName.trim(),
-          nickname: trimmedNick,
-          phone,
-          email: normalizedEmail,
-        });
-        user = currentUser;
-      } else {
-        user = await signUp({
-          email: normalizedEmail,
-          password,
-          nickname: trimmedNick,
-          nicknameLower: nickLower,
-          phone,
-          displayName: displayName.trim(),
-          // Firebase 메일의 action handler는 /verify-email이며, continueUrl은 인증 후 복귀 경로입니다.
-          continueUrl: onboardingPath,
-        });
-      }
+      const { user, createdNow } = await signUp({
+        email: normalizedEmail,
+        password,
+        continueUrl: onboardingPath,
+      });
 
       markMemberOnboardingPending(returnTo);
 
-      const uid = user?.uid || auth.currentUser?.uid;
-      if (uid) {
-        const ts = serverTimestamp();
-        await setDoc(
-          doc(db, "users", uid),
-          {
-            consents: {
-              version: CURRENT_CONSENT_VERSION,
-              age14:     { accepted: true,                   at: ts },
-              tos:       { accepted: true,                   at: ts },
-              privacy:   { accepted: true,                   at: ts },
-              marketing: { accepted: !!agreements.marketing, at: ts },
-            },
-          },
-          { merge: true }
-        );
-      }
+      // 신규 가입은 Auth/OOB 직후 Firestore 읽기를 추가하지 않고 최소 회원 문서와
+      // 동의를 바로 한 번만 기록합니다. 미인증 가입 재개 역시 자기 회원 문서를
+      // 읽지 않고 마케팅 동의만 갱신해, 인증 전에는 읽기 권한 자체를 열지 않습니다.
+      const userRef = doc(db, "users", user.uid);
+      const ts = serverTimestamp();
+      const initialConsents = {
+        version: CURRENT_CONSENT_VERSION,
+        age14: { accepted: true, at: ts },
+        tos: { accepted: true, at: ts },
+        privacy: { accepted: true, at: ts },
+        marketing: { accepted: !!agreements.marketing, at: ts },
+      };
 
-      // 보너스 지급은 이메일 인증 완료 후 WelcomeOnboarding에서 처리합니다.
-      // 퀴즈를 먼저 풀었다면 결과는 localStorage(24시간)에 보존되어 인증 후 서버가 다시 검증합니다.
-
-      // MY GOLD는 로그인만 하면 사용할 수 있으므로 MY GOLD 흐름에서 가입한 회원은
-      // 가입 직후 바로 요청한 내금고 흐름으로 복귀합니다. 인증 메일은 이미 발송되어 있으며
-      // 회원가입 순금 혜택과 예약 확정은 이메일 인증 완료 후 처리됩니다.
-      if (returnAllowsUnverified) {
-        navigate(returnTo, { replace: true });
+      if (createdNow) {
+        await setDoc(userRef, {
+          email: normalizedEmail,
+          createdAt: ts,
+          updatedAt: ts,
+          consents: initialConsents,
+        }, { merge: true });
       } else {
-        navigate(buildVerifyEmailPath(onboardingPath), {
-          replace: true,
-        });
+        try {
+          await updateDoc(userRef, {
+            email: normalizedEmail,
+            updatedAt: ts,
+            "consents.marketing": {
+              accepted: !!agreements.marketing,
+              at: ts,
+            },
+          });
+        } catch (resumeWriteError) {
+          const code = String(resumeWriteError?.code || "");
+          const canInitializeMissingSignupDoc =
+            code === "not-found" ||
+            code === "permission-denied" ||
+            code === "failed-precondition";
+
+          if (!canInitializeMissingSignupDoc) throw resumeWriteError;
+
+          await setDoc(userRef, {
+            email: normalizedEmail,
+            createdAt: ts,
+            updatedAt: ts,
+            consents: initialConsents,
+          }, { merge: true });
+        }
       }
+
+      sessionStorage.removeItem(REGISTER_FORM_KEY);
+      trackProductEventOncePerSession(
+        "sign_up",
+        { method: "email", signup_mode: "progressive_profile" },
+        "signup-completed"
+      );
+
+      // Firebase Auth 세션은 생성 직후 존재하지만, 한국골드마켓 회원가입 완료는
+      // 이메일 인증까지입니다. 어떤 진입 경로에서도 인증 전 회원 화면으로 보내지 않습니다.
+      navigate(buildVerifyEmailPath(onboardingPath), { replace: true });
     } catch (err) {
       console.error("회원가입 에러:", err);
       setError(toKoreanError(err?.message));
@@ -494,145 +366,83 @@ export default function Register() {
     }
   };
 
-  const isDisabled = loading || checkingNick;
-
   return (
     <Container>
       <Card>
-        <Title>회원가입</Title>
+        <Title>{copy.title}</Title>
+        <Lead>{copy.lead}</Lead>
 
-        <NoticeBox role="note" aria-live="polite">
-          <strong>
-            {returningToGuestMyGoldImport
-              ? "가입 후 지금 만든 MY GOLD 체험 기록을 그대로 저장합니다"
-              : returningToMyGoldImport
-                ? "가입 후 방금 계산한 금을 MY GOLD에 이어서 저장합니다"
-                : "회원가입하고 순금 0.01g 받기"}
-          </strong>
-          <div>
-            {returningToGuestMyGoldImport
-              ? "체험에서 추가·수정한 금 이름·종류·중량·메모가 임시 보관되어 있습니다. 가입이 끝나면 그대로 MY GOLD에 저장할 수 있고, 이메일 인증을 완료하면 회원가입 순금 0.01g 혜택도 받을 수 있습니다."
-              : returningToMyGoldImport
-                ? "계산한 금 종류와 중량은 임시 보관되어 있습니다. 가입이 끝나면 바로 MY GOLD에 저장할 수 있고, 이메일 인증을 완료하면 회원가입 순금 0.01g 혜택도 받을 수 있습니다."
-                : "각 순금 혜택은 인증 이메일 기준 1회만 지급되며, 탈퇴 후 재가입해도 중복 지급되지 않습니다. 퀵퀴즈와 광고성 정보 수신(앱푸시) 설정으로 최대 순금 0.03g까지 받을 수 있습니다."}
-          </div>
+        <NoticeBox role="note">
+          <strong>{copy.noticeTitle}</strong>
+          <span>{copy.noticeBody}</span>
         </NoticeBox>
 
-        {error && <ErrorText role="alert" aria-live="assertive">{error}</ErrorText>}
-
-        <BenefitJourney aria-label="순금 혜택 여정">
-          <BenefitStep><small>회원가입</small><strong>+0.01g</strong></BenefitStep>
-          <BenefitStep><small>퀵퀴즈</small><strong>+0.01g</strong></BenefitStep>
-          <BenefitStep><small>금시세 알림</small><strong>+0.01g</strong></BenefitStep>
-        </BenefitJourney>
-
         <Form onSubmit={handleSubmit} autoComplete="on" aria-busy={loading ? "true" : undefined}>
-          {step === 1 && (
-            <>
-              <StepIntro>
-                <h2>계정 만들기</h2>
-                <p>MY GOLD에 금을 기록하고 가치 변화와 교환 가능 상태를 계속 확인할 계정을 만듭니다.</p>
-              </StepIntro>
+          {error && <ErrorText role="alert" aria-live="assertive">{error}</ErrorText>}
 
-              <FormGroup>
-                <Label htmlFor="regEmail">이메일</Label>
-                <Input id="regEmail" name="email" type="email" value={email}
-                  onChange={e => setEmail(e.target.value)} required disabled={isDisabled}
-                  autoComplete="email" inputMode="email" />
-              </FormGroup>
+          <FormGroup>
+            <Label htmlFor="regEmail">이메일</Label>
+            <Input
+              id="regEmail"
+              name="email"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              required
+              disabled={loading}
+              autoComplete="email"
+              inputMode="email"
+            />
+          </FormGroup>
 
-              <VisuallyHidden type="text" name="username" autoComplete="username" value={email}
-                readOnly aria-hidden="true" tabIndex={-1} />
+          <VisuallyHidden
+            type="text"
+            name="username"
+            autoComplete="username"
+            value={email}
+            readOnly
+            aria-hidden="true"
+            tabIndex={-1}
+          />
 
-              <FormGroup>
-                <Label htmlFor="regPassword">비밀번호</Label>
-                <Input id="regPassword" name="new-password" type={showPassword ? "text" : "password"}
-                  value={password} onChange={e => setPassword(e.target.value)}
-                  placeholder="8자 이상, 영문/숫자/특수문자 포함" required disabled={isDisabled}
-                  autoComplete="new-password" />
-                <ToggleButton type="button" onClick={() => setShowPassword(v => !v)}
-                  aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 보기"}>
-                  {showPassword ? <FiEyeOff /> : <FiEye />}
-                </ToggleButton>
-              </FormGroup>
+          <FormGroup>
+            <Label htmlFor="regPassword">비밀번호</Label>
+            <Input
+              id="regPassword"
+              name="new-password"
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="8자 이상, 영문/숫자/특수문자 포함"
+              required
+              disabled={loading}
+              autoComplete="new-password"
+            />
+            <ToggleButton
+              type="button"
+              onClick={() => setShowPassword((value) => !value)}
+              aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 보기"}
+            >
+              {showPassword ? <FiEyeOff /> : <FiEye />}
+            </ToggleButton>
+          </FormGroup>
+          <Helper>이름·전화번호·닉네임은 이메일 인증 후 필요한 순간에 설정할 수 있습니다.</Helper>
 
-              <FormGroup>
-                <Label htmlFor="regPasswordConfirm">비밀번호 확인</Label>
-                <Input id="regPasswordConfirm" name="confirm-password" type={showConfirmPassword ? "text" : "password"}
-                  value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
-                  placeholder="비밀번호를 다시 입력하세요" required disabled={isDisabled}
-                  autoComplete="new-password" />
-                <ToggleButton type="button" onClick={() => setShowConfirmPassword(v => !v)}
-                  aria-label={showConfirmPassword ? "비밀번호 숨기기" : "비밀번호 보기"}>
-                  {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
-                </ToggleButton>
-              </FormGroup>
+          <AgreementsSection value={agreements} onChange={setAgreements} />
 
-              <ButtonRow $single>
-                <Button type="button" onClick={goAccountNext} disabled={isDisabled}>내 정보 입력하기 →</Button>
-              </ButtonRow>
-            </>
-          )}
-
-          {step === 2 && (
-            <>
-              <StepIntro>
-                <h2>내 정보</h2>
-                <p>방문예약과 MY GOLD에서 사용할 기본 정보를 입력합니다.</p>
-              </StepIntro>
-
-              <FormGroup>
-                <Label htmlFor="regName">이름</Label>
-                <Input id="regName" name="name" type="text" value={displayName}
-                  onChange={e => setDisplayName(e.target.value)} required disabled={isDisabled}
-                  autoComplete="name" placeholder="예: 홍길동" />
-              </FormGroup>
-
-              <FormGroup>
-                <Label htmlFor="regNickname">닉네임</Label>
-                <Input id="regNickname" name="nickname" type="text" value={nickname}
-                  onChange={e => { setNickname(e.target.value); setIsNickDuplicate(false); setError(null); }}
-                  onBlur={handleNicknameBlur} maxLength={16} required disabled={isDisabled}
-                  style={isNickDuplicate ? { borderColor: "red" } : {}}
-                  aria-invalid={isNickDuplicate ? "true" : undefined}
-                  aria-describedby={isNickDuplicate ? "nickname-error" : undefined} />
-                {checkingNick && <SmallText>중복 확인 중...</SmallText>}
-                {isNickDuplicate && <ErrorText id="nickname-error" role="alert">이미 사용 중인 닉네임입니다.</ErrorText>}
-              </FormGroup>
-
-              <FormGroup>
-                <Label htmlFor="regPhone">휴대전화</Label>
-                <Input id="regPhone" name="tel" type="tel" value={phone}
-                  onChange={e => { setPhone(formatPhone(e.target.value)); setError(null); }}
-                  placeholder="010-1234-5678" required disabled={isDisabled}
-                  inputMode="numeric" autoComplete="tel" />
-              </FormGroup>
-
-              <ButtonRow>
-                <SecondaryButton type="button" onClick={() => { setError(null); setStep(1); }}>← 이전</SecondaryButton>
-                <Button type="button" onClick={goProfileNext} disabled={isDisabled}>약관 확인하기 →</Button>
-              </ButtonRow>
-            </>
-          )}
-
-          {step === 3 && (
-            <>
-              <StepIntro>
-                <h2>약관 확인 후 완료</h2>
-                <p>필수 동의만 가입에 필요합니다. 광고성 정보 수신은 선택이며, 알림 혜택은 가입 후 직접 설정할 수 있습니다.</p>
-              </StepIntro>
-
-              <AgreementsSection value={agreements} onChange={setAgreements} />
-
-              <ButtonRow>
-                <SecondaryButton type="button" onClick={() => { setError(null); setStep(2); }}>← 이전</SecondaryButton>
-                <Button type="submit" disabled={isDisabled || !agreements.age14 || !agreements.tos || !agreements.privacy}>
-                  {loading ? "가입 중..." : "가입하고 순금 0.01g 받기"}
-                </Button>
-              </ButtonRow>
-            </>
-          )}
+          <Button
+            type="submit"
+            disabled={loading || !agreements.age14 || !agreements.tos || !agreements.privacy}
+          >
+            {loading ? "계정 만드는 중..." : copy.button}
+          </Button>
         </Form>
+
+        <BenefitJourney aria-label="가입 후 이어지는 혜택">
+          <BenefitStep><small>이메일 인증</small><strong>+0.01g</strong></BenefitStep>
+          <BenefitStep><small>금시세 알림</small><strong>+0.01g</strong></BenefitStep>
+          <BenefitStep><small>퀵퀴즈</small><strong>+0.01g</strong></BenefitStep>
+        </BenefitJourney>
       </Card>
     </Container>
   );

@@ -7,6 +7,7 @@ import shopLogo from "@/assets/logo.webp";
 import useReservedSlots from "@/hooks/useReservedSlots";
 import useBookingAvailability, { getBookingAvailabilityEntry } from "@/hooks/useBookingAvailability";
 import { DON_TO_GRAMS, roundTo3Custom, toFixed3CustomStr } from "@/lib/goldRates";
+import { getGoldBarFeeEstimate, formatGoldBarFee } from "@/lib/goldBarFee";
 import {
   Card,
   StartChoiceGrid,
@@ -48,7 +49,11 @@ import {
   PrivacyModalTitle,
   PrivacyCloseButton,
   PrivacyFrame,
-  Input
+  Input,
+  ReservationSummary,
+  FeeSummary,
+  FeeLink,
+  PendingBadge
 } from "./GoldExchange.styles";
 import {
   STORE_INFO,
@@ -128,7 +133,7 @@ export function StartMethodScreen({ onChoose }) {
       <StartChoiceGrid aria-label="금교환 시작 방법">
         <StartChoice type="button" onClick={() => onChoose("vault")}>
           <strong>MY GOLD에서 불러오기</strong>
-          <span>MY GOLD에 기록한 금 종류·중량으로 바로 계산합니다.</span>
+          <span>내가 기록해 둔 금 종류·중량을 불러와 예상 교환량을 계산합니다. 로그인 전에는 이 브라우저의 MY GOLD 기록으로 계속할 수 있습니다.</span>
         </StartChoice>
         <StartChoice type="button" onClick={() => onChoose("manual")}>
           <strong>직접 입력하기</strong>
@@ -147,13 +152,18 @@ export function StartMethodScreen({ onChoose }) {
 export function CalcStep({
   products, productOptions, error, onCalculate,
   handleProductChange, handleProductSelect, addProduct, removeProduct,
-  onGoReserveDirect, fromVault,
+  onGoReserveDirect, fromVault, vaultImportNotice = "",
 }) {
   return (
     <>
       <Card>
         <StepCenter><StepMark>스텝 1</StepMark></StepCenter>
         <Title>{fromVault ? "MY GOLD에서 불러온 내 금을 확인하세요" : "내 금 종류와 무게를 입력하세요"}</Title>
+        {vaultImportNotice && (
+          <InfoCard role="status" style={{ marginBottom: 18 }}>
+            {vaultImportNotice}
+          </InfoCard>
+        )}
         {error && <ErrorText role="alert">{error}</ErrorText>}
 
         <form onSubmit={onCalculate}>
@@ -283,6 +293,11 @@ export function BarStep({
     maxSelectableQty,
     Math.max(1, Number(barChoice.qty) || 1)
   );
+  const feeEstimate = getGoldBarFeeEstimate({
+    grams: selectedBar.grams,
+    don: selectedBar.don,
+    qty: safeQty,
+  });
 
   const isTileRecommended = (i) => i === recIdx;
   const isTileTopUp = (i) => i === topUpIdx;
@@ -294,7 +309,7 @@ export function BarStep({
 
       <ExchangeOutcome aria-label="예상 금교환 결과">
         <div>
-          <small>MY GOLD → 999.9 GOLD</small>
+          <small>MY GOLD 기록 → 999.9 GOLD 예상</small>
           <strong>예상 순금량 {fmtG(totalGrams)}g → {selectedBar.label} × {safeQty}</strong>
           <p>
             {roundTo3Custom(totalGrams - selectedBar.grams * safeQty) >= 0
@@ -309,6 +324,20 @@ export function BarStep({
           <em>{selectedBar.label.replace(" 골드바", "")}</em>
         </MiniGoldBar>
       </ExchangeOutcome>
+
+      <FeeSummary aria-label="예상 골드바 제작 공임">
+        <div>
+          <small>선택한 규격의 예상 제작 공임</small>
+          <strong>{feeEstimate.totalFee == null ? "매장 확인" : formatGoldBarFee(feeEstimate.totalFee)}</strong>
+          <small>
+            {feeEstimate.unitFee == null
+              ? "해당 규격은 매장에서 공임을 안내합니다."
+              : `${selectedBar.label} ${formatGoldBarFee(feeEstimate.unitFee)} × ${safeQty}개 기준`}
+            {" · "}최종 공임은 교환 확정 전에 매장에서 다시 확인합니다.
+          </small>
+        </div>
+        <FeeLink href="/goldbar-fee">전체 공임표 보기 →</FeeLink>
+      </FeeSummary>
 
       <SubTitle>제품별 순금 환산 결과</SubTitle>
       <TableWrap>
@@ -550,7 +579,7 @@ export function BarStep({
 
       <SectionSeparator />
       <div style={{ display: "grid", gap: 10 }}>
-        <Button type="button" onClick={onGoReserve}>골드바 교환 하러가기</Button>
+        <Button type="button" onClick={onGoReserve}>이 예상으로 방문 예약 계속</Button>
         <OutlineButton type="button" onClick={onSaveToMyGold}>MY GOLD에 저장하고 가치 추적</OutlineButton>
         <HelpText style={{ margin: 0, textAlign: "center" }}>
           지금 교환하지 않아도 저장해 두면 오늘 가치와 시세 변화를 계속 확인할 수 있습니다.
@@ -576,6 +605,7 @@ export function ReserveStep({
   onSubmitReservation,
   loading,
   calculated, setStep,
+  barsPlan,
 }) {
   const dateKey = visitDate ? format(visitDate, "yyyy-MM-dd") : "";
   const taken = useReservedSlots(dateKey); // ✅ 날짜별 선점 시간 Set
@@ -586,6 +616,15 @@ export function ReserveStep({
   );
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const privacyDialogRef = useRef(null);
+  const phoneDigits = String(phone || "").replace(/\D/g, "");
+  const contactReady = String(name || "").trim().length >= 2 && phoneDigits.length >= 9;
+  const [editingContact, setEditingContact] = useState(false);
+  const [contactTouched, setContactTouched] = useState(false);
+
+  useEffect(() => {
+    if (contactTouched) return;
+    setEditingContact(!contactReady);
+  }, [contactReady, contactTouched]);
 
   useEffect(() => {
     if (!privacyOpen) return undefined;
@@ -680,10 +719,33 @@ export function ReserveStep({
   return (
     <Card>
       <StepCenter><StepMark>스텝 3</StepMark></StepCenter>
-      <Title>스텝 3. 나의 골드바 예약하기</Title>
+      <Title>방문 예약 요청</Title>
       {error && <ErrorText role="alert">{error}</ErrorText>}
 
-      <SubTitle>방문 예약</SubTitle>
+      <ReservationSummary role="note" aria-label="방문 전 예상 정보">
+        <small>{calculated && barsPlan ? "온라인 예상 · 매장 확정 전" : "현장 확인 방문"}</small>
+        {calculated && barsPlan ? (
+          <>
+            <strong>
+              예상 순금 {Number(barsPlan.totalGrams || 0).toFixed(2)}g · {barsPlan.selected?.label || "골드바"} × {barsPlan.selected?.qty || 1}
+            </strong>
+            <p>
+              예상 제작 공임 {formatGoldBarFee(getGoldBarFeeEstimate({
+                grams: barsPlan.selected?.grams,
+                don: barsPlan.selected?.don,
+                qty: barsPlan.selected?.qty,
+              }).totalFee)} · 실제 순도·중량·공임과 교환 조건은 매장 실측과 고객 확인 후 확정됩니다.
+            </p>
+          </>
+        ) : (
+          <>
+            <strong>금 종류·중량을 매장에서 직접 확인하는 방문 예약입니다.</strong>
+            <p>온라인에서 교환량을 확정하지 않습니다. 매장에서 실물의 순도와 중량, 공임을 확인한 뒤 동의한 경우에만 실제 교환을 진행합니다.</p>
+          </>
+        )}
+      </ReservationSummary>
+
+      <SubTitle>방문 날짜와 시간</SubTitle>
       <FormGroup>
         <Label htmlFor="exchange-visit-date">방문 날짜</Label>
         <DatePicker
@@ -735,38 +797,72 @@ export function ReserveStep({
           onSubmitReservation(e);
         }}
       >
-        <FormGroup>
-          <Label htmlFor="exchange-name">성명</Label>
-          <Input
-            id="exchange-name"
-            value={name}
-            maxLength={MAX_NAME_LENGTH}
-            onChange={(e) => setName(e.target.value.slice(0, MAX_NAME_LENGTH))}
-            required
-            autoComplete="name"
-            placeholder="예: 홍길동"
-          />
-        </FormGroup>
-        <FormGroup>
-          <Label htmlFor="exchange-phone">전화번호</Label>
-          <Input
-            id="exchange-phone"
-            type="tel"
-            inputMode="tel"
-            placeholder="예: 010-1234-5678"
-            value={phone}
-            maxLength={MAX_PHONE_LENGTH}
-            onChange={(e) =>
-              setPhone(
-                e.target.value
-                  .replace(/[^0-9+()\-\s]/g, "")
-                  .slice(0, MAX_PHONE_LENGTH)
-              )
-            }
-            required
-            autoComplete="tel"
-          />
-        </FormGroup>
+        {!editingContact && contactReady ? (
+          <InfoCard role="group" aria-label="예약자 연락처 확인">
+            <p style={{ margin: 0, fontWeight: 900 }}>예약자 정보</p>
+            <p style={{ margin: "6px 0 10px" }}>{String(name).trim()} · {String(phone).trim()}</p>
+            <SmallButton
+              type="button"
+              onClick={() => {
+                setContactTouched(true);
+                setEditingContact(true);
+              }}
+            >
+              정보 변경
+            </SmallButton>
+          </InfoCard>
+        ) : (
+          <>
+            <FormGroup>
+              <Label htmlFor="exchange-name">성명</Label>
+              <Input
+                id="exchange-name"
+                value={name}
+                maxLength={MAX_NAME_LENGTH}
+                onChange={(e) => {
+                  setContactTouched(true);
+                  setName(e.target.value.slice(0, MAX_NAME_LENGTH));
+                }}
+                required
+                autoComplete="name"
+                placeholder="예: 홍길동"
+              />
+            </FormGroup>
+            <FormGroup>
+              <Label htmlFor="exchange-phone">전화번호</Label>
+              <Input
+                id="exchange-phone"
+                type="tel"
+                inputMode="tel"
+                placeholder="예: 010-1234-5678"
+                value={phone}
+                maxLength={MAX_PHONE_LENGTH}
+                onChange={(e) => {
+                  setContactTouched(true);
+                  setPhone(
+                    e.target.value
+                      .replace(/[^0-9+()\-\s]/g, "")
+                      .slice(0, MAX_PHONE_LENGTH)
+                  );
+                }}
+                required
+                autoComplete="tel"
+              />
+            </FormGroup>
+            <HelpText>한 번 예약하면 입력한 이름과 전화번호를 다음 예약에 자동으로 불러옵니다.</HelpText>
+            {contactReady && (
+              <SmallButton
+                type="button"
+                onClick={() => {
+                  setContactTouched(true);
+                  setEditingContact(false);
+                }}
+              >
+                입력 완료
+              </SmallButton>
+            )}
+          </>
+        )}
         <SectionSeparator />
         <ConsentBox>
           <ConsentRow>
@@ -834,7 +930,7 @@ export function ReserveStep({
 
         <div style={{ display: "grid", gap: 10 }}>
           <Button type="submit" disabled={loading} aria-busy={loading}>
-            {loading ? "제출 중..." : "예약요청 하기"}
+            {loading ? "제출 중..." : "방문 예약 요청"}
           </Button>
           <GhostButton
             type="button"
@@ -854,8 +950,8 @@ export function ReserveStep({
             </p>
             <p style={{ margin: "8px 0 0" }}>
               {user
-                ? "회원가입 때 받은 이메일 인증을 한 번 완료한 뒤 성명·전화번호 확인과 개인정보 동의를 거쳐 예약요청이 완료됩니다."
-                : "로그인 또는 회원가입 후 이메일 인증을 완료하고, 성명·전화번호 확인과 개인정보 동의를 거쳐 예약요청이 완료됩니다."}
+                ? "이메일 인증을 완료한 뒤 예약에 필요한 성명·전화번호를 확인하고 개인정보 동의를 거치면 예약요청이 완료됩니다."
+                : "로그인 또는 간단 가입과 이메일 인증 후, 예약에 필요한 성명·전화번호를 한 번 입력하면 예약요청이 완료됩니다."}
             </p>
             <p style={{ margin: "8px 0 0" }}>
               인증을 진행하는 동안 이 시간은 선점되지 않습니다. 돌아오면 실시간 예약 상태를
@@ -870,7 +966,7 @@ export function ReserveStep({
 
           <div style={{ display: "grid", gap: 10, marginTop: 14 }}>
             <Button type="button" onClick={onRequireAuth}>
-              {user ? "이메일 인증하고 예약하기" : "이 일정으로 예약하기"}
+              {user ? "이메일 인증하고 방문 예약 계속" : "로그인하고 방문 예약 계속"}
             </Button>
             <GhostButton
               type="button"
@@ -894,8 +990,9 @@ export function DoneStep({ status }) {
     <>
       <GoldExchangeTracker status={status} />
       <Card>
-        <Title>예약 신청 접수 완료</Title>
-        <HelpText>관리자 확인 후 예약이 확정되면 알림으로 안내드립니다.</HelpText>
+        <PendingBadge>현재 상태 · 예약 확인 대기</PendingBadge>
+        <Title>방문 예약 요청이 접수되었습니다</Title>
+        <HelpText>아직 예약 확정이나 교환 완료 상태가 아닙니다. 관리자 확인 후 방문 예약이 확정되면 알림으로 안내드립니다.</HelpText>
 
         <PushPermissionPrompt
           context="exchange-complete"

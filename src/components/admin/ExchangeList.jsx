@@ -5,6 +5,7 @@ import { useSearchParams } from "react-router-dom";
 import { db, functions } from "@/firebase/firebase";
 import { httpsCallable } from "firebase/functions";
 import { collection, getDocs, limit, onSnapshot, orderBy, query, where } from "firebase/firestore";
+import StoreMeasurementPanel from "@/components/admin/StoreMeasurementPanel";
 import {
   fetchAdminExchangeGroup,
   fetchAdminExchangeGroupItems,
@@ -18,15 +19,28 @@ const DON_TO_GRAMS = 3.75;
 const STATUS_LABEL = {
   requested: "예약 확인 대기",
   scheduled: "예약 확정",
-  in_progress: "진행 중",
-  completed: "완료",
+  in_progress: "매장 확인 중",
+  completed: "교환 완료",
   rejected: "거절",
   canceled: "취소",
-  교환중: "진행 중",
+  교환중: "매장 확인 중",
+  attention: "방문일 경과 · 확인 필요",
+};
+
+const FILTER_LABEL = {
+  requested: "확인 대기",
+  scheduled: "예약 확정",
+  attention: "확인 필요",
+  in_progress: "매장 확인",
+  completed: "완료",
+  canceled: "취소",
+  rejected: "거절",
+  active: "처리 중",
 };
 
 const displayReservationStatus = (status, scheduleChangeType = "") => {
   const normalized = status === "교환중" ? "in_progress" : String(status || "requested");
+  if (normalized === "attention") return STATUS_LABEL.attention;
   if (normalized === "requested" && scheduleChangeType === "rescheduled") {
     return "일정 변경 확인 대기";
   }
@@ -281,12 +295,14 @@ const StatusBadge = styled.span`
   background: ${({ $status, theme }) => {
     if ($status === "requested") return theme.colors.warning;
     if ($status === "scheduled") return theme.colors.success;
+    if ($status === "attention") return theme.colors.error;
     if ($status === "in_progress") return theme.colors.info;
     if ($status === "completed") return theme.colors.secondary;
     if ($status === "rejected") return theme.colors.error;
     return theme.colors.gray;
   }};
-  color: ${({ $status, theme }) => ($status === "requested" ? theme.on.warning : theme.on.primary)};
+  color: ${({ $status, theme }) =>
+    $status === "requested" ? theme.on.warning : theme.on.primary};
   font-size: 0.75rem;
   font-weight: 850;
 `;
@@ -512,6 +528,65 @@ const SectionTitle = styled.div`
   font-weight: 900;
 `;
 
+const StatusFlow = styled.div`
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 5px;
+
+  @media (max-width: 820px) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  @media (max-width: 520px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+`;
+
+const StatusStep = styled.div`
+  padding: 8px 6px;
+  border: 1px solid ${({ $active, theme }) =>
+    $active ? theme.colors.primary : theme.colors.border};
+  border-radius: 8px;
+  background: ${({ $current, $active, theme }) =>
+    $current ? theme.colors.primary : $active ? theme.semantic.badgeGoldBg : theme.colors.surfaceAlt};
+  color: ${({ $current, $active, theme }) =>
+    $current ? theme.on.primary : $active ? theme.colors.primary : theme.colors.textSecondary};
+  font-size: 0.72rem;
+  font-weight: ${({ $current }) => ($current ? 900 : 750)};
+  text-align: center;
+`;
+
+const AttentionNotice = styled.section`
+  display: grid;
+  gap: 4px;
+  padding: 11px 12px;
+  border: 1px solid ${({ theme }) => theme.colors.warning};
+  border-radius: 9px;
+  background: ${({ theme }) => theme.semantic.alertWarningBg};
+  color: ${({ theme }) => theme.semantic.alertWarningText};
+  font-size: 0.8rem;
+  line-height: 1.5;
+
+  p {
+    margin: 0;
+  }
+`;
+
+const ActionGuide = styled.div`
+  display: grid;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: 9px;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 0.8rem;
+  line-height: 1.45;
+
+  strong {
+    color: ${({ theme }) => theme.colors.text};
+  }
+`;
+
 const ButtonGroup = styled.div`
   display: flex;
   flex-wrap: wrap;
@@ -533,6 +608,14 @@ const ActionButton = styled.button`
     opacity: .55;
     cursor: not-allowed;
   }
+`;
+
+const SecondaryActionButton = styled(ActionButton)`
+  border: 1px solid ${({ $danger, theme }) =>
+    $danger ? theme.colors.error : theme.colors.border};
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ $danger, theme }) =>
+    $danger ? theme.colors.error : theme.colors.text};
 `;
 
 const LoadMoreWrap = styled.div`
@@ -614,11 +697,53 @@ function normalizeStatus(value) {
   return value === "교환중" ? "in_progress" : String(value || "requested");
 }
 
-function matchesStatusFilter(status, filter) {
-  const normalized = normalizeStatus(status);
+function getAdminStatusKey(group, todayKey) {
+  const normalized = normalizeStatus(group?.repStatus);
+  const visitDate = String(group?.visitDate || "");
+  const hasComparableVisitDate = /^\d{4}-\d{2}-\d{2}$/.test(visitDate);
+  const overdue =
+    ["requested", "scheduled"].includes(normalized) &&
+    hasComparableVisitDate &&
+    visitDate < todayKey;
+  return overdue ? "attention" : normalized;
+}
+
+function matchesStatusFilter(group, filter, todayKey) {
+  const statusKey = getAdminStatusKey(group, todayKey);
   if (!filter) return true;
-  if (filter === "active") return ["scheduled", "in_progress"].includes(normalized);
-  return normalized === filter;
+  if (filter === "active") {
+    return ["scheduled", "in_progress"].includes(normalizeStatus(group?.repStatus));
+  }
+  return statusKey === filter;
+}
+
+const EXCHANGE_PROGRESS_STEPS = [
+  "요청 접수",
+  "확인 대기",
+  "예약 확정",
+  "방문 예정",
+  "매장 확인",
+  "교환 완료",
+];
+
+function progressIndexForStatus(status) {
+  if (status === "completed") return 5;
+  if (status === "in_progress") return 4;
+  if (status === "scheduled") return 3;
+  return 1;
+}
+
+function nextActionGuide(status, isAttention) {
+  if (isAttention) {
+    return "방문일이 지난 요청입니다. 실제 방문 여부를 확인한 뒤 예약 확정·매장 확인·취소 중 맞는 처리를 진행하세요.";
+  }
+  if (status === "requested") return "예약 내용을 확인한 뒤 예약을 확정하거나 요청을 거절하세요.";
+  if (status === "scheduled") return "고객이 방문하면 실물 순도·중량 확인을 시작하고 ‘매장 확인 시작’으로 전환하세요.";
+  if (status === "in_progress") return "실측 결과와 교환 조건을 고객이 확인·동의한 뒤 교환 완료로 처리하세요.";
+  if (status === "completed") return "교환 완료된 기록입니다. 완료 상태는 다시 변경하지 않습니다.";
+  if (status === "canceled") return "취소된 기록입니다.";
+  if (status === "rejected") return "거절 사유가 해소된 경우에만 확인 대기로 복구하세요.";
+  return "현재 상태를 확인해 주세요.";
 }
 
 function latestItem(items) {
@@ -785,7 +910,9 @@ export default function ExchangeList() {
   // 고객의 일정 변경/취소가 발생해도 알림이나 새로고침 없이 즉시 반영됩니다.
   useEffect(() => {
     const constraints = [];
-    if (statusFilter === "active") {
+    if (statusFilter === "attention") {
+      constraints.push(where("repStatus", "in", ["requested", "scheduled"]));
+    } else if (statusFilter === "active") {
       constraints.push(where("repStatus", "in", ["scheduled", "in_progress"]));
     } else if (
       ["requested", "scheduled", "in_progress", "completed", "rejected", "canceled"].includes(
@@ -996,9 +1123,11 @@ export default function ExchangeList() {
 
   const filteredGroups = useMemo(() => {
     const term = qText.trim().toLowerCase();
-    if (!term) return groups;
 
     return groups.filter((group) => {
+      if (!matchesStatusFilter(group, statusFilter, todayKey)) return false;
+      if (!term) return true;
+
       const detail = details[group.id];
       const items = detail?.items || [];
       const latest = latestItem(items);
@@ -1008,6 +1137,7 @@ export default function ExchangeList() {
         group.visitDate,
         group.visitTime,
         group.repStatus,
+        getAdminStatusKey(group, todayKey),
         latest.name,
         latest.phone,
         latest.userId,
@@ -1027,7 +1157,7 @@ export default function ExchangeList() {
 
       return values.includes(term);
     });
-  }, [details, groups, qText]);
+  }, [details, groups, qText, statusFilter, todayKey]);
 
   const updateGroupStatus = async (groupId, status) => {
     if (!groupId || !status || busy[groupId]) return;
@@ -1044,7 +1174,11 @@ export default function ExchangeList() {
             ? { ...group, repStatus: status, updatedAt: new Date() }
             : group
         );
-        if (focusGroupId === groupId || matchesStatusFilter(status, statusFilter)) {
+        const changedGroup = updated.find((group) => group.id === groupId);
+        if (
+          focusGroupId === groupId ||
+          (changedGroup && matchesStatusFilter(changedGroup, statusFilter, todayKey))
+        ) {
           return updated;
         }
         return updated.filter((group) => group.id !== groupId);
@@ -1076,6 +1210,48 @@ export default function ExchangeList() {
     } finally {
       setBusy((current) => ({ ...current, [groupId]: false }));
     }
+  };
+
+  const handleMeasurementSaved = (groupId, result) => {
+    if (!groupId || !result) return;
+
+    setGroups((current) =>
+      current.map((group) =>
+        group.id === groupId
+          ? {
+              ...group,
+              finalRecognizedG: Number(result.finalRecognizedG || 0),
+              finalAppliedG: Number(result.finalAppliedG || 0),
+              finalBarsPlan: result.finalBarsPlan || group.finalBarsPlan || null,
+              finalFeeWon: Number(result.finalFeeWon || 0),
+              measurementStatus: String(result.measurementStatus || "draft"),
+              measurementUpdatedAt: new Date(),
+            }
+          : group
+      )
+    );
+
+    const measurementMap = new Map(
+      (Array.isArray(result.measurements) ? result.measurements : []).map((item) => [
+        String(item.id || ""),
+        item,
+      ])
+    );
+
+    setDetails((current) => {
+      const detail = current[groupId];
+      if (!detail?.items) return current;
+      return {
+        ...current,
+        [groupId]: {
+          ...detail,
+          items: detail.items.map((item) => {
+            const measurement = measurementMap.get(String(item.id || ""));
+            return measurement ? { ...item, ...measurement } : item;
+          }),
+        },
+      };
+    });
   };
 
   const updateBonusForm = (groupId, field, value) => {
@@ -1226,7 +1402,7 @@ export default function ExchangeList() {
           <div>
             <strong>오늘 예약 · {todayReservations.length}건</strong>
             <span>
-              {todayKey} · 확인 대기 {todayCounts.requested} · 확정 {todayCounts.scheduled} · 진행 {todayCounts.in_progress}
+              {todayKey} · 확인 대기 {todayCounts.requested} · 확정 {todayCounts.scheduled} · 매장 확인 {todayCounts.in_progress}
               {todayCounts.rescheduled > 0 ? ` · 변경 확인 ${todayCounts.rescheduled}` : ""}
             </span>
           </div>
@@ -1297,7 +1473,7 @@ export default function ExchangeList() {
           새로고침
         </ToolbarButton>
         <Summary>
-          {statusFilter ? `필터 ${statusFilter} · ` : ""}
+          {statusFilter ? `필터 ${FILTER_LABEL[statusFilter] || statusFilter} · ` : ""}
           표시 <strong>{searchDetailsPending ? "…" : filteredGroups.length}</strong>건 · 불러온 그룹{" "}
           <strong>{groups.length}</strong>건
         </Summary>
@@ -1312,6 +1488,8 @@ export default function ExchangeList() {
       ) : (
         filteredGroups.map((group) => {
           const status = normalizeStatus(group.repStatus);
+          const statusKey = getAdminStatusKey(group, todayKey);
+          const isAttention = statusKey === "attention";
           const detail = details[group.id] || {};
           const items = detail.items || [];
           const latest = latestItem(items);
@@ -1386,8 +1564,8 @@ export default function ExchangeList() {
                   )}
                   <Chip>{gramsText(totalG)}</Chip>
                   <Chip>{donText(totalG)}</Chip>
-                  <StatusBadge $status={status}>
-                    {displayReservationStatus(status, scheduleType)}
+                  <StatusBadge $status={statusKey}>
+                    {displayReservationStatus(statusKey, scheduleType)}
                   </StatusBadge>
                   <span aria-hidden>{expanded[group.id] ? "▲" : "▼"}</span>
                 </HeaderRight>
@@ -1400,6 +1578,38 @@ export default function ExchangeList() {
 
                   {detail.loaded && (
                     <>
+                      {!["canceled", "rejected"].includes(status) && (
+                        <StatusFlow aria-label="교환 진행 단계">
+                          {EXCHANGE_PROGRESS_STEPS.map((label, index) => {
+                            const progressIndex = progressIndexForStatus(status);
+                            return (
+                              <StatusStep
+                                key={label}
+                                $active={index <= progressIndex}
+                                $current={index === progressIndex}
+                              >
+                                {label}
+                              </StatusStep>
+                            );
+                          })}
+                        </StatusFlow>
+                      )}
+
+                      {isAttention && (
+                        <AttentionNotice role="status">
+                          <strong>방문 예정일이 지났지만 완료·취소 처리가 확인되지 않았습니다.</strong>
+                          <p>
+                            고객 화면도 같은 기록을 “방문일 경과 · 확인 필요”로 표시합니다. 실제 방문 여부를
+                            확인한 뒤 현재 상황에 맞는 상태로 처리하세요.
+                          </p>
+                        </AttentionNotice>
+                      )}
+
+                      <ActionGuide>
+                        <strong>다음 처리</strong>
+                        <span>{nextActionGuide(status, isAttention)}</span>
+                      </ActionGuide>
+
                       <MetaGrid>
                         <Field>
                           <strong>요청자</strong>
@@ -1454,7 +1664,7 @@ export default function ExchangeList() {
                       <SectionTitle>요청 핵심 요약</SectionTitle>
                       <OverviewGrid aria-label="금교환 요청 핵심 요약">
                         <OverviewCard $accent>
-                          <OverviewLabel>예상 순금</OverviewLabel>
+                          <OverviewLabel>예상 순금량</OverviewLabel>
                           <OverviewValue>{gramsText(totalG)}</OverviewValue>
                           <OverviewSub>{donText(totalG)}</OverviewSub>
                         </OverviewCard>
@@ -1476,26 +1686,26 @@ export default function ExchangeList() {
                         </OverviewCard>
 
                         <OverviewCard>
-                          <OverviewLabel>추가 필요 / 잔여</OverviewLabel>
+                          <OverviewLabel>부족 / 잔여 예상</OverviewLabel>
                           <OverviewValue>
                             {plan
                               ? plan.requiresTopUp || Number(plan.topUpGrams) > 0
-                                ? `+${gramsText(plan.topUpGrams)}`
-                                : gramsText(plan.leftoverGrams)
+                                ? `부족 ${gramsText(plan.topUpGrams)}`
+                                : `잔여 ${gramsText(plan.leftoverGrams)}`
                               : "계획 없음"}
                           </OverviewValue>
                           <OverviewSub>
                             {plan
                               ? plan.requiresTopUp || Number(plan.topUpGrams) > 0
-                                ? `추가 필요 · ${Number(plan.topUpDon || 0).toFixed(2)}돈`
-                                : `예상 잔여 · ${Number(plan.leftoverDon || 0).toFixed(2)}돈`
+                                ? `부족 예상 · ${Number(plan.topUpDon || 0).toFixed(2)}돈`
+                                : `잔여 예상 · ${Number(plan.leftoverDon || 0).toFixed(2)}돈`
                               : "현장 확인이 필요한 요청일 수 있습니다."}
                           </OverviewSub>
                         </OverviewCard>
 
                         <OverviewCard>
-                          <OverviewLabel>예약 / 진행 상태</OverviewLabel>
-                          <OverviewValue>{displayReservationStatus(status, scheduleType)}</OverviewValue>
+                          <OverviewLabel>현재 상태</OverviewLabel>
+                          <OverviewValue>{displayReservationStatus(statusKey, scheduleType)}</OverviewValue>
                           <OverviewSub>
                             {[group.visitDate, group.visitTime].filter(Boolean).join(" ") ||
                               "방문 일정 미정"}
@@ -1511,8 +1721,8 @@ export default function ExchangeList() {
                               <th>제품 종류</th>
                               <th>요청 수량</th>
                               <th>교환 유형</th>
-                              <th>상태</th>
-                              <th>환산 중량</th>
+                              <th>처리 상태</th>
+                              <th>예상 순금량</th>
                               <th>환산 기준</th>
                             </tr>
                           </thead>
@@ -1527,9 +1737,7 @@ export default function ExchangeList() {
                                     : item.exchangeType || "999.9골드바"}
                                 </td>
                                 <td>
-                                  {STATUS_LABEL[normalizeStatus(item.status)] ||
-                                    item.status ||
-                                    "-"}
+                                  {displayReservationStatus(statusKey, scheduleType)}
                                 </td>
                                 <td>{gramsText(item.finalWeight)}</td>
                                 <td>
@@ -1542,8 +1750,8 @@ export default function ExchangeList() {
                         </ItemsTable>
                       </TableWrap>
 
-                      <TotalSummary aria-label="환산 중량 합계">
-                        <strong>환산 중량 합계</strong>
+                      <TotalSummary aria-label="예상 순금량 합계">
+                        <strong>예상 순금량 합계</strong>
                         <Chip>{gramsText(totalG)}</Chip>
                         <Chip>{donText(totalG)}</Chip>
                       </TotalSummary>
@@ -1604,14 +1812,14 @@ export default function ExchangeList() {
                           </span>
                           {plan.requiresTopUp || Number(plan.topUpGrams) > 0 ? (
                             <NoticeCard>
-                              <p><strong>추가 교환 선택</strong></p>
+                              <p><strong>부족 예상</strong></p>
                               <p>
                                 고객 예상 순금: {gramsText(planBasisG)} / {(planBasisG / DON_TO_GRAMS).toFixed(2)}돈
                               </p>
                               <p>
-                                추가 필요: <strong>+{gramsText(plan.topUpGrams)} / {Number(plan.topUpDon || 0).toFixed(2)}돈</strong>
+                                부족 예상: <strong>{gramsText(plan.topUpGrams)} / {Number(plan.topUpDon || 0).toFixed(2)}돈</strong>
                               </p>
-                              <p>방문 시 실측 후 실제 추가량과 당일 순금 판매시세 기준 금액을 최종 안내하세요.</p>
+                              <p>방문 시 실측 후 실제 부족량과 당일 적용 기준을 확인한 뒤 고객 동의 후 확정하세요.</p>
                             </NoticeCard>
                           ) : (
                             <span>
@@ -1730,6 +1938,25 @@ export default function ExchangeList() {
                         </BonusCard>
                       )}
 
+                      {["in_progress", "completed"].includes(status) && (
+                        <StoreMeasurementPanel
+                          group={group}
+                          items={items}
+                          disabled={disabled}
+                          readOnly={status === "completed"}
+                          onSaved={(result) => handleMeasurementSaved(group.id, result)}
+                        />
+                      )}
+
+                      {status === "in_progress" && group.measurementStatus !== "confirmed" && (
+                        <NoticeCard>
+                          <strong>교환 완료 전 확인</strong>
+                          <p>
+                            실측 결과와 최종 골드바·공임을 저장하고 고객 동의를 확정해야 교환 완료 처리가 가능합니다.
+                          </p>
+                        </NoticeCard>
+                      )}
+
                       <ButtonGroup>
                         {status === "requested" && (
                           <>
@@ -1741,14 +1968,15 @@ export default function ExchangeList() {
                             >
                               {scheduleType === "rescheduled" ? "변경 예약 확정" : "예약 확정"}
                             </ActionButton>
-                            <ActionButton
+                            <SecondaryActionButton
+                              $danger
                               disabled={disabled}
                               onClick={() =>
                                 updateGroupStatus(group.id, "rejected")
                               }
                             >
-                              {scheduleType === "rescheduled" ? "변경 요청 거절" : "거절"}
-                            </ActionButton>
+                              {scheduleType === "rescheduled" ? "변경 요청 거절" : "요청 거절"}
+                            </SecondaryActionButton>
                           </>
                         )}
 
@@ -1760,37 +1988,41 @@ export default function ExchangeList() {
                                 updateGroupStatus(group.id, "in_progress")
                               }
                             >
-                              진행 중
+                              매장 확인 시작
                             </ActionButton>
-                            <ActionButton
+                            <SecondaryActionButton
+                              $danger
                               disabled={disabled}
                               onClick={() =>
                                 updateGroupStatus(group.id, "canceled")
                               }
                             >
-                              취소
-                            </ActionButton>
+                              예약 취소
+                            </SecondaryActionButton>
                           </>
                         )}
 
                         {status === "in_progress" && (
                           <>
                             <ActionButton
-                              disabled={disabled}
+                              disabled={disabled || group.measurementStatus !== "confirmed"}
                               onClick={() =>
                                 updateGroupStatus(group.id, "completed")
                               }
                             >
-                              완료
+                              {group.measurementStatus === "confirmed"
+                                ? "교환 완료 확정"
+                                : "실측·동의 확인 필요"}
                             </ActionButton>
-                            <ActionButton
+                            <SecondaryActionButton
+                              $danger
                               disabled={disabled}
                               onClick={() =>
                                 updateGroupStatus(group.id, "canceled")
                               }
                             >
-                              취소
-                            </ActionButton>
+                              처리 취소
+                            </SecondaryActionButton>
                           </>
                         )}
 

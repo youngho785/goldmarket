@@ -15,7 +15,7 @@ const Summary = styled.div`
   flex-wrap: wrap;
   align-items: center;
   gap: 9px 13px;
-  margin-bottom: 20px;
+  margin-bottom: ${({ $compact }) => ($compact ? "12px" : "20px")};
   color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
@@ -37,11 +37,11 @@ const SummaryText = styled.span`
 
 const Grid = styled.div`
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: ${({ $preview }) => ($preview ? "1fr" : "repeat(3, minmax(0, 1fr))")};
+  gap: ${({ $compact, $preview }) => ($preview ? "0" : $compact ? "9px" : "14px")};
 
   @media (max-width: 900px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: ${({ $preview }) => ($preview ? "1fr" : "repeat(2, minmax(0, 1fr))")};
   }
 
   @media (max-width: 620px) {
@@ -52,10 +52,15 @@ const Grid = styled.div`
 const ReviewCard = styled.article`
   display: flex;
   flex-direction: column;
-  min-height: 220px;
-  padding: 22px;
+  min-height: 0;
+  padding: ${({ $compact, $preview }) => ($preview && $compact ? "9px 11px" : $preview ? "14px 16px" : $compact ? "14px" : "18px")};
   border: 1px solid ${({ theme }) => theme.colors.border};
   background: ${({ theme }) => theme.colors.surface};
+
+  @media (max-width: 620px) {
+    padding: ${({ $compact, $preview }) =>
+      $preview && $compact ? "9px 11px" : $preview ? "14px 16px" : $compact ? "14px" : "16px"};
+  }
 `;
 
 const CardHead = styled.div`
@@ -63,19 +68,19 @@ const CardHead = styled.div`
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  margin-bottom: 20px;
+  margin-bottom: ${({ $compact, $preview }) => ($compact && $preview ? "6px" : $compact || $preview ? "10px" : "12px")};
 `;
 
 const CardStars = styled(Stars)`
-  font-size: 0.92rem;
+  font-size: ${({ $compact }) => ($compact ? "0.84rem" : "0.92rem")};
 `;
 
 const Verified = styled.span`
   flex: 0 0 auto;
-  padding: 5px 8px;
+  padding: ${({ $compact }) => ($compact ? "4px 7px" : "5px 8px")};
   border: 1px solid ${({ theme }) => theme.colors.secondary};
   color: ${({ theme }) => theme.colors.secondaryDark};
-  font-size: 0.67rem;
+  font-size: ${({ $compact }) => ($compact ? "0.62rem" : "0.67rem")};
   font-weight: 850;
   white-space: nowrap;
 `;
@@ -84,9 +89,18 @@ const Comment = styled.blockquote`
   flex: 1;
   margin: 0;
   color: ${({ theme }) => theme.colors.text};
-  font-size: 0.96rem;
-  line-height: 1.72;
+  font-size: ${({ $compact, $preview }) => ($compact && $preview ? "0.76rem" : $compact || $preview ? "0.8rem" : "0.96rem")};
+  line-height: ${({ $compact, $preview }) => ($compact && $preview ? "1.48" : $compact || $preview ? "1.55" : "1.65")};
   word-break: keep-all;
+
+  ${({ $preview }) =>
+    $preview &&
+    `
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      overflow: hidden;
+    `}
 `;
 
 const ReviewMeta = styled.div`
@@ -94,8 +108,8 @@ const ReviewMeta = styled.div`
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  margin-top: 22px;
-  padding-top: 13px;
+  margin-top: ${({ $compact }) => ($compact ? "12px" : "14px")};
+  padding-top: ${({ $compact }) => ($compact ? "9px" : "11px")};
   border-top: 1px solid ${({ theme }) => theme.colors.border};
   color: ${({ theme }) => theme.colors.textSecondary};
   font-size: 0.76rem;
@@ -106,7 +120,7 @@ const ReviewMeta = styled.div`
 `;
 
 const Empty = styled.div`
-  padding: clamp(30px, 5vw, 52px);
+  padding: clamp(24px, 4vw, 40px);
   border: 1px solid ${({ theme }) => theme.colors.border};
   background: ${({ theme }) => theme.colors.surface};
   text-align: center;
@@ -153,7 +167,12 @@ function normalizeRating(value) {
   return Math.min(5, Math.max(1, Math.round(number)));
 }
 
-export default function GoldExchangeReviewList({ limitCount = 6 }) {
+export default function GoldExchangeReviewList({
+  limitCount = 6,
+  compact = false,
+  showSummary = true,
+  preview = false,
+}) {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -229,54 +248,59 @@ export default function GoldExchangeReviewList({ limitCount = 6 }) {
 
   return (
     <>
-      <Summary
-        aria-label={`공개 교환 후기 ${reviews.length}건, 평균 ${average.toFixed(
-          1
-        )}점`}
-      >
-        <Score>{average.toFixed(1)}</Score>
+      {showSummary && (
+        <Summary
+          $compact={compact}
+          aria-label={`공개 교환 후기 ${reviews.length}건, 평균 ${average.toFixed(
+            1
+          )}점`}
+        >
+          <Score>{average.toFixed(1)}</Score>
 
-        <Stars aria-hidden="true">
-          {"★".repeat(roundedAverage)}
-          {"☆".repeat(5 - roundedAverage)}
-        </Stars>
+          <Stars aria-hidden="true">
+            {"★".repeat(roundedAverage)}
+            {"☆".repeat(5 - roundedAverage)}
+          </Stars>
 
-        <SummaryText>
-          최근 공개된 교환 완료 후기 {reviews.length}건
-        </SummaryText>
-      </Summary>
+          <SummaryText>
+            최근 공개된 교환 완료 후기 {reviews.length}건
+          </SummaryText>
+        </Summary>
+      )}
 
-      <Grid>
+      <Grid $compact={compact} $preview={preview}>
         {reviews.map((review) => {
           const rating = normalizeRating(review.rating);
           const formattedDate = formatDate(review.createdAt);
 
           return (
-            <ReviewCard key={review.id}>
-              <CardHead>
-                <CardStars aria-label={`평점 ${rating}점`}>
+            <ReviewCard key={review.id} $compact={compact} $preview={preview}>
+              <CardHead $compact={compact} $preview={preview}>
+                <CardStars $compact={compact} aria-label={`평점 ${rating}점`}>
                   {"★".repeat(rating)}
                   {"☆".repeat(5 - rating)}
                 </CardStars>
 
                 {review.verified === true && (
-                  <Verified>교환 완료 확인</Verified>
+                  <Verified $compact={compact}>교환 완료 확인</Verified>
                 )}
               </CardHead>
 
-              <Comment>
+              <Comment $compact={compact} $preview={preview}>
                 “{String(review.comment || "").trim()}”
               </Comment>
 
-              <ReviewMeta>
-                <span>
-                  {review.reviewerLabel || "교환 완료 고객"}
-                </span>
+              {!preview && (
+                <ReviewMeta $compact={compact}>
+                  <span>
+                    {review.reviewerLabel || "교환 완료 고객"}
+                  </span>
 
-                {formattedDate && (
-                  <time>{formattedDate}</time>
-                )}
-              </ReviewMeta>
+                  {formattedDate && (
+                    <time>{formattedDate}</time>
+                  )}
+                </ReviewMeta>
+              )}
             </ReviewCard>
           );
         })}

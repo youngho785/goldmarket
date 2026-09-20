@@ -35,7 +35,9 @@ import { auth } from "@/firebase/firebase";
 import { isAndroid } from "@/platform/runtime";
 import LandingPage from "@/pages/LandingPage";
 import AppHome from "@/pages/AppHome";
+import { useAuthContext } from "@/context/AuthContext";
 import { captureOperationalError } from "@/monitoring/operationalMonitoring";
+import { buildVerifyEmailPath } from "@/lib/authReturn";
 
 function isDynamicImportLoadError(error) {
   const message = String(
@@ -116,6 +118,7 @@ const safeLazy = (importer, namedKey) =>
 
 const About = lazy(() => import("@/pages/About"));
 const GoldPrice = lazy(() => import("@/pages/GoldPrice"));
+const GoldValue = lazy(() => import("@/pages/GoldValue"));
 const GoldToGoldIntro = lazy(() => import("@/pages/GoldToGoldIntro"));
 const Profile = lazy(() => import("@/pages/Profile"));
 const Settings = lazy(() => import("@/pages/Settings"));
@@ -565,7 +568,27 @@ function AndroidBackButtonBridge() {
 }
 
 function PlatformHome() {
-  return isAndroid ? <AppHome /> : <LandingPage />;
+  const { user, loading, isEmailVerified } = useAuthContext() || {};
+
+  if (loading) return null;
+  if (user && !isEmailVerified) {
+    return <Navigate to={buildVerifyEmailPath("/")} replace />;
+  }
+  if (isAndroid || user) return <AppHome />;
+  return <LandingPage />;
+}
+
+function MyGoldRoute({ alerts = false }) {
+  const { user, loading, isEmailVerified } = useAuthContext() || {};
+  const location = useLocation();
+
+  if (loading) return null;
+  if (user && !isEmailVerified) {
+    const returnTo = `${location.pathname}${location.search}${location.hash}` || "/my-gold";
+    return <Navigate to={buildVerifyEmailPath(returnTo)} replace />;
+  }
+
+  return alerts ? <MyGoldAlerts /> : <MyGoldVault />;
 }
 
 function RootShell() {
@@ -589,22 +612,23 @@ const router = createBrowserRouter([
       { path: "/", element: <PlatformHome /> },
       { path: "/about", element: <About /> },
       { path: "/gold-price", element: <GoldPrice /> },
+      { path: "/gold-value", element: <GoldValue /> },
       { path: "/gold-to-gold", element: <GoldToGoldIntro /> },
       { path: "/goldbar-fee", element: <GoldbarFee /> },
       { path: "/stores", element: <Stores /> },
       { path: "/gold-exchange", element: <GoldExchange /> },
       { path: "/reviews", element: <Reviews /> },
       { path: "/quiz/gold-bonus", element: <QuizGoldBonus /> },
-      { path: "/my-gold", element: <MyGoldVault /> },
-      { path: "/my-gold/items", element: <MyGoldVault /> },
-      { path: "/my-gold/trend", element: <MyGoldVault /> },
-      { path: "/my-gold/alerts", element: <MyGoldAlerts /> },
+      { path: "/my-gold", element: <MyGoldRoute /> },
+      { path: "/my-gold/items", element: <MyGoldRoute /> },
+      { path: "/my-gold/trend", element: <MyGoldRoute /> },
+      { path: "/my-gold/alerts", element: <MyGoldRoute alerts /> },
       { path: "/terms", element: <Terms /> },
       { path: "/privacy", element: <Privacy /> },
       { path: "/account-delete", element: <AccountDelete /> },
 
       {
-        element: <ProtectedRoute allowUnverified />,
+        element: <ProtectedRoute />,
         children: [
           { path: "/welcome", element: <WelcomeOnboarding /> },
         ],
@@ -651,6 +675,7 @@ const router = createBrowserRouter([
 
               { path: "statistics", element: <StatisticsDashboard /> },
               { path: "support", element: <AdminInquiries /> },
+              { path: "support/:postId", element: <InquiryDetail /> },
               { path: "audit-logs", element: <AdminAuditLogs /> },
               { path: "security", element: <AdminSecurity /> },
             ],

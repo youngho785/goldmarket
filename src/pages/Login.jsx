@@ -189,11 +189,8 @@ export default function Login() {
   const returningToGuestMyGoldImport = returnTo.startsWith("/my-gold?import=guest");
   const returningToMyGoldImport =
     returningToGuestMyGoldImport || returnTo.startsWith("/my-gold?import=calculator");
-  const returnAllowsUnverified =
-    returnTo === "/my-gold" ||
-    returnTo.startsWith("/my-gold?") ||
-    returnTo.startsWith("/my-gold/alerts") ||
-    returnTo.startsWith("/gold-exchange?mode=vault");
+  const returningToMyGold = returnTo === "/my-gold" || returnTo.startsWith("/my-gold?") || returnTo.startsWith("/my-gold/");
+  const returningToExchange = returnTo.startsWith("/gold-exchange");
   const registerPath = buildAuthPath("/register", returnTo);
   const registerState = {
     from: returnTo,
@@ -239,9 +236,11 @@ export default function Login() {
     try {
       const user = await login(email, password);
 
-      if (!user.emailVerified && !returnAllowsUnverified) {
-        setError("이메일 인증이 필요합니다. 메일함에서 인증을 완료해 주세요.");
-        setShowResend(true);
+      if (!user.emailVerified) {
+        navigate(
+          buildVerifyEmailPath(readMemberOnboardingPath("") || returnTo),
+          { replace: true }
+        );
       } else {
         navigate(resolvePostLoginPath(), { replace: true });
       }
@@ -285,9 +284,11 @@ export default function Login() {
       const user = await completeMfaSignIn(mfaChallenge, mfaCode);
       setMfaChallenge(null);
       setMfaCode("");
-      if (!user.emailVerified && !returnAllowsUnverified) {
-        setError("이메일 인증이 필요합니다. 메일함에서 인증을 완료해 주세요.");
-        setShowResend(true);
+      if (!user.emailVerified) {
+        navigate(
+          buildVerifyEmailPath(readMemberOnboardingPath("") || returnTo),
+          { replace: true }
+        );
       } else {
         navigate(resolvePostLoginPath(), { replace: true });
       }
@@ -324,10 +325,12 @@ export default function Login() {
         <Title>한국골드마켓에 오신것을 환영합니다.</Title>
         <SubTitle>
           {returningToGuestMyGoldImport
-            ? "로그인하면 지금 만든 MY GOLD 체험 기록를 그대로 저장합니다."
+            ? "로그인하면 지금 만든 MY GOLD 체험 기록을 그대로 저장합니다."
             : returningToMyGoldImport
               ? "로그인하면 방금 계산한 금을 MY GOLD에 이어서 저장합니다."
-              : "이메일 인증만으로 간편하게 가입"}
+              : returningToExchange
+                ? "로그인하면 계산 결과와 예약 흐름을 그대로 이어갑니다."
+                : "내 금의 오늘 가치를 기록하고 계속 이어보세요."}
         </SubTitle>
 
         <TopCtaWrap>
@@ -335,24 +338,26 @@ export default function Login() {
             to={registerPath}
             state={registerState}
             aria-label={
-              returningToGuestMyGoldImport
-                ? "회원가입하고 MY GOLD 체험 기록 저장하기"
-                : returningToMyGoldImport
-                  ? "회원가입하고 계산한 금 MY GOLD에 저장하기"
-                  : "회원가입하기 - 신규회원 최대 순금 0.03g 혜택"
+              returningToMyGold
+                ? "내 금 저장하고 시작하기"
+                : returningToExchange
+                  ? "계산 결과 이어서 예약하기"
+                  : "한국골드마켓 시작하기"
             }
           >
             <CtaLineMain>
-              {returningToMyGoldImport
-                ? "회원가입하고 MY GOLD에 저장하기"
-                : "회원가입하고 순금 0.01g 받기"}
+              {returningToMyGold
+                ? "내 금 저장하고 시작하기"
+                : returningToExchange
+                  ? "계산 결과 이어서 예약하기"
+                  : "한국골드마켓 시작하기"}
             </CtaLineMain>
             <CtaLineSub>
-              {returningToGuestMyGoldImport
-                ? "체험에서 추가·수정한 금을 그대로 저장하고 순금 0.01g 회원혜택도 확인해보세요"
-                : returningToMyGoldImport
-                  ? "계산한 금을 이어서 저장하고 순금 0.01g 회원혜택도 받아보세요"
-                  : "퀵퀴즈와 금시세 알림으로 최대 순금 0.03g까지"}
+              {returningToMyGold
+                ? "이메일과 비밀번호만으로 지금 만든 MY GOLD를 이어갑니다"
+                : returningToExchange
+                  ? "계산한 금과 선택한 일정은 다시 입력하지 않습니다"
+                  : "가입은 간단하게 · MY GOLD 기록과 가치 확인을 이어가세요"}
             </CtaLineSub>
           </LuxuryCta>
         </TopCtaWrap>

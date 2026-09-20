@@ -20,10 +20,16 @@
     "app-check:status": "node scripts/app-check-status.mjs",
     "deploy": "firebase deploy --only hosting",
     "android:prepare": "npm run build && npx cap sync android",
-    "test:e2e:setup": "npm --prefix tests/e2e run setup",
-    "test:e2e": "npm --prefix tests/e2e test",
-    "test:e2e:headed": "npm --prefix tests/e2e run test:headed",
-    "test:monitoring": "node --test scripts/test-operational-monitoring.mjs functions/scripts/test-monitoring-security.mjs"
+    "test:monitoring": "node --test scripts/test-operational-monitoring.mjs functions/scripts/test-monitoring-security.mjs",
+    "test:analytics": "node scripts/test-product-analytics.mjs",
+    "test:ux-upgrade": "node scripts/test-ux-upgrade.mjs",
+    "test:release": "node scripts/test-release-simple.mjs",
+    "test:auth-safety": "node scripts/test-auth-core-safety.mjs",
+    "test:smoke:setup": "npm --prefix tests/smoke run setup",
+    "test:smoke": "node scripts/run-smoke.mjs",
+    "test:smoke:headed": "node scripts/run-smoke.mjs --headed",
+    "test:mobile": "node scripts/run-mobile-smoke.mjs",
+    "test:mobile:headed": "node scripts/run-mobile-smoke.mjs --headed"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",

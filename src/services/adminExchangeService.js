@@ -16,6 +16,7 @@ const PAGE_SIZE_DEFAULT = 20;
 
 function normalizeStatusFilter(status) {
   const value = String(status || "").trim();
+  if (value === "attention") return ["requested", "scheduled"];
   if (value === "active") return ["scheduled", "in_progress"];
   if (
     ["requested", "scheduled", "in_progress", "completed", "rejected", "canceled"].includes(value)

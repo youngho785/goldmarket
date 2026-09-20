@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import styled from "styled-components";
 import { ChevronRight } from "lucide-react";
 import { getAuth, updateProfile as updateAuthProfile } from "firebase/auth";
-import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 import { useAuthContext } from "../context/AuthContext";
 import { fetchMyProfile, updateUserProfile } from "../services/userService";
@@ -421,6 +421,40 @@ const RewardError = styled.p`
   font-size: 0.9rem;
 `;
 
+
+const MyHub = styled.nav`
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+
+  @media (max-width: 520px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const MyHubLink = styled(Link)`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 64px;
+  padding: 12px 13px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 14px;
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
+  text-decoration: none;
+
+  &:hover {
+    border-color: ${({ theme }) => theme.colors.secondary};
+  }
+
+  > span { display: grid; gap: 3px; }
+  strong { color: ${({ theme }) => theme.colors.primary}; font-size: .9rem; }
+  small { color: ${({ theme }) => theme.colors.textSecondary}; font-size: .72rem; line-height: 1.4; }
+  svg { width: 17px; height: 17px; color: ${({ theme }) => theme.colors.secondaryDark}; }
+`;
 const SettingsShortcut = styled(Link)`
   display: flex;
   align-items: center;
@@ -521,7 +555,6 @@ export default function Profile() {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [, setUploadPct] = useState(0);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState("");
   const [photoStatus, setPhotoStatus] = useState("");
@@ -579,7 +612,7 @@ export default function Profile() {
           displayName: mergedDisplayName,
           nickname: data?.nickname || "",
           email: user.email || data?.email || "",
-          phone: data?.phone || "",
+          phone: formatPhone(data?.phone || ""),
           profileImage: data?.photoURL || data?.profileImage || "",
         };
 
@@ -853,21 +886,26 @@ export default function Profile() {
     const previewUrl = URL.createObjectURL(file);
     setPhotoPreviewUrl(previewUrl);
     setPhotoBusy(true);
-    setUploadPct(0);
     setPhotoStatus("선택한 사진을 준비하고 있습니다.");
     setMessage("");
     setError("");
 
     try {
-      let uploadFile = file;
+      // Android Photo Picker/모바일 브라우저의 임시 URI에 오래 의존하지 않도록
+      // 선택 직후 파일 바이트를 메모리 기반 File로 복사합니다.
+      const fileBytes = await file.arrayBuffer();
+      let uploadFile = new File([fileBytes], file.name || "profile-image", {
+        type: file.type || "application/octet-stream",
+        lastModified: file.lastModified || Date.now(),
+      });
 
       // 작은 이미지는 압축 시간을 쓰지 않고 바로 업로드합니다.
       // 큰 이미지만 프로필 용도에 맞게 가볍게 최적화합니다.
       const DIRECT_UPLOAD_MAX_BYTES = 2_500_000;
-      if (file.size > DIRECT_UPLOAD_MAX_BYTES) {
+      if (uploadFile.size > DIRECT_UPLOAD_MAX_BYTES) {
         setPhotoStatus("프로필 사진에 맞게 이미지를 최적화하고 있습니다.");
         try {
-          uploadFile = await compressImage(file, {
+          uploadFile = await compressImage(uploadFile, {
             maxW: 1024,
             maxH: 1024,
             targetMaxBytes: 700_000,
@@ -879,7 +917,6 @@ export default function Profile() {
             "[profile] 이미지 최적화 실패, 원본 업로드로 폴백:",
             compressError
           );
-          uploadFile = file;
         }
       }
 
@@ -890,23 +927,12 @@ export default function Profile() {
       const path = `profilePhotos/${user.uid}/${Date.now()}.${safeExt}`;
 
       const storageRef = ref(storage, path);
-      const task = uploadBytesResumable(storageRef, uploadFile, {
+      const uploadSnapshot = await uploadBytes(storageRef, uploadFile, {
         contentType: uploadFile.type,
         cacheControl: "private,max-age=31536000,immutable",
       });
 
-      task.on("state_changed", (snapshot) => {
-        if (snapshot.totalBytes > 0) {
-          const pct = Math.round(
-            (snapshot.bytesTransferred / snapshot.totalBytes) * 100
-          );
-          setUploadPct(pct);
-          setPhotoStatus(`프로필 사진 업로드 중 · ${pct}%`);
-        }
-      });
-
-      await task;
-      const url = await getDownloadURL(task.snapshot.ref);
+      const url = await getDownloadURL(uploadSnapshot.ref);
       setProfile((current) => ({ ...current, profileImage: url }));
       setPhotoPreviewUrl("");
       setPhotoStatus("새 프로필 사진이 준비되었습니다. 저장을 눌러 적용해 주세요.");
@@ -923,7 +949,6 @@ export default function Profile() {
       );
       setMessage("");
     } finally {
-      setUploadPct(0);
       setPhotoBusy(false);
       input.value = "";
     }
@@ -955,7 +980,8 @@ export default function Profile() {
     event.preventDefault();
     if (!user?.uid) return;
 
-    if (!validatePhone(profile.phone)) {
+    const normalizedPhone = formatPhone(profile.phone);
+    if (!validatePhone(normalizedPhone)) {
       setError("전화번호 형식을 확인해주세요.");
       return;
     }
@@ -973,25 +999,33 @@ export default function Profile() {
         nickname: canSetNicknameFirstTime
           ? profile.nickname || ""
           : initialNickname,
-        phone: profile.phone || "",
+        phone: normalizedPhone || "",
         photoURL: profile.profileImage || "",
         profileImage: profile.profileImage || "",
       });
 
-      if (auth.currentUser) {
-        await updateAuthProfile(auth.currentUser, {
-          displayName: profile.displayName || "",
-          photoURL: profile.profileImage || null,
-        });
-      }
+      const authUserToSync = auth.currentUser;
+      setProfile((current) => ({ ...current, phone: normalizedPhone }));
 
       if (canSetNicknameFirstTime) {
         setInitialNickname(profile.nickname || "");
       }
 
+      // Firestore 프로필 저장이 끝나면 사용자는 즉시 완료 상태를 봅니다.
+      // Firebase Auth의 displayName/photoURL 동기화는 보조 정보이므로
+      // 네트워크가 느려도 프로필 저장 화면을 붙잡지 않도록 백그라운드에서 동기화합니다.
       setMessage("프로필이 저장되었습니다.");
       setError("");
       setEditing(false);
+
+      if (authUserToSync) {
+        void updateAuthProfile(authUserToSync, {
+          displayName: profile.displayName || "",
+          photoURL: profile.profileImage || null,
+        }).catch((syncError) => {
+          console.warn("Auth 프로필 동기화 지연:", syncError?.message || syncError);
+        });
+      }
     } catch (saveError) {
       console.error(saveError);
       setError("저장 중 오류가 발생했습니다.");
@@ -1075,11 +1109,30 @@ export default function Profile() {
   return (
     <Container>
       <ProfileHero>
-        <ProfileHeroTitle>내 프로필</ProfileHeroTitle>
+        <ProfileHeroTitle>MY</ProfileHeroTitle>
         <ProfileHeroLead>
-          MY GOLD와 연결되는 MEMBER GOLD, 계정 정보, 금교환 혜택을 한곳에서 관리합니다.
+          MY GOLD, 교환 내역, MEMBER GOLD, 고객지원과 계정 설정을 한곳에서 관리합니다.
         </ProfileHeroLead>
       </ProfileHero>
+
+      <MyHub aria-label="MY 주요 메뉴">
+        <MyHubLink to="/my-exchanges">
+          <span><strong>예약·교환 내역</strong><small>진행 중 예약과 지난 교환 기록을 확인합니다.</small></span>
+          <ChevronRight aria-hidden="true" />
+        </MyHubLink>
+        <MyHubLink to="/support">
+          <span><strong>고객지원 · 1:1 문의</strong><small>문의 작성과 답변 상태를 확인합니다.</small></span>
+          <ChevronRight aria-hidden="true" />
+        </MyHubLink>
+        <MyHubLink to="/reviews">
+          <span><strong>교환 완료 고객 후기</strong><small>실제 교환 완료가 확인된 후기를 봅니다.</small></span>
+          <ChevronRight aria-hidden="true" />
+        </MyHubLink>
+        <MyHubLink to="/stores">
+          <span><strong>매장·이용 안내</strong><small>매장 위치, 이용 방법과 교환 정보를 확인합니다.</small></span>
+          <ChevronRight aria-hidden="true" />
+        </MyHubLink>
+      </MyHub>
 
       <Section>
         <RewardPanel aria-label="순금 적립 내역">

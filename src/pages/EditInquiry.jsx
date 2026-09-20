@@ -7,14 +7,33 @@ import { fetchPostById, updatePost } from "../services/supportService";
 const Card = styled.section`
   max-width: 680px;
   margin: 8px auto 28px;
-  padding: clamp(22px, 4vw, 34px);
+  padding: clamp(20px, 3vw, 30px);
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: ${({ theme }) => theme.radii.large};
   background: ${({ theme }) => theme.colors.surface};
   box-shadow: ${({ theme }) => theme.shadows.card};
+
+  > h1 {
+    margin: 0 0 14px;
+    font-size: clamp(1.45rem, 3vw, 2rem);
+    line-height: 1.3;
+  }
+
+  @media (max-width: 560px) {
+    padding: 18px 16px;
+  }
 `;
-const Form = styled.form`display: grid; gap: 16px;`;
-const Field = styled.label`display: grid; gap: 7px; font-weight: 750;`;
+const Form = styled.form`display: grid; gap: 14px;`;
+const Field = styled.label`
+  display: grid;
+  gap: 7px;
+  font-weight: 750;
+
+  textarea {
+    min-height: 112px;
+    resize: vertical;
+  }
+`;
 const Actions = styled.div`display: flex; gap: 8px; flex-wrap: wrap;`;
 const Error = styled.p`
   padding: 10px 12px;
@@ -84,7 +103,7 @@ export default function EditInquiry() {
         <Field>
           문의 내용
           <textarea
-            rows={8}
+            rows={5}
             value={content}
             onChange={(event) => setContent(event.target.value)}
             maxLength={5000}

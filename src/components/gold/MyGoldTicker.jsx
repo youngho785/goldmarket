@@ -139,7 +139,7 @@ function formatSignedPercent(value) {
 }
 
 export default function MyGoldTicker() {
-  const { user } = useAuthContext() || {};
+  const { memberUser: user } = useAuthContext() || {};
   const dashboard = useGoldVaultDashboard(user?.uid);
   const bonus = useBonusGoldBalance(user?.uid);
 
