@@ -347,6 +347,7 @@ export default function LandingPage() {
           <StoreMeta><span><MapPin size={14} aria-hidden /> 부산광역시 부산진구 골드테마길 21</span></StoreMeta>
           <Actions>
             <GoldButton to="/gold-exchange">예상 교환 확인 <ArrowRight size={15} aria-hidden /></GoldButton>
+            <TextLink to="/gold-to-gold">GOLD TO GOLD 이야기 <ArrowRight size={15} aria-hidden /></TextLink>
             <TextLink to="/stores">매장·교환절차 보기 <ArrowRight size={15} aria-hidden /></TextLink>
           </Actions>
         </ExchangeCopy>
