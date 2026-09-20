@@ -26,15 +26,22 @@ npm run dev
 
 ## 품질 검사
 
+기본 검증 순서는 다음과 같습니다.
+
 ```powershell
 npm run lint
 npm run build
-npm --prefix functions run lint
-npm --prefix functions run typecheck
-npm --prefix functions run test:policy
-npm run test:rules
+npm run test:release
 ```
 
+화면 변경이 있을 때는 변경 범위에 따라 필요한 smoke test를 추가합니다.
+
+```powershell
+npm run test:smoke
+npm run test:mobile
+```
+
+	est:release가 현재 기본 release gate입니다. 과거의 	ests/e2e 구조는 사용하지 않습니다.
 ## 예약 상태 원칙
 
 ```text
@@ -54,34 +61,58 @@ canceled/completed: 최종 상태, 복구하지 않음
 
 ## Android 준비
 
-웹 화면 변경을 Android 앱에 포함하려면 다음 명령으로 빌드와 Capacitor 동기화를 한 번에 실행합니다.
+웹 화면 변경을 Android 앱에 반영할 때는 먼저 빌드와 Capacitor 동기화를 실행합니다.
 
 ```powershell
+Set-Location C:\goldmarket
 npm run android:prepare
 ```
 
-그 후 Android Studio에서 APK/AAB를 빌드합니다.
+그 후 Debug APK가 필요하면 다음과 같이 빌드합니다.
 
+```powershell
+Set-Location C:\goldmarket\android
+.\gradlew.bat assembleDebug
+```
+
+Debug APK 경로:
+
+```text
+C:\goldmarket\android\app\build\outputs\apk\debug\app-debug.apk
+```
+
+Android 관련 변경은 필요한 경우 실제 기기에서도 확인합니다.
 ## 배포
 
-루트와 Functions 빌드를 먼저 확인합니다.
+배포 전에 관련 테스트를 완료합니다.
+
+운영 배포는 명시적으로 확인한 뒤 실제 변경된 대상만 선택적으로 수행합니다.
+
+프론트엔드만 변경한 경우:
 
 ```powershell
-npm run build
-cd functions
-npm run build
-cd ..
+firebase deploy --only hosting --project goldmarket-0
 ```
 
-전체 배포:
+Functions를 변경한 경우:
 
 ```powershell
-$env:FUNCTIONS_DISCOVERY_TIMEOUT="60"
-firebase deploy --only "hosting,functions,firestore:rules" --project goldmarket-0
+firebase deploy --only functions --project goldmarket-0
 ```
 
-Rules만 변경했을 때도 반드시 `firestore:rules`를 배포해야 합니다.
+Firestore Rules를 변경한 경우:
 
+```powershell
+firebase deploy --only firestore:rules --project goldmarket-0
+```
+
+Storage Rules를 변경한 경우:
+
+```powershell
+firebase deploy --only storage --project goldmarket-0
+```
+
+변경하지 않은 Functions나 Rules를 함께 배포하지 않습니다.
 ## 운영 주의
 
 - 완료확인서(`exchangeConfirmations`) 신규 생성 기능은 사용하지 않습니다.
