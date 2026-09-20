@@ -628,7 +628,7 @@ export default function Navbar() {
       return [
         { to: "/my-gold", label: "MY GOLD" },
         { to: "/gold-price", label: "금시세" },
-        { to: "/gold-exchange", label: "GOLD TO GOLD" },
+        { to: "/gold-exchange", label: "금교환" },
         { to: "/my-exchanges", label: "교환내역", badge: formatBadge(exchangeCount) },
       ];
     }
@@ -636,7 +636,7 @@ export default function Navbar() {
     return [
       { to: "/gold-price", label: "금시세" },
       { to: "/my-gold", label: "MY GOLD" },
-      { to: "/gold-exchange", label: "GOLD TO GOLD" },
+      { to: "/gold-exchange", label: "금교환" },
       { to: "/stores", label: "매장안내" },
     ];
   }, [exchangeCount, isMember]);
