@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import styled from "styled-components";
 import {
   ArrowRight,
-  Gem,
   MapPin,
   ReceiptText,
   Scale,
@@ -72,22 +71,6 @@ const HeroLead = styled.p`
   word-break: keep-all;
 
   strong { color: ${({ theme }) => theme.colors.primary}; }
-`;
-
-const HeroPrinciple = styled.div`
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 17px;
-  padding: 8px 11px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 999px;
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: .68rem;
-  font-weight: 850;
-
-  svg { width: 15px; height: 15px; color: ${({ theme }) => theme.colors.secondaryDark}; }
 `;
 
 const FlowStrip = styled.section`
@@ -295,29 +278,6 @@ const ReviewWrap = styled.div`
   max-width: 980px;
 `;
 
-const Final = styled.section`
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 20px;
-  align-items: center;
-  margin-top: 18px;
-  padding: clamp(22px, 3vw, 30px);
-  border-radius: 20px;
-  background: ${({ theme }) => theme.colors.surfaceAlt};
-
-  h2 {
-    margin: 0;
-    color: ${({ theme }) => theme.colors.primary};
-    font-family: ${({ theme }) => theme.fonts.heading};
-    font-size: clamp(1.35rem, 2.5vw, 1.9rem);
-    letter-spacing: -.04em;
-  }
-
-  p { margin: 7px 0 0; color: ${({ theme }) => theme.colors.textSecondary}; font-size: .72rem; line-height: 1.5; }
-
-  @media (max-width: 680px) { grid-template-columns: 1fr; }
-`;
-
 export default function LandingPage() {
   useEffect(() => {
     trackProductEventOncePerSession("landing_view", {}, "landing-view");
@@ -336,7 +296,6 @@ export default function LandingPage() {
             <strong> MY GOLD는 내가 가진 금을 기록하고 가치의 변화를 확인하는 개인 기록 공간입니다.</strong>
             실물 금을 보관·예치하는 서비스가 아닙니다.
           </HeroLead>
-          <HeroPrinciple><Gem aria-hidden /> 기록 → 가치 확인 → 필요할 때 GOLD TO GOLD</HeroPrinciple>
         </HeroCopy>
 
         <QuickGoldValueCalculator source="landing" />
@@ -398,14 +357,6 @@ export default function LandingPage() {
           <VerifiedReviewSection compact showInquiryAction={false} />
         </ReviewWrap>
       </CompactSection>
-
-      <Final aria-labelledby="final-title">
-        <div>
-          <h2 id="final-title">내가 가진 금을 오늘부터 기록해 보세요.</h2>
-          <p>오늘 가치와 변화를 확인하고, 실제 교환이 필요해지는 순간 GOLD TO GOLD로 이어갈 수 있습니다.</p>
-        </div>
-        <GoldButton to="/my-gold">MY GOLD 시작하기 <ArrowRight size={16} aria-hidden /></GoldButton>
-      </Final>
     </Page>
   );
 }
