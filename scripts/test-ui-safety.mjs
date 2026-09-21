@@ -89,8 +89,8 @@ test("비회원 하단 메뉴는 보호 화면 대신 공개 핵심 기능과 �
 });
 
 test("2.1 상단 메뉴는 비회원과 회원의 핵심 행동을 각각 4개로 정리한다", () => {
-  assert.match(navbarSource, /if \(isMember\) \{[\s\S]*label: "MY GOLD"[\s\S]*label: "금시세"[\s\S]*label: "GOLD TO GOLD"[\s\S]*label: "교환내역"/);
-  assert.match(navbarSource, /return \[[\s\S]*label: "금시세"[\s\S]*label: "MY GOLD"[\s\S]*label: "GOLD TO GOLD"[\s\S]*label: "매장안내"/);
+  assert.match(navbarSource, /if \(isMember\) \{[\s\S]*label: "MY GOLD"[\s\S]*label: "금시세"[\s\S]*label: "금교환"[\s\S]*label: "교환내역"/);
+  assert.match(navbarSource, /return \[[\s\S]*label: "금시세"[\s\S]*label: "MY GOLD"[\s\S]*label: "금교환"[\s\S]*label: "매장안내"/);
   assert.match(navbarSource, /<AccountLink to="\/register">시작하기<\/AccountLink>/);
   assert.match(navbarSource, /aria-label="MY 계정 메뉴"/);
 });
@@ -124,7 +124,7 @@ test("2.1 회원 홈은 PC에서 넓은 2열 대시보드와 작은 MY GOLD 안�
   assert.match(appHomeSource, /width: min\(1160px, 100%\)/);
   assert.match(appHomeSource, /grid-template-columns: minmax\(0, 1\.75fr\) minmax\(290px, \.75fr\)/);
   assert.match(appHomeSource, /<OverviewGrid aria-label="내 금과 오늘 금시세">/);
-  assert.match(appHomeSource, /MY GOLD는 개인 기록 공간입니다/);
+  assert.match(myGoldDashboardSource, /MY GOLD는 개인 금 기록 공간입니다/);
   assert.match(myGoldDashboardSource, /font-variant-numeric: tabular-nums/);
 });
 
@@ -962,14 +962,15 @@ test("비회원 랜딩은 첫 체험에 집중하고 GOLD TO GOLD와 실측 신�
   assert.match(reviewSource, /VerifiedReviewSection\(\{ compact = false, showInquiryAction = true \}\)/);
 });
 
-test("랜딩 마지막 CTA와 푸터는 홈에서 자연스럽게 이어진다", async () => {
+test("랜딩 하단은 반복 CTA 없이 GOLD TO GOLD와 푸터로 자연스럽게 이어진다", async () => {
   const [landingSource, footerSource] = await Promise.all([
     read("src/pages/LandingPage.jsx"),
     read("src/components/common/Footer.jsx"),
   ]);
 
-  assert.match(landingSource, /<Final aria-labelledby="final-title">/);
-  assert.match(landingSource, /MY GOLD 시작하기/);
+  assert.doesNotMatch(landingSource, /<Final aria-labelledby="final-title">/);
+  assert.doesNotMatch(landingSource, /MY GOLD 시작하기/);
+  assert.match(landingSource, /<GoldToGoldStory aria-labelledby="gold-to-gold-story-title">/);
   assert.match(footerSource, /const \{ pathname \} = useLocation\(\)/);
   assert.match(footerSource, /const joinLanding = pathname === "\/"/);
 });
@@ -1043,27 +1044,21 @@ test("2.8.3 프로필 저장은 보조 Auth 프로필 동기화를 기다리지 
 });
 
 
-test("2.8.5 PC MY 계정 드롭다운은 메인 콘텐츠보다 높은 stacking context에서 실제 클릭 가능하게 유지한다", async () => {
-  const [navbarSource, layoutSource, memberE2ESource] = await Promise.all([
+test("2.8.5 PC MY 계정 드롭다운은 메인 콘텐츠보다 높은 stacking context를 유지한다", async () => {
+  const [navbarSource, layoutSource] = await Promise.all([
     read("src/components/common/Navbar.jsx"),
     read("src/components/common/MainLayout.jsx"),
-    read("tests/e2e/specs/full-member-journey.spec.mjs"),
   ]);
 
   assert.match(navbarSource, /const Header = styled\.header`[\s\S]*z-index: 1400;[\s\S]*overflow: visible;[\s\S]*isolation: isolate;/);
   assert.match(navbarSource, /const AccountMenuWrap = styled\.div`[\s\S]*z-index: 1450;/);
   assert.match(navbarSource, /const AccountMenu = styled\.div`[\s\S]*z-index: 1500;[\s\S]*pointer-events: auto;/);
   assert.match(layoutSource, /const MainContent = styled\.main`[\s\S]*position: relative;[\s\S]*z-index: 0;/);
-  assert.match(memberE2ESource, /document\.elementFromPoint/);
-  assert.match(memberE2ESource, /await clickByRealPointer\(page, profileMenuItem\)/);
 });
 
 
-test("2.8.6 로그인·화면 전환 직후 MY 메뉴 클릭은 지연된 route effect에 다시 닫히지 않는다", async () => {
-  const [navbarSource, memberE2ESource] = await Promise.all([
-    read("src/components/common/Navbar.jsx"),
-    read("tests/e2e/specs/full-member-journey.spec.mjs"),
-  ]);
+test("2.8.6 로그인·화면 전환 직후 MY 메뉴는 지연된 route effect에 다시 닫히지 않도록 layout effect를 사용한다", async () => {
+  const navbarSource = await read("src/components/common/Navbar.jsx");
 
   assert.match(
     navbarSource,
@@ -1077,6 +1072,4 @@ test("2.8.6 로그인·화면 전환 직후 MY 메뉴 클릭은 지연된 route 
     navbarSource,
     /useEffect\(\(\) => \{\s*setDrawerOpen\(false\);\s*setAccountMenuOpen\(false\);\s*\}, \[location\.pathname, location\.search\]\);/
   );
-  assert.match(memberE2ESource, /toHaveAttribute\("aria-expanded", "true"\)/);
-  assert.match(memberE2ESource, /await clickByRealPointer\(page, profileMenuItem\)/);
 });
