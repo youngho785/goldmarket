@@ -3,6 +3,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import styled from "styled-components";
 import LivingGoldCompanion from "@/components/common/LivingGoldCompanion";
+import GuideLinks from "@/components/guide/GuideLinks";
 import { livingGoldJourney } from "@/styles/livingGoldMotion";
 import {
   ArrowRight,
@@ -939,6 +940,11 @@ export default function GoldToGoldIntro() {
           골드바 제작 공임 확인 <ArrowRight size={13} aria-hidden />
         </TinyLink>
       </CTA>
+
+      <GuideLinks
+        title="교환 전에 함께 보기"
+        slugs={["multiple-gold-pure-weight", "broken-jewelry-value", "busan-gold-exchange"]}
+      />
     </Page>
   );
 }

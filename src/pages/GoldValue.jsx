@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 
 import QuickGoldValueCalculator from "@/components/gold/QuickGoldValueCalculator";
+import GuideLinks from "@/components/guide/GuideLinks";
 
 const Page = styled.div`
   display: grid;
@@ -116,6 +117,11 @@ export default function GoldValue() {
           <Link to="/gold-exchange">GOLD TO GOLD <ArrowRight size={13} aria-hidden /></Link>
         </Links>
       </Guide>
+
+      <GuideLinks
+        title="계산 전에 함께 보기"
+        slugs={["gold-don-gram", "18k-one-don", "14k-one-don"]}
+      />
     </Page>
   );
 }

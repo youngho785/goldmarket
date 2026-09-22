@@ -321,6 +321,7 @@ export default function Footer() {
         <CompactInner>
           <strong>한국골드마켓</strong>
           <nav aria-label="하단 안내">
+            <Link to="/guide">금 정보</Link>
             <Link to="/support/new">1:1 문의</Link>
             <Link to="/terms">이용약관</Link>
             <Link to="/privacy">개인정보처리방침</Link>
@@ -357,6 +358,7 @@ export default function Footer() {
             <Link to="/gold-to-gold">GOLD TO GOLD</Link>
             <Link to="/gold-exchange">금교환 계산·예약</Link>
             <Link to="/goldbar-fee">골드바 공임</Link>
+            <Link to="/guide">금 정보 가이드</Link>
           </LinkList>
         </Col>
 

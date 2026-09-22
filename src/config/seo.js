@@ -1,3 +1,5 @@
+import { GUIDE_SEO_ROUTES } from "../data/goldGuides.js";
+
 export const SITE_URL = "https://koreagoldmarket.com";
 export const SITE_NAME = "한국골드마켓";
 export const SITE_ALT_NAMES = ["Korea Gold Market", "koreagoldmarket.com"];
@@ -124,6 +126,7 @@ export const SEO_ROUTES = {
     ogDescription: "한국골드마켓 개인정보처리방침입니다.",
     imageAlt: "한국골드마켓 개인정보처리방침",
   },
+  ...GUIDE_SEO_ROUTES,
 };
 
 export const INDEXABLE_PATHS = Object.keys(SEO_ROUTES);
@@ -234,7 +237,11 @@ export function buildRouteSchema(pathname) {
   if (!seo.indexable) return null;
 
   const webpage = {
-    "@type": seo.aboutPage ? "AboutPage" : "WebPage",
+    "@type": seo.aboutPage
+      ? "AboutPage"
+      : seo.collectionPage
+        ? "CollectionPage"
+        : "WebPage",
     "@id": `${seo.canonical}#webpage`,
     url: seo.canonical,
     name: seo.title,
@@ -252,6 +259,34 @@ export function buildRouteSchema(pathname) {
     webpage.mainEntity = { "@id": OPERATOR_ID };
   }
 
+
+  if (seo.article) {
+    const articleId = `${seo.canonical}#article`;
+    webpage.mainEntity = { "@id": articleId };
+
+    return {
+      "@context": "https://schema.org",
+      "@graph": [
+        webpage,
+        {
+          "@type": "Article",
+          "@id": articleId,
+          headline: seo.article.headline || seo.title,
+          description: seo.description,
+          articleSection: seo.article.section || "금 정보",
+          inLanguage: "ko-KR",
+          mainEntityOfPage: { "@id": `${seo.canonical}#webpage` },
+          author: {
+            "@type": "Organization",
+            name: SITE_NAME,
+            url: `${SITE_URL}/`,
+          },
+          publisher: { "@id": OPERATOR_ID },
+          about: { "@id": BRAND_ID },
+        },
+      ],
+    };
+  }
   if (seo.service) {
     const serviceId = `${seo.canonical}#service`;
     webpage.mainEntity = { "@id": serviceId };

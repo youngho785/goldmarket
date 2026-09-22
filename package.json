@@ -17,6 +17,7 @@
     "test:rules": "firebase emulators:exec --only firestore,storage \"npm --prefix tests/rules test\"",
     "test:app-check": "node scripts/test-app-check-policy.mjs",
     "test:ui-safety": "node scripts/test-ui-safety.mjs",
+    "test:seo-guides": "node scripts/test-seo-guides.mjs",
     "app-check:status": "node scripts/app-check-status.mjs",
     "deploy": "firebase deploy --only hosting",
     "android:prepare": "npm run build && npx cap sync android",

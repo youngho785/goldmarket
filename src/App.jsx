@@ -119,6 +119,8 @@ const safeLazy = (importer, namedKey) =>
 const About = lazy(() => import("@/pages/About"));
 const GoldPrice = lazy(() => import("@/pages/GoldPrice"));
 const GoldValue = lazy(() => import("@/pages/GoldValue"));
+const GuideIndex = lazy(() => import("@/pages/GuideIndex"));
+const GuideArticle = lazy(() => import("@/pages/GuideArticle"));
 const GoldToGoldIntro = lazy(() => import("@/pages/GoldToGoldIntro"));
 const Profile = lazy(() => import("@/pages/Profile"));
 const Settings = lazy(() => import("@/pages/Settings"));
@@ -613,6 +615,8 @@ const router = createBrowserRouter([
       { path: "/about", element: <About /> },
       { path: "/gold-price", element: <GoldPrice /> },
       { path: "/gold-value", element: <GoldValue /> },
+      { path: "/guide", element: <GuideIndex /> },
+      { path: "/guide/:slug", element: <GuideArticle /> },
       { path: "/gold-to-gold", element: <GoldToGoldIntro /> },
       { path: "/goldbar-fee", element: <GoldbarFee /> },
       { path: "/stores", element: <Stores /> },

@@ -1,6 +1,7 @@
 //src/pages/Stores.jsx
 import React from "react";
 import styled from "styled-components";
+import GuideLinks from "@/components/guide/GuideLinks";
 import {
   ArrowUpRight,
   CheckCircle2,
@@ -408,6 +409,11 @@ export default function Stores() {
           </Assurance>
         </VisitGuide>
       </Layout>
+
+      <GuideLinks
+        title="방문 전에 함께 보기"
+        slugs={["busan-gold-exchange", "broken-jewelry-value", "gold-selling-price"]}
+      />
     </Page>
   );
 }

@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { INDEXABLE_PATHS, SITE_URL } from "../src/config/seo.js";
+import { GOLD_GUIDES } from "../src/data/goldGuides.js";
 
 const outDir = path.resolve(process.env.SITEMAP_OUT_DIR || "public");
 const baseUrl = SITE_URL;
@@ -70,7 +71,13 @@ async function generate() {
     },
   ];
 
-  const rssItems = rssEntries.map((entry) => {
+  const guideRssEntries = GOLD_GUIDES.map((guide) => ({
+    title: guide.title,
+    path: `/guide/${guide.slug}`,
+    description: guide.summary,
+  }));
+
+  const rssItems = [...rssEntries, ...guideRssEntries].map((entry) => {
     return [
       "    <item>",
       `      <title><![CDATA[${cdata(entry.title)}]]></title>`,

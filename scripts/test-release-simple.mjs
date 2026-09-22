@@ -114,6 +114,9 @@ async function main() {
   const build = await step('WEB BUILD', () => runNpm(['run', 'build']));
   if (!build) return finish(1);
 
+  const seoGuides = await step('SEO GUIDES', () => runNpm(['run', 'test:seo-guides']));
+  if (!seoGuides) return finish(1);
+
   const functionsBuild = await step('FUNCTIONS BUILD', () => runNpm(['--prefix', 'functions', 'run', 'build']));
   if (!functionsBuild) return finish(1);
 

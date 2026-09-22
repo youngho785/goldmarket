@@ -14,6 +14,7 @@ import { db, registerForPush } from "@/firebase/firebase";
 import { useAuthContext } from "@/context/AuthContext";
 import MyGoldTicker from "@/components/gold/MyGoldTicker";
 import QuickGoldValueCalculator from "@/components/gold/QuickGoldValueCalculator";
+import GuideLinks from "@/components/guide/GuideLinks";
 import {
   getNotificationPreferences,
   saveMarketingNotificationConsent,
@@ -868,6 +869,11 @@ export default function GoldPrice() {
             시점의 시세와 다를 수 있습니다.
           </Footnote>
         </Section>
+
+        <GuideLinks
+          title="금시세와 함께 읽기"
+          slugs={["gold-don-gram", "14k-18k-24k", "gold-selling-price"]}
+        />
       </Shell>
     </Page>
   );
