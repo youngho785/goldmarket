@@ -60,7 +60,7 @@ const Hero = styled.header`
     max-width: 760px;
     margin: 0;
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .79rem;
+    font-size: .88rem;
     line-height: 1.7;
     word-break: keep-all;
   }
@@ -107,7 +107,7 @@ const Formula = styled.div`
   background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.primary};
   font-family: ${({ theme }) => theme.fonts.numeric};
-  font-size: .72rem;
+  font-size: .82rem;
   font-weight: 850;
   line-height: 1.55;
 `;
@@ -129,7 +129,7 @@ const TableWrap = styled.section`
     padding: 12px 14px;
     border-bottom: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
     text-align: left;
-    font-size: .72rem;
+    font-size: .82rem;
     line-height: 1.5;
   }
 
@@ -170,7 +170,7 @@ const Section = styled.section`
   p {
     margin: 9px 0 0;
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .76rem;
+    font-size: .9rem;
     line-height: 1.75;
     word-break: keep-all;
   }
@@ -181,7 +181,7 @@ const Section = styled.section`
     margin: 11px 0 0;
     padding-left: 18px;
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .73rem;
+    font-size: .84rem;
     line-height: 1.65;
   }
 `;
@@ -195,7 +195,7 @@ const Notice = styled.aside`
   border-radius: 15px;
   background: ${({ theme }) => theme.semantic.alertInfoBg};
   color: ${({ theme }) => theme.semantic.alertInfoText};
-  font-size: .7rem;
+  font-size: .8rem;
   line-height: 1.65;
 
   svg {
@@ -225,7 +225,7 @@ const Action = styled(Link)`
   border-radius: 14px;
   background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.primary};
-  font-size: .75rem;
+  font-size: .82rem;
   font-weight: 900;
   text-decoration: none;
 

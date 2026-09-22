@@ -207,9 +207,9 @@ export default function GuideIndex() {
         <small>KOREA GOLD MARKET · GOLD GUIDE</small>
         <h1>내가 가진 금을 이해하는 데 필요한 정보부터 정리했습니다.</h1>
         <p>
-          금 1돈의 무게, 14K·18K의 차이, 이론상 순금량, 돌반지와 오래된
-          주얼리의 가치 확인, 부산 금교환 방문 전 체크까지 실제로 자주 묻는
-          질문을 기준으로 설명합니다.
+          금 1돈의 무게, 14K·18K 각인과 차이, 돌반지와 오래된 주얼리의
+          가치 확인, 부산 금교환 방문 전 체크까지 실제로 자주 묻는 질문을
+          기준으로 설명합니다.
         </p>
         <QuickLinks aria-label="금 정보와 계산 바로가기">
           <Link to="/gold-price">오늘 금시세 <ArrowRight size={13} aria-hidden /></Link>
@@ -231,13 +231,13 @@ export default function GuideIndex() {
         </IntroCard>
         <IntroCard>
           <BookOpen size={20} aria-hidden />
-          <strong>실제 교환은 별도 확인</strong>
-          <p>일반 순도 이론과 실제 GOLD TO GOLD 교환 기준을 구분해 안내합니다.</p>
+          <strong>현재 계산 기준으로 확인</strong>
+          <p>각인 정보와 실제 GOLD TO GOLD 계산 기준을 구분하고, 예상값은 현재 계산기에서 확인합니다.</p>
         </IntroCard>
       </Intro>
 
       <SectionHead>
-        <h2>금 정보 가이드 10선</h2>
+        <h2>금 정보 가이드</h2>
         <p>궁금한 질문부터 읽고 관련 계산기와 MY GOLD로 이어서 확인해 보세요.</p>
       </SectionHead>
 
@@ -255,10 +255,10 @@ export default function GuideIndex() {
       </Grid>
 
       <Boundary>
-        <strong>정보와 실제 교환 기준은 구분합니다.</strong>{" "}
-        가이드의 14K·18K 금 함량 계산은 일반적인 순도 이해를 돕기 위한
-        설명입니다. 한국골드마켓의 실제 교환 예상량과 확정량은 별도 반영
-        기준과 매장 실측을 통해 확인합니다.
+        <strong>가이드와 실제 교환 계산은 역할을 나눕니다.</strong>{" "}
+        가이드는 무게·각인·제품 상태처럼 오래 유지되는 정보를 설명합니다.
+        한국골드마켓의 고정 환산율은 가이드에 표시하지 않으며, 현재 예상값은
+        계산기에서 확인하고 최종값은 매장 실측 후 확정합니다.
       </Boundary>
     </Page>
   );

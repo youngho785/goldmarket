@@ -61,17 +61,38 @@ test("가이드 관련 링크는 존재하는 slug만 사용하고 자기 자신
   }
 });
 
-test("14K·18K 이론 정보와 실제 교환 기준을 분리해 안내한다", () => {
-  const purityGuide = GUIDE_BY_SLUG["14k-18k-24k"];
+test("가이드는 변동 가능한 한국골드마켓 환산율을 고정 숫자로 노출하지 않는다", () => {
+  const combined = JSON.stringify(GOLD_GUIDES);
+
+  for (const forbidden of [
+    "0.585",
+    "0.75",
+    "58.5%",
+    "75%",
+    "2.8125g",
+    "2.19375g",
+    "1.755g",
+    "4.755g",
+    "이론상 금 함량",
+    "이론상 합계",
+  ]) {
+    assert.equal(
+      combined.includes(forbidden),
+      false,
+      `공개 가이드에 고정 환산 정보가 남아 있습니다: ${forbidden}`
+    );
+  }
+
+  const hallmarkGuide = GUIDE_BY_SLUG["14k-18k-24k"];
   const eighteen = GUIDE_BY_SLUG["18k-one-don"];
   const fourteen = GUIDE_BY_SLUG["14k-one-don"];
-  const combined = [purityGuide, eighteen, fourteen]
-    .map((guide) => `${guide.directAnswer}\n${guide.notice}\n${guide.sections.map((section) => section.paragraphs.join("\n")).join("\n")}`)
-    .join("\n");
+  const multiple = GUIDE_BY_SLUG["multiple-gold-pure-weight"];
 
-  assert.match(combined, /이론/);
-  assert.match(combined, /실제 교환/);
-  assert.match(combined, /별도.*기준|별도 교환/);
+  assert.match(hallmarkGuide.directAnswer, /585/);
+  assert.match(hallmarkGuide.directAnswer, /750/);
+  assert.match(eighteen.directAnswer, /1돈.*3\.75g/);
+  assert.match(fourteen.directAnswer, /1돈.*3\.75g/);
+  assert.match(multiple.notice, /현재.*계산 기준|현재.*계산기/);
 });
 
 test("라우터와 푸터에서 금 정보 가이드에 접근할 수 있다", async () => {
