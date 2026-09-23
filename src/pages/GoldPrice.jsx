@@ -684,7 +684,7 @@ export default function GoldPrice() {
               </AlertTitle>
               <AlertText>
                 매번 확인하지 않아도 주요 금시세 변동을 알려드립니다.
-                알림은 MY GOLD의 가치 변화를 놓치지 않도록 돕는 보조 기능입니다.
+                MY GOLD에 내 금을 기록해 두면 주간 가치 변화도 함께 받아볼 수 있습니다.
               </AlertText>
 
               <AlertBullets>
@@ -694,7 +694,7 @@ export default function GoldPrice() {
                 </AlertBullet>
                 <AlertBullet>
                   <CheckCircle2 size={15} aria-hidden />
-                  매일 확인하지 않아도 편하게
+                  MY GOLD 주간 가치 리포트
                 </AlertBullet>
                 <AlertBullet>
                   <ShieldCheck size={15} aria-hidden />
@@ -714,7 +714,7 @@ export default function GoldPrice() {
                         intent: "gold-price-notification",
                       }}
                     >
-                      회원가입하고 금시세 알림 받기
+                      간편가입하고 알림 받기
                       <ArrowRight size={18} aria-hidden />
                     </MainButton>
 

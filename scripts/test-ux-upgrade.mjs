@@ -44,7 +44,7 @@ test("회원가입은 최소 계정 생성과 점진적 프로필 구조를 사�
   assert.match(registerSource, /id="regEmail"/);
   assert.match(registerSource, /id="regPassword"/);
   assert.doesNotMatch(registerSource, /id="regName"|id="regPhone"|id="regNickname"/);
-  assert.match(registerSource, /이름·전화번호·닉네임은 이메일 인증 후 필요한 순간에 설정/);
+  assert.doesNotMatch(registerSource, /\b(displayName|phone|nickname)\s*:/);
   assert.match(authServiceSource, /if \(safeNickname\)/);
   assert.match(userServiceSource, /if \(!email\) throw new Error/);
   assert.doesNotMatch(userServiceSource, /if \(!displayName\) throw new Error\("가입 이름 정보가 없습니다/);

@@ -157,12 +157,6 @@ const Button = styled.button`
   &:disabled { opacity: .55; cursor: not-allowed; }
   &:hover:enabled { filter: brightness(.96); }
 `;
-const Helper = styled.p`
-  margin: -7px 0 0;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: .79rem;
-  line-height: 1.5;
-`;
 const VisuallyHidden = styled.input`
   position: absolute !important;
   height: 1px;
@@ -263,11 +257,11 @@ export default function Register() {
       };
     }
     return {
-      title: "한국골드마켓 시작하기",
-      lead: "내 금을 기록하고 오늘 가치와 예상 순금량을 계속 확인할 계정을 간단히 만듭니다.",
-      noticeTitle: "가입은 간단하게, 완료는 이메일 인증까지",
-      noticeBody: "이메일·비밀번호와 필수동의 후 인증메일을 확인하면 가입이 완료됩니다. 이름·휴대전화·닉네임은 필요한 순간에만 추가합니다.",
-      button: "한국골드마켓 시작하기",
+      title: "가입은 간단하게, 내 금의 가치는 계속.",
+      lead: "이메일과 비밀번호로 간단히 가입하고, 이메일 인증 후 MY GOLD를 시작하세요.",
+      noticeTitle: "가입 후 바로 이어지는 MY GOLD",
+      noticeBody: "내 금을 기록하고 알림을 켜면 주요 금시세 변동과 MY GOLD의 주간 가치 변화를 받아볼 수 있습니다.",
+      button: "간편하게 시작하기",
     };
   }, [returningToExchange, returningToGuestMyGoldImport, returningToMyGold]);
 
@@ -426,8 +420,6 @@ export default function Register() {
               {showPassword ? <FiEyeOff /> : <FiEye />}
             </ToggleButton>
           </FormGroup>
-          <Helper>이름·전화번호·닉네임은 이메일 인증 후 필요한 순간에 설정할 수 있습니다.</Helper>
-
           <AgreementsSection value={agreements} onChange={setAgreements} />
 
           <Button

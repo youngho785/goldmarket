@@ -39,7 +39,7 @@ test('Firebase emulator mode is DEV-only and explicitly gated', () => {
 
 test('Registration keeps the initial account minimal', () => {
   assert.doesNotMatch(registerSource, /id="regName"|id="regPhone"|id="regNickname"/);
-  assert.match(registerSource, /이름·전화번호·닉네임은 이메일 인증 후 필요한 순간에 설정/);
+  assert.doesNotMatch(registerSource, /\b(displayName|phone|nickname)\s*:/);
   assert.match(userServiceSource, /회원가입은 이메일만으로 최소 계정을 만듭니다/);
   assert.match(registerSource, /navigate\(buildVerifyEmailPath\(onboardingPath\)/);
 });

@@ -950,7 +950,7 @@ export default function MyGoldVault() {
             <GuestSaveCard aria-label="MY GOLD 회원가입 저장 안내">
               <GuestSaveCopy>
                 <h2>오늘 확인한 내 금, MY GOLD에 이어두세요.</h2>
-                <p>지금 입력한 금 기록을 그대로 저장하면 다음에도 오늘 참고가치와 변화, 예상 순금량을 이어서 확인할 수 있습니다.</p>
+                <p>지금 기록을 그대로 저장하세요. 알림을 켜면 주요 금시세 변동과 MY GOLD의 주간 가치 변화도 받아볼 수 있습니다.</p>
               </GuestSaveCopy>
               <GuestSaveAction type="button" onClick={saveGuestVaultToAccount}>
                 <Save aria-hidden /> MY GOLD 기록 저장하기 <ArrowRight aria-hidden />
@@ -1013,7 +1013,7 @@ export default function MyGoldVault() {
             <GuestSaveCard aria-label="MY GOLD 회원가입 저장 안내">
               <GuestSaveCopy>
                 <h2>기록한 금을 계정에 그대로 이어두세요.</h2>
-                <p>회원가입 후에도 지금 만든 금 이름·종류·중량이 그대로 MY GOLD에 이어집니다.</p>
+                <p>지금 만든 금 기록은 가입 후에도 그대로 이어집니다. 알림을 켜면 주요 금시세 변동과 MY GOLD의 주간 가치 변화도 받아볼 수 있습니다.</p>
               </GuestSaveCopy>
               <GuestSaveAction type="button" onClick={saveGuestVaultToAccount}>
                 <Save aria-hidden /> MY GOLD 기록 저장하기 <ArrowRight aria-hidden />

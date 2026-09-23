@@ -123,6 +123,46 @@ const FlowItem = styled.div`
   }
 `;
 
+const MemberStartCard = styled.section`
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: clamp(16px, 3vw, 28px);
+  align-items: center;
+  margin: 16px 0 0;
+  padding: clamp(20px, 3.2vw, 28px);
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 24%, ${({ theme }) => theme.colors.border});
+  border-radius: 18px;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 38%, ${({ theme }) => theme.colors.surface}),
+    ${({ theme }) => theme.colors.surface}
+  );
+
+  h2 {
+    margin: 7px 0 0;
+    color: ${({ theme }) => theme.colors.primary};
+    font-family: ${({ theme }) => theme.fonts.heading};
+    font-size: clamp(1.35rem, 2.8vw, 1.9rem);
+    line-height: 1.18;
+    letter-spacing: -.045em;
+    word-break: keep-all;
+  }
+
+  p {
+    max-width: 760px;
+    margin: 8px 0 0;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: .74rem;
+    line-height: 1.65;
+    word-break: keep-all;
+  }
+
+  @media (max-width: 700px) {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+`;
+
 const Section = styled.section`
   padding: clamp(34px, 4.5vw, 54px) 0;
   border-top: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
@@ -371,6 +411,20 @@ export default function LandingPage() {
           <div><strong>필요할 때 교환</strong><p>MY GOLD 기록을 바탕으로 예상 교환량을 확인합니다.</p></div>
         </FlowItem>
       </FlowStrip>
+
+      <MemberStartCard aria-labelledby="member-start-title">
+        <div>
+          <Kicker>MEMBER · MY GOLD</Kicker>
+          <h2 id="member-start-title">가입은 간단하게, 내 금의 가치는 계속.</h2>
+          <p>
+            이메일 인증만으로 MY GOLD를 시작하세요. 내 금을 기록하고 알림을 켜면
+            주요 금시세 변동과 MY GOLD의 주간 가치 변화를 받아볼 수 있습니다.
+          </p>
+        </div>
+        <GoldButton to="/register">
+          간편하게 시작하기 <ArrowRight size={15} aria-hidden />
+        </GoldButton>
+      </MemberStartCard>
 
       <CompactSection aria-labelledby="live-title">
         <SectionHead>
