@@ -92,6 +92,29 @@ async function verifySourceGuards() {
   assert.match(accountSource, /balanceCarryover[\s\S]*state: "available"/);
   assert.match(accountSource, /bonusGoldCarriedOverAt/);
 
+  const welcomeSection = sourceSection(
+    rewardsSource,
+    "export const welcomeClaimGoldBonus",
+    "export const marketingPushClaimGoldBonus"
+  );
+  assert.match(
+    welcomeSection,
+    /requireVerifiedUserRecord\(req\.auth\?\.uid\)/,
+    "new-member admin notifications must only happen after verified auth"
+  );
+  assert.match(
+    welcomeSection,
+    /if \(res\.claimedNow\)[\s\S]*addNotificationForAdmins/,
+    "new-member admin notification must be gated by the first welcome claim"
+  );
+  assert.match(welcomeSection, /type: "admin_member_signup"/);
+  assert.match(welcomeSection, /link: "\/admin\/members"/);
+  assert.match(
+    rewardsSource,
+    /function maskEmailForAdminNotification/,
+    "admin push must mask the member email shown on lock screens"
+  );
+
   const roleSection = sourceSection(
     adminSource,
     "export const setUserRole",

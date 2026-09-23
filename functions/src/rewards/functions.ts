@@ -36,6 +36,25 @@ import {
   BENEFIT_BALANCE_CARRYOVER_LEDGER_SOURCE,
 } from "./shared.js";
 
+function maskEmailForAdminNotification(value: unknown): string {
+  const email = String(value || "").trim().toLowerCase();
+  const at = email.lastIndexOf("@");
+
+  if (at <= 0 || at >= email.length - 1) {
+    return "이메일 인증 완료";
+  }
+
+  const local = email.slice(0, at);
+  const domain = email.slice(at + 1);
+  const visible = local.slice(0, Math.min(2, local.length));
+  const hiddenCount = Math.max(
+    2,
+    Math.min(4, Math.max(0, local.length - visible.length))
+  );
+
+  return `${visible}${"*".repeat(hiddenCount)}@${domain}`;
+}
+
 function marketingPushBonusConfigured(
   data: FirebaseFirestore.DocumentData | undefined,
   expectedToken = ""
@@ -615,6 +634,34 @@ export const welcomeClaimGoldBonus = onCall(
         });
       } catch (error) {
         console.error("[welcomeClaimGoldBonus] 지급 알림 생성 실패", error);
+      }
+
+      // 신규 가입 알림은 이메일 인증을 통과하고 웰컴 혜택이 최초 지급된
+      // 실제 신규 회원에 대해서만 1회 생성합니다.
+      // 관리자 잠금화면에 전체 이메일이 노출되지 않도록 일부만 표시합니다.
+      try {
+        const maskedEmail = maskEmailForAdminNotification(verifiedUser.email);
+        const adminCount = await addNotificationForAdmins({
+          type: "admin_member_signup",
+          title: "신규 회원 가입 완료",
+          body: `이메일 인증을 완료한 새 회원이 가입했습니다. ${maskedEmail}`,
+          link: "/admin/members",
+          meta: {
+            event: "verified_member_signup",
+            memberUid: uid,
+          },
+        });
+
+        console.info("[welcomeClaimGoldBonus] 신규 회원 관리자 알림 생성", {
+          uid,
+          admins: adminCount,
+        });
+      } catch (error) {
+        // 관리자 알림 실패가 회원가입이나 웰컴 혜택 지급을 막으면 안 됩니다.
+        console.error(
+          "[welcomeClaimGoldBonus] 신규 회원 관리자 알림 생성 실패",
+          error
+        );
       }
     }
     return res;
