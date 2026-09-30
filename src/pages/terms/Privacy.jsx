@@ -5,10 +5,10 @@ import { Link, useNavigate } from "react-router-dom";
 
 /*
  * 개인정보처리방침 버전은 앱 버전(versionName/versionCode)과 무관합니다.
- * 직전 공개 문서가 v2.4였고 이번에 내용이 바뀌므로 이 파일은 v2.5로 표기합니다.
+ * 회원가입 동의 버전(privacy-v2.6)과 공개 문서 버전을 일치시킵니다.
  */
-const PRIVACY_VERSION = "v2.5";
-const PRIVACY_EFFECTIVE_DATE = "2026-09-04";
+const PRIVACY_VERSION = "v2.6";
+const PRIVACY_EFFECTIVE_DATE = "2026-09-30";
 
 const P_OPERATOR = {
   brand: "한국골드마켓",
@@ -195,12 +195,17 @@ export function Privacy() {
           <h2>2. 처리하는 개인정보 항목</h2>
           <ul>
             <li>
-              <strong>회원가입/인증</strong>: 이메일, 이름, 닉네임,
-              휴대전화번호, Firebase Authentication을 통한 인증정보 및 인증 상태
+              <strong>회원가입/인증</strong>: 이메일, Firebase Authentication을
+              통한 인증정보 및 인증 상태
             </li>
             <li>
-              <strong>방문예약</strong>: 성명, 휴대전화번호, 방문 날짜·시간,
-              예약 상태
+              <strong>프로필/계정 설정</strong>: 이용자가 이후 프로필 또는
+              서비스 이용 과정에서 입력하는 이름, 닉네임, 휴대전화번호,
+              프로필 이미지
+            </li>
+            <li>
+              <strong>방문예약</strong>: 예약을 진행할 때 입력하거나 기존
+              프로필에서 불러오는 성명, 휴대전화번호, 방문 날짜·시간, 예약 상태
             </li>
             <li>
               <strong>순금 혜택 중복 방지 및 미사용 잔액 승계</strong>: 이메일 인증 완료 주소를
@@ -238,7 +243,7 @@ export function Privacy() {
         <P_Section>
           <h2>3. 개인정보 이용 목적</h2>
           <ul>
-            <li>회원가입, 로그인, 이메일 인증, 비밀번호 재설정 및 회원관리</li>
+            <li>이메일 기반 회원가입, 로그인, 이메일 인증, 비밀번호 재설정 및 회원관리</li>
             <li>본인확인, 부정이용 방지, 계정 및 서비스 보안</li>
             <li>탈퇴 후 재가입을 포함한 순금 혜택의 중복 수령 방지 및 미사용 적립 순금 잔액 승계</li>
             <li>

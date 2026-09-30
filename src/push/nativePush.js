@@ -11,6 +11,31 @@ let lastNativeToken = "";
 
 const tokenWaiters = new Set();
 
+const NATIVE_NOTIFICATION_CHANNEL = Object.freeze({
+  id: "kgm_general",
+  name: "한국골드마켓 알림",
+  description: "MY GOLD, 금시세, 예약·교환 등 주요 알림",
+  importance: 3,
+});
+
+let notificationChannelInitialized = false;
+
+async function ensureNativeNotificationChannel() {
+  if (!isAndroid || notificationChannelInitialized) {
+    return;
+  }
+
+  try {
+    await PushNotifications.createChannel(NATIVE_NOTIFICATION_CHANNEL);
+    notificationChannelInitialized = true;
+  } catch (error) {
+    console.warn(
+      "[Native Push] 알림 채널 생성 실패:",
+      error?.message || error
+    );
+  }
+}
+
 function resolveTokenWaiters(token) {
   for (const waiter of tokenWaiters) {
     try {
@@ -109,6 +134,8 @@ async function ensureNativePushListeners() {
   if (!isAndroid || listenersInitialized) {
     return;
   }
+
+  await ensureNativeNotificationChannel();
 
   if (listenersPromise) {
     return listenersPromise;

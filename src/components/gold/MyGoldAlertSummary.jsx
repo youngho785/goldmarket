@@ -54,7 +54,7 @@ const Title = styled.div`
   p {
     margin: 4px 0 0;
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: 0.63rem;
+    font-size: 0.72rem;
     line-height: 1.4;
     word-break: keep-all;
   }
@@ -69,7 +69,7 @@ const Status = styled.span`
   border-radius: 999px;
   background: ${({ $ready, theme }) => $ready ? theme.semantic.alertSuccessBg : theme.colors.surfaceAlt};
   color: ${({ $ready, theme }) => $ready ? theme.semantic.alertSuccessText : theme.colors.textSecondary};
-  font-size: 0.62rem;
+  font-size: 0.7rem;
   font-weight: 900;
 `;
 
@@ -88,7 +88,7 @@ const Chip = styled.span`
   border-radius: 999px;
   background: ${({ theme }) => theme.colors.surfaceAlt};
   color: ${({ theme }) => theme.colors.text};
-  font-size: 0.62rem;
+  font-size: 0.7rem;
   font-weight: 850;
 `;
 
@@ -103,7 +103,7 @@ const Action = styled(Link)`
   background: ${({ theme }) => theme.colors.primary};
   color: ${({ theme }) => theme.on.primary};
   text-decoration: none;
-  font-size: 0.68rem;
+  font-size: 0.76rem;
   font-weight: 950;
   white-space: nowrap;
 
@@ -139,7 +139,7 @@ const CompactCard = styled(Link)`
   p {
     margin: 4px 0 0;
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: 0.62rem;
+    font-size: 0.7rem;
     line-height: 1.4;
     word-break: keep-all;
   }

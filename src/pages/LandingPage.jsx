@@ -75,7 +75,7 @@ const HeroLead = styled.p`
 
 const FlowStrip = styled.section`
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1px;
   overflow: hidden;
   margin: 8px 0 0;
@@ -103,21 +103,21 @@ const FlowItem = styled.div`
     border-radius: 12px;
     background: ${({ theme }) => theme.semantic.badgeGoldBg};
     color: ${({ theme }) => theme.colors.secondaryDark};
-    font-size: .65rem;
+    font-size: .82rem;
     font-weight: 950;
   }
 
   strong {
     display: block;
     color: ${({ theme }) => theme.colors.primary};
-    font-size: .76rem;
+    font-size: .84rem;
     font-weight: 900;
   }
 
   p {
     margin: 3px 0 0;
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .64rem;
+    font-size: .82rem;
     line-height: 1.45;
     word-break: keep-all;
   }
@@ -152,7 +152,7 @@ const MemberStartCard = styled.section`
     max-width: 760px;
     margin: 8px 0 0;
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .74rem;
+    font-size: .82rem;
     line-height: 1.65;
     word-break: keep-all;
   }
@@ -199,7 +199,7 @@ const SectionTitle = styled.h2`
 const SectionLead = styled.p`
   margin: 7px 0 0;
   color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: .76rem;
+  font-size: .84rem;
   line-height: 1.6;
   word-break: keep-all;
 `;
@@ -209,7 +209,7 @@ const TextLink = styled(Link)`
   align-items: center;
   gap: 5px;
   color: ${({ theme }) => theme.colors.primary};
-  font-size: .72rem;
+  font-size: .8rem;
   font-weight: 950;
   text-decoration: none;
   white-space: nowrap;
@@ -244,7 +244,7 @@ const GoldToGoldStory = styled.section`
     max-width: 760px;
     margin: 9px 0 0;
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .74rem;
+    font-size: .82rem;
     line-height: 1.65;
     word-break: keep-all;
   }
@@ -266,7 +266,7 @@ const GoldToGoldStoryLink = styled(Link)`
   border-radius: 12px;
   background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.primary};
-  font-size: .72rem;
+  font-size: .8rem;
   font-weight: 950;
   text-decoration: none;
   white-space: nowrap;
@@ -315,7 +315,7 @@ const ExchangeCopy = styled.div`
   > p {
     margin: 9px 0 0;
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .74rem;
+    font-size: .82rem;
     line-height: 1.6;
   }
 `;
@@ -333,8 +333,8 @@ const TrustList = styled.div`
   }
 
   svg { width: 18px; height: 18px; color: ${({ theme }) => theme.colors.secondaryDark}; }
-  strong { display: block; color: ${({ theme }) => theme.colors.primary}; font-size: .73rem; }
-  p { margin: 2px 0 0; color: ${({ theme }) => theme.colors.textSecondary}; font-size: .65rem; line-height: 1.45; }
+  strong { display: block; color: ${({ theme }) => theme.colors.primary}; font-size: .8rem; }
+  p { margin: 2px 0 0; color: ${({ theme }) => theme.colors.textSecondary}; font-size: .82rem; line-height: 1.45; }
 `;
 
 const StoreMeta = styled.div`
@@ -343,7 +343,7 @@ const StoreMeta = styled.div`
   gap: 8px 12px;
   margin-top: 15px;
   color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: .64rem;
+  font-size: .82rem;
 
   span { display: inline-flex; align-items: center; gap: 5px; }
 `;
@@ -365,7 +365,7 @@ const GoldButton = styled(Link)`
   border-radius: 12px;
   background: ${({ theme }) => theme.colors.primary};
   color: ${({ theme }) => theme.on.primary};
-  font-size: .72rem;
+  font-size: .8rem;
   font-weight: 950;
   text-decoration: none;
 `;
@@ -397,18 +397,22 @@ export default function LandingPage() {
         <QuickGoldValueCalculator source="landing" />
       </Hero>
 
-      <FlowStrip aria-label="한국골드마켓 이용 흐름">
+      <FlowStrip aria-label="한국골드마켓 GOLD JOURNEY">
         <FlowItem>
           <span>01</span>
-          <div><strong>내 금 기록</strong><p>내가 실제로 가진 금의 종류와 중량을 기록합니다.</p></div>
+          <div><strong>내 금 기록</strong><p>내가 실제로 가진 금의 종류와 중량을 MY GOLD에 기록합니다.</p></div>
         </FlowItem>
         <FlowItem>
           <span>02</span>
-          <div><strong>오늘 가치 확인</strong><p>공개 금시세를 기준으로 참고가치와 변화를 확인합니다.</p></div>
+          <div><strong>오늘 가치 확인</strong><p>공개 금시세를 기준으로 오늘 참고가치와 변화를 확인합니다.</p></div>
         </FlowItem>
         <FlowItem>
           <span>03</span>
-          <div><strong>필요할 때 교환</strong><p>MY GOLD 기록을 바탕으로 예상 교환량을 확인합니다.</p></div>
+          <div><strong>목표 알림</strong><p>원하는 가치·금시세·골드바 목표를 정하고 도달 시 알림을 받습니다.</p></div>
+        </FlowItem>
+        <FlowItem>
+          <span>04</span>
+          <div><strong>GOLD TO GOLD</strong><p>MY GOLD 기록으로 예상 교환량을 확인하고 방문 예약까지 이어갑니다.</p></div>
         </FlowItem>
       </FlowStrip>
 
@@ -417,8 +421,8 @@ export default function LandingPage() {
           <Kicker>MEMBER · MY GOLD</Kicker>
           <h2 id="member-start-title">가입은 간단하게, 내 금의 가치는 계속.</h2>
           <p>
-            이메일 인증만으로 MY GOLD를 시작하세요. 내 금을 기록하고 알림을 켜면
-            주요 금시세 변동과 MY GOLD의 주간 가치 변화를 받아볼 수 있습니다.
+            이메일 인증만으로 MY GOLD를 시작하세요. 내 금을 기록하고 목표 알림을 설정하면
+            가치 변화를 확인하다가 GOLD TO GOLD 예상과 방문 예약까지 이어갈 수 있습니다.
           </p>
         </div>
         <GoldButton to="/register">

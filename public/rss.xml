@@ -5,7 +5,7 @@
 <link>https://koreagoldmarket.com</link>
 <description>오늘 금시세, MY GOLD 기록·관리, GOLD TO GOLD와 부산 매장 이용 안내입니다.</description>
 <language>ko</language>
-<lastBuildDate>Sun, 20 Sep 2026 14:50:46 GMT</lastBuildDate>
+<lastBuildDate>Wed, 30 Sep 2026 15:56:35 GMT</lastBuildDate>
     <item>
       <title><![CDATA[오늘의 한국골드마켓 금시세]]></title>
       <link>https://koreagoldmarket.com/gold-price</link>
@@ -35,6 +35,56 @@
       <title><![CDATA[부산 범천동 원일귀금속 매장 안내]]></title>
       <link>https://koreagoldmarket.com/stores</link>
       <description><![CDATA[골드바 교환 매장의 주소, 영업시간과 연락처를 확인합니다.]]></description>
+    </item>
+    <item>
+      <title><![CDATA[금 1돈은 몇 g일까요? 한돈·반돈·1냥까지 한 번에 정리]]></title>
+      <link>https://koreagoldmarket.com/guide/gold-don-gram</link>
+      <description><![CDATA[금 거래에서 자주 쓰는 돈 단위를 g으로 바꾸는 가장 기본적인 기준부터 정리합니다.]]></description>
+    </item>
+    <item>
+      <title><![CDATA[14K·18K·24K는 무엇이 다를까요? 금 각인 읽는 법]]></title>
+      <link>https://koreagoldmarket.com/guide/14k-18k-24k</link>
+      <description><![CDATA[14K·18K·24K 표기와 585·750·999 같은 각인이 무엇을 뜻하는지, 실제 확인에서는 무엇을 함께 봐야 하는지 정리합니다.]]></description>
+    </item>
+    <item>
+      <title><![CDATA[18K 1돈은 몇 g일까요? 무게와 가치 확인 방법]]></title>
+      <link>https://koreagoldmarket.com/guide/18k-one-don</link>
+      <description><![CDATA[18K 1돈의 제품 중량과 각인, 실제 가치 확인에서 함께 봐야 할 항목을 정리합니다.]]></description>
+    </item>
+    <item>
+      <title><![CDATA[14K 1돈은 몇 g일까요? 무게와 가치 확인 방법]]></title>
+      <link>https://koreagoldmarket.com/guide/14k-one-don</link>
+      <description><![CDATA[14K 1돈의 제품 중량과 각인, 실제 가치 확인에서 함께 봐야 할 항목을 정리합니다.]]></description>
+    </item>
+    <item>
+      <title><![CDATA[금 팔 때 가격과 샀을 때 가격은 왜 다를까요?]]></title>
+      <link>https://koreagoldmarket.com/guide/gold-selling-price</link>
+      <description><![CDATA[주얼리 구매가격과 금 자체의 현재 가치는 구성 요소가 다르기 때문에 그대로 비교하기 어렵습니다.]]></description>
+    </item>
+    <item>
+      <title><![CDATA[돌반지 1돈·반돈은 몇 g일까요? 무게와 가치 확인 방법]]></title>
+      <link>https://koreagoldmarket.com/guide/first-birthday-gold-ring</link>
+      <description><![CDATA[오래 보관한 돌반지의 돈 단위와 g 중량을 확인하고 현재 가치를 기록하는 방법을 정리합니다.]]></description>
+    </item>
+    <item>
+      <title><![CDATA[금 목걸이·반지 무게로 오늘 가치를 확인하는 방법]]></title>
+      <link>https://koreagoldmarket.com/guide/jewelry-weight-value</link>
+      <description><![CDATA[주얼리의 순도와 실제 금 중량을 확인한 뒤 현재 시세와 연결해 보는 순서를 설명합니다.]]></description>
+    </item>
+    <item>
+      <title><![CDATA[14K·18K 금 여러 개, 어떻게 함께 계산할까요?]]></title>
+      <link>https://koreagoldmarket.com/guide/multiple-gold-pure-weight</link>
+      <description><![CDATA[순도가 다른 여러 제품은 총중량 하나로 환산하지 않고 제품별 종류와 중량을 각각 확인하는 것이 좋습니다.]]></description>
+    </item>
+    <item>
+      <title><![CDATA[부산에서 금교환하기 전 무엇을 확인해야 할까요?]]></title>
+      <link>https://koreagoldmarket.com/guide/busan-gold-exchange</link>
+      <description><![CDATA[금교환 방문 전에 온라인 예상값, 실측 방식, 공임과 최종 동의 절차를 확인하면 비교가 쉬워집니다.]]></description>
+    </item>
+    <item>
+      <title><![CDATA[끊어진 금목걸이·한쪽 귀걸이도 금 가치가 있을까요?]]></title>
+      <link>https://koreagoldmarket.com/guide/broken-jewelry-value</link>
+      <description><![CDATA[착용이 어렵거나 짝이 없어도 금 제품이라면 순도와 금으로 인정되는 중량을 기준으로 가치를 확인할 수 있습니다.]]></description>
     </item>
 </channel>
 </rss>

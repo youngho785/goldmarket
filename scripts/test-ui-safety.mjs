@@ -20,6 +20,7 @@ const [
   goldExchangeFunctionsSource,
   myExchangesSource,
   appHomeSource,
+  androidHomeSource,
   appGoldPriceSummarySource,
   myGoldVaultSource,
   myGoldVaultStylesSource,
@@ -50,6 +51,7 @@ const [
   read("functions/src/goldExchange/functions.ts"),
   read("src/pages/MyExchanges.jsx"),
   read("src/pages/AppHome.jsx"),
+  read("src/pages/AndroidHome.jsx"),
   read("src/components/gold/AppGoldPriceSummary.jsx"),
   read("src/pages/MyGoldVault.jsx"),
   read("src/components/myGoldVault/MyGoldVault.styles.js"),
@@ -239,8 +241,9 @@ test("2.2 최종 랜딩은 히어로와 시세·후기를 더 압축하고 후�
 
 
 
-test("회원 웹 홈은 제품형 AppHome을 사용하고 공개 웹은 랜딩을 유지한다", () => {
-  assert.match(appSource, /if \(isAndroid \|\| user\) return <AppHome \/>/);
+test("Android는 AndroidHome, 회원 웹은 AppHome, 공개 웹은 LandingPage를 사용한다", () => {
+  assert.match(appSource, /if \(isAndroid\) return <AndroidHome \/>/);
+  assert.match(appSource, /if \(user\) return <AppHome \/>/);
   assert.match(appSource, /return <LandingPage \/>/);
 });
 
@@ -258,11 +261,13 @@ test("홈의 검증 후기는 최신 1건을 2줄 미리보기로만 보여준�
   assert.match(reviewListSource, /!preview && \(/);
 });
 
-test("비회원 랜딩은 계산 → 기록 흐름 → 금시세 → GOLD TO GOLD/실측 → 후기 흐름으로 간결해진다", () => {
+test("비회원 랜딩은 계산 → GOLD JOURNEY → 금시세 → GOLD TO GOLD/실측 → 후기 흐름으로 간결해진다", () => {
   assert.match(landingSource, /<QuickGoldValueCalculator source="landing" \/>/);
   assert.match(landingSource, /MY GOLD는 내가 가진 금을 기록하고 가치의 변화를 확인하는 개인 기록 공간/);
   assert.match(landingSource, /실물 금을 보관·예치하는 서비스가 아닙니다/);
-  assert.match(landingSource, /<FlowStrip/);
+  assert.match(landingSource, /<FlowStrip aria-label="한국골드마켓 GOLD JOURNEY">/);
+  assert.match(landingSource, /<strong>목표 알림<\/strong>/);
+  assert.match(landingSource, /<strong>GOLD TO GOLD<\/strong>/);
   assert.match(landingSource, /<GoldPriceBoard compact \/>/);
   assert.match(landingSource, /기록은 MY GOLD에서, 실제 교환은 매장에서 확인합니다/);
   assert.match(landingSource, /<VerifiedReviewSection compact showInquiryAction=\{false\} \/>/);
@@ -481,11 +486,11 @@ test("Navbar 교환 새소식은 마지막 확인 이후 최대 100개 그룹만
   assert.match(navbarSource, /const menuButton = menuButtonRef\.current/);
 });
 
-test("앱 홈 다가오는 예약은 진행 상태와 오늘 이후 일정만 제한 조회한다", () => {
-  assert.match(appHomeSource, /where\("repStatus",\s*"in",\s*\["requested", "scheduled", "in_progress", "교환중"\]\)/);
-  assert.match(appHomeSource, /where\("visitDate",\s*">=",\s*toLocalDateKey\(\)\)/);
-  assert.match(appHomeSource, /orderBy\("visitDate",\s*"asc"\)/);
-  assert.match(appHomeSource, /limit\(10\)/);
+test("Android 홈 다가오는 예약은 진행 상태와 오늘 이후 일정만 제한 조회한다", () => {
+  assert.match(androidHomeSource, /where\("repStatus",\s*"in",\s*\["requested", "scheduled", "in_progress", "교환중"\]\)/);
+  assert.match(androidHomeSource, /where\("visitDate",\s*">=",\s*toLocalDateKey\(\)\)/);
+  assert.match(androidHomeSource, /orderBy\("visitDate",\s*"asc"\)/);
+  assert.match(androidHomeSource, /limit\(10\)/);
 });
 
 
@@ -507,6 +512,17 @@ test("앱 홈 금시세는 MY GOLD 시세 listener를 재사용하고 활성 예
   const reservationIndex = appHomeSource.indexOf("<ReservationCard to=\"/my-exchanges\"");
   const goldPriceIndex = appHomeSource.indexOf("<AppGoldPriceSummary");
   assert.ok(reservationIndex >= 0 && myGoldIndex > reservationIndex && goldPriceIndex > myGoldIndex);
+});
+
+test("Android 홈은 GOLD JOURNEY와 MILESTONE LADDER를 MY GOLD 기록에서 바로 이어준다", () => {
+  assert.match(androidHomeSource, /GOLD JOURNEY · GOLD TO GOLD/);
+  assert.match(androidHomeSource, /<JourneySteps aria-label="내 금의 GOLD JOURNEY">/);
+  assert.match(androidHomeSource, /MILESTONE LADDER/);
+  assert.match(androidHomeSource, /buildGoldMilestones\(pureGoldG\)/);
+  assert.match(androidHomeSource, /formatGoldGrams\(nextBarTarget\.grams\)/);
+  assert.match(androidHomeSource, /to="\/gold-exchange\?mode=vault&auto=1"/);
+  assert.match(androidHomeSource, /<MyGoldAlertSummary[\s\S]*demoMode=\{!user\?\.uid\}/);
+  assert.doesNotMatch(androidHomeSource, /Math\.round\(nextBarTarget\.grams\)/);
 });
 
 test("GoldExchange 진입 모드는 URL을 기준으로 한 곳에서 상태를 전환한다", () => {

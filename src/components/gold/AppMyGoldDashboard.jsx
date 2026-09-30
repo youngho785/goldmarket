@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import styled from "styled-components";
 
@@ -105,7 +105,7 @@ const Kicker = styled.div`
   align-items: center;
   gap: 6px;
   color: ${({ theme }) => theme.colors.goldLight};
-  font-size: 0.62rem;
+  font-size: 0.7rem;
   font-weight: 950;
   letter-spacing: 0.09em;
 
@@ -155,12 +155,32 @@ const Change = styled.div`
   font-family: "Segoe UI", "Malgun Gothic", Arial, sans-serif;
   font-variant-numeric: tabular-nums lining-nums;
   font-feature-settings: "tnum" 1, "lnum" 1;
-  font-size: 0.63rem;
+  font-size: 0.72rem;
   font-weight: 900;
 
   svg {
     width: 13px;
     height: 13px;
+  }
+
+  animation: ${({ $animate }) =>
+    $animate
+      ? "kgm-my-gold-change-in 380ms cubic-bezier(.22,1,.36,1) 900ms both"
+      : "none"};
+
+  @keyframes kgm-my-gold-change-in {
+    from {
+      opacity: 0;
+      transform: translateY(7px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
   }
 `;
 
@@ -173,7 +193,7 @@ const SummaryMeta = styled.div`
   padding-top: 12px;
   border-top: 1px solid color-mix(in srgb, ${({ theme }) => theme.on.primary} 11%, transparent);
   color: color-mix(in srgb, ${({ theme }) => theme.on.primary} 70%, transparent);
-  font-size: 0.62rem;
+  font-size: 0.7rem;
   font-weight: 800;
 
   strong {
@@ -182,7 +202,7 @@ const SummaryMeta = styled.div`
     font-family: "Segoe UI", "Malgun Gothic", Arial, sans-serif;
     font-variant-numeric: tabular-nums lining-nums;
     font-feature-settings: "tnum" 1, "lnum" 1;
-    font-size: 0.64rem;
+    font-size: 0.72rem;
     font-weight: 900;
   }
 
@@ -213,7 +233,7 @@ const PrimaryAction = styled(Link)`
     ${({ theme }) => theme.colors.gold}
   );
   color: ${({ theme }) => theme.colors.primaryDark};
-  font-size: 0.68rem;
+  font-size: 0.76rem;
   font-weight: 950;
   text-align: center;
   text-decoration: none;
@@ -243,10 +263,54 @@ const EmptyTitle = styled.h1`
 const EmptyCopy = styled.p`
   margin: 6px 0 0;
   color: color-mix(in srgb, ${({ theme }) => theme.on.primary} 68%, transparent);
-  font-size: 0.61rem;
+  font-size: 0.7rem;
   line-height: 1.45;
   word-break: keep-all;
 `;
+
+function useAnimatedMyGoldValue(targetValue, previousValue, enabled) {
+  const target = Number(targetValue) || 0;
+  const previous = Number(previousValue) || 0;
+  const [displayValue, setDisplayValue] = useState(
+    enabled && previous > 0 && target > 0 ? previous : target
+  );
+
+  useEffect(() => {
+    if (!enabled || target <= 0 || previous <= 0 || previous === target) {
+      setDisplayValue(target);
+      return undefined;
+    }
+
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches
+    ) {
+      setDisplayValue(target);
+      return undefined;
+    }
+
+    setDisplayValue(previous);
+
+    let frameId = 0;
+    const duration = 880;
+    const startedAt = performance.now();
+
+    const tick = (now) => {
+      const progress = Math.min(1, (now - startedAt) / duration);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplayValue(previous + (target - previous) * eased);
+
+      if (progress < 1) {
+        frameId = requestAnimationFrame(tick);
+      }
+    };
+
+    frameId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frameId);
+  }, [enabled, previous, target]);
+
+  return displayValue;
+}
 
 function formatWon(value) {
   const number = Number(value);
@@ -268,7 +332,7 @@ function formatSignedPercent(value) {
   return `${number > 0 ? "+" : "-"}${Math.abs(number).toFixed(2)}%`;
 }
 
-export default function AppMyGoldDashboard({ user, dashboard }) {
+export default function AppMyGoldDashboard({ user, dashboard, animateValue = false }) {
   const hasRealGold = !!user?.uid && dashboard.summary.itemCount > 0;
   const loading = !!user?.uid && dashboard.itemsLoading;
 
@@ -287,6 +351,22 @@ export default function AppMyGoldDashboard({ user, dashboard }) {
     dashboard.summary.estimatedValueWon,
     dashboard.summary.previousEstimatedValueWon,
   ]);
+
+  const previousValue = Number(
+    dashboard.summary.previousEstimatedValueWon || 0
+  );
+  const shouldAnimateValue =
+    animateValue &&
+    dashboard.publicPriceEnabled &&
+    previousValue > 0 &&
+    totals.current > 0 &&
+    previousValue !== totals.current;
+
+  const animatedCurrent = useAnimatedMyGoldValue(
+    totals.current,
+    previousValue,
+    shouldAnimateValue
+  );
 
   if (!user?.uid) {
     return (
@@ -380,11 +460,11 @@ export default function AppMyGoldDashboard({ user, dashboard }) {
           </Topline>
 
           <Value>
-            {dashboard.publicPriceEnabled ? formatWon(totals.current) : "시세 공개 대기"}
+            {dashboard.publicPriceEnabled ? formatWon(animatedCurrent) : "시세 공개 대기"}
           </Value>
 
           {dashboard.publicPriceEnabled && Number.isFinite(totals.percent) && (
-            <Change $direction={totals.direction}>
+            <Change $direction={totals.direction} $animate={shouldAnimateValue}>
               <ChangeIcon aria-hidden />
               오늘 {formatSignedWon(totals.amount)} · {formatSignedPercent(totals.percent)}
             </Change>

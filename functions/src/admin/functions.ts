@@ -477,11 +477,10 @@ function normalizeGoldProductTable(value: unknown): Record<string, GoldProductPo
 
 function buildLegacyPurityTable(
   products: Record<string, GoldProductPolicy>,
-  beforePurity: unknown
+  _beforePurity: unknown
 ): Record<string, number> {
   const result: Record<string, number> = {
     ...DEFAULT_PURITY,
-    ...(beforePurity && typeof beforePurity === "object" ? beforePurity as Record<string, number> : {}),
   };
   Object.values(products).forEach((product) => {
     if (!product.legacyGoldType) return;

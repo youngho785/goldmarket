@@ -13,6 +13,8 @@ const [
   myGoldSource,
   myGoldItemsSource,
   appHomeSource,
+  androidHomeSource,
+  privacySource,
   exchangeSource,
   autoVaultSource,
   exchangeStepsSource,
@@ -30,6 +32,8 @@ const [
   read("src/pages/MyGoldVault.jsx"),
   read("src/components/myGoldVault/MyGoldItemsSection.jsx"),
   read("src/pages/AppHome.jsx"),
+  read("src/pages/AndroidHome.jsx"),
+  read("src/pages/terms/Privacy.jsx"),
   read("src/pages/GoldExchange.jsx"),
   read("src/hooks/useGoldExchangeAutoVault.js"),
   read("src/components/goldExchange/GoldExchangeSteps.jsx"),
@@ -77,6 +81,9 @@ test("푸시 권한은 가치 설명 뒤 사용자 행동으로 요청하고 보
 test("MY GOLD는 저장한 금으로 GOLD TO GOLD 결과 단계까지 자동 연결한다", () => {
   assert.match(myGoldSource, /\/gold-exchange\?mode=vault&auto=1/);
   assert.match(appHomeSource, /\/gold-exchange\?mode=vault&auto=1/);
+  assert.match(androidHomeSource, /\/gold-exchange\?mode=vault&auto=1/);
+  assert.match(androidHomeSource, /GOLD JOURNEY · GOLD TO GOLD/);
+  assert.match(androidHomeSource, /MILESTONE LADDER/);
   assert.match(exchangeSource, /useGoldExchangeAutoVault/);
   assert.match(autoVaultSource, /validateExchangeProductsForCalculation/);
   assert.match(autoVaultSource, /applyExchangeFinalWeights/);
@@ -112,11 +119,23 @@ test("예약 연락처는 이미 알면 확인만 하고 첫 입력 후 다음 �
   assert.match(userServiceSource, /export async function saveReservationContact/);
 });
 
-test("앱 홈은 다가오는 예약을 MY GOLD보다 먼저 보여준다", () => {
-  const reservationIndex = appHomeSource.indexOf('<ReservationCard to="/my-exchanges"');
-  const dashboardIndex = appHomeSource.indexOf("<AppMyGoldDashboard");
+test("Android 앱 홈은 다가오는 예약을 MY GOLD보다 먼저 보여준다", () => {
+  const reservationIndex = androidHomeSource.indexOf('<ReservationCard');
+  const dashboardIndex = androidHomeSource.indexOf("<AppMyGoldDashboard");
   assert.ok(reservationIndex >= 0 && dashboardIndex > reservationIndex);
-  assert.match(appHomeSource, /지금 가장 먼저 확인할 일정/);
+  assert.match(androidHomeSource, /다가오는 방문 일정/);
+  assert.match(androidHomeSource, /GOLD TO GOLD 예약을 확인하세요/);
+});
+
+test("개인정보 공개 문서와 회원가입 동의 버전·수집 시점이 일치한다", () => {
+  assert.match(registerSource, /terms-v2\.0_privacy-v2\.6/);
+  assert.match(privacySource, /const PRIVACY_VERSION = "v2\.6"/);
+  assert.match(privacySource, /<strong>회원가입\/인증<\/strong>: 이메일/);
+  assert.match(privacySource, /<strong>프로필\/계정 설정<\/strong>:[\s\S]*이용자가 이후 프로필 또는/);
+  assert.doesNotMatch(
+    privacySource,
+    /<strong>회원가입\/인증<\/strong>:[\s\S]{0,160}이름,[\s\S]{0,80}닉네임/
+  );
 });
 
 test("교환내역에서 시작한 1:1 문의는 해당 교환건과 안전하게 연결된다", () => {

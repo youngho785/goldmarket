@@ -35,6 +35,7 @@ import { auth } from "@/firebase/firebase";
 import { isAndroid } from "@/platform/runtime";
 import LandingPage from "@/pages/LandingPage";
 import AppHome from "@/pages/AppHome";
+import AndroidHome from "@/pages/AndroidHome";
 import { useAuthContext } from "@/context/AuthContext";
 import { captureOperationalError } from "@/monitoring/operationalMonitoring";
 import { buildVerifyEmailPath } from "@/lib/authReturn";
@@ -576,7 +577,8 @@ function PlatformHome() {
   if (user && !isEmailVerified) {
     return <Navigate to={buildVerifyEmailPath("/")} replace />;
   }
-  if (isAndroid || user) return <AppHome />;
+  if (isAndroid) return <AndroidHome />;
+  if (user) return <AppHome />;
   return <LandingPage />;
 }
 

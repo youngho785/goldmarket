@@ -100,6 +100,7 @@ async function main() {
       'firestore.rules',
       'storage.rules',
       'src/App.jsx',
+      'src/pages/AndroidHome.jsx',
       'functions/package.json',
       'functions/tsconfig.json',
       'tests/rules/package.json',
@@ -161,6 +162,9 @@ async function main() {
 
   const ux = await step('UX STATIC SAFETY', () => runNpm(['run', 'test:ux-upgrade']));
   if (!ux) return finish(1);
+
+  const ui = await step('UI STATIC SAFETY', () => runNpm(['run', 'test:ui-safety']));
+  if (!ui) return finish(1);
 
   return finish(0);
 }

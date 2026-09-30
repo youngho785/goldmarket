@@ -268,7 +268,7 @@ const QUICK_PRODUCT_IDS = [
   { label: "999", id: "gold-999-product" },
   { label: "18K", id: "gold-18k-jewelry" },
   { label: "14K", id: "gold-14k-jewelry" },
-  { label: "기타", id: "other-inquiry" },
+  { label: "기타 문의", id: "other-inquiry" },
 ];
 
 const DENOMS = [
@@ -362,6 +362,7 @@ export default function LiteCalcFromGX({ showCombo = true }) {
   }, [productId, selectedProduct, qty, gramsInput]);
 
   const selectedQuickType = QUICK_PRODUCT_IDS.find((item) => item.id === productId)?.id;
+  const isManualInquiry = productId === "other-inquiry";
 
   return (
     <Sheet aria-label="예상 순금량 계산서">
@@ -385,13 +386,46 @@ export default function LiteCalcFromGX({ showCombo = true }) {
         ))}
       </PurityTabs>
 
-      <FieldGrid>
+      {isManualInquiry ? (
+        <>
+          <FieldGrid>
+            <Field>
+              <Label>보유 제품 종류</Label>
+              <Select value={productId} onChange={(event) => setProductId(event.target.value)}>
+                {productOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.id === "other-inquiry" ? "기타(1:1 문의)" : option.displayName}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          </FieldGrid>
+
+          <Result>
+            <div>
+              <Label>기타 제품</Label>
+              <ResultValue>
+                1:1 문의로 확인
+              </ResultValue>
+              <ResultEquivalent>
+                자동 계산이 어려운 제품입니다. 제품 종류와 특징을 남겨주시면 확인 후 안내드립니다.
+              </ResultEquivalent>
+            </div>
+          </Result>
+
+          <CTA to="/support/new">
+            1:1 문의하기
+            <ArrowRight size={17} aria-hidden />
+          </CTA>
+        </>
+      ) : (
+        <>      <FieldGrid>
         <Field>
           <Label>보유 제품 종류</Label>
           <Select value={productId} onChange={(event) => setProductId(event.target.value)}>
             {productOptions.map((option) => (
               <option key={option.id} value={option.id}>
-                {option.displayName}
+                {option.id === "other-inquiry" ? "기타(1:1 문의)" : option.displayName}
               </option>
             ))}
           </Select>
@@ -458,6 +492,8 @@ export default function LiteCalcFromGX({ showCombo = true }) {
         여러 제품 합산하고 교환 조합 확인
         <ArrowRight size={17} aria-hidden />
       </CTA>
+        </>
+      )}
       <Disclaimer>
         <Check size={15} aria-hidden />
         온라인 결과는 예상값입니다. 최종 순도·중량·공임은 원일귀금속 매장에서
