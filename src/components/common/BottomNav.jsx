@@ -4,9 +4,11 @@ import { createPortal } from "react-dom";
 import { NavLink, useLocation } from "react-router-dom";
 import styled, { css } from "styled-components";
 import {
+  BellRing,
   Calculator,
   Gem,
   Home,
+  Plus,
   Scale,
   User,
 } from "lucide-react";
@@ -201,17 +203,17 @@ const GUEST_WEB_ITEMS = [
 
 const MEMBER_ANDROID_ITEMS = [
   { to: "/", icon: Home, label: "홈" },
-  { to: "/gold-price", icon: Scale, label: "금시세" },
-  { to: "/my-gold", icon: Gem, label: "MY GOLD", center: true },
-  { to: "/gold-exchange", icon: Calculator, label: "금교환" },
+  { to: "/my-gold", icon: Gem, label: "MY GOLD" },
+  { to: "/my-gold/items?add=1", icon: Plus, label: "금 추가", center: true },
+  { to: "/my-gold/alerts", icon: BellRing, label: "알림" },
   { to: "/profile", icon: User, label: "MY" },
 ];
 
 const GUEST_ANDROID_ITEMS = [
   { to: "/", icon: Home, label: "홈" },
   { to: "/gold-price", icon: Scale, label: "금시세" },
-  { to: "/my-gold", icon: Gem, label: "MY GOLD", center: true },
-  { to: "/gold-exchange", icon: Calculator, label: "금교환" },
+  { to: "/my-gold/items?add=1", icon: Plus, label: "금 추가", center: true },
+  { to: "/my-gold", icon: Gem, label: "MY GOLD" },
   { to: "/login", icon: User, label: "로그인" },
 ];
 
@@ -227,25 +229,30 @@ export default function BottomNav() {
 
   return createPortal(
     <Nav $android={isAndroid}>
-      {items.map(({ to, icon, label, center = false }) => (
+      {items.map(({ to, icon, label, center = false }) => {
+        const itemPath = String(to).split("?", 1)[0];
+        const isCurrent = itemPath === "/"
+          ? pathname === "/"
+          : center && itemPath === "/my-gold/items"
+            ? pathname === itemPath
+            : pathname.startsWith(itemPath);
+
+        return (
         <Item
           key={to}
           to={to}
-          end={to === "/"}
+          end={itemPath === "/"}
           $android={isAndroid}
           $center={center}
-          aria-current={
-            (to === "/" ? pathname === "/" : pathname.startsWith(to))
-              ? "page"
-              : undefined
-          }
+          aria-current={isCurrent ? "page" : undefined}
         >
           <IconShell>
             {React.createElement(icon, { "aria-hidden": true })}
           </IconShell>
           <span>{label}</span>
         </Item>
-      ))}
+        );
+      })}
     </Nav>,
     document.body
   );

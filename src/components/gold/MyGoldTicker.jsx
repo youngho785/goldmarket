@@ -5,9 +5,7 @@ import styled from "styled-components";
 import { ArrowRight, Gem } from "lucide-react";
 
 import { useAuthContext } from "@/context/AuthContext";
-import useBonusGoldBalance from "@/hooks/useBonusGoldBalance";
 import useGoldVaultDashboard from "@/hooks/useGoldVaultDashboard";
-import { computeVaultValueWon } from "@/lib/goldVaultCatalog";
 
 const Bar = styled.aside`
   position: relative;
@@ -141,27 +139,17 @@ function formatSignedPercent(value) {
 export default function MyGoldTicker() {
   const { memberUser: user } = useAuthContext() || {};
   const dashboard = useGoldVaultDashboard(user?.uid);
-  const bonus = useBonusGoldBalance(user?.uid);
 
-  const bonusBalanceG = Number(bonus.balanceG || 0);
-  const pureGoldG = Number(dashboard.summary.pureGoldG || 0) + bonusBalanceG;
-  const bonusValueWon = dashboard.publicPriceEnabled
-    ? computeVaultValueWon(bonusBalanceG, dashboard.customerSellPricePerDon)
-    : 0;
-  const previousBonusValueWon = dashboard.publicPriceEnabled
-    ? computeVaultValueWon(bonusBalanceG, dashboard.previousCustomerSellPricePerDon)
-    : 0;
-  const currentValueWon =
-    Number(dashboard.summary.estimatedValueWon || 0) + bonusValueWon;
-  const previousValueWon =
-    Number(dashboard.summary.previousEstimatedValueWon || 0) + previousBonusValueWon;
+  const pureGoldG = Number(dashboard.summary.pureGoldG || 0);
+  const currentValueWon = Number(dashboard.summary.estimatedValueWon || 0);
+  const previousValueWon = Number(dashboard.summary.previousEstimatedValueWon || 0);
   const todayChangeWon =
     currentValueWon > 0 && previousValueWon > 0
       ? currentValueWon - previousValueWon
       : 0;
   const todayChangePercent =
     previousValueWon > 0 ? (todayChangeWon / previousValueWon) * 100 : null;
-  const loading = !!user?.uid && (dashboard.itemsLoading || bonus.loading);
+  const loading = !!user?.uid && dashboard.itemsLoading;
 
   let content;
   if (!user?.uid) {

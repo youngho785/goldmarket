@@ -85,7 +85,7 @@ test("비회원 하단 메뉴는 보호 화면 대신 공개 핵심 기능과 �
   assert.match(bottomNavSource, /to: "\/gold-price"[\s\S]*label: "금시세"/);
   assert.match(bottomNavSource, /to: "\/login"[\s\S]*label: "로그인"/);
   assert.match(bottomNavSource, /const MEMBER_WEB_ITEMS = \[[\s\S]*label: "금시세"[\s\S]*label: "MY GOLD"[\s\S]*label: "금교환"[\s\S]*label: "MY"/);
-  assert.match(bottomNavSource, /const MEMBER_ANDROID_ITEMS = \[[\s\S]*label: "금시세"[\s\S]*label: "MY GOLD"[\s\S]*center: true[\s\S]*label: "금교환"[\s\S]*label: "MY"/);
+  assert.match(bottomNavSource, /const MEMBER_ANDROID_ITEMS = \[[\s\S]*label: "MY GOLD"[\s\S]*label: "금 추가"[\s\S]*center: true[\s\S]*label: "알림"[\s\S]*label: "MY"/);
   assert.match(bottomNavSource, /isMember \? MEMBER_WEB_ITEMS : GUEST_WEB_ITEMS/);
   assert.match(bottomNavSource, /isMember \? MEMBER_ANDROID_ITEMS : GUEST_ANDROID_ITEMS/);
 });
@@ -514,15 +514,14 @@ test("앱 홈 금시세는 MY GOLD 시세 listener를 재사용하고 활성 예
   assert.ok(reservationIndex >= 0 && myGoldIndex > reservationIndex && goldPriceIndex > myGoldIndex);
 });
 
-test("Android 홈은 GOLD JOURNEY와 MILESTONE LADDER를 MY GOLD 기록에서 바로 이어준다", () => {
-  assert.match(androidHomeSource, /GOLD JOURNEY · GOLD TO GOLD/);
-  assert.match(androidHomeSource, /<JourneySteps aria-label="내 금의 GOLD JOURNEY">/);
-  assert.match(androidHomeSource, /MILESTONE LADDER/);
-  assert.match(androidHomeSource, /buildGoldMilestones\(pureGoldG\)/);
-  assert.match(androidHomeSource, /formatGoldGrams\(nextBarTarget\.grams\)/);
+test("Android 홈은 MY GOLD 가치·7일 변화·알림·GOLD TO GOLD를 간결하게 이어준다", () => {
+  assert.match(androidHomeSource, /<AppMyGoldDashboard/);
+  assert.match(androidHomeSource, /최근 7일 가치 변화/);
+  assert.match(androidHomeSource, /GOLD TO GOLD · MY GOLD/);
   assert.match(androidHomeSource, /to="\/gold-exchange\?mode=vault&auto=1"/);
   assert.match(androidHomeSource, /<MyGoldAlertSummary[\s\S]*demoMode=\{!user\?\.uid\}/);
-  assert.doesNotMatch(androidHomeSource, /Math\.round\(nextBarTarget\.grams\)/);
+  assert.match(androidHomeSource, /to="\/my-gold\/items\?add=1"/);
+  assert.doesNotMatch(androidHomeSource, /GOLD JOURNEY · GOLD TO GOLD|MILESTONE LADDER/);
 });
 
 test("GoldExchange 진입 모드는 URL을 기준으로 한 곳에서 상태를 전환한다", () => {

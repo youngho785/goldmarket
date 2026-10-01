@@ -214,6 +214,21 @@ export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
+    const source = returningToMyGold
+      ? "mygold"
+      : returningToExchange
+        ? "exchange"
+        : returnTo === "/"
+          ? "direct"
+          : "other";
+    trackProductEventOncePerSession(
+      "registration_started",
+      { source },
+      `registration-started-${source}`
+    );
+  }, [returnTo, returningToExchange, returningToMyGold]);
+
+  useEffect(() => {
     const raw = sessionStorage.getItem(REGISTER_FORM_KEY);
     if (!raw) return;
     try {

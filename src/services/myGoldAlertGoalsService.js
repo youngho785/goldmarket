@@ -52,20 +52,13 @@ export function normalizeMyGoldAlertGoals(raw) {
 }
 
 function readPushReady(data) {
+  // MY GOLD 목표 도달은 사용자가 직접 설정하는 서비스 알림입니다.
+  // 마케팅 동의와 별개로, 이 계정에 연결된 알림 기기가 있는지만 확인합니다.
   const preferences = data?.notificationPreferences || {};
-  const hasExplicitTarget =
-    !!data && Object.prototype.hasOwnProperty.call(data, "marketingFcmToken");
-  const hasTarget = hasExplicitTarget
-    ? typeof data?.marketingFcmToken === "string" && data.marketingFcmToken.trim().length >= 20
-    : Array.isArray(data?.fcmTokens) && data.fcmTokens.some(
-        (token) => typeof token === "string" && token.trim().length >= 20
-      );
-  return (
-    data?.consents?.marketing?.accepted === true &&
-    preferences.allEnabled !== false &&
-    preferences.goldNews !== false &&
-    hasTarget
-  );
+  return preferences.allEnabled !== false &&
+    Array.isArray(data?.fcmTokens) && data.fcmTokens.some(
+      (token) => typeof token === "string" && token.trim().length >= 20
+    );
 }
 
 export async function getMyGoldAlertGoals(uid) {

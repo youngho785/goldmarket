@@ -13,24 +13,6 @@ import {
 import { useAuthContext } from "@/context/AuthContext";
 import useBonusGoldBalance from "@/hooks/useBonusGoldBalance";
 import useGoldVaultDashboard from "@/hooks/useGoldVaultDashboard";
-import { DON_TO_GRAMS } from "@/lib/goldRates";
-import {
-  computeVaultMarketValueWon,
-  computeVaultValueWon,
-} from "@/lib/goldVaultCatalog";
-
-const GUEST_SAMPLE_ITEMS = Object.freeze([
-  {
-    label: "18K 팔찌",
-    goldType: "18k(750) 제품(팔찌,목걸이, 반지,귀걸이, 발찌 등)",
-    weightG: 10,
-  },
-  {
-    label: "순금 돌반지",
-    goldType: "순금 999제품(팔찌,목걸이, 반지,귀걸이)",
-    weightG: DON_TO_GRAMS * 2,
-  },
-]);
 
 const Card = styled.section`
   position: relative;
@@ -312,70 +294,12 @@ export default function MyGoldIntroCard() {
   const bonus = useBonusGoldBalance(user?.uid);
   const bonusBalanceG = Number(bonus.balanceG || 0);
   const hasRealGold = !!user?.uid && dashboard.summary.itemCount > 0;
-  const hasBonusGold = !!user?.uid && bonusBalanceG > 0;
-  const hasVaultContent = hasRealGold || hasBonusGold;
-  const waitingForVault =
-    !!user?.uid && (dashboard.itemsLoading || bonus.loading);
-
-  const guestSample = useMemo(() => {
-    const values = GUEST_SAMPLE_ITEMS.map((item) => {
-      return {
-        currentValue: dashboard.publicPriceEnabled
-          ? computeVaultMarketValueWon(item, dashboard.rates, dashboard.market)
-          : 0,
-        previousValue: dashboard.publicPriceEnabled
-          ? computeVaultMarketValueWon(item, dashboard.rates, dashboard.previousMarket)
-          : 0,
-      };
-    });
-
-    const totals = values.reduce(
-      (acc, item) => ({
-        estimatedValueWon: acc.estimatedValueWon + item.currentValue,
-        previousEstimatedValueWon:
-          acc.previousEstimatedValueWon + item.previousValue,
-      }),
-      { estimatedValueWon: 0, previousEstimatedValueWon: 0 }
-    );
-    const changeWon =
-      totals.estimatedValueWon > 0 && totals.previousEstimatedValueWon > 0
-        ? totals.estimatedValueWon - totals.previousEstimatedValueWon
-        : 0;
-    const changePercent =
-      totals.previousEstimatedValueWon > 0
-        ? (changeWon / totals.previousEstimatedValueWon) * 100
-        : null;
-
-    return {
-      ...totals,
-      changePercent,
-      changeDirection:
-        changeWon > 0
-          ? "up"
-          : changeWon < 0
-            ? "down"
-            : changePercent === 0
-              ? "same"
-              : "unknown",
-    };
-  }, [
-    dashboard.rates,
-    dashboard.publicPriceEnabled,
-    dashboard.market,
-    dashboard.previousMarket,
-  ]);
+  const hasVaultContent = hasRealGold;
+  const waitingForVault = !!user?.uid && dashboard.itemsLoading;
 
   const actual = useMemo(() => {
-    const bonusCurrentValue = dashboard.publicPriceEnabled
-      ? computeVaultValueWon(bonusBalanceG, dashboard.customerSellPricePerDon)
-      : 0;
-    const bonusPreviousValue = dashboard.publicPriceEnabled
-      ? computeVaultValueWon(bonusBalanceG, dashboard.previousCustomerSellPricePerDon)
-      : 0;
-    const estimatedValueWon =
-      Number(dashboard.summary.estimatedValueWon || 0) + bonusCurrentValue;
-    const previousEstimatedValueWon =
-      Number(dashboard.summary.previousEstimatedValueWon || 0) + bonusPreviousValue;
+    const estimatedValueWon = Number(dashboard.summary.estimatedValueWon || 0);
+    const previousEstimatedValueWon = Number(dashboard.summary.previousEstimatedValueWon || 0);
     const changeWon =
       estimatedValueWon > 0 && previousEstimatedValueWon > 0
         ? estimatedValueWon - previousEstimatedValueWon
@@ -399,16 +323,11 @@ export default function MyGoldIntroCard() {
               : "unknown",
     };
   }, [
-    bonusBalanceG,
-    dashboard.publicPriceEnabled,
-    dashboard.customerSellPricePerDon,
-    dashboard.previousCustomerSellPricePerDon,
     dashboard.summary.estimatedValueWon,
     dashboard.summary.previousEstimatedValueWon,
   ]);
 
-  const showGuestSample = !user?.uid;
-  const display = showGuestSample ? guestSample : actual;
+  const display = actual;
   const change = changePercentView(display.changePercent, display.changeDirection);
   const ChangeIcon = change.icon;
 
@@ -422,20 +341,18 @@ export default function MyGoldIntroCard() {
               ? "MY GOLD"
               : hasVaultContent
                 ? "MY GOLD"
-                : showGuestSample
-                  ? "MY GOLD · 체험 예시"
-                  : "MY GOLD"}
+                : "MY GOLD"}
           </Kicker>
 
           <Title id="my-gold-intro-title">
             {waitingForVault
               ? "MY GOLD를 불러오고 있어요"
-              : hasVaultContent || showGuestSample
+              : hasVaultContent
                 ? "내 금의 오늘 가치"
                 : "내 금, 오늘 얼마일까요?"}
           </Title>
 
-          {(waitingForVault || hasVaultContent || showGuestSample) ? (
+          {(waitingForVault || hasVaultContent) ? (
             <ValueRow>
               <Value>
                 {waitingForVault
@@ -444,7 +361,7 @@ export default function MyGoldIntroCard() {
                     ? formatWon(display.estimatedValueWon)
                     : "시세 공개 대기"}
               </Value>
-              {dashboard.publicPriceEnabled && !waitingForVault && (hasVaultContent || showGuestSample) && (
+              {dashboard.publicPriceEnabled && !waitingForVault && hasVaultContent && (
                 <Change $direction={change.direction}>
                   <ChangeIcon size={14} aria-hidden />
                   {change.text}
@@ -463,24 +380,17 @@ export default function MyGoldIntroCard() {
             </BonusLine>
           )}
 
-          {showGuestSample && (
-            <BonusLine>
-              체험 예시 · 18K 팔찌 10g + 순금 돌반지 2돈
-            </BonusLine>
-          )}
         </Copy>
 
         <Aside>
           <Action to="/my-gold">
-            {hasVaultContent ? "MY GOLD 보기" : user?.uid ? "첫 금 기록하기" : "MY GOLD 체험하기"}
+            {hasVaultContent ? "MY GOLD 보기" : user?.uid ? "첫 금 기록하기" : "내 금 기록해 보기"}
             <ArrowRight size={15} aria-hidden />
           </Action>
           <Disclaimer>
             {hasVaultContent
-              ? "기록한 금과 MEMBER GOLD에 현재 환산율과 공개 시세를 적용한 참고값이며 실제 교환 결과는 매장 확인 후 확정됩니다."
-              : user?.uid
-                ? "가상의 자산 금액을 표시하지 않습니다. 금을 기록한 뒤 실제 입력값으로 오늘 가치와 예상 순금량을 계산합니다."
-                : "예시 금제품과 현재 공개 시세를 적용한 체험값입니다. 실제 내 금은 회원가입 후 저장할 수 있습니다."}
+              ? "MY GOLD는 기록한 내 금에 현재 환산율과 공개 시세를 적용한 참고값입니다. MEMBER GOLD는 별도 혜택이며 실제 교환 결과는 매장 확인 후 확정됩니다."
+              : "가상의 자산 금액을 표시하지 않습니다. 실제 가지고 있는 금을 입력한 뒤 오늘 가치와 예상 순금량을 확인할 수 있습니다."}
           </Disclaimer>
         </Aside>
       </Inner>

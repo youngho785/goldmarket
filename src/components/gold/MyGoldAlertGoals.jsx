@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import styled from "styled-components";
 import { Bell, BellRing, CheckCircle2, Save } from "lucide-react";
+import { trackProductEvent } from "@/analytics/productAnalytics";
 
 import {
   EMPTY_MY_GOLD_ALERT_GOALS,
@@ -349,6 +350,7 @@ export default function MyGoldAlertGoals({
 
       const result = await saveMyGoldAlertGoals(values);
       setPushReady(result.pushReady === true);
+      void trackProductEvent("mygold_alert_saved", { mode: hasAnyGoal ? "enabled" : "disabled" });
       if (result.notified && Array.isArray(result.reached) && result.reached.length) {
         setMessage(`저장 완료 · 현재 이미 ${result.reached.join(" · ")}에 도달했습니다.`);
       } else if (hasAnyGoal) {
@@ -385,7 +387,6 @@ export default function MyGoldAlertGoals({
     }
   };
 
-  const bonusOnly = Number(registeredItemCount) === 0 && Number(bonusGoldG) > 0;
   const metricsUnavailable = loadingMetrics || !publicPriceEnabled;
 
   return (
@@ -400,7 +401,7 @@ export default function MyGoldAlertGoals({
 
       <Current aria-label="현재 내 금 알림 기준">
         <CurrentItem>
-          <span>{bonusOnly ? "MEMBER GOLD 가치" : "현재 MY GOLD"}</span>
+          <span>현재 MY GOLD</span>
           <strong>{metricsUnavailable ? "확인 중" : formatWon(currentValueWon)}</strong>
         </CurrentItem>
         <CurrentItem>
@@ -491,7 +492,7 @@ export default function MyGoldAlertGoals({
           <span>
             {demoMode
               ? "지금은 알림 기능을 체험하는 중입니다. 실제 자동 푸시는 로그인 후 받을 수 있습니다."
-              : "자동 푸시를 받으려면 앱푸시 수신 설정이 필요합니다."}
+              : "MY GOLD 목표 도달 푸시를 받으려면 이 기기의 알림 권한을 켜 주세요. 마케팅 수신동의와는 별도입니다."}
           </span>
           <Link to={demoMode ? "/login?next=%2Fmy-gold%2Falerts" : "/settings"}>
             {demoMode ? "로그인" : "알림 설정"}
@@ -515,8 +516,8 @@ export default function MyGoldAlertGoals({
       <Details>
         <summary>알림 계산 기준 보기</summary>
         <p>
-          MY GOLD 가치는 기록한 금의 교환기준 예상 순금과 MEMBER GOLD의 참고가치를 함께 반영합니다.
-          골드바 목표도 두 금량을 합산해 확인합니다.
+          MY GOLD 가치 목표는 내가 직접 기록한 금의 현재 참고가치만 반영합니다.
+          MEMBER GOLD는 MY GOLD 가치와 분리하며, 골드바 교환 가능 목표에서만 함께 사용할 수 있는 금량으로 확인합니다.
         </p>
         <p>
           순금 가격은 상승 도달이면 목표가 이상, 하락 도달이면 목표가 이하가 되는 순간을 확인합니다.

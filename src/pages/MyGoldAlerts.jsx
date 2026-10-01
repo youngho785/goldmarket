@@ -11,7 +11,6 @@ import MyGoldAlertGoals from "@/components/gold/MyGoldAlertGoals";
 import {
   computeVaultMarketValueWon,
   computeVaultPureGoldG,
-  computeVaultValueWon,
 } from "@/lib/goldVaultCatalog";
 import {
   GUEST_MY_GOLD_BONUS_G,
@@ -94,11 +93,9 @@ export default function MyGoldAlerts() {
 
   const bonusBalanceG = isGuest ? GUEST_MY_GOLD_BONUS_G : Number(bonus.balanceG || 0);
   const activeSummary = isGuest ? guestSummary : summary;
-  const bonusValueWon =
-    publicPriceEnabled && bonusBalanceG > 0
-      ? computeVaultValueWon(bonusBalanceG, customerSellPricePerDon)
-      : 0;
-  const currentValueWon = Number(activeSummary.estimatedValueWon || 0) + bonusValueWon;
+  // MY GOLD 가치 목표는 사용자가 직접 기록한 금만 반영합니다.
+  // MEMBER GOLD(회원혜택)는 별도 자산으로 유지하고, 골드바 교환 가능 예상량에서만 합산합니다.
+  const currentValueWon = Number(activeSummary.estimatedValueWon || 0);
   const exchangeReadyG = Number(activeSummary.pureGoldG || 0) + bonusBalanceG;
   const loading = isGuest ? false : itemsLoading || bonus.loading;
 

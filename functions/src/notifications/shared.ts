@@ -12,6 +12,8 @@ export function notificationCategory(typeValue: unknown): "exchange" | "goldNews
   const type = String(typeValue || "").toLowerCase();
   if (type.startsWith("exchange_") || type.startsWith("bonus_gold_usage_")) return "exchange";
   if (type.startsWith("gold_price") || type.startsWith("gold_news") || type.startsWith("market_") || type === "notice") return "goldNews";
+  // 사용자가 직접 설정한 MY GOLD 목표 도달 알림은 서비스 알림으로 취급합니다.
+  if (type === "my_gold_goal_reached") return "other";
   if (type.startsWith("my_gold_") || type.startsWith("promo_") || type.startsWith("quiz_") || type === "promo_bonus" || type === "welcome_bonus" || type.startsWith("event_") || type.startsWith("benefit_")) return "benefits";
   return "other";
 }

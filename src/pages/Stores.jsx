@@ -336,9 +336,9 @@ export default function Stores() {
   return (
     <Page>
       <Header>
-        <Title>교환 절차와 매장 안내</Title>
+        <Title>부산 방문·교환 안내</Title>
         <Lead>
-          한국골드마켓의 골드바 교환은 부산 범천동 원일귀금속에서 진행합니다.
+          MY GOLD와 금 가치 계산은 전국에서 온라인으로 이용할 수 있고, 실제 실측·확인·GOLD TO GOLD 교환은 현재 부산 범천동 원일귀금속에서 한국골드마켓이 직접 진행합니다.
           방문 전 전화로 준비사항과 가능한 시간을 확인하면 더 빠르게 안내받을 수 있습니다.
         </Lead>
       </Header>

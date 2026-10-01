@@ -18,6 +18,22 @@ const ANALYTICS_EXPLICITLY_DISABLED =
 
 const EVENT_PARAM_RULES = Object.freeze({
   landing_view: Object.freeze({}),
+  registration_started: Object.freeze({
+    source: new Set(["direct", "mygold", "exchange", "other"]),
+  }),
+  mygold_save_intent: Object.freeze({
+    source: new Set(["guest"]),
+  }),
+  onboarding_completed: Object.freeze({
+    destination: new Set(["mygold", "exchange", "profile", "other"]),
+  }),
+  app_home_view: Object.freeze({}),
+  mygold_alert_saved: Object.freeze({
+    mode: new Set(["enabled", "disabled"]),
+  }),
+  gold_to_gold_cta_clicked: Object.freeze({
+    source: new Set(["app_home", "mygold"]),
+  }),
   landing_value_calculated: Object.freeze({
     gold_category: new Set(["14k", "18k", "pure_995", "pure_999", "pure_9999", "pure_other", "other"]),
     weight_band: new Set(["0_1g", "1_5g", "5_10g", "10_20g", "20_50g", "50_100g", "100g_plus"]),

@@ -5,6 +5,7 @@ import styled from "styled-components";
 import { BellRing, Check, ChevronRight, Sparkles } from "lucide-react";
 
 import { useAuthContext } from "@/context/AuthContext";
+import { trackProductEventOncePerSession } from "@/analytics/productAnalytics";
 import { registerForPush } from "@/firebase/firebase";
 import { isAndroid } from "@/platform/runtime";
 import { requestNativePushPermission } from "@/push/nativePush";
@@ -245,12 +246,6 @@ const Message = styled.p`
   line-height: 1.55;
 `;
 
-const FooterActions = styled.div`
-  display: grid;
-  gap: 9px;
-  margin-top: 18px;
-`;
-
 const ContinueCard = styled.section`
   margin-top: 14px;
   padding: 16px;
@@ -487,20 +482,27 @@ export default function WelcomeOnboarding() {
   };
 
   const handleFinish = () => {
+    const destination = nextPath.startsWith("/gold-exchange")
+      ? "exchange"
+      : nextPath.startsWith("/profile")
+        ? "profile"
+        : nextPath === "/" || nextPath.startsWith("/my-gold")
+          ? "mygold"
+          : "other";
+    trackProductEventOncePerSession(
+      "onboarding_completed",
+      { destination },
+      `onboarding-completed-${destination}`
+    );
     clearMemberOnboardingPending();
-    navigate(nextPath || "/", { replace: true });
+    navigate(nextPath && nextPath !== "/" ? nextPath : "/my-gold", { replace: true });
   };
 
   const claimedCount =
     Number(status.welcome.receivedThisAccount) +
     Number(status.marketingPush.receivedThisAccount) +
     Number(status.quiz.receivedThisAccount);
-  const previousClaimCount =
-    Number(status.welcome.previouslyReceived) +
-    Number(status.marketingPush.previouslyReceived) +
-    Number(status.quiz.previouslyReceived);
   const progress = Math.round((claimedCount / 3) * 100);
-  const allRewardsClaimed = claimedCount === 3;
 
   const hasRequestedFlow = nextPath !== "/";
   const finishLabel = nextPath.startsWith("/gold-exchange")
@@ -509,13 +511,13 @@ export default function WelcomeOnboarding() {
       ? "MY GOLD 계속하기"
       : nextPath.startsWith("/profile")
         ? "내 정보 계속하기"
-        : "한국골드마켓 시작하기";
+        : "MY GOLD 시작하기";
 
   const finishDescription = nextPath.startsWith("/gold-exchange")
     ? "가입 전에 계산하거나 선택한 예약 흐름으로 바로 돌아갑니다."
     : nextPath.startsWith("/my-gold")
       ? "가입 전에 기록하거나 계산한 내 금 흐름을 그대로 이어갑니다."
-      : "가입 전에 하던 작업으로 먼저 돌아갑니다.";
+      : "집에 있는 금 하나를 기록하면 오늘 가치와 이후의 변화를 계속 확인할 수 있습니다.";
 
   if (user?.uid && !isEmailVerified) {
     return null;
@@ -524,59 +526,34 @@ export default function WelcomeOnboarding() {
   return (
     <Page>
       <Hero>
-        <Title>
-          {allRewardsClaimed
-            ? "신규회원 혜택 순금 0.03g 달성 🎉"
-            : "회원가입을 축하합니다 🎉"}
-        </Title>
+        <Title>MY GOLD를 시작할 준비가 됐습니다.</Title>
         <Lead>
-          {status.welcome.receivedThisAccount ? (
-            <>
-              회원가입이 완료되어 <strong>순금 0.01g</strong>이 현재 계정에 적립되었습니다.
-            </>
-          ) : status.welcome.previouslyReceived ? (
-            <>
-              이 인증 이메일은 이전 가입에서 회원가입 혜택을 이미 지급받았습니다.
-              각 순금 혜택은 <strong>인증 이메일 기준 1회</strong>만 제공되어 재가입 시 중복 적립되지 않습니다.
-            </>
-          ) : (
-            <>
-              회원가입이 완료되었습니다. <strong>순금 0.01g</strong> 적립을 확인하고 있습니다.
-            </>
+          이메일 인증이 완료되었습니다. 이제 내가 실제로 가진 금을 기록하고 오늘 가치와 변화를 이어서 확인할 수 있습니다.
+          {status.welcome.receivedThisAccount && (
+            <> 신규회원 기본 혜택 <strong>순금 {status.welcome.creditedG.toFixed(2)}g</strong>도 별도로 적립되었습니다.</>
           )}
           {status.restoredBalanceG > 0 && (
-            <>
-              {" "}이전 계정에서 사용하지 않은 <strong>적립 순금 {status.restoredBalanceG.toFixed(2)}g</strong>은 현재 계정으로 복원했습니다.
-            </>
-          )}
-          {previousClaimCount < 3 && (
-            <>
-              {" "}아직 지급 이력이 없는 혜택은 조건을 완료하면 받을 수 있습니다.
-            </>
+            <> 이전 계정의 미사용 <strong>회원혜택 순금 {status.restoredBalanceG.toFixed(2)}g</strong>도 복원했습니다.</>
           )}
         </Lead>
-
-        <ProgressText>
-          <span>신규회원 혜택 진행</span>
-          <b>
-            순금 {status.earnedG.toFixed(2)}g / {status.maxG.toFixed(2)}g
-          </b>
-        </ProgressText>
-        <ProgressTrack aria-label={`신규회원 혜택 진행률 ${progress}%`}>
-          <ProgressBar $progress={progress} />
-        </ProgressTrack>
       </Hero>
 
-      {hasRequestedFlow && (
-        <ContinueCard aria-label="가입 전 작업 계속하기">
-          <strong>하던 일을 먼저 이어가세요.</strong>
-          <p>{finishDescription}</p>
-          <ActionButton type="button" onClick={handleFinish}>
-            {finishLabel}
-            <ChevronRight />
-          </ActionButton>
-        </ContinueCard>
-      )}
+      <ContinueCard aria-label="MY GOLD 계속하기">
+        <strong>{hasRequestedFlow ? "하던 일을 먼저 이어가세요." : "MY GOLD부터 시작하세요."}</strong>
+        <p>{finishDescription}</p>
+        <ActionButton type="button" onClick={handleFinish}>
+          {finishLabel}
+          <ChevronRight />
+        </ActionButton>
+      </ContinueCard>
+
+      <ProgressText>
+        <span>선택 회원혜택</span>
+        <b>순금 {status.earnedG.toFixed(2)}g / {status.maxG.toFixed(2)}g</b>
+      </ProgressText>
+      <ProgressTrack aria-label={`선택 회원혜택 진행률 ${progress}%`}>
+        <ProgressBar $progress={progress} />
+      </ProgressTrack>
 
       <Steps>
         <StepCard $done={status.marketingPush.claimed}>
@@ -585,7 +562,7 @@ export default function WelcomeOnboarding() {
           </StepIcon>
           <StepBody>
             <StepTop>
-              <h2>1. 금시세·MY GOLD 알림 받아보기</h2>
+              <h2>선택 1. 금시세·혜택 소식 알림</h2>
               <b>
                 {status.marketingPush.claimed
                   ? status.marketingPush.receivedThisAccount
@@ -595,9 +572,8 @@ export default function WelcomeOnboarding() {
               </b>
             </StepTop>
             <StepDescription>
-              금시세를 매번 찾아보지 않아도 주요 변동, MY GOLD 주간 리포트와
-              혜택을 앱푸시로 받아볼 수 있습니다. 광고성 정보 수신은 선택이며,
-              직접 알림 받기를 눌렀을 때만 기기 권한을 요청합니다.
+              주요 금시세 변동, MY GOLD 주간 리포트와 회원혜택 소식을 앱푸시로 받을 수 있습니다.
+              이 항목은 선택이며, MY GOLD 목표 도달 같은 서비스 알림과는 별도로 운영됩니다.
             </StepDescription>
 
             {!status.marketingPush.claimed && (
@@ -623,7 +599,7 @@ export default function WelcomeOnboarding() {
           </StepIcon>
           <StepBody>
             <StepTop>
-              <h2>2. 퀵퀴즈 풀고 순금 0.01g 더 받기</h2>
+              <h2>선택 2. 금 퀵퀴즈 혜택</h2>
               <b>
                 {status.quiz.claimed
                   ? status.quiz.receivedThisAccount
@@ -657,14 +633,6 @@ export default function WelcomeOnboarding() {
         </Message>
       )}
 
-      {!hasRequestedFlow && (
-        <FooterActions>
-          <ActionButton type="button" onClick={handleFinish}>
-            {finishLabel}
-            <ChevronRight />
-          </ActionButton>
-        </FooterActions>
-      )}
     </Page>
   );
 }

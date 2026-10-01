@@ -7,7 +7,6 @@ import {
   ALLOWED_BAR_DENOMS,
   DEFAULT_EXCHANGE,
   DEFAULT_GOLD_PRODUCTS,
-  DON_TO_GRAMS,
   ENFORCE_APP_CHECK,
   mergeGoldProducts,
   computeGoldPolicyResult,
@@ -16,10 +15,7 @@ import {
   koreaDateKey,
   roundTo3,
 } from "../core/runtime.js";
-import {
-  marketingPushEnabled,
-  normalizeNotificationPreferences,
-} from "./shared.js";
+import { normalizeNotificationPreferences } from "./shared.js";
 
 type PriceDirection = "up" | "down";
 
@@ -157,18 +153,10 @@ function normalizeGoals(value: unknown, strict = false): AlertGoals {
   return normalized;
 }
 
-function hasMarketingPushTarget(
+function hasServicePushTarget(
   userData: FirebaseFirestore.DocumentData | undefined
 ): boolean {
   if (!userData) return false;
-  const hasExplicitTarget = Object.prototype.hasOwnProperty.call(
-    userData,
-    "marketingFcmToken"
-  );
-  if (hasExplicitTarget) {
-    return typeof userData.marketingFcmToken === "string" &&
-      userData.marketingFcmToken.trim().length >= 20;
-  }
   return Array.isArray(userData.fcmTokens) &&
     userData.fcmTokens.some(
       (token: unknown) => typeof token === "string" && token.trim().length >= 20
@@ -178,10 +166,10 @@ function hasMarketingPushTarget(
 function goalPushReady(
   userData: FirebaseFirestore.DocumentData | undefined
 ): boolean {
-  const preferences = normalizeNotificationPreferences(
-    userData?.notificationPreferences
-  );
-  return marketingPushEnabled(userData, preferences) && hasMarketingPushTarget(userData);
+  // MY GOLD 목표는 사용자가 직접 설정한 서비스 알림입니다.
+  // 광고성 정보 수신동의와는 분리하되, 사용자가 전체 알림을 껐다면 보내지 않습니다.
+  const preferences = normalizeNotificationPreferences(userData?.notificationPreferences);
+  return preferences.allEnabled !== false && hasServicePushTarget(userData);
 }
 
 function readBonusGoldG(data: FirebaseFirestore.DocumentData | undefined): number {
@@ -191,10 +179,6 @@ function readBonusGoldG(data: FirebaseFirestore.DocumentData | undefined): numbe
   return Number.isFinite(grams) && grams > 0 ? grams : 0;
 }
 
-function goldValueWon(pureGoldG: number, pricePerDon: number): number {
-  if (pureGoldG <= 0 || pricePerDon <= 0) return 0;
-  return Math.round((pureGoldG / DON_TO_GRAMS) * pricePerDon);
-}
 
 function goalKey(prefix: string, value: number | null): string {
   if (!value || value <= 0) return "";
@@ -283,10 +267,9 @@ async function loadUserMetrics(
   registeredPureGoldG = roundTo3(registeredPureGoldG);
   const bonusGoldG = roundTo3(readBonusGoldG(userData));
   const exchangeReadyG = roundTo3(registeredPureGoldG + bonusGoldG);
-  const bonusValueWon = goldValueWon(bonusGoldG, currentPricePerDon);
-
   return {
-    currentValueWon: registeredValueWon + bonusValueWon,
+    // MY GOLD 가치는 사용자가 직접 등록한 실물 금만 반영합니다.
+    currentValueWon: registeredValueWon,
     currentPricePerDon,
     registeredItemCount,
     registeredPureGoldG,
@@ -360,7 +343,8 @@ function metricsFromAggregate(
   const bonusGoldG = roundTo3(readBonusGoldG(userData));
   const exchangeReadyG = roundTo3(registeredPureGoldG + bonusGoldG);
   return {
-    currentValueWon: registeredValueWon + goldValueWon(bonusGoldG, currentPricePerDon),
+    // MEMBER GOLD는 MY GOLD 가치에 합산하지 않습니다.
+    currentValueWon: registeredValueWon,
     currentPricePerDon,
     registeredItemCount,
     registeredPureGoldG,

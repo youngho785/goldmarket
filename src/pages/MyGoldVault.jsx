@@ -658,7 +658,7 @@ export default function MyGoldVault() {
 
   const resetGuestDemo = () => {
     if (!isGuest) return;
-    if (!window.confirm("MY GOLD 체험을 처음 예시 상태로 되돌릴까요?")) return;
+    if (!window.confirm("MY GOLD 체험 기록을 모두 지우고 처음 상태로 되돌릴까요?")) return;
     setGuestRawItems(resetGuestMyGoldItems());
     resetForm();
     setCompareDate("");
@@ -669,6 +669,11 @@ export default function MyGoldVault() {
 
   const saveGuestVaultToAccount = () => {
     if (!isGuest || guestRawItems.length === 0) return;
+    trackProductEventOncePerSession(
+      "mygold_save_intent",
+      { source: "guest" },
+      "mygold-guest-save-intent"
+    );
     try {
       saveGoldVaultGuestDraft(guestRawItems);
       navigate("/login?next=%2Fmy-gold%3Fimport%3Dguest", {

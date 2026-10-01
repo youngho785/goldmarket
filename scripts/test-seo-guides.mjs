@@ -17,8 +17,8 @@ import {
 const read = (relativePath) =>
   readFile(new URL(`../${relativePath}`, import.meta.url), "utf8");
 
-test("검색 가이드는 정확히 10개이며 slug가 중복되지 않는다", () => {
-  assert.equal(GOLD_GUIDES.length, 10);
+test("검색 가이드는 핵심 검색의도를 20개 이상 다루고 slug가 중복되지 않는다", () => {
+  assert.ok(GOLD_GUIDES.length >= 20);
   const slugs = GOLD_GUIDES.map((guide) => guide.slug);
   assert.equal(new Set(slugs).size, slugs.length);
 

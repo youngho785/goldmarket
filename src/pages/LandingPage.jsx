@@ -418,15 +418,15 @@ export default function LandingPage() {
 
       <MemberStartCard aria-labelledby="member-start-title">
         <div>
-          <Kicker>MEMBER · MY GOLD</Kicker>
-          <h2 id="member-start-title">가입은 간단하게, 내 금의 가치는 계속.</h2>
+          <Kicker>MY GOLD · KEEP YOUR RECORD</Kicker>
+          <h2 id="member-start-title">계산한 금을 기록하면, 오늘 이후의 가치가 이어집니다.</h2>
           <p>
-            이메일 인증만으로 MY GOLD를 시작하세요. 내 금을 기록하고 목표 알림을 설정하면
-            가치 변화를 확인하다가 GOLD TO GOLD 예상과 방문 예약까지 이어갈 수 있습니다.
+            회원가입부터 요구하지 않습니다. 먼저 금을 계산하고 MY GOLD에 기록해 보세요.
+            기록을 계정에 계속 보관하고 알림을 받을 때 간단한 이메일 인증으로 이어갈 수 있습니다.
           </p>
         </div>
-        <GoldButton to="/register">
-          간편하게 시작하기 <ArrowRight size={15} aria-hidden />
+        <GoldButton to="/my-gold">
+          MY GOLD 보기 <ArrowRight size={15} aria-hidden />
         </GoldButton>
       </MemberStartCard>
 
@@ -477,7 +477,7 @@ export default function LandingPage() {
           <StoreMeta><span><MapPin size={14} aria-hidden /> 부산광역시 부산진구 골드테마길 21</span></StoreMeta>
           <Actions>
             <GoldButton to="/gold-exchange">예상 교환 확인 <ArrowRight size={15} aria-hidden /></GoldButton>
-            <TextLink to="/stores">매장·교환절차 보기 <ArrowRight size={15} aria-hidden /></TextLink>
+            <TextLink to="/stores">부산 방문·교환절차 보기 <ArrowRight size={15} aria-hidden /></TextLink>
           </Actions>
         </ExchangeCopy>
       </ExchangeTrust>

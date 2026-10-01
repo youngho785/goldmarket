@@ -44,6 +44,24 @@ const [
   read("firestore.rules"),
 ]);
 
+const [
+  guestDemoSource,
+  myGoldTickerSource,
+  myGoldIntroSource,
+  myGoldAlertsPageSource,
+  myGoldAlertGoalsServiceSource,
+  myGoldAlertFunctionSource,
+  notificationSharedSource,
+] = await Promise.all([
+  read("src/lib/myGoldGuestDemo.js"),
+  read("src/components/gold/MyGoldTicker.jsx"),
+  read("src/components/gold/MyGoldIntroCard.jsx"),
+  read("src/pages/MyGoldAlerts.jsx"),
+  read("src/services/myGoldAlertGoalsService.js"),
+  read("functions/src/notifications/myGoldAlerts.ts"),
+  read("functions/src/notifications/shared.ts"),
+]);
+
 test("회원가입은 최소 계정 생성과 점진적 프로필 구조를 사용한다", () => {
   assert.match(registerSource, /id="regEmail"/);
   assert.match(registerSource, /id="regPassword"/);
@@ -67,13 +85,14 @@ test("이메일 인증 후에는 원래 하던 일을 혜택보다 먼저 이어
   const continueIndex = welcomeSource.indexOf("<ContinueCard");
   const rewardsIndex = welcomeSource.indexOf("<Steps>");
   assert.ok(continueIndex >= 0 && rewardsIndex > continueIndex);
-  assert.match(welcomeSource, /navigate\(nextPath \|\| "\/", \{ replace: true \}\)/);
-  assert.match(welcomeSource, /하던 일을 먼저 이어가세요/);
+  assert.match(welcomeSource, /nextPath && nextPath !== "\/" \? nextPath : "\/my-gold"/);
+  assert.match(welcomeSource, /MY GOLD부터 시작하세요/);
 });
 
-test("푸시 권한은 가치 설명 뒤 사용자 행동으로 요청하고 보너스는 부가 혜택으로 둔다", () => {
-  assert.match(welcomeSource, /금시세·MY GOLD 알림 받아보기/);
-  assert.match(welcomeSource, /직접 알림 받기를 눌렀을 때만 기기 권한을 요청/);
+test("선택 마케팅 푸시는 사용자 행동으로 요청하고 MY GOLD 서비스 알림과 분리해 설명한다", () => {
+  assert.match(welcomeSource, /선택 1\. 금시세·혜택 소식 알림/);
+  assert.match(welcomeSource, /버튼을 누른 경우에만 OS\/브라우저 알림 권한을 요청/);
+  assert.match(welcomeSource, /MY GOLD 목표 도달 같은 서비스 알림과는 별도로 운영/);
   assert.match(welcomeSource, /알림 받고 순금 0\.01g 혜택 받기/);
   assert.match(welcomeSource, /onClick=\{handleMarketingReward\}/);
 });
@@ -82,8 +101,8 @@ test("MY GOLD는 저장한 금으로 GOLD TO GOLD 결과 단계까지 자동 연
   assert.match(myGoldSource, /\/gold-exchange\?mode=vault&auto=1/);
   assert.match(appHomeSource, /\/gold-exchange\?mode=vault&auto=1/);
   assert.match(androidHomeSource, /\/gold-exchange\?mode=vault&auto=1/);
-  assert.match(androidHomeSource, /GOLD JOURNEY · GOLD TO GOLD/);
-  assert.match(androidHomeSource, /MILESTONE LADDER/);
+  assert.match(androidHomeSource, /GOLD TO GOLD · MY GOLD/);
+  assert.match(androidHomeSource, /최근 7일 가치 변화/);
   assert.match(exchangeSource, /useGoldExchangeAutoVault/);
   assert.match(autoVaultSource, /validateExchangeProductsForCalculation/);
   assert.match(autoVaultSource, /applyExchangeFinalWeights/);
@@ -119,12 +138,34 @@ test("예약 연락처는 이미 알면 확인만 하고 첫 입력 후 다음 �
   assert.match(userServiceSource, /export async function saveReservationContact/);
 });
 
-test("Android 앱 홈은 다가오는 예약을 MY GOLD보다 먼저 보여준다", () => {
-  const reservationIndex = androidHomeSource.indexOf('<ReservationCard');
+test("Android 앱 홈은 MY GOLD를 최우선으로 보여주고 예약은 그 다음에 안내한다", () => {
   const dashboardIndex = androidHomeSource.indexOf("<AppMyGoldDashboard");
-  assert.ok(reservationIndex >= 0 && dashboardIndex > reservationIndex);
-  assert.match(androidHomeSource, /다가오는 방문 일정/);
-  assert.match(androidHomeSource, /GOLD TO GOLD 예약을 확인하세요/);
+  const reservationIndex = androidHomeSource.indexOf('<ReservationCard');
+  assert.ok(dashboardIndex >= 0 && reservationIndex > dashboardIndex);
+  assert.match(androidHomeSource, /다가오는 부산 방문 일정/);
+  assert.match(androidHomeSource, /GOLD TO GOLD 예약 내용을 확인하세요/);
+});
+
+test("게스트 MY GOLD는 가짜 기본 금과 회원혜택 없이 실제 입력부터 시작한다", () => {
+  assert.match(guestDemoSource, /GUEST_MY_GOLD_BONUS_G = 0/);
+  assert.match(guestDemoSource, /DEFAULT_GUEST_MY_GOLD_ITEMS = Object\.freeze\(\[\]\)/);
+  assert.match(guestDemoSource, /LEGACY_SAMPLE_IDS/);
+  assert.match(guestDemoSource, /LEGACY_SAMPLE_IDS\.has\(String\(item\?\.id \|\| ""\)\)\) continue/);
+});
+
+test("MY GOLD 요약 UI는 MEMBER GOLD를 현재 가치에 합산하지 않고 게스트 가상 샘플도 만들지 않는다", () => {
+  assert.doesNotMatch(myGoldTickerSource, /useBonusGoldBalance|bonusValueWon|previousBonusValueWon/);
+  assert.match(myGoldTickerSource, /const currentValueWon = Number\(dashboard\.summary\.estimatedValueWon \|\| 0\)/);
+  assert.doesNotMatch(myGoldIntroSource, /GUEST_SAMPLE_ITEMS|체험 예시 · 18K/);
+  assert.match(myGoldIntroSource, /const hasVaultContent = hasRealGold/);
+});
+
+test("MY GOLD 목표 알림은 회원혜택을 가치에 합산하지 않고 마케팅 동의와 분리한다", () => {
+  assert.match(myGoldAlertsPageSource, /const currentValueWon = Number\(activeSummary\.estimatedValueWon \|\| 0\)/);
+  assert.match(myGoldAlertFunctionSource, /currentValueWon: registeredValueWon/);
+  assert.match(myGoldAlertGoalsServiceSource, /const preferences = data\?\.notificationPreferences \|\| \{\}[\s\S]*preferences\.allEnabled !== false/);
+  assert.doesNotMatch(myGoldAlertGoalsServiceSource, /marketingPush|marketingSubscribed/);
+  assert.match(notificationSharedSource, /type === "my_gold_goal_reached"\) return "other"/);
 });
 
 test("개인정보 공개 문서와 회원가입 동의 버전·수집 시점이 일치한다", () => {

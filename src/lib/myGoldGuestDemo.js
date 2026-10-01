@@ -1,11 +1,16 @@
-import { DON_TO_GRAMS } from "@/lib/goldRates";
 import { validateGoldVaultValues } from "@/lib/goldVaultCatalog";
 
 const STORAGE_KEY = "kgm_my_gold_guest_demo_v1";
-const VERSION = 1;
+const VERSION = 2;
 const MAX_ITEMS = 30;
+const LEGACY_SAMPLE_IDS = new Set([
+  "guest-sample-bracelet",
+  "guest-sample-ring",
+]);
 
-export const GUEST_MY_GOLD_BONUS_G = 0.03;
+// 게스트 MY GOLD는 실제 회원혜택 순금을 가정하지 않습니다.
+// 사용자가 직접 입력한 금만 MY GOLD 가치에 반영합니다.
+export const GUEST_MY_GOLD_BONUS_G = 0;
 
 const EMPTY_GUEST_ALERT_GOALS = Object.freeze({
   enabled: false,
@@ -15,22 +20,9 @@ const EMPTY_GUEST_ALERT_GOALS = Object.freeze({
   targetGoldBarG: null,
 });
 
-export const DEFAULT_GUEST_MY_GOLD_ITEMS = Object.freeze([
-  {
-    id: "guest-sample-bracelet",
-    label: "18K 팔찌",
-    goldType: "18k(750) 제품(팔찌,목걸이, 반지,귀걸이, 발찌 등)",
-    weightG: 10,
-    note: "체험 예시",
-  },
-  {
-    id: "guest-sample-ring",
-    label: "순금 돌반지",
-    goldType: "순금 999제품(팔찌,목걸이, 반지,귀걸이)",
-    weightG: DON_TO_GRAMS * 2,
-    note: "체험 예시",
-  },
-]);
+// 새 게스트 MY GOLD는 샘플 금을 자동으로 넣지 않습니다.
+// 사용자가 계산기/직접 입력으로 만든 금만 표시합니다.
+export const DEFAULT_GUEST_MY_GOLD_ITEMS = Object.freeze([]);
 
 function makeGuestId() {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -43,6 +35,7 @@ function sanitizeItems(items) {
   if (!Array.isArray(items)) return [];
   const next = [];
   for (const item of items.slice(0, MAX_ITEMS)) {
+    if (LEGACY_SAMPLE_IDS.has(String(item?.id || ""))) continue;
     try {
       const normalized = validateGoldVaultValues(item || {});
       next.push({
@@ -81,7 +74,22 @@ function readStore() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (parsed?.version !== VERSION) return null;
+    if (![1, VERSION].includes(Number(parsed?.version))) return null;
+
+    // v1에서 자동으로 들어가던 샘플 두 개만 제거하고 사용자가 만든 기록은 보존합니다.
+    if (Number(parsed?.version) === 1) {
+      const migrated = {
+        ...parsed,
+        version: VERSION,
+        items: sanitizeItems(parsed?.items),
+        updatedAt: Date.now(),
+      };
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+      } catch {}
+      return migrated;
+    }
+
     return parsed;
   } catch {
     return null;
@@ -101,7 +109,6 @@ function writeStore(patch) {
   }
 }
 
-
 export function readSavedGuestMyGoldItems() {
   const stored = readStore();
   if (!Array.isArray(stored?.items)) return [];
@@ -111,7 +118,7 @@ export function readSavedGuestMyGoldItems() {
 export function readGuestMyGoldItems() {
   const stored = readStore();
   if (Array.isArray(stored?.items)) return sanitizeItems(stored.items);
-  return DEFAULT_GUEST_MY_GOLD_ITEMS.map((item) => ({ ...item }));
+  return [];
 }
 
 export function saveGuestMyGoldItems(items) {
@@ -121,7 +128,7 @@ export function saveGuestMyGoldItems(items) {
 }
 
 export function resetGuestMyGoldItems() {
-  const items = DEFAULT_GUEST_MY_GOLD_ITEMS.map((item) => ({ ...item }));
+  const items = [];
   writeStore({ items });
   return items;
 }
