@@ -16,8 +16,6 @@ import {
   ClipboardList,
   Plus,
   Scale,
-  TrendingDown,
-  TrendingUp,
 } from "lucide-react";
 
 import AppMyGoldDashboard from "@/components/gold/AppMyGoldDashboard";
@@ -67,73 +65,9 @@ const ReservationCard = styled(Link)`
 
 const ReservationCopy = styled.div`
   min-width: 0;
-  small { display: block; color: ${({ theme }) => theme.colors.secondaryDark}; font-size: .68rem; font-weight: 950; }
+  small { display: block; color: ${({ theme }) => theme.colors.secondaryDark}; font-size: .72rem; font-weight: 950; }
   strong { display: block; margin-top: 3px; color: ${({ theme }) => theme.colors.primary}; font-size: .86rem; }
-  p { margin: 3px 0 0; color: ${({ theme }) => theme.colors.textSecondary}; font-size: .68rem; }
-`;
-
-const SectionCard = styled.section`
-  display: grid;
-  gap: 12px;
-  padding: 15px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 18px;
-  background: ${({ theme }) => theme.colors.surface};
-  box-shadow: 0 8px 22px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 4%, transparent);
-`;
-
-const SectionHead = styled.div`
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-
-  small {
-    display: block;
-    color: ${({ theme }) => theme.colors.secondaryDark};
-    font-size: .64rem;
-    font-weight: 950;
-    letter-spacing: .07em;
-  }
-
-  h2 {
-    margin: 3px 0 0;
-    color: ${({ theme }) => theme.colors.primary};
-    font-size: 1rem;
-    letter-spacing: -.03em;
-  }
-
-  p {
-    margin: 4px 0 0;
-    color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .68rem;
-    line-height: 1.45;
-    word-break: keep-all;
-  }
-`;
-
-const TrendValue = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 12px;
-  border-radius: 14px;
-  background: ${({ theme }) => theme.colors.surfaceAlt};
-
-  span { color: ${({ theme }) => theme.colors.textSecondary}; font-size: .68rem; font-weight: 850; }
-  strong {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    color: ${({ $direction, theme }) =>
-      $direction === "up" ? theme.semantic.alertErrorText :
-      $direction === "down" ? theme.colors.info : theme.colors.text};
-    font-family: ${({ theme }) => theme.fonts.numeric};
-    font-size: .88rem;
-    font-weight: 950;
-  }
-  svg { width: 15px; height: 15px; }
+  p { margin: 3px 0 0; color: ${({ theme }) => theme.colors.textSecondary}; font-size: .72rem; }
 `;
 
 const PriceCard = styled(Link)`
@@ -148,8 +82,8 @@ const PriceCard = styled(Link)`
   color: inherit;
   text-decoration: none;
 
-  small { display: block; color: ${({ theme }) => theme.colors.secondaryDark}; font-size: .62rem; font-weight: 950; }
-  strong { display: block; margin-top: 3px; color: ${({ theme }) => theme.colors.primary}; font-size: .82rem; }
+  small { display: block; color: ${({ theme }) => theme.colors.secondaryDark}; font-size: .68rem; font-weight: 950; }
+  strong { display: block; margin-top: 3px; color: ${({ theme }) => theme.colors.primary}; font-size: .86rem; }
   b { color: ${({ theme }) => theme.colors.primary}; font-family: ${({ theme }) => theme.fonts.numeric}; font-size: .92rem; }
 `;
 
@@ -170,7 +104,7 @@ const QuickAction = styled(Link)`
   background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.text};
   text-decoration: none;
-  font-size: .72rem;
+  font-size: .76rem;
   font-weight: 900;
 
   span {
@@ -190,18 +124,6 @@ function formatWon(value) {
   return Number.isFinite(number) && number > 0
     ? `${Math.round(number).toLocaleString("ko-KR")}원`
     : "시세 공개 대기";
-}
-
-function formatSignedWon(value) {
-  const number = Number(value);
-  if (!Number.isFinite(number) || number === 0) return "0원";
-  return `${number > 0 ? "+" : "-"}${Math.abs(Math.round(number)).toLocaleString("ko-KR")}원`;
-}
-
-function formatSignedPercent(value) {
-  const number = Number(value);
-  if (!Number.isFinite(number)) return "";
-  return `${number > 0 ? "+" : number < 0 ? "-" : ""}${Math.abs(number).toFixed(2)}%`;
 }
 
 const toLocalDateKey = (date = new Date()) => {
@@ -311,11 +233,20 @@ export default function AndroidHome() {
   });
 
   const purePrice = Number(dashboard.market.pureGoldBuyPerDon || 0);
-  const TrendIcon = trend.weeklyChange.direction === "up" ? TrendingUp : TrendingDown;
-
   return (
     <Page>
-      <AppMyGoldDashboard user={user} dashboard={dashboard} animateValue />
+      <AppMyGoldDashboard
+        user={user}
+        dashboard={dashboard}
+        animateValue
+        weeklyTrend={myGoldReady ? {
+          loading: trend.loading,
+          hasReference: !!trend.weeklyReference,
+          direction: trend.weeklyChange.direction,
+          amount: trend.weeklyChange.amount,
+          percent: trend.weeklyChange.percent,
+        } : null}
+      />
 
       {upcomingReservation && (
         <ReservationCard to="/my-exchanges" aria-label="다가오는 방문 예약 확인">
@@ -339,50 +270,6 @@ export default function AndroidHome() {
         />
       )}
 
-      {hasMyGold && (
-        <AppGoldJourney
-          pureGoldG={Number(dashboard.summary.pureGoldG || 0)}
-          onExchangeClick={() => trackProductEventOncePerSession(
-            "gold_to_gold_cta_clicked",
-            { source: "app_home_journey" },
-            "app-home-gold-journey"
-          )}
-        />
-      )}
-
-      {myGoldReady && (
-        <SectionCard aria-labelledby="app-weekly-title">
-          <SectionHead>
-            <div>
-              <small>MY GOLD · 7 DAYS</small>
-              <h2 id="app-weekly-title">최근 7일 가치 변화</h2>
-              <p>앱을 열 때 가장 필요한 변화만 빠르게 확인합니다.</p>
-            </div>
-            <Link to="/my-gold/trend" aria-label="가치 변화 자세히 보기"><ChevronRight size={18} /></Link>
-          </SectionHead>
-          <TrendValue $direction={trend.weeklyChange.direction}>
-            <span>{trend.weeklyReference ? "7일 전 대비" : "비교 기준 준비 중"}</span>
-            <strong>
-              {trend.weeklyReference && <TrendIcon aria-hidden />}
-              {trend.weeklyReference
-                ? `${formatSignedWon(trend.weeklyChange.amount)} · ${formatSignedPercent(trend.weeklyChange.percent)}`
-                : trend.loading ? "불러오는 중" : "데이터 준비 중"}
-            </strong>
-          </TrendValue>
-        </SectionCard>
-      )}
-
-      <MyGoldAlertSummary uid={user?.uid} demoMode={!user?.uid} compact />
-
-      {!dashboard.publicPriceLoading && dashboard.publicPriceEnabled && purePrice > 0 && (
-        <PriceCard to="/gold-price" aria-label="오늘 순금 시세 보기">
-          <div>
-            <small>TODAY&apos;S GOLD</small>
-            <strong>오늘 순금 · 내가 팔 때 · 1돈(3.75g)</strong>
-          </div>
-          <b>{formatWon(purePrice)}</b>
-        </PriceCard>
-      )}
 
       {user?.uid && (
         <QuickActions aria-label="빠른 행동">
@@ -400,6 +287,31 @@ export default function AndroidHome() {
           </QuickAction>
         </QuickActions>
       )}
+
+      {hasMyGold && (
+        <AppGoldJourney
+          pureGoldG={Number(dashboard.summary.pureGoldG || 0)}
+          onExchangeClick={() => trackProductEventOncePerSession(
+            "gold_to_gold_cta_clicked",
+            { source: "app_home" },
+            "app-home-gold-journey"
+          )}
+        />
+      )}
+
+
+      <MyGoldAlertSummary uid={user?.uid} demoMode={!user?.uid} compact />
+
+      {!dashboard.publicPriceLoading && dashboard.publicPriceEnabled && purePrice > 0 && (
+        <PriceCard to="/gold-price" aria-label="오늘 순금 시세 보기">
+          <div>
+            <small>TODAY&apos;S GOLD</small>
+            <strong>오늘 순금 · 내가 팔 때 · 1돈(3.75g)</strong>
+          </div>
+          <b>{formatWon(purePrice)}</b>
+        </PriceCard>
+      )}
+
     </Page>
   );
 }

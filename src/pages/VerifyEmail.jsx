@@ -34,8 +34,17 @@ const Container = styled.div`
   box-shadow: ${({ theme }) => theme.shadows.card};
 `;
 const Title = styled.h2`
-  margin-bottom: 24px;
+  margin: 0;
   color: ${({ theme }) => theme.colors.text};
+  line-height: 1.3;
+  word-break: keep-all;
+`;
+const ContextLead = styled.p`
+  margin: 10px 0 20px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: .92rem;
+  line-height: 1.6;
+  word-break: keep-all;
 `;
 const Message = styled.p`
   margin-top: 16px;
@@ -214,6 +223,26 @@ export default function VerifyEmail() {
   }, [continueUrl]);
 
   const destination = continuePath || readMemberOnboardingPath("") || "/";
+
+  const verificationContext = useMemo(() => {
+    const path = String(destination || "/");
+    if (path.startsWith("/my-gold")) {
+      return {
+        title: "MY GOLD 저장까지 한 단계 남았습니다",
+        lead: "이메일 인증이 끝나면 방금 계산하거나 기록한 내 금 흐름으로 돌아가 그대로 이어갑니다.",
+      };
+    }
+    if (path.startsWith("/gold-exchange") || path.startsWith("/my-exchanges")) {
+      return {
+        title: "방문 예약까지 한 단계 남았습니다",
+        lead: "이메일 인증이 끝나면 입력한 금 정보와 선택한 예약 흐름으로 돌아가 계속 진행합니다.",
+      };
+    }
+    return {
+      title: "이메일 인증을 완료해 주세요",
+      lead: "계정 확인이 끝나면 원래 하던 화면으로 돌아가 한국골드마켓을 계속 이용할 수 있습니다.",
+    };
+  }, [destination]);
 
   const appReturnUrl = useMemo(() => {
     const query = new URLSearchParams();
@@ -616,7 +645,8 @@ export default function VerifyEmail() {
 
   return (
     <Container>
-      <Title>이메일 인증</Title>
+      <Title>{verificationContext.title}</Title>
+      <ContextLead>{verificationContext.lead}</ContextLead>
 
       {quizBonusResult && (
         <Message $color="var(--gm-success)">

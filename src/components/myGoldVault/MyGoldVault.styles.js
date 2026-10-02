@@ -110,7 +110,7 @@ export const HeroKicker = styled.div`
   align-items: center;
   gap: 6px;
   color: ${({ theme }) => theme.colors.secondaryDark};
-  font-size: 0.61rem;
+  font-size: 0.68rem;
   font-weight: 950;
   letter-spacing: 0.08em;
 
@@ -153,7 +153,7 @@ export const HeroValueNote = styled.p`
   z-index: 1;
   margin: -3px 0 0;
   color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: 0.62rem;
+  font-size: 0.7rem;
   font-weight: 750;
   line-height: 1.4;
   word-break: keep-all;
@@ -207,7 +207,7 @@ export const HeroStat = styled.div`
     display: block;
     overflow: hidden;
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: clamp(0.51rem, 1.8vw, 0.58rem);
+    font-size: clamp(0.62rem, 1.8vw, 0.68rem);
     font-weight: 800;
     line-height: 1.2;
     text-overflow: ellipsis;
@@ -219,7 +219,7 @@ export const HeroStat = styled.div`
     margin-top: 3px;
     color: ${({ theme }) => theme.colors.primary};
     font-family: ${({ theme }) => theme.fonts.numeric};
-    font-size: clamp(0.74rem, 2.4vw, 0.9rem);
+    font-size: clamp(0.82rem, 2.4vw, 0.96rem);
     font-weight: 950;
     line-height: 1.15;
     white-space: nowrap;
@@ -265,7 +265,7 @@ export const ReadinessPanel = styled(Link)`
   small {
     display: block;
     color: ${({ theme }) => theme.colors.secondaryDark};
-    font-size: 0.62rem;
+    font-size: 0.68rem;
     font-weight: 950;
     letter-spacing: 0.08em;
   }
@@ -283,7 +283,7 @@ export const ReadinessPanel = styled(Link)`
   p {
     margin: 3px 0 0;
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: 0.62rem;
+    font-size: 0.68rem;
     line-height: 1.4;
     word-break: keep-all;
   }

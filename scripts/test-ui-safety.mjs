@@ -93,7 +93,7 @@ test("비회원 하단 메뉴는 보호 화면 대신 공개 핵심 기능과 �
 test("2.1 상단 메뉴는 비회원과 회원의 핵심 행동을 각각 4개로 정리한다", () => {
   assert.match(navbarSource, /if \(isMember\) \{[\s\S]*label: "MY GOLD"[\s\S]*label: "금시세"[\s\S]*label: "금교환"[\s\S]*label: "교환내역"/);
   assert.match(navbarSource, /return \[[\s\S]*label: "금시세"[\s\S]*label: "MY GOLD"[\s\S]*label: "금교환"[\s\S]*label: "매장안내"/);
-  assert.match(navbarSource, /<AccountLink to="\/register">시작하기<\/AccountLink>/);
+  assert.match(navbarSource, /<AccountLink to="\/gold-value">내 금 확인<\/AccountLink>/);
   assert.match(navbarSource, /aria-label="MY 계정 메뉴"/);
 });
 
@@ -117,8 +117,8 @@ test("2.2.1 로그인·보호 화면의 기본 메시지는 회원혜택보다 M
   assert.match(loginSource, /가입은 간단하게 · MY GOLD 기록과 가치 확인을 이어가세요/);
   assert.match(protectedRouteSource, /MY GOLD 기록을 이어가세요/);
   assert.match(protectedRouteSource, /내가 가진 금의 기록과 오늘 가치 확인/);
-  assert.match(androidHeaderSource, /내 금 기록을 시작해 보세요/);
-  assert.match(androidHeaderSource, /MY GOLD에 내가 가진 금을 기록하고 오늘의 참고가치와 변화를 확인/);
+  assert.match(androidHeaderSource, /먼저 내 금의 오늘 가치를 확인해 보세요/);
+  assert.match(androidHeaderSource, /회원가입 없이 계산하고, 계속 보고 싶은 금만 MY GOLD에 이어둘 수 있어요/);
 });
 
 test("2.1 회원 홈은 PC에서 넓은 2열 대시보드와 작은 MY GOLD 안내를 사용한다", async () => {
@@ -263,10 +263,10 @@ test("홈의 검증 후기는 최신 1건을 2줄 미리보기로만 보여준�
 
 test("비회원 랜딩은 계산 → GOLD JOURNEY → 금시세 → GOLD TO GOLD/실측 → 후기 흐름으로 간결해진다", () => {
   assert.match(landingSource, /<QuickGoldValueCalculator source="landing" \/>/);
-  assert.match(landingSource, /MY GOLD는 내가 가진 금을 기록하고 가치의 변화를 확인하는 개인 기록 공간/);
-  assert.match(landingSource, /실물 금을 보관·예치하는 서비스가 아닙니다/);
+  assert.match(landingSource, /먼저 계산하고, 계속 보고 싶은 금만 MY GOLD에 이어두세요/);
+  assert.match(landingSource, /회원가입 없이 먼저 계산/);
   assert.match(landingSource, /<FlowStrip aria-label="한국골드마켓 GOLD JOURNEY">/);
-  assert.match(landingSource, /<strong>목표 알림<\/strong>/);
+  assert.match(landingSource, /<strong>변화·알림<\/strong>/);
   assert.match(landingSource, /<strong>GOLD TO GOLD<\/strong>/);
   assert.match(landingSource, /<GoldPriceBoard compact \/>/);
   assert.match(landingSource, /기록은 MY GOLD에서, 실제 교환은 매장에서 확인합니다/);
@@ -514,11 +514,15 @@ test("앱 홈 금시세는 MY GOLD 시세 listener를 재사용하고 활성 예
   assert.ok(reservationIndex >= 0 && myGoldIndex > reservationIndex && goldPriceIndex > myGoldIndex);
 });
 
-test("Android 홈은 MY GOLD 가치·7일 변화·알림·GOLD TO GOLD를 간결하게 이어준다", () => {
-  assert.match(androidHomeSource, /<AppMyGoldDashboard/);
-  assert.match(androidHomeSource, /최근 7일 가치 변화/);
-  assert.match(androidHomeSource, /GOLD TO GOLD · MY GOLD/);
-  assert.match(androidHomeSource, /to="\/gold-exchange\?mode=vault&auto=1"/);
+test("Android 홈은 7일 변화를 별도 카드 없이 MY GOLD 요약에 통합한다", async () => {
+  const myGoldDashboardSource = await read("src/components/gold/AppMyGoldDashboard.jsx");
+  assert.match(androidHomeSource, /<AppMyGoldDashboard[\s\S]*weeklyTrend=\{myGoldReady \? \{/);
+  assert.doesNotMatch(androidHomeSource, /최근 7일 가치 변화|app-weekly-title|TrendValue/);
+  assert.match(myGoldDashboardSource, /const WeeklyTrendLink = styled\(Link\)/);
+  assert.match(myGoldDashboardSource, /to="\/my-gold\/trend"/);
+  assert.match(myGoldDashboardSource, /<span>최근 7일<\/span>/);
+  assert.match(androidHomeSource, /<AppGoldJourney/);
+  assert.match(androidHomeSource, /gold_to_gold_cta_clicked/);
   assert.match(androidHomeSource, /<MyGoldAlertSummary[\s\S]*demoMode=\{!user\?\.uid\}/);
   assert.match(androidHomeSource, /to="\/my-gold\/items\?add=1"/);
   assert.doesNotMatch(androidHomeSource, /GOLD JOURNEY · GOLD TO GOLD|MILESTONE LADDER/);

@@ -13,6 +13,8 @@ const [
   registerSource,
   myGoldVaultSource,
   goldExchangeSource,
+  myExchangesSource,
+  reviewFormSource,
   packageText,
 ] = await Promise.all([
   read("src/analytics/productAnalytics.js"),
@@ -22,6 +24,8 @@ const [
   read("src/pages/Register.jsx"),
   read("src/pages/MyGoldVault.jsx"),
   read("src/pages/GoldExchange.jsx"),
+  read("src/pages/MyExchanges.jsx"),
+  read("src/components/reviews/GoldExchangeReviewForm.jsx"),
   read("package.json"),
 ]);
 
@@ -49,6 +53,8 @@ test("analytics accepts only the small allowlisted KGM funnel schema", () => {
     "gold_to_gold_cta_clicked",
     "exchange_calculated",
     "reservation_completed",
+    "post_exchange_mygold_clicked",
+    "review_submitted",
   ]) {
     assert.match(analyticsSource, new RegExp(`${eventName}:`));
   }
@@ -86,6 +92,16 @@ test("exchange funnel measures successful calculation and reservation completion
   assert.match(goldExchangeSource, /await submitGoldExchangeGroup\(payload\)[\s\S]*"reservation_completed"/);
   assert.match(goldExchangeSource, /calculation_mode: calculated \? "calculated" : "visit_only"/);
   assert.doesNotMatch(goldExchangeSource, /trackProductEvent\([^)]*\b(?:name|phone|email)\b/s);
+  assert.match(analyticsSource, /gold_to_gold_cta_clicked:[\s\S]*app_home[\s\S]*mygold/);
+});
+
+
+test("post-exchange retention measures only bounded actions and successful review submission", () => {
+  assert.match(analyticsSource, /post_exchange_mygold_clicked:[\s\S]*add_bar[\s\S]*manage_items/);
+  assert.match(myExchangesSource, /"post_exchange_mygold_clicked"[\s\S]*action: "add_bar"/);
+  assert.match(myExchangesSource, /"post_exchange_mygold_clicked"[\s\S]*action: "manage_items"/);
+  assert.match(reviewFormSource, /await submitGoldExchangeReview[\s\S]*"review_submitted"/);
+  assert.doesNotMatch(myExchangesSource, /trackProductEvent\([^)]*(?:groupId|phone|name|email)/s);
 });
 
 test("analytics has an explicit verification command", () => {

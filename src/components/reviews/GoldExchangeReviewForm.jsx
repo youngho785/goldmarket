@@ -5,6 +5,7 @@ import {
   getMyGoldExchangeReview,
   submitGoldExchangeReview,
 } from "@/services/goldExchangeReviewClient";
+import { trackProductEvent } from "@/analytics/productAnalytics";
 
 const Panel = styled.section`
   margin-top: 22px;
@@ -308,6 +309,7 @@ export default function GoldExchangeReviewForm({ exchangeId, status }) {
 
       setComment("");
       setMessage("교환 후기가 등록되었습니다.");
+      void trackProductEvent("review_submitted");
     } catch (error) {
       console.error("교환 후기 등록 실패:", error);
 
@@ -332,7 +334,7 @@ export default function GoldExchangeReviewForm({ exchangeId, status }) {
   const existingRating = normalizeRating(existing?.rating);
 
   return (
-    <Panel aria-labelledby={`review-title-${exchangeId}`}>
+    <Panel id={`review-${exchangeId}`} aria-labelledby={`review-title-${exchangeId}`}>
       <Head>
         <div>
           <h3 id={`review-title-${exchangeId}`}>교환 후기</h3>

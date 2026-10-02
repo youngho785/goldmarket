@@ -527,8 +527,8 @@ export default function AndroidAppHeader() {
               {!user ? (
                 <AccountPanel>
                   <AccountCopy>
-                    <strong>내 금 기록을 시작해 보세요</strong>
-                    <p>MY GOLD에 내가 가진 금을 기록하고 오늘의 참고가치와 변화를 확인할 수 있어요.</p>
+                    <strong>먼저 내 금의 오늘 가치를 확인해 보세요</strong>
+                    <p>회원가입 없이 계산하고, 계속 보고 싶은 금만 MY GOLD에 이어둘 수 있어요.</p>
                   </AccountCopy>
 
                   <AccountActions>
@@ -536,9 +536,9 @@ export default function AndroidAppHeader() {
                       <LogIn aria-hidden />
                       로그인
                     </AccountLink>
-                    <AccountLink to="/register" $primary>
+                    <AccountLink to="/my-gold?add=1" $primary>
                       <UserPlus aria-hidden />
-                      시작하기
+                      내 금 확인
                     </AccountLink>
                   </AccountActions>
                 </AccountPanel>

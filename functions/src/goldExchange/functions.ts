@@ -1011,8 +1011,8 @@ export const setExchangeGroupStatus = onCall<{
         tx.set(completionNotificationRef, {
           type: "exchange_completed",
           title: "GOLD TO GOLD 교환이 완료되었습니다",
-          body: "매장에서 확인한 최종 교환 결과를 교환내역에서 확인할 수 있습니다.",
-          link: "/my-exchanges",
+          body: "최종 교환 결과를 확인하고 MY GOLD 기록도 현재 보유 상태에 맞게 이어보세요.",
+          link: `/my-exchanges?group=${encodeURIComponent(groupId)}&review=1`,
           meta: { groupId, newStatus: "completed" },
           createdAt: now,
           read: false,

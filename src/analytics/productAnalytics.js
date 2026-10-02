@@ -55,6 +55,10 @@ const EVENT_PARAM_RULES = Object.freeze({
     source_mode: new Set(["manual", "vault", "visit", "rebook", "resume"]),
     calculation_mode: new Set(["calculated", "visit_only"]),
   }),
+  review_submitted: Object.freeze({}),
+  post_exchange_mygold_clicked: Object.freeze({
+    action: new Set(["add_bar", "manage_items"]),
+  }),
 });
 
 let analyticsModulePromise = null;

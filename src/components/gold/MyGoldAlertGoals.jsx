@@ -262,8 +262,6 @@ export default function MyGoldAlertGoals({
   currentValueWon,
   currentPricePerDon,
   exchangeReadyG,
-  registeredItemCount,
-  bonusGoldG,
   publicPriceEnabled = true,
   loadingMetrics = false,
   demoMode = false,

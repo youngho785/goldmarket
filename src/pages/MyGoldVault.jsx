@@ -500,7 +500,7 @@ export default function MyGoldVault() {
     ? getValueChange(vaultValueWon, historicalValueWon)
     : null;
 
-  const confirmCalculatorImport = async () => {
+  const confirmCalculatorImport = useCallback(async () => {
     if (!user?.uid || importSaving) return;
 
     const draft = importDraft || readGoldVaultImportDraft(importSource);
@@ -549,7 +549,16 @@ export default function MyGoldVault() {
     } finally {
       setImportSaving(false);
     }
-  };
+  }, [
+    user?.uid,
+    importSaving,
+    importDraft,
+    importSource,
+    importKind,
+    itemsLoading,
+    items.length,
+    navigate,
+  ]);
 
   useEffect(() => {
     if (autoImportAttemptedRef.current) return;
@@ -561,13 +570,13 @@ export default function MyGoldVault() {
 
     if (!pendingItems.length) {
       clearGuestMyGoldAutoImportPending();
-      setImportError("Guest MY GOLD data was not found. Please add the item again.");
+      setImportError("가입 전에 만든 MY GOLD 기록을 찾지 못했습니다. 내 금을 다시 한 번 기록해 주세요.");
       return;
     }
 
     if (items.length > 0) {
       clearGuestMyGoldAutoImportPending();
-      setImportError("Existing MY GOLD records were found. Review the items before importing.");
+      setImportError("이미 MY GOLD 기록이 있습니다. 기존 기록을 확인한 뒤 필요한 항목만 추가해 주세요.");
       return;
     }
 
@@ -581,6 +590,7 @@ export default function MyGoldVault() {
     importSaving,
     itemsLoading,
     items.length,
+    confirmCalculatorImport,
   ]);
 
   const cancelCalculatorImport = () => {
