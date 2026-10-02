@@ -88,14 +88,33 @@ const FlowStrip = styled.section`
   }
 `;
 
-const FlowItem = styled.div`
+const FlowItem = styled.button`
   display: grid;
   grid-template-columns: 38px minmax(0, 1fr);
   gap: 10px;
   align-items: center;
+  width: 100%;
   min-height: 82px;
   padding: 13px 15px;
+  border: 0;
   background: ${({ theme }) => theme.colors.surface};
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 160ms ease, box-shadow 160ms ease;
+
+  &:hover {
+    background: color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 44%, ${({ theme }) => theme.colors.surface});
+  }
+
+  &:focus-visible {
+    position: relative;
+    z-index: 1;
+    outline: 2px solid ${({ theme }) => theme.colors.secondary};
+    outline-offset: -2px;
+  }
 
   > span {
     display: grid;
@@ -125,48 +144,21 @@ const FlowItem = styled.div`
   }
 `;
 
-const TrustStrip = styled.section`
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin: 14px 0 0;
-  overflow: hidden;
-  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 22%, ${({ theme }) => theme.colors.border});
-  border-radius: 16px;
-  background: ${({ theme }) => theme.colors.surface};
+const CalculatorAnchor = styled.div`
+  scroll-margin-top: 118px;
+`;
 
-  > div {
-    min-width: 0;
-    padding: 13px 15px;
-  }
-
-  > div + div {
-    border-left: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
-  }
+const JourneyNote = styled.p`
+  margin: 12px 2px 0;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: .78rem;
+  line-height: 1.55;
+  text-align: center;
+  word-break: keep-all;
 
   strong {
-    display: block;
     color: ${({ theme }) => theme.colors.primary};
-    font-size: .8rem;
     font-weight: 900;
-  }
-
-  span {
-    display: block;
-    margin-top: 3px;
-    color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .76rem;
-    line-height: 1.45;
-    word-break: keep-all;
-  }
-
-  @media (max-width: 700px) {
-    grid-template-columns: 1fr;
-
-    > div { padding: 11px 13px; }
-    > div + div {
-      border-left: 0;
-      border-top: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
-    }
   }
 `;
 
@@ -386,6 +378,16 @@ export default function LandingPage() {
     trackProductEventOncePerSession("landing_view", {}, "landing-view");
   }, []);
 
+  const startValueCheck = () => {
+    const calculator = document.getElementById("landing-calculator");
+    if (!calculator) return;
+
+    calculator.scrollIntoView({ behavior: "smooth", block: "center" });
+    window.setTimeout(() => {
+      calculator.querySelector('[aria-label="내 금 중량"]')?.focus();
+    }, 350);
+  };
+
   return (
     <Page>
       <Hero aria-labelledby="landing-title">
@@ -400,33 +402,33 @@ export default function LandingPage() {
           </HeroLead>
         </HeroCopy>
 
-        <QuickGoldValueCalculator source="landing" />
+        <CalculatorAnchor id="landing-calculator">
+          <QuickGoldValueCalculator source="landing" />
+        </CalculatorAnchor>
       </Hero>
 
       <FlowStrip aria-label="한국골드마켓 GOLD JOURNEY">
-        <FlowItem>
+        <FlowItem type="button" onClick={startValueCheck} aria-label="오늘 가치 확인 계산기로 이동">
           <span>01</span>
           <div><strong>오늘 가치 확인</strong><p>금 종류와 중량으로 지금 내 금의 참고가치를 바로 확인합니다.</p></div>
         </FlowItem>
-        <FlowItem>
+        <FlowItem as={Link} to="/my-gold" aria-label="MY GOLD 기록으로 이동">
           <span>02</span>
           <div><strong>MY GOLD 기록</strong><p>계속 보고 싶은 금만 기록해 오늘 이후의 가치를 이어둡니다.</p></div>
         </FlowItem>
-        <FlowItem>
+        <FlowItem as={Link} to="/my-gold/alerts" aria-label="MY GOLD 변화와 알림으로 이동">
           <span>03</span>
           <div><strong>변화·알림</strong><p>가치 변화와 목표 도달을 확인하고 필요한 알림을 설정합니다.</p></div>
         </FlowItem>
-        <FlowItem>
+        <FlowItem as={Link} to="/gold-to-gold" aria-label="GOLD TO GOLD 안내로 이동">
           <span>04</span>
           <div><strong>GOLD TO GOLD</strong><p>원할 때 예상 교환량을 확인하고 부산 매장 방문으로 이어갑니다.</p></div>
         </FlowItem>
       </FlowStrip>
 
-      <TrustStrip aria-label="한국골드마켓 이용 원칙">
-        <div><strong>회원가입 없이 먼저 계산</strong><span>가치를 확인한 뒤 기록 여부를 결정합니다.</span></div>
-        <div><strong>원일귀금속 직접 운영</strong><span>부산 골드테마길 21에서 실제 상담과 교환을 진행합니다.</span></div>
-        <div><strong>실제 교환은 확인 후 결정</strong><span>순도·중량·공임을 매장에서 함께 확인하고 동의 후 확정합니다.</span></div>
-      </TrustStrip>
+      <JourneyNote>
+        <strong>회원가입 없이 먼저 계산</strong> · 실제 교환은 매장 실측·고객 동의 후 확정됩니다.
+      </JourneyNote>
 
       <CompactSection aria-labelledby="live-title">
         <SectionHead>

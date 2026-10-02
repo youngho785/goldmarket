@@ -262,12 +262,15 @@ test("홈의 검증 후기는 최신 1건을 2줄 미리보기로만 보여준�
 });
 
 test("비회원 랜딩은 계산 → GOLD JOURNEY → 금시세 → GOLD TO GOLD/실측 → 후기 흐름으로 간결해진다", () => {
-  assert.match(landingSource, /<QuickGoldValueCalculator source="landing" \/>/);
+  assert.match(landingSource, /<CalculatorAnchor id="landing-calculator">[\s\S]*<QuickGoldValueCalculator source="landing" \/>/);
   assert.match(landingSource, /먼저 계산하고, 계속 보고 싶은 금만 MY GOLD에 이어두세요/);
-  assert.match(landingSource, /회원가입 없이 먼저 계산/);
-  assert.match(landingSource, /<FlowStrip aria-label="한국골드마켓 GOLD JOURNEY">/);
-  assert.match(landingSource, /<strong>변화·알림<\/strong>/);
-  assert.match(landingSource, /<strong>GOLD TO GOLD<\/strong>/);
+  assert.match(landingSource, /const FlowItem = styled\.button/);
+  assert.match(landingSource, /onClick=\{startValueCheck\}/);
+  assert.match(landingSource, /as=\{Link\} to="\/my-gold"/);
+  assert.match(landingSource, /as=\{Link\} to="\/my-gold\/alerts"/);
+  assert.match(landingSource, /as=\{Link\} to="\/gold-to-gold"/);
+  assert.match(landingSource, /회원가입 없이 먼저 계산[\s\S]*실제 교환은 매장 실측·고객 동의 후 확정됩니다/);
+  assert.doesNotMatch(landingSource, /const TrustStrip|원일귀금속 직접 운영|실제 교환은 확인 후 결정/);
   assert.match(landingSource, /<GoldPriceBoard compact \/>/);
   assert.match(landingSource, /기록은 MY GOLD에서, 실제 교환은 매장에서 확인합니다/);
   assert.match(landingSource, /<VerifiedReviewSection compact showInquiryAction=\{false\} \/>/);
