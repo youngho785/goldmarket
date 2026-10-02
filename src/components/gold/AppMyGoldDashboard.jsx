@@ -48,6 +48,12 @@ const Card = styled.section`
 const SummaryShell = styled.div`
   position: relative;
   height: 100%;
+
+  /* Desktop 2-column layout uses full height. On stacked/mobile layouts,
+     auto height must include the weekly trend row in normal document flow. */
+  @media (max-width: 900px) {
+    height: auto;
+  }
 `;
 
 const SummaryCard = styled(Card)`
@@ -66,6 +72,10 @@ const SummaryCard = styled(Card)`
   &:focus-visible {
     outline: 2px solid ${({ theme }) => theme.colors.goldLight};
     outline-offset: 2px;
+  }
+
+  @media (max-width: 900px) {
+    height: auto;
   }
 `;
 
