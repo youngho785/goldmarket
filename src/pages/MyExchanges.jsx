@@ -1,6 +1,6 @@
 // src/pages/MyExchanges.jsx
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
 import { collection, getDocs, limit, onSnapshot, orderBy, query, startAfter, where } from 'firebase/firestore';
 import DatePicker from 'react-datepicker';
@@ -8,6 +8,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 import { addDays, format, isValid } from 'date-fns';
 import { db } from '../firebase/firebase';
 import { useAuthContext } from '../context/AuthContext';
+import { trackProductEvent } from '@/analytics/productAnalytics';
 import GoldExchangeReviewForm from '@/components/reviews/GoldExchangeReviewForm';
 import useReservedSlots from '@/hooks/useReservedSlots';
 import useBookingAvailability, { getBookingAvailabilityEntry } from '@/hooks/useBookingAvailability';
@@ -1277,6 +1278,15 @@ const Skeleton = styled.div`
 /* ── 메인 컴포넌트 ─────────────────────────────── */
 export default function MyExchanges() {
   const { user } = useAuthContext();
+  const location = useLocation();
+  const deepLinkHandledRef = useRef("");
+  const deepLink = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return {
+      groupId: String(params.get("group") || "").trim(),
+      review: params.get("review") === "1",
+    };
+  }, [location.search]);
   const [liveSummaries, setLiveSummaries] = useState([]);
   const [olderSummaries, setOlderSummaries] = useState([]);
   const [summaryCursor, setSummaryCursor] = useState(null);
@@ -1518,6 +1528,30 @@ export default function MyExchanges() {
     }
     setExpanded((previous) => ({ ...previous, [groupId]: nextOpen }));
   }, [expanded, subscribeGroupDetails]);
+
+  useEffect(() => {
+    const groupId = deepLink.groupId;
+    if (!groupId || deepLinkHandledRef.current === groupId) return;
+    if (!groups.some((group) => group.groupId === groupId)) return;
+
+    deepLinkHandledRef.current = groupId;
+    setStatusFilter("all");
+    setExpanded((previous) => ({ ...previous, [groupId]: true }));
+    subscribeGroupDetails(groupId);
+  }, [deepLink.groupId, groups, subscribeGroupDetails]);
+
+  useEffect(() => {
+    if (!deepLink.review || !deepLink.groupId) return undefined;
+    if (!expanded[deepLink.groupId] || !detailsByGroup[deepLink.groupId]?.loaded) return undefined;
+
+    const timer = window.setTimeout(() => {
+      document.getElementById(`review-${deepLink.groupId}`)?.scrollIntoView?.({
+        behavior: "smooth",
+        block: "center",
+      });
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, [deepLink.groupId, deepLink.review, detailsByGroup, expanded]);
 
   const loadMore = useCallback(async () => {
     if (!user?.uid || !summaryCursor || loadingMore || !hasMore) return;
@@ -2047,6 +2081,48 @@ export default function MyExchanges() {
                         )}
                       </PlanCard>
                     </>
+                  )}
+
+                  {rawStatusKey === 'completed' && (
+                    <ScheduleActionsPanel aria-label="교환 후 MY GOLD 이어가기">
+                      <ScheduleActionTitle>교환 후 MY GOLD도 현재 보유 상태에 맞게 이어보세요.</ScheduleActionTitle>
+                      <ScheduleActionLead>
+                        교환 전 금 기록은 자동으로 삭제하지 않습니다. 실제 받은 골드바를 새로 기록하고,
+                        더 이상 보유하지 않는 기존 금은 MY GOLD에서 직접 정리해 주세요.
+                      </ScheduleActionLead>
+                      <ScheduleButtonRow>
+                        <ScheduleButton
+                          as={Link}
+                          to="/my-gold/items?add=1"
+                          state={
+                            g.plan?.selected?.usedGrams > 0 && (!Array.isArray(g.plan?.autoBreakdown) || g.plan.autoBreakdown.length === 0)
+                              ? {
+                                  quickGoldItem: {
+                                    label: `GOLD TO GOLD · ${g.plan.selected.label || '999.9 골드바'}`,
+                                    productId: 'gold-9999-bar',
+                                    goldType: '999.9 골드바',
+                                    weightG: Number(g.plan.selected.usedGrams || 0),
+                                    note: `GOLD TO GOLD 교환 완료${g.visitDate ? ` · ${g.visitDate}` : ''}`,
+                                  },
+                                }
+                              : undefined
+                          }
+                          onClick={() => void trackProductEvent("post_exchange_mygold_clicked", { action: "add_bar" })}
+                        >
+                          받은 골드바 기록
+                        </ScheduleButton>
+                        <ScheduleButton
+                          as={Link}
+                          to="/my-gold/items"
+                          onClick={() => void trackProductEvent("post_exchange_mygold_clicked", { action: "manage_items" })}
+                        >
+                          기존 금 기록 정리
+                        </ScheduleButton>
+                        <ScheduleButton as="a" href={`#review-${g.groupId}`}>
+                          교환 후기 남기기
+                        </ScheduleButton>
+                      </ScheduleButtonRow>
+                    </ScheduleActionsPanel>
                   )}
 
                   {['requested', 'scheduled'].includes(rawStatusKey) && !isOverdue && (

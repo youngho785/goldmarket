@@ -83,17 +83,38 @@ const FlowStrip = styled.section`
   border-radius: 18px;
   background: ${({ theme }) => theme.colors.border};
 
-  @media (max-width: 700px) { grid-template-columns: 1fr; }
+  @media (max-width: 700px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 `;
 
-const FlowItem = styled.div`
+const FlowItem = styled.button`
   display: grid;
   grid-template-columns: 38px minmax(0, 1fr);
   gap: 10px;
   align-items: center;
+  width: 100%;
   min-height: 82px;
   padding: 13px 15px;
+  border: 0;
   background: ${({ theme }) => theme.colors.surface};
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 160ms ease, box-shadow 160ms ease;
+
+  &:hover {
+    background: color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 44%, ${({ theme }) => theme.colors.surface});
+  }
+
+  &:focus-visible {
+    position: relative;
+    z-index: 1;
+    outline: 2px solid ${({ theme }) => theme.colors.secondary};
+    outline-offset: -2px;
+  }
 
   > span {
     display: grid;
@@ -123,43 +144,21 @@ const FlowItem = styled.div`
   }
 `;
 
-const MemberStartCard = styled.section`
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: clamp(16px, 3vw, 28px);
-  align-items: center;
-  margin: 16px 0 0;
-  padding: clamp(20px, 3.2vw, 28px);
-  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 24%, ${({ theme }) => theme.colors.border});
-  border-radius: 18px;
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 38%, ${({ theme }) => theme.colors.surface}),
-    ${({ theme }) => theme.colors.surface}
-  );
+const CalculatorAnchor = styled.div`
+  scroll-margin-top: 118px;
+`;
 
-  h2 {
-    margin: 7px 0 0;
+const JourneyNote = styled.p`
+  margin: 12px 2px 0;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: .78rem;
+  line-height: 1.55;
+  text-align: center;
+  word-break: keep-all;
+
+  strong {
     color: ${({ theme }) => theme.colors.primary};
-    font-family: ${({ theme }) => theme.fonts.heading};
-    font-size: clamp(1.35rem, 2.8vw, 1.9rem);
-    line-height: 1.18;
-    letter-spacing: -.045em;
-    word-break: keep-all;
-  }
-
-  p {
-    max-width: 760px;
-    margin: 8px 0 0;
-    color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .82rem;
-    line-height: 1.65;
-    word-break: keep-all;
-  }
-
-  @media (max-width: 700px) {
-    grid-template-columns: 1fr;
-    gap: 14px;
+    font-weight: 900;
   }
 `;
 
@@ -379,56 +378,57 @@ export default function LandingPage() {
     trackProductEventOncePerSession("landing_view", {}, "landing-view");
   }, []);
 
+  const startValueCheck = () => {
+    const calculator = document.getElementById("landing-calculator");
+    if (!calculator) return;
+
+    calculator.scrollIntoView({ behavior: "smooth", block: "center" });
+    window.setTimeout(() => {
+      calculator.querySelector('[aria-label="내 금 중량"]')?.focus();
+    }, 350);
+  };
+
   return (
     <Page>
       <Hero aria-labelledby="landing-title">
         <HeroCopy>
           <Kicker>KOREA GOLD MARKET</Kicker>
           <HeroTitle id="landing-title">
-            내가 가진 금을 기록하면,<br /><em>오늘의 가치가 보입니다.</em>
+            내 금, <em>오늘 얼마일까요?</em>
           </HeroTitle>
           <HeroLead>
-            14K·18K·순금의 종류와 중량을 입력해 오늘 참고가치와 예상 순금량을 확인하세요.
-            <strong> MY GOLD는 내가 가진 금을 기록하고 가치의 변화를 확인하는 개인 기록 공간입니다.</strong>
-            실물 금을 보관·예치하는 서비스가 아닙니다.
+            14K·18K·순금의 종류와 중량만 입력하면 오늘 참고가치와 예상 순금량을 바로 확인할 수 있습니다.
+            <strong> 먼저 계산하고, 계속 보고 싶은 금만 MY GOLD에 이어두세요.</strong>
           </HeroLead>
         </HeroCopy>
 
-        <QuickGoldValueCalculator source="landing" />
+        <CalculatorAnchor id="landing-calculator">
+          <QuickGoldValueCalculator source="landing" />
+        </CalculatorAnchor>
       </Hero>
 
       <FlowStrip aria-label="한국골드마켓 GOLD JOURNEY">
-        <FlowItem>
+        <FlowItem type="button" onClick={startValueCheck} aria-label="오늘 가치 확인 계산기로 이동">
           <span>01</span>
-          <div><strong>내 금 기록</strong><p>내가 실제로 가진 금의 종류와 중량을 MY GOLD에 기록합니다.</p></div>
+          <div><strong>오늘 가치 확인</strong><p>금 종류와 중량으로 지금 내 금의 참고가치를 바로 확인합니다.</p></div>
         </FlowItem>
-        <FlowItem>
+        <FlowItem as={Link} to="/my-gold" aria-label="MY GOLD 기록으로 이동">
           <span>02</span>
-          <div><strong>오늘 가치 확인</strong><p>공개 금시세를 기준으로 오늘 참고가치와 변화를 확인합니다.</p></div>
+          <div><strong>MY GOLD 기록</strong><p>계속 보고 싶은 금만 기록해 오늘 이후의 가치를 이어둡니다.</p></div>
         </FlowItem>
-        <FlowItem>
+        <FlowItem as={Link} to="/my-gold/alerts" aria-label="MY GOLD 변화와 알림으로 이동">
           <span>03</span>
-          <div><strong>목표 알림</strong><p>원하는 가치·금시세·골드바 목표를 정하고 도달 시 알림을 받습니다.</p></div>
+          <div><strong>변화·알림</strong><p>가치 변화와 목표 도달을 확인하고 필요한 알림을 설정합니다.</p></div>
         </FlowItem>
-        <FlowItem>
+        <FlowItem as={Link} to="/gold-to-gold" aria-label="GOLD TO GOLD 안내로 이동">
           <span>04</span>
-          <div><strong>GOLD TO GOLD</strong><p>MY GOLD 기록으로 예상 교환량을 확인하고 방문 예약까지 이어갑니다.</p></div>
+          <div><strong>GOLD TO GOLD</strong><p>원할 때 예상 교환량을 확인하고 부산 매장 방문으로 이어갑니다.</p></div>
         </FlowItem>
       </FlowStrip>
 
-      <MemberStartCard aria-labelledby="member-start-title">
-        <div>
-          <Kicker>MY GOLD · KEEP YOUR RECORD</Kicker>
-          <h2 id="member-start-title">계산한 금을 기록하면, 오늘 이후의 가치가 이어집니다.</h2>
-          <p>
-            회원가입부터 요구하지 않습니다. 먼저 금을 계산하고 MY GOLD에 기록해 보세요.
-            기록을 계정에 계속 보관하고 알림을 받을 때 간단한 이메일 인증으로 이어갈 수 있습니다.
-          </p>
-        </div>
-        <GoldButton to="/my-gold">
-          MY GOLD 보기 <ArrowRight size={15} aria-hidden />
-        </GoldButton>
-      </MemberStartCard>
+      <JourneyNote>
+        <strong>회원가입 없이 먼저 계산</strong> · 실제 교환은 매장 실측·고객 동의 후 확정됩니다.
+      </JourneyNote>
 
       <CompactSection aria-labelledby="live-title">
         <SectionHead>

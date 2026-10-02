@@ -60,7 +60,10 @@ const UtilityInner = styled.div`
   }
 
   @media (max-width: 680px) {
+    min-height: 28px;
+    padding: 4px 14px;
     justify-content: center;
+    font-size: .67rem;
     span:last-child { display: none; }
   }
 `;
@@ -77,6 +80,9 @@ const Nav = styled.nav`
 
   @media (max-width: 980px) {
     grid-template-columns: 1fr auto;
+    min-height: 62px;
+    gap: 12px;
+    padding: 6px 14px;
   }
 `;
 
@@ -115,6 +121,12 @@ const BrandSeal = styled.span`
     pointer-events: none;
     animation: ${livingGoldPulse} 6.2s ease-in-out 1.4s infinite;
   }
+
+  @media (max-width: 980px) {
+    width: 38px;
+    height: 38px;
+    font-size: .98rem;
+  }
 `;
 
 const BrandCopy = styled.span`
@@ -133,6 +145,12 @@ const BrandCopy = styled.span`
     font-family: ${({ theme }) => theme.fonts.numeric};
     font-size: 0.62rem;
     letter-spacing: .13em;
+  }
+
+  @media (max-width: 520px) {
+    gap: 0;
+    strong { font-size: 1.08rem; }
+    small { display: none; }
   }
 `;
 
@@ -672,7 +690,7 @@ export default function Navbar() {
           {!user ? (
             <>
               <MenuLink to="/login" end>로그인</MenuLink>
-              <AccountLink to="/register">시작하기</AccountLink>
+              <AccountLink to="/gold-value">내 금 확인</AccountLink>
             </>
           ) : !isMember ? (
             <>
@@ -783,7 +801,7 @@ export default function Navbar() {
           {!user ? (
             <>
               <DrawerAction to="/login" tabIndex={drawerOpen ? 0 : -1}>로그인</DrawerAction>
-              <DrawerAction to="/register" tabIndex={drawerOpen ? 0 : -1}>시작하기</DrawerAction>
+              <DrawerAction to="/gold-value" tabIndex={drawerOpen ? 0 : -1}>내 금 확인</DrawerAction>
             </>
           ) : !isMember ? (
             <>

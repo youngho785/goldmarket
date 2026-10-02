@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import DatePicker from "react-datepicker";
 import { addDays, format } from "date-fns";
 import GoldExchangeTracker from "@/components/GoldExchangeTracker";
@@ -158,7 +159,7 @@ export function CalcStep({
     <>
       <Card>
         <StepCenter><StepMark>스텝 1</StepMark></StepCenter>
-        <Title>{fromVault ? "MY GOLD에서 불러온 내 금을 확인하세요" : "내 금 종류와 무게를 입력하세요"}</Title>
+        <Title>{fromVault ? "MY GOLD에서 불러온 내 금을 확인하세요" : "내 금 종류와 중량을 입력하세요"}</Title>
         {vaultImportNotice && (
           <InfoCard role="status" style={{ marginBottom: 18 }}>
             {vaultImportNotice}
@@ -167,6 +168,9 @@ export function CalcStep({
         {error && <ErrorText role="alert">{error}</ErrorText>}
 
         <form onSubmit={onCalculate}>
+          <HelpText style={{ margin: "0 0 12px", fontWeight: 850 }}>
+            교환 기준 · 999.9 골드바
+          </HelpText>
           {products.map((p, idx) => (
             <FormGroup key={`row-${idx}`}>
               <Label htmlFor={`product-${idx}`}>제품 종류</Label>
@@ -187,7 +191,7 @@ export function CalcStep({
                 </HelpText>
               )}
 
-              <Label htmlFor={`quantity-${idx}`}>수량</Label>
+              <Label htmlFor={`quantity-${idx}`}>중량</Label>
               <Inline>
                 <QuantityField
                   id={`quantity-${idx}`}
@@ -200,7 +204,7 @@ export function CalcStep({
                 />
                 <Select
                   id={`quantity-unit-${idx}`}
-                  aria-label={`${idx + 1}번째 제품 수량 단위`}
+                  aria-label={`${idx + 1}번째 제품 중량 단위`}
                   value={p.inputUnit}
                   onChange={(e) => handleProductChange(idx, "inputUnit", e.target.value)}
                 >
@@ -210,14 +214,6 @@ export function CalcStep({
               </Inline>
               <HelpText>{qtyHelperText(p.quantity, p.inputUnit)}</HelpText>
 
-              <Label htmlFor={`exchange-type-${idx}`}>교환 유형</Label>
-              <Select
-                id={`exchange-type-${idx}`}
-                value={p.exchangeType}
-                onChange={(e) => handleProductChange(idx, "exchangeType", e.target.value)}
-              >
-                <option value="999.9골드바">999.9골드바</option>
-              </Select>
 
               {products.length > 1 && (
                 <RemoveButton type="button" onClick={() => removeProduct(idx)}>
@@ -339,8 +335,11 @@ export function BarStep({
         <FeeLink href="/goldbar-fee">전체 공임표 보기 →</FeeLink>
       </FeeSummary>
 
-      <SubTitle>제품별 순금 환산 결과</SubTitle>
-      <TableWrap>
+      <details style={{ margin: "14px 0 4px" }}>
+        <summary style={{ cursor: "pointer", color: "var(--gm-primary)", fontWeight: 850, fontSize: ".88rem" }}>
+          제품별 환산 결과 자세히 보기
+        </summary>
+        <TableWrap style={{ marginTop: 10 }}>
         <Table>
           <thead>
             <tr>
@@ -372,7 +371,8 @@ export function BarStep({
             </tr>
           </tfoot>
         </Table>
-      </TableWrap>
+        </TableWrap>
+      </details>
 
       <SubTitle>골드바 규격 선택</SubTitle>
       <Seg role="tablist" aria-label="골드바 규격 선택 탭">
@@ -966,7 +966,7 @@ export function ReserveStep({
 
           <div style={{ display: "grid", gap: 10, marginTop: 14 }}>
             <Button type="button" onClick={onRequireAuth}>
-              {user ? "이메일 인증하고 방문 예약 계속" : "로그인하고 방문 예약 계속"}
+              방문 예약 계속하기
             </Button>
             <GhostButton
               type="button"
@@ -993,6 +993,9 @@ export function DoneStep({ status }) {
         <PendingBadge>현재 상태 · 예약 확인 대기</PendingBadge>
         <Title>방문 예약 요청이 접수되었습니다</Title>
         <HelpText>아직 예약 확정이나 교환 완료 상태가 아닙니다. 관리자 확인 후 방문 예약이 확정되면 알림으로 안내드립니다.</HelpText>
+        <OutlineButton as={Link} to="/my-exchanges" style={{ marginTop: 12 }}>
+          내 예약 확인하기
+        </OutlineButton>
 
         <PushPermissionPrompt
           context="exchange-complete"

@@ -56,6 +56,7 @@ const SummaryCard = styled(Card)`
   color: ${({ theme }) => theme.on.primary};
   text-decoration: none;
   cursor: pointer;
+  border-radius: ${({ $withWeekly }) => ($withWeekly ? "20px 20px 0 0" : "20px")};
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 
   &:active {
@@ -213,6 +214,55 @@ const SummaryMeta = styled.div`
   }
 `;
 
+const WeeklyTrendLink = styled(Link)`
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  min-height: 40px;
+  margin-top: -1px;
+  padding: 8px 13px;
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 24%, ${({ theme }) => theme.colors.primary});
+  border-top-color: color-mix(in srgb, ${({ theme }) => theme.on.primary} 11%, transparent);
+  border-radius: 0 0 16px 16px;
+  background: color-mix(in srgb, ${({ theme }) => theme.colors.primary} 94%, ${({ theme }) => theme.colors.gold} 6%);
+  color: ${({ theme }) => theme.on.primary};
+  text-decoration: none;
+
+  > span {
+    color: color-mix(in srgb, ${({ theme }) => theme.on.primary} 68%, transparent);
+    font-size: 0.7rem;
+    font-weight: 850;
+  }
+
+  > strong {
+    justify-self: end;
+    color: ${({ $direction, theme }) =>
+      $direction === "up"
+        ? "#FFD0D3"
+        : $direction === "down"
+          ? "#C7E5FF"
+          : theme.colors.goldLight};
+    font-family: "Segoe UI", "Malgun Gothic", Arial, sans-serif;
+    font-variant-numeric: tabular-nums lining-nums;
+    font-feature-settings: "tnum" 1, "lnum" 1;
+    font-size: 0.72rem;
+    font-weight: 900;
+    white-space: nowrap;
+  }
+
+  > svg {
+    width: 14px;
+    height: 14px;
+    color: ${({ theme }) => theme.colors.goldLight};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.goldLight};
+    outline-offset: 2px;
+  }
+`;
+
 const ActionRow = styled.div`
   display: grid;
   margin-top: 10px;
@@ -332,7 +382,7 @@ function formatSignedPercent(value) {
   return `${number > 0 ? "+" : "-"}${Math.abs(number).toFixed(2)}%`;
 }
 
-export default function AppMyGoldDashboard({ user, dashboard, animateValue = false }) {
+export default function AppMyGoldDashboard({ user, dashboard, animateValue = false, weeklyTrend = null }) {
   const hasRealGold = !!user?.uid && dashboard.summary.itemCount > 0;
   const loading = !!user?.uid && dashboard.itemsLoading;
 
@@ -446,12 +496,21 @@ export default function AppMyGoldDashboard({ user, dashboard, animateValue = fal
         ? TrendingDown
         : Minus;
 
+  const showWeeklyTrend = !!weeklyTrend;
+  const weeklyDirection = String(weeklyTrend?.direction || "same");
+  const weeklyText = weeklyTrend?.hasReference
+    ? `${formatSignedWon(weeklyTrend.amount)} · ${formatSignedPercent(weeklyTrend.percent)}`
+    : weeklyTrend?.loading
+      ? "불러오는 중"
+      : "변화 보기";
+
   return (
     <SummaryShell>
       <SummaryCard
         as={Link}
         to="/my-gold"
         aria-label="MY GOLD 상세 보기"
+        $withWeekly={showWeeklyTrend}
       >
         <SummaryInner>
           <Topline>
@@ -483,6 +542,17 @@ export default function AppMyGoldDashboard({ user, dashboard, animateValue = fal
           </SummaryMeta>
         </SummaryInner>
       </SummaryCard>
+      {showWeeklyTrend && (
+        <WeeklyTrendLink
+          to="/my-gold/trend"
+          $direction={weeklyDirection}
+          aria-label={`최근 7일 MY GOLD 가치 변화 ${weeklyText} · 자세히 보기`}
+        >
+          <span>최근 7일</span>
+          <strong>{weeklyText}</strong>
+          <ChevronRight aria-hidden />
+        </WeeklyTrendLink>
+      )}
       <SummaryGoldCompanion
         size={28}
         delay={90}

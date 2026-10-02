@@ -17,7 +17,7 @@ const Card = styled.section`
     color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 72%, ${({ theme }) => theme.colors.surface}),
     ${({ theme }) => theme.colors.surface}
   );
-  box-shadow: 0 9px 24px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 5%, transparent);
+  box-shadow: none;
 `;
 
 const Head = styled.div`
@@ -31,7 +31,7 @@ const Head = styled.div`
     align-items: center;
     gap: 5px;
     color: ${({ theme }) => theme.colors.secondaryDark};
-    font-size: .64rem;
+    font-size: .69rem;
     font-weight: 950;
     letter-spacing: .08em;
   }
@@ -50,7 +50,7 @@ const Head = styled.div`
   p {
     margin: 5px 0 0;
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .68rem;
+    font-size: .72rem;
     line-height: 1.45;
     word-break: keep-all;
   }
@@ -65,7 +65,7 @@ const StatusPill = styled.span`
   border-radius: 999px;
   background: ${({ theme }) => theme.colors.primary};
   color: ${({ theme }) => theme.colors.goldLight};
-  font-size: .61rem;
+  font-size: .67rem;
   font-weight: 950;
   white-space: nowrap;
 
@@ -88,7 +88,7 @@ const ExchangeNow = styled(Link)`
   small {
     display: block;
     color: ${({ theme }) => theme.colors.secondaryDark};
-    font-size: .62rem;
+    font-size: .68rem;
     font-weight: 900;
   }
 
@@ -104,7 +104,7 @@ const ExchangeNow = styled(Link)`
   p {
     margin: 3px 0 0;
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .62rem;
+    font-size: .68rem;
     line-height: 1.35;
   }
 
@@ -195,7 +195,7 @@ const Milestone = styled.li`
     overflow: hidden;
     text-overflow: ellipsis;
     color: inherit;
-    font-size: .6rem;
+    font-size: .66rem;
     font-weight: 900;
     white-space: nowrap;
   }
@@ -207,7 +207,7 @@ const ProgressLabels = styled.div`
   justify-content: space-between;
   gap: 10px;
   color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: .65rem;
+  font-size: .69rem;
 
   strong {
     color: ${({ theme }) => theme.colors.primary};
