@@ -1,0 +1,14 @@
+{
+  "appId": "com.koreagoldmarket.app",
+  "appName": "한국골드마켓",
+  "webDir": "dist",
+  "plugins": {
+    "PushNotifications": {
+      "presentationOptions": [
+        "sound",
+        "banner",
+        "list"
+      ]
+    }
+  }
+}

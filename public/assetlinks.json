@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.koreagoldmarket.app",
+      "sha256_cert_fingerprints": [
+        "4D:1F:D5:46:BD:40:DC:F2:0F:C4:66:16:07:61:1A:45:17:58:45:84:83:F7:AB:96:C9:2E:E5:CC:7F:57:6D:97"
+      ]
+    }
+  }
+]

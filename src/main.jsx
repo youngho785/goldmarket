@@ -1,0 +1,139 @@
+// src/main.jsx
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App.jsx";
+import ErrorBoundary from "./components/common/ErrorBoundary.jsx";
+import AppProviders from "./context/AppProviders.jsx";
+import { requestIdle, cancelIdle } from "./utils/idle";
+import { isWeb } from "./platform/runtime";
+import {
+  initializeOperationalMonitoring,
+  queueOperationalError,
+} from "./monitoring/operationalMonitoring";
+import { createFirebaseMonitoringTransport } from "./monitoring/firebaseMonitoringTransport";
+import { initializeProductAnalytics } from "./analytics/productAnalytics";
+
+const PRELOAD_RECOVERY_KEY = "__kgm_preload_recovery_at__";
+const PRELOAD_RECOVERY_WINDOW_MS = 30 * 1000;
+
+if (import.meta.env.PROD) {
+  initializeOperationalMonitoring({
+    transport: createFirebaseMonitoringTransport(),
+  });
+}
+
+// Product Analytics is production-on by default and development-off unless
+// VITE_PRODUCT_ANALYTICS_ENABLED/DEBUG explicitly enables it. Automatic
+// page_view collection is disabled inside the analytics service.
+void initializeProductAnalytics();
+
+// A web tab can stay open across a new deployment or a network handoff.
+// If an old tab later opens a lazy route, Vite may fail to fetch the old chunk.
+// Recover once with a full reload so the tab picks up the current index/chunk map.
+// Keep this web-only: the Capacitor Android app ships its chunks with the app bundle.
+if (isWeb && import.meta.env.PROD && typeof window !== "undefined") {
+  window.addEventListener("vite:preloadError", (event) => {
+    const preloadError =
+      event?.payload || new Error("Vite preload error while opening a lazy route");
+
+    if (navigator.onLine === false) {
+      queueOperationalError(preloadError, {
+        source: "vite.preloadError",
+        area: "preload",
+        action: "offline-lazy-load",
+        level: "warning",
+        recovered: false,
+      });
+      return;
+    }
+
+    const now = Date.now();
+    let recentlyReloaded = false;
+
+    try {
+      const previous = Number(
+        window.sessionStorage.getItem(PRELOAD_RECOVERY_KEY) || 0
+      );
+      recentlyReloaded =
+        Number.isFinite(previous) &&
+        previous > 0 &&
+        now - previous < PRELOAD_RECOVERY_WINDOW_MS;
+
+      if (!recentlyReloaded) {
+        window.sessionStorage.setItem(PRELOAD_RECOVERY_KEY, String(now));
+      }
+    } catch {
+      // If sessionStorage is unavailable, do not risk a reload loop.
+      // Let the route error UI offer a manual reload instead.
+      return;
+    }
+
+    if (recentlyReloaded) {
+      queueOperationalError(preloadError, {
+        source: "vite.preloadError",
+        area: "preload",
+        action: "repeat-after-reload",
+        level: "error",
+        recovered: false,
+      });
+      return;
+    }
+
+    queueOperationalError(preloadError, {
+      source: "vite.preloadError",
+      area: "preload",
+      action: "reload-recovery",
+      level: "warning",
+      recovered: true,
+    });
+    event.preventDefault();
+    window.location.reload();
+  });
+}
+
+// Service Worker는 웹/PWA 환경에서만 등록
+// Capacitor Android 앱에서는 Native Push를 사용하므로 등록하지 않음
+if (isWeb && "serviceWorker" in navigator) {
+  window.__swReadyPromise = navigator.serviceWorker
+    .register("/sw.js", { scope: "/" })
+    .then(() => navigator.serviceWorker.ready)
+    .catch((error) => {
+      console.error("SW register failed:", error);
+      return null;
+    });
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(
+  <React.StrictMode>
+    <ErrorBoundary>
+      <AppProviders>
+        <App />
+      </AppProviders>
+    </ErrorBoundary>
+  </React.StrictMode>
+);
+
+// Firebase 모듈은 앱에서 이미 정적으로 사용하므로 별도 동적 import를 하지 않습니다.
+// 자주 사용하는 지연 로딩 페이지들만 유휴 시간에 미리 불러옵니다.
+const pageWarmupId = requestIdle(async () => {
+  try {
+    const preloadPages = import.meta.glob(
+      [
+        "./pages/GoldExchange.jsx",
+        "./pages/admin/StatisticsDashboard.jsx",
+        "./pages/admin/AdminGoldExchange.jsx",
+      ],
+      { eager: false }
+    );
+
+    await Promise.all(
+      Object.values(preloadPages).map((loader) => loader())
+    );
+  } catch {
+    // 실제 라우트 진입 시 다시 로드됩니다.
+  }
+});
+
+export function cancelWarmups() {
+  cancelIdle(pageWarmupId);
+}

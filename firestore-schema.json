@@ -1,0 +1,481 @@
+{
+  "appConfig": {
+    "exchange": [
+      "map"
+    ],
+    "exchange.*": {
+      "999.9골드바": [
+        "number"
+      ]
+    },
+    "purity": [
+      "map"
+    ],
+    "purity.*": {
+      "18k(750)": [
+        "number"
+      ],
+      "순금제품 999": [
+        "number"
+      ],
+      "14k(585)": [
+        "number"
+      ],
+      "순금제품 995": [
+        "number"
+      ],
+      "순금기타(문의)": [
+        "number"
+      ],
+      "999 순금덩어리": [
+        "number"
+      ],
+      "순금 999제품(목걸이,팔찌,반지,귀걸이)": [
+        "number"
+      ],
+      "순금 동물모양(거북이,두꺼비 등)": [
+        "number"
+      ],
+      "순금 마고자 단추 / 색상이 들어있는 제품": [
+        "number"
+      ],
+      "14k(585) 제품(팔찌,목걸이, 반지,귀걸이, 발찌 등)": [
+        "number"
+      ],
+      "기타(문의)": [
+        "number"
+      ],
+      "18k(750) 제품(팔찌,목걸이, 반지,귀걸이, 발찌 등)": [
+        "number"
+      ],
+      "순금 995제품(목걸이,팔찌,반지,귀걸이)": [
+        "number"
+      ],
+      "순금 열쇠": [
+        "number"
+      ]
+    },
+    "2025-09-02.11:00": [
+      "boolean"
+    ],
+    "2025-09-02.12:00": [
+      "boolean"
+    ],
+    "2025-09-02.13:00": [
+      "boolean"
+    ]
+  },
+  "board": {
+    "title": [
+      "string"
+    ],
+    "content": [
+      "string"
+    ],
+    "category": [
+      "string"
+    ],
+    "authorId": [
+      "string"
+    ],
+    "createdAt": [
+      "timestamp"
+    ],
+    "updatedAt": [
+      "timestamp"
+    ]
+  },
+  "chats": {
+    "lastUpdated": [
+      "timestamp"
+    ],
+    "createdAt": [
+      "timestamp"
+    ],
+    "productId": [
+      "string"
+    ],
+    "unreadCount": [
+      "map"
+    ],
+    "unreadCount.*": {
+      "WT6C8dwI8nSnUjXV6Wa89JeV9m13": [
+        "number"
+      ],
+      "kMNvtCL5kjbxTJ220ltowh9hXcJ2": [
+        "number"
+      ]
+    },
+    "participantsMap": [
+      "map"
+    ],
+    "participantsMap.*": {
+      "WT6C8dwI8nSnUjXV6Wa89JeV9m13": [
+        "boolean"
+      ],
+      "kMNvtCL5kjbxTJ220ltowh9hXcJ2": [
+        "boolean"
+      ]
+    },
+    "participants": [
+      "array"
+    ],
+    "participants[]": [
+      "string"
+    ],
+    "lastMessageType": [
+      "string"
+    ],
+    "unread.WT6C8dwI8nSnUjXV6Wa89JeV9m13": [
+      "number"
+    ],
+    "lastSender": [
+      "string"
+    ],
+    "lastMessageAt": [
+      "timestamp"
+    ],
+    "unread.kMNvtCL5kjbxTJ220ltowh9hXcJ2": [
+      "number"
+    ],
+    "lastMessage": [
+      "string"
+    ],
+    "lastMessageId": [
+      "string"
+    ],
+    "updatedAt": [
+      "timestamp"
+    ],
+    "lastSeenAt": [
+      "map"
+    ],
+    "lastSeenAt.*": {
+      "kMNvtCL5kjbxTJ220ltowh9hXcJ2": [
+        "timestamp"
+      ],
+      "WT6C8dwI8nSnUjXV6Wa89JeV9m13": [
+        "timestamp"
+      ]
+    }
+  },
+  "goldExchangeGroups": {
+    "createdAt": [
+      "timestamp"
+    ],
+    "visitTime": [
+      "string"
+    ],
+    "repStatus": [
+      "string"
+    ],
+    "totalG": [
+      "number"
+    ],
+    "totalDon": [
+      "number"
+    ],
+    "visitDate": [
+      "string"
+    ],
+    "updatedAt": [
+      "timestamp"
+    ]
+  },
+  "goldExchanges": {
+    "userId": [
+      "string"
+    ],
+    "groupId": [
+      "string"
+    ],
+    "status": [
+      "string"
+    ],
+    "unknown": [
+      "boolean"
+    ],
+    "name": [
+      "string"
+    ],
+    "phone": [
+      "string"
+    ],
+    "address": [
+      "string"
+    ],
+    "email": [
+      "string"
+    ],
+    "visitDate": [
+      "string"
+    ],
+    "visitTime": [
+      "string"
+    ],
+    "originalQuantity": [
+      "number"
+    ],
+    "inputUnit": [
+      "string"
+    ],
+    "quantity": [
+      "number"
+    ],
+    "goldType": [
+      "string"
+    ],
+    "exchangeType": [
+      "string"
+    ],
+    "finalWeight": [
+      "number"
+    ],
+    "finalWeightDon": [
+      "number"
+    ],
+    "purityUsed": [
+      "number"
+    ],
+    "exchangeRatioUsed": [
+      "number"
+    ],
+    "calcVersion": [
+      "number"
+    ],
+    "barsPlan": [
+      "map"
+    ],
+    "barsPlan.*": {
+      "category": [
+        "string"
+      ],
+      "totalGrams": [
+        "number"
+      ],
+      "totalDon": [
+        "number"
+      ],
+      "selected": [
+        "map"
+      ],
+      "selected.*": {
+        "label": [
+          "string"
+        ],
+        "grams": [
+          "number"
+        ],
+        "don": [
+          "number"
+        ],
+        "qty": [
+          "number"
+        ],
+        "usedGrams": [
+          "number"
+        ],
+        "usedDon": [
+          "number"
+        ]
+      },
+      "leftoverGrams": [
+        "number"
+      ],
+      "leftoverDon": [
+        "number"
+      ],
+      "autoBreakdown": [
+        "array"
+      ],
+      "autoBreakdown[]": [
+        "map"
+      ],
+      "autoBreakdown[].*": {
+        "label": [
+          "string"
+        ],
+        "grams": [
+          "number"
+        ],
+        "don": [
+          "number"
+        ],
+        "qty": [
+          "number"
+        ]
+      }
+    },
+    "createdAt": [
+      "timestamp"
+    ],
+    "updatedAt": [
+      "timestamp"
+    ],
+    "scheduledAt": [
+      "timestamp"
+    ]
+  },
+  "notifications": {},
+  "products": {
+    "title": [
+      "string"
+    ],
+    "description": [
+      "string"
+    ],
+    "category": [
+      "string"
+    ],
+    "sellerId": [
+      "string"
+    ],
+    "weight": [
+      "number"
+    ],
+    "weightUnit": [
+      "string"
+    ],
+    "weightGrams": [
+      "number"
+    ],
+    "approved": [
+      "boolean"
+    ],
+    "completed": [
+      "boolean"
+    ],
+    "createdAt": [
+      "timestamp"
+    ],
+    "price": [
+      "number"
+    ],
+    "imageUrls": [
+      "array"
+    ],
+    "imageUrls[]": [
+      "string"
+    ],
+    "updatedAt": [
+      "timestamp"
+    ],
+    "likesCount": [
+      "number"
+    ],
+    "likedBy": [
+      "array"
+    ],
+    "likedBy[]": [
+      "string"
+    ]
+  },
+  "profiles": {
+    "sellerRatingCount": [
+      "number"
+    ],
+    "sellerRatingAvg": [
+      "number"
+    ],
+    "nickname": [
+      "string"
+    ],
+    "displayName": [
+      "string"
+    ]
+  },
+  "transactionReviews": {
+    "sellerId": [
+      "string"
+    ],
+    "buyerId": [
+      "string"
+    ],
+    "rating": [
+      "number"
+    ],
+    "comment": [
+      "string"
+    ],
+    "createdAt": [
+      "string"
+    ]
+  },
+  "users": {
+    "nickname": [
+      "string"
+    ],
+    "phone": [
+      "string"
+    ],
+    "email": [
+      "string"
+    ],
+    "createdAt": [
+      "timestamp"
+    ],
+    "sellerRatingCount": [
+      "number"
+    ],
+    "uid": [
+      "string"
+    ],
+    "sellerRatingAvg": [
+      "number"
+    ],
+    "role": [
+      "string"
+    ],
+    "myExchangesLastSeenAt": [
+      "timestamp"
+    ],
+    "displayName": [
+      "string"
+    ],
+    "fcmTokens": [
+      "array"
+    ],
+    "fcmTokens[]": [
+      "string"
+    ]
+  },
+  "chats/{docId}/messages": {
+    "sender": [
+      "string"
+    ],
+    "text": [
+      "string"
+    ],
+    "imageUrl": [
+      "null"
+    ],
+    "timestamp": [
+      "timestamp"
+    ],
+    "readBy": [
+      "array"
+    ],
+    "readBy[]": [
+      "string"
+    ]
+  },
+  "chats/{docId}/typing": {
+    "uid": [
+      "string"
+    ],
+    "isTyping": [
+      "boolean"
+    ],
+    "updatedAt": [
+      "timestamp"
+    ]
+  },
+  "users/{docId}/favorites": {
+    "createdAt": [
+      "timestamp"
+    ],
+    "favoriteProductId": [
+      "string"
+    ]
+  }
+}

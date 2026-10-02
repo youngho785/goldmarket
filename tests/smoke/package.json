@@ -1,0 +1,19 @@
+{
+  "name": "kgm-small-smoke",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "setup": "npm install && npx playwright install chromium",
+    "test:inner": "playwright test -c playwright.config.mjs",
+    "test:inner:headed": "playwright test -c playwright.config.mjs --headed",
+    "test:mobile:inner": "playwright test -c playwright.mobile.config.mjs",
+    "test:mobile:inner:headed": "playwright test -c playwright.mobile.config.mjs --headed"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0"
+  },
+  "dependencies": {
+    "kgm-small-smoke": "file:"
+  }
+}
