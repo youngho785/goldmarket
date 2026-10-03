@@ -12,6 +12,7 @@ export default defineConfig([
     'backup-*/**',
     '_backups/**',
     '_patch_backups/**',
+    'test-results/**',
 
     // Android/Capacitor 자동 생성·복사 산출물만 제외
     'android/.gradle/**',

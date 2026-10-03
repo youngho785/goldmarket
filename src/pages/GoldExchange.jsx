@@ -253,7 +253,7 @@ export default function GoldExchange() {
   ]);
 
   /* 환산율 */
-  const { rates, pureGoldBuyPricePerDon } = useGoldExchangeMarketData();
+  const { rates, ratesReady, pureGoldBuyPricePerDon } = useGoldExchangeMarketData();
   const productOptions = useMemo(
     () => listGoldProducts(rates, { context: "exchange" }).filter(isGoldToGoldInputProduct),
     [rates]
@@ -332,6 +332,11 @@ export default function GoldExchange() {
     e.preventDefault();
     setError("");
 
+    if (!ratesReady) {
+      setError("현재 금 환산 기준을 불러오는 중입니다. 잠시 후 다시 계산해 주세요.");
+      return;
+    }
+
     const validation = validateExchangeProductsForCalculation(products, {
       rates,
       pureGoldBuyPricePerDon,
@@ -384,6 +389,7 @@ export default function GoldExchange() {
     vaultImportLoading,
     products,
     rates,
+    ratesReady,
     pureGoldBuyPricePerDon,
     maxProducts: MAX_PRODUCTS_PER_BOOKING,
     maxProductGrams: MAX_PRODUCT_GRAMS,

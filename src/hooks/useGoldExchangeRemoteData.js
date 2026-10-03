@@ -16,12 +16,25 @@ export function useGoldExchangeMarketData() {
     products: DEFAULT_GOLD_PRODUCTS,
   });
   const [pureGoldBuyPricePerDon, setPureGoldBuyPricePerDon] = useState(0);
+  const [ratesReady, setRatesReady] = useState(false);
 
   useEffect(() => {
+    setRatesReady(false);
     const unsubscribe = subscribeGoldRates(
       db,
-      (merged) => setRates(merged),
-      (message, error) => console.error(message, error)
+      (merged, snapshot) => {
+        if (!snapshot.exists() || snapshot.metadata.fromCache) {
+          setRatesReady(false);
+          return;
+        }
+        setRates(merged);
+        setRatesReady(true);
+      },
+      (message, error) => {
+        setRatesReady(false);
+        console.error(message, error);
+      },
+      { includeMetadataChanges: true }
     );
     return () => unsubscribe?.();
   }, []);
@@ -32,7 +45,7 @@ export function useGoldExchangeMarketData() {
     () => setPureGoldBuyPricePerDon(0)
   ), []);
 
-  return { rates, pureGoldBuyPricePerDon };
+  return { rates, ratesReady, pureGoldBuyPricePerDon };
 }
 
 export function useGoldExchangeStatus(exchangeId) {

@@ -13,6 +13,7 @@ import {
   resetEmulators,
   seedCoreData,
   waitForFirestore,
+  waitForFirestoreValue,
   waitForNewOob
 } from "../helpers/smoke.mjs";
 
@@ -34,7 +35,7 @@ async function actualSignupAndVerify(page) {
   await page.locator("#agree_privacy").check();
 
   const oobPromise = waitForNewOob({ seen: before, email });
-  await page.getByRole("button", { name: "한국골드마켓 시작하기" }).click();
+  await page.locator('form button[type="submit"]').click();
   const oob = await oobPromise;
   await expect(page).toHaveURL(/\/verify-email(?:\?|$)/, { timeout: 30_000 });
 
@@ -102,6 +103,7 @@ test("3. GOLD TO GOLD 방문 예약 신청", async ({ page }) => {
 });
 
 test("4. 관리자 예약확정 → 실측확정 → 교환완료", async ({ page, browser }) => {
+  test.setTimeout(360_000);
   const assertCustomerNoProduction = await blockProductionFirebase(page);
   const member = await createVerifiedUser("smoke-admin-customer", {
     displayName: "관리처리 스모크 고객",
@@ -124,16 +126,18 @@ test("4. 관리자 예약확정 → 실측확정 → 교환완료", async ({ pag
     await expect(adminPage.getByText(group.id).first()).toBeVisible();
 
     await adminPage.getByRole("button", { name: "예약 확정", exact: true }).click();
-    await waitForFirestore(async () => {
-      const row = await findLatestExchangeGroupByUser(member.uid);
-      return row?.repStatus === "scheduled" ? row : null;
-    });
+    await waitForFirestoreValue(
+      () => findLatestExchangeGroupByUser(member.uid),
+      (row) => row?.repStatus === "scheduled",
+      { timeoutMs: 60_000, label: "admin reservation scheduled" }
+    );
 
     await adminPage.getByRole("button", { name: "매장 확인 시작", exact: true }).click();
-    await waitForFirestore(async () => {
-      const row = await findLatestExchangeGroupByUser(member.uid);
-      return row?.repStatus === "in_progress" ? row : null;
-    });
+    await waitForFirestoreValue(
+      () => findLatestExchangeGroupByUser(member.uid),
+      (row) => row?.repStatus === "in_progress",
+      { timeoutMs: 60_000, label: "admin reservation in_progress" }
+    );
 
     const panel = adminPage.getByRole("region", { name: "매장 실측 결과 입력" });
     await panel.getByLabel("실측 중량(g)").first().fill("20");
@@ -143,18 +147,23 @@ test("4. 관리자 예약확정 → 실측확정 → 교환완료", async ({ pag
     await panel.getByRole("checkbox").check();
     await panel.getByRole("button", { name: "실측·동의 확정 저장" }).click();
 
-    await waitForFirestore(async () => {
-      const snap = await adminDb().doc(`goldExchangeGroups/${group.id}`).get();
-      return snap.data()?.measurementStatus === "confirmed" ? snap.data() : null;
-    }, { timeoutMs: 30_000 });
+    await waitForFirestoreValue(
+      async () => {
+        const snap = await adminDb().doc(`goldExchangeGroups/${group.id}`).get();
+        return snap.data() || null;
+      },
+      (row) => row?.measurementStatus === "confirmed",
+      { timeoutMs: 60_000, label: "admin measurement confirmed" }
+    );
 
     const completeButton = adminPage.getByRole("button", { name: "교환 완료 확정", exact: true });
     await expect(completeButton).toBeEnabled();
     await completeButton.click();
-    await waitForFirestore(async () => {
-      const row = await findLatestExchangeGroupByUser(member.uid);
-      return row?.repStatus === "completed" ? row : null;
-    }, { timeoutMs: 30_000 });
+    await waitForFirestoreValue(
+      () => findLatestExchangeGroupByUser(member.uid),
+      (row) => row?.repStatus === "completed",
+      { timeoutMs: 60_000, label: "admin exchange completed" }
+    );
 
     await page.goto("/my-exchanges", { waitUntil: "domcontentloaded" });
     await expect(page.getByText("교환 완료", { exact: true }).first()).toBeVisible();

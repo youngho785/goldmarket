@@ -12,6 +12,7 @@ export default function useGoldExchangeAutoVault({
   vaultImportLoading,
   products,
   rates,
+  ratesReady,
   pureGoldBuyPricePerDon,
   maxProducts,
   maxProductGrams,
@@ -30,7 +31,7 @@ export default function useGoldExchangeAutoVault({
   }, [entryMode]);
 
   useEffect(() => {
-    if (!enabled || entryMode !== "vault" || vaultImportLoading) return;
+    if (!enabled || entryMode !== "vault" || vaultImportLoading || !ratesReady) return;
     if (completedRef.current || step !== STEP.CALC || products.length === 0) return;
 
     const validation = validateExchangeProductsForCalculation(products, {
@@ -70,6 +71,7 @@ export default function useGoldExchangeAutoVault({
     products,
     pureGoldBuyPricePerDon,
     rates,
+    ratesReady,
     setCalculated,
     setError,
     setProducts,

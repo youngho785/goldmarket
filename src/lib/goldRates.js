@@ -230,11 +230,12 @@ export async function getGoldRatesOnce(db) {
   }
 }
 
-export function subscribeGoldRates(db, onChange, onError = console.error) {
+export function subscribeGoldRates(db, onChange, onError = console.error, options = {}) {
   const ref = doc(db, GOLD_RATES_DOC.coll, GOLD_RATES_DOC.id);
   return onSnapshot(
     ref,
-    (snap) => onChange(mergeGoldRates(snap.data() || {})),
+    options,
+    (snap) => onChange(mergeGoldRates(snap.data() || {}), snap),
     (err) => onError("goldRates subscribe failed", err)
   );
 }

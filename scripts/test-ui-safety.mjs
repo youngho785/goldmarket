@@ -593,7 +593,7 @@ test("MY GOLD 비동기 불러오기는 레거시 goldType만 있어도 제품 �
 
 test("GoldExchange 원격 읽기와 프로필 초기값은 전용 hook으로 분리한다", () => {
   assert.match(goldExchangeSource, /from "@\/hooks\/useGoldExchangeRemoteData"/);
-  assert.match(goldExchangeSource, /const \{ rates, pureGoldBuyPricePerDon \} = useGoldExchangeMarketData\(\)/);
+  assert.match(goldExchangeSource, /const \{ rates, ratesReady, pureGoldBuyPricePerDon \} = useGoldExchangeMarketData\(\)/);
   assert.match(goldExchangeSource, /const status = useGoldExchangeStatus\(exchangeId\)/);
   assert.match(goldExchangeSource, /useGoldExchangeProfileDefaults\(user, setName, setPhone\)/);
   assert.doesNotMatch(goldExchangeSource, /from "firebase\/firestore"|fetchMyProfile|subscribeGoldRates/);

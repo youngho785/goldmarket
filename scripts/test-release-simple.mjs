@@ -121,8 +121,14 @@ async function main() {
   const functionsBuild = await step('FUNCTIONS BUILD', () => runNpm(['--prefix', 'functions', 'run', 'build']));
   if (!functionsBuild) return finish(1);
 
+  const functionDeps = await step('FUNCTION DEPENDENCIES', () => runNpm(['--prefix', 'functions', 'run', 'test:dependency-security']));
+  if (!functionDeps) return finish(1);
+
   const goldCalc = await step('GOLD CALCULATION', () => runNode(['scripts/test-gold-bar-fee.mjs']));
   if (!goldCalc) return finish(1);
+
+  const rateReadiness = await step('GOLD RATE READINESS', () => runNode(['scripts/test-gold-exchange-rate-readiness.mjs']));
+  if (!rateReadiness) return finish(1);
 
   const authStatic = await step('AUTH SAFETY', () => runNode(['scripts/test-auth-core-safety.mjs']));
   if (!authStatic) return finish(1);
