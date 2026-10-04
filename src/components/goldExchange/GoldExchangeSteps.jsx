@@ -53,7 +53,6 @@ import {
   PrivacyFrame,
   Input,
   ReservationSummary,
-  FeeSummary,
   FeeLink,
   PendingBadge
 } from "./GoldExchange.styles";
@@ -322,19 +321,7 @@ export function BarStep({
         </MiniGoldBar>
       </ExchangeOutcome>
 
-      <FeeSummary aria-label="예상 골드바 제작 공임">
-        <div>
-          <small>선택한 규격의 예상 제작 공임</small>
-          <strong>{feeEstimate.totalFee == null ? "매장 확인" : formatGoldBarFee(feeEstimate.totalFee)}</strong>
-          <small>
-            {feeEstimate.unitFee == null
-              ? "해당 규격은 매장에서 공임을 안내합니다."
-              : `${selectedBar.label} ${formatGoldBarFee(feeEstimate.unitFee)} × ${safeQty}개 기준`}
-            {" · "}최종 공임은 교환 확정 전에 매장에서 다시 확인합니다.
-          </small>
-        </div>
-        <FeeLink href="/goldbar-fee">전체 공임표 보기 →</FeeLink>
-      </FeeSummary>
+
 
       <details style={{ margin: "14px 0 4px" }}>
         <summary style={{ cursor: "pointer", color: "var(--gm-primary)", fontWeight: 850, fontSize: ".88rem" }}>
@@ -580,6 +567,12 @@ export function BarStep({
 
       <SectionSeparator />
       <div style={{ display: "grid", gap: 10 }}>
+        <HelpText style={{ margin: "0", textAlign: "center", lineHeight: 1.55 }}>
+          {"예상 제작 공임 "}
+          <b>{feeEstimate.totalFee == null ? "매장 확인" : formatGoldBarFee(feeEstimate.totalFee)}</b>
+          {" · 최종 공임은 교환 확정 전에 매장에서 확인합니다. "}
+          <FeeLink href="/goldbar-fee">{"전체 공임표 보기"}</FeeLink>
+        </HelpText>
         <Button type="button" onClick={onGoReserve}>이 예상으로 방문 예약 계속</Button>
         <OutlineButton type="button" onClick={onSaveToMyGold}>MY GOLD에 저장하고 가치 추적</OutlineButton>
         <HelpText style={{ margin: 0, textAlign: "center" }}>

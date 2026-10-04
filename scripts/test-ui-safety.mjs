@@ -179,7 +179,7 @@ test("2.4 GOLD TO GOLD는 온라인 예상과 실제 매장 확정을 분리하�
   assert.match(goldExchangeStylesSource, /max-width: 1160px/);
   assert.match(goldExchangeSource, /온라인 화면은 예상값입니다/);
   assert.match(goldExchangeSource, /실제 순도·중량·골드바 제작공임과 교환 조건은 매장에서 실물을 확인하고 고객이 동의한 뒤 확정/);
-  assert.match(goldExchangeStepsSource, /선택한 규격의 예상 제작 공임/);
+  assert.match(goldExchangeStepsSource, /예상 제작 공임/);
   assert.match(goldExchangeStepsSource, /전체 공임표 보기/);
   assert.match(goldExchangeStepsSource, /이 예상으로 방문 예약 계속/);
   assert.match(goldExchangeStepsSource, /<Title>방문 예약 요청<\/Title>/);
