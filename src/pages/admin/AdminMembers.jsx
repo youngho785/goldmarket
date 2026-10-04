@@ -50,7 +50,7 @@ const VaultInfo = styled.div`
 `;
 
 const formatDate = (value) => value ? new Date(value).toLocaleString("ko-KR", { dateStyle: "short", timeStyle: "short" }) : "-";
-const formatBonusGold = (value) => `순금 ${Math.max(0, Number(value || 0)).toFixed(3)}g`;
+const formatBonusGold = (value) => `순금 ${Math.max(0, Number(value || 0)).toFixed(2)}g`;
 
 function rewardSummary(rewards) {
   if (!rewards) return "적립 상세 확인 불가";
@@ -148,12 +148,12 @@ export default function AdminMembers() {
   return (
     <Page>
       <Header>
-        <h1>회원·금고 관리</h1>
-        <p>회원 계정과 나의 금 등록 여부, 한국골드마켓 적립 순금 현황을 확인합니다. 개인 금제품의 종류·중량·메모는 관리자 화면에 표시하지 않습니다.</p>
+        <h1>회원·MY GOLD 관리</h1>
+        <p>회원 계정과 MY GOLD 등록 여부, 한국골드마켓 적립 순금 현황을 확인합니다. 개인 금제품의 종류·중량·메모는 관리자 화면에 표시하지 않습니다.</p>
       </Header>
       {limitedMode && (
         <Message>
-          서버 함수가 아직 배포되지 않아 회원 기본목록만 표시합니다. 나의 금 등록 수·적립 상세·이메일 인증·최근 로그인·계정 정지는 서버 함수 배포 후 정확히 확인할 수 있습니다.
+          서버 함수가 아직 배포되지 않아 회원 기본목록만 표시합니다. MY GOLD 등록 수·적립 상세·이메일 인증·최근 로그인·계정 정지는 서버 함수 배포 후 정확히 확인할 수 있습니다.
         </Message>
       )}
       {!isSuperAdmin && <Message>회원 조회는 가능하지만 역할 변경과 계정 정지는 최고관리자만 할 수 있습니다.</Message>}
@@ -162,15 +162,15 @@ export default function AdminMembers() {
         <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="이메일·이름·전화번호·UID 검색" aria-label="회원 검색" />
         <select value={filter} onChange={(event) => setFilter(event.target.value)} disabled={limitedMode} aria-label="회원 상태 필터">
           <option value="all">전체 회원</option>
-          <option value="vaultActive">나의 금 등록 회원</option>
-          <option value="vaultEmpty">나의 금 미등록 회원</option>
+          <option value="vaultActive">MY GOLD 등록 회원</option>
+          <option value="vaultEmpty">MY GOLD 미등록 회원</option>
           <option value="bonusPositive">적립 순금 보유 회원</option>
         </select>
         <Button type="button" onClick={() => load()} disabled={loading}>{loading ? "불러오는 중…" : "새로고침"}</Button>
       </Toolbar>
       <TableWrap>
         <Table>
-          <thead><tr><th>회원</th><th>연락처</th><th>권한</th><th>인증/상태</th><th>나의 금고 / 적립</th><th>가입일</th><th>최근 로그인</th><th>관리</th></tr></thead>
+          <thead><tr><th>회원</th><th>연락처</th><th>권한</th><th>인증/상태</th><th>MY GOLD / 적립</th><th>가입일</th><th>최근 로그인</th><th>관리</th></tr></thead>
           <tbody>
             {filtered.map((item) => {
               const protectedAccount = item.uid === currentUser?.uid || item.role === "superAdmin";
@@ -193,7 +193,7 @@ export default function AdminMembers() {
                   </td>
                   <td>
                     <VaultInfo>
-                      <strong>{vaultCount == null ? "나의 금 확인 불가" : Number(vaultCount) > 0 ? `나의 금 ${Number(vaultCount).toLocaleString("ko-KR")}개` : "나의 금 미등록"}</strong>
+                      <strong>{vaultCount == null ? "MY GOLD 확인 불가" : Number(vaultCount) > 0 ? `MY GOLD ${Number(vaultCount).toLocaleString("ko-KR")}개` : "MY GOLD 미등록"}</strong>
                       <span>적립 {formatBonusGold(item.bonusGoldG)}</span>
                       <small>{rewardSummary(item.bonusRewards)}</small>
                     </VaultInfo>

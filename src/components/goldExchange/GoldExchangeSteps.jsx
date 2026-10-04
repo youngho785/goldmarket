@@ -7,8 +7,9 @@ import PushPermissionPrompt from "@/components/common/PushPermissionPrompt";
 import shopLogo from "@/assets/logo.webp";
 import useReservedSlots from "@/hooks/useReservedSlots";
 import useBookingAvailability, { getBookingAvailabilityEntry } from "@/hooks/useBookingAvailability";
-import { DON_TO_GRAMS, roundTo3Custom, toFixed3CustomStr } from "@/lib/goldRates";
+import { DON_TO_GRAMS, roundTo3Custom } from "@/lib/goldRates";
 import { getGoldBarFeeEstimate, formatGoldBarFee } from "@/lib/goldBarFee";
+import { formatGoldWeightPair } from "@/lib/goldDisplay";
 import {
   Card,
   StartChoiceGrid,
@@ -256,7 +257,7 @@ export function BarStep({
         <InfoCard role="status">
           <p style={{ margin: 0 }}>
             예상 순금량은 <b>{fmtG(totalGrams)}g</b>이며, 최소 골드바 1g까지
-            <b> {toFixed3CustomStr(needed)}g</b>이 더 필요합니다.
+            <b> {fmtG(needed)}g</b>이 더 필요합니다.
           </p>
           <p style={{ margin: "8px 0 0" }}>
             1g 골드바를 임의로 선택하지 않습니다. 제품을 추가하거나 매장에서 실측 후
@@ -309,8 +310,8 @@ export function BarStep({
           <strong>예상 순금량 {fmtG(totalGrams)}g → {selectedBar.label} × {safeQty}</strong>
           <p>
             {roundTo3Custom(totalGrams - selectedBar.grams * safeQty) >= 0
-              ? `예상 잔여 순금 ${toFixed3CustomStr(roundTo3Custom(totalGrams - selectedBar.grams * safeQty))}g`
-              : `선택 규격까지 ${toFixed3CustomStr(roundTo3Custom(selectedBar.grams * safeQty - totalGrams))}g 추가 필요`}
+              ? `예상 잔여 순금 ${fmtG(roundTo3Custom(totalGrams - selectedBar.grams * safeQty))}g (${fmtD(roundTo3Custom(totalGrams - selectedBar.grams * safeQty) / DON_TO_GRAMS)}돈)`
+              : `선택 규격까지 ${fmtG(roundTo3Custom(selectedBar.grams * safeQty - totalGrams))}g (${fmtD(roundTo3Custom(selectedBar.grams * safeQty - totalGrams) / DON_TO_GRAMS)}돈) 추가 필요`}
             · 실제 순금량은 매장 실측 후 확정됩니다.
           </p>
         </div>
@@ -357,8 +358,8 @@ export function BarStep({
                 <tr key={`sum-${idx}`}>
                   <td>{p.productName || p.goldType || "-"}</td>
                   <td>{displayOriginal(p.quantity, p.inputUnit)}</td>
-                  <td>{fmtG(g)} g</td>
-                  <td>{fmtD(d)} 돈</td>
+                  <td>{fmtG(g)}g</td>
+                  <td>{fmtD(d)}돈</td>
                 </tr>
               );
             })}
@@ -366,8 +367,8 @@ export function BarStep({
           <tfoot>
             <tr>
               <td colSpan={2}>합계(예상 순금량)</td>
-              <td>{fmtG(totalGrams)} g</td>
-              <td>{fmtD(totalDon)} 돈</td>
+              <td>{fmtG(totalGrams)}g</td>
+              <td>{fmtD(totalDon)}돈</td>
             </tr>
           </tfoot>
         </Table>
@@ -445,11 +446,11 @@ export function BarStep({
                 {topUpRecommended && !recommended && <AIBadge>추가해서 선택</AIBadge>}
               </div>
               <div style={{ fontSize: ".9rem", color: "var(--gm-text-secondary)" }}>
-                ≈ {fmtD(d.don)} 돈 / {toFixed3CustomStr(d.grams)} g
+                {fmtG(d.grams)}g ({fmtD(d.don)}돈)
               </div>
               {topUpRecommended && topUpGramsForOne > 0 && (
                 <div style={{ fontSize: ".82rem", fontWeight: 800, color: "var(--gm-primary)" }}>
-                  + {fmtD(topUpGramsForOne / DON_TO_GRAMS)} 돈 ({toFixed3CustomStr(topUpGramsForOne)}g) 추가 시 1개 선택 가능
+                  + {fmtG(topUpGramsForOne)}g ({fmtD(topUpGramsForOne / DON_TO_GRAMS)}돈) 추가 시 1개 선택 가능
                 </div>
               )}
               {disabled && (
@@ -503,7 +504,7 @@ export function BarStep({
           </SmallButton>
         </Inline>
         <HelpText>
-          선택 골드바 총중량: <b>{toFixed3CustomStr(roundTo3Custom(selectedBar.grams * safeQty))}</b> g / <b>{fmtD((selectedBar.grams * safeQty) / DON_TO_GRAMS)}</b> 돈{" "}
+          선택 골드바 총중량: <b>{fmtG(roundTo3Custom(selectedBar.grams * safeQty))}g</b> (<b>{fmtD((selectedBar.grams * safeQty) / DON_TO_GRAMS)}돈</b>){" "}
           (선택 가능 최대 {maxSelectableQty}개)
         </HelpText>
       </FormGroup>
@@ -522,7 +523,7 @@ export function BarStep({
               <>
                 <p style={{ margin: 0 }}>
                   현재 예상 순금량은 <b>{fmtG(totalGrams)}g</b> ({fmtD(totalDon)}돈)이며, 선택한 <b>{selectedBar.label} × {qty}</b>를 만들려면
-                  <b> {toFixed3CustomStr(topUpG)}g</b> (<b>{fmtD(topUpG / DON_TO_GRAMS)}돈</b>)을 추가하면 됩니다.
+                  <b> {fmtG(topUpG)}g</b> (<b>{fmtD(topUpG / DON_TO_GRAMS)}돈</b>)을 추가하면 됩니다.
                 </p>
                 <p style={{ margin: "8px 0 0", fontWeight: 700 }}>
                   부족분은 방문 시 실물 확인 후 당일 순금 판매시세를 기준으로 정산됩니다.
@@ -536,7 +537,7 @@ export function BarStep({
             return (
               <>
                 <p style={{ margin: 0 }}>
-                  남는 무게는 <b>{(Math.round(leftoverG * 100) / 100).toFixed(2)} g</b> (<b>{fmtD(leftoverG / DON_TO_GRAMS)} 돈</b>) 입니다. 다음과 같은 추가 조합이 가능합니다:
+                  남는 무게는 <b>{fmtG(leftoverG)}g</b> (<b>{fmtD(leftoverG / DON_TO_GRAMS)}돈</b>) 입니다. 다음과 같은 추가 조합이 가능합니다:
                 </p>
                 <div style={{ marginTop: 8 }}>
                   {extraCombo.items.map(({ denom, qty: q }) => (
@@ -566,10 +567,10 @@ export function BarStep({
           return (
             <>
               <p style={{ margin: 0 }}>
-                남는 금은 <b>{(Math.round(leftoverG * 100) / 100).toFixed(2)} g</b> (<b>{fmtD(leftoverG / DON_TO_GRAMS)} 돈</b>)입니다.
+                남는 금은 <b>{fmtG(leftoverG)}g</b> (<b>{fmtD(leftoverG / DON_TO_GRAMS)}돈</b>)입니다.
               </p>
               <p style={{ margin: "6px 0 0" }}>
-                <b>{groupMin.label}</b> 1개를 추가하려면 <b>{(Math.round(needMore * 100) / 100).toFixed(2)} g</b> (<b>{fmtD(needMore / DON_TO_GRAMS)} 돈</b>)이 더 필요합니다.
+                <b>{groupMin.label}</b> 1개를 추가하려면 <b>{fmtG(needMore)}g</b> (<b>{fmtD(needMore / DON_TO_GRAMS)}돈</b>)이 더 필요합니다.
               </p>
               <p style={{ margin: "10px 0 0", fontWeight: 700 }}>잔여 금 처리방법은 교환 확정 시 안내합니다.</p>
             </>
@@ -727,7 +728,7 @@ export function ReserveStep({
         {calculated && barsPlan ? (
           <>
             <strong>
-              예상 순금 {Number(barsPlan.totalGrams || 0).toFixed(2)}g · {barsPlan.selected?.label || "골드바"} × {barsPlan.selected?.qty || 1}
+              ?? ?? {formatGoldWeightPair(barsPlan.totalGrams || 0)} ? {barsPlan.selected?.label || "???"} ? {barsPlan.selected?.qty || 1}
             </strong>
             <p>
               예상 제작 공임 {formatGoldBarFee(getGoldBarFeeEstimate({

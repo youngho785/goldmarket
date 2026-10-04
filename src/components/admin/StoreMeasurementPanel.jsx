@@ -4,8 +4,8 @@ import { httpsCallable } from "firebase/functions";
 import { functions } from "@/firebase/firebase";
 import { BAR_GROUPS } from "@/components/goldExchange/goldExchangeUi";
 import { getGoldBarFeeEstimate, formatGoldBarFee } from "@/lib/goldBarFee";
-
-const DON_TO_GRAMS = 3.75;
+import { DON_TO_GRAMS } from "@/lib/goldRates";
+import { formatGoldDon, formatGoldGrams } from "@/lib/goldDisplay";
 
 const Wrap = styled.section`
   display: grid;
@@ -466,7 +466,7 @@ export default function StoreMeasurementPanel({
               <ProductInfo>
                 <strong>{item.productName || item.goldType || "제품"}</strong>
                 <span>
-                  온라인 예상 순금 {round3(item.finalWeight || 0).toFixed(3)}g · 요청 중량 {round3(item.quantity || 0).toFixed(3)}g
+                  온라인 예상 순금 {formatGoldGrams(item.finalWeight || 0)} ({formatGoldDon(Number(item.finalWeight || 0) / DON_TO_GRAMS)}) · 요청 중량 {formatGoldGrams(item.quantity || 0)} ({formatGoldDon(Number(item.quantity || 0) / DON_TO_GRAMS)})
                 </span>
               </ProductInfo>
               <Field>
@@ -505,8 +505,8 @@ export default function StoreMeasurementPanel({
       <SummaryGrid>
         <SummaryCard $accent>
           <small>실측 확정 순금량</small>
-          <strong>{finalRecognizedG.toFixed(3)}g</strong>
-          <span>{(finalRecognizedG / DON_TO_GRAMS).toFixed(2)}돈</span>
+          <strong>{formatGoldGrams(finalRecognizedG)}</strong>
+          <span>{formatGoldDon(finalRecognizedG / DON_TO_GRAMS)}</span>
         </SummaryCard>
         <SummaryCard>
           <small>MEMBER GOLD 적용</small>
@@ -515,15 +515,15 @@ export default function StoreMeasurementPanel({
         </SummaryCard>
         <SummaryCard>
           <small>최종 적용량</small>
-          <strong>{finalAppliedG.toFixed(3)}g</strong>
-          <span>{(finalAppliedG / DON_TO_GRAMS).toFixed(2)}돈</span>
+          <strong>{formatGoldGrams(finalAppliedG)}</strong>
+          <span>{formatGoldDon(finalAppliedG / DON_TO_GRAMS)}</span>
         </SummaryCard>
         <SummaryCard>
           <small>부족 / 잔여</small>
           <strong>
-            {delta.topUp > 0 ? `부족 ${delta.topUp.toFixed(3)}g` : `잔여 ${delta.leftover.toFixed(3)}g`}
+            {delta.topUp > 0 ? `부족 ${formatGoldGrams(delta.topUp)}` : `잔여 ${formatGoldGrams(delta.leftover)}`}
           </strong>
-          <span>선택 골드바 총 {delta.used.toFixed(3)}g</span>
+          <span>선택 골드바 총 {formatGoldGrams(delta.used)} ({formatGoldDon(delta.used / DON_TO_GRAMS)})</span>
         </SummaryCard>
       </SummaryGrid>
 

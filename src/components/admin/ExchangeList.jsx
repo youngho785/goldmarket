@@ -12,9 +12,10 @@ import {
   fetchAdminExchangeGroupsPage,
   fetchAdminProfile,
 } from "@/services/adminExchangeService";
+import { DON_TO_GRAMS } from "@/lib/goldRates";
+import { formatGoldDon, formatGoldGrams, formatGoldNumber2, formatGoldWeightPair } from "@/lib/goldDisplay";
 
 const PAGE_SIZE = 20;
-const DON_TO_GRAMS = 3.75;
 
 const STATUS_LABEL = {
   requested: "예약 확인 대기",
@@ -642,23 +643,12 @@ function fmt(value) {
   }
 }
 
-function roundTo3(value) {
-  const number = Number(value);
-  if (!Number.isFinite(number)) return 0;
-  const sign = number < 0 ? -1 : 1;
-  const absolute = Math.abs(number);
-  const times10000 = Math.floor(absolute * 10000 + 1e-8);
-  let thousandths = Math.floor(times10000 / 10);
-  if (times10000 % 10 >= 7) thousandths += 1;
-  return sign * (thousandths / 1000);
-}
-
 function gramsText(value) {
-  return `${roundTo3(value).toFixed(3)}g`;
+  return formatGoldGrams(value);
 }
 
 function donText(value) {
-  return `${(Number(value || 0) / DON_TO_GRAMS).toFixed(2)}돈`;
+  return formatGoldDon(Number(value || 0) / DON_TO_GRAMS);
 }
 
 function originalQuantityText(item) {
@@ -666,12 +656,12 @@ function originalQuantityText(item) {
   const grams = Number(item.quantity || 0);
 
   if (Number.isFinite(original) && item.inputUnit === "don") {
-    return `${roundTo3(original * DON_TO_GRAMS).toFixed(3)}g (${original.toFixed(2)}돈)`;
+    return formatGoldWeightPair(original * DON_TO_GRAMS);
   }
   if (Number.isFinite(original) && item.inputUnit === "g") {
-    return `${roundTo3(original).toFixed(3)}g (${(original / DON_TO_GRAMS).toFixed(2)}돈)`;
+    return formatGoldWeightPair(original);
   }
-  return `${roundTo3(grams).toFixed(3)}g (${(grams / DON_TO_GRAMS).toFixed(2)}돈)`;
+  return formatGoldWeightPair(grams);
 }
 
 function calculationBasisText(item) {
@@ -1280,7 +1270,7 @@ export default function ExchangeList() {
     }
     if (
       !window.confirm(
-        `현장 인정 ${finalRecognizedG.toFixed(3)}g에 적립 순금 ${amountG.toFixed(2)}g을 사용 확정할까요?`
+        `현장 인정 ${formatGoldGrams(finalRecognizedG)}에 적립 순금 ${formatGoldGrams(amountG)}을 사용 확정할까요?`
       )
     ) {
       return;
@@ -1678,9 +1668,7 @@ export default function ExchangeList() {
                           </OverviewValue>
                           <OverviewSub>
                             {plan?.selected?.usedGrams != null
-                              ? `총 ${gramsText(plan.selected.usedGrams)} / ${Number(
-                                  plan.selected.usedDon || 0
-                                ).toFixed(2)}돈`
+                              ? `총 ${formatGoldWeightPair(plan.selected.usedGrams)}`
                               : "고객 선택 계획을 확인하세요."}
                           </OverviewSub>
                         </OverviewCard>
@@ -1697,8 +1685,8 @@ export default function ExchangeList() {
                           <OverviewSub>
                             {plan
                               ? plan.requiresTopUp || Number(plan.topUpGrams) > 0
-                                ? `부족 예상 · ${Number(plan.topUpDon || 0).toFixed(2)}돈`
-                                : `잔여 예상 · ${Number(plan.leftoverDon || 0).toFixed(2)}돈`
+                                ? `부족 예상 · ${formatGoldDon(plan.topUpDon || 0)}`
+                                : `잔여 예상 · ${formatGoldDon(plan.leftoverDon || 0)}`
                               : "현장 확인이 필요한 요청일 수 있습니다."}
                           </OverviewSub>
                         </OverviewCard>
@@ -1781,20 +1769,13 @@ export default function ExchangeList() {
                               <span>
                                 최종 적용 합계:{" "}
                                 <strong>
-                                  {gramsText(group.finalAppliedG)}
-                                </strong>{" "}
-                                /{" "}
-                                {(
-                                  Number(group.finalAppliedG || 0) /
-                                  DON_TO_GRAMS
-                                ).toFixed(2)}
-                                돈
+                                  {formatGoldWeightPair(group.finalAppliedG)}
+                                </strong>
                               </span>
                             </>
                           ) : (
                             <span>
-                              계산 기준: {gramsText(planBasisG)} /{" "}
-                              {(planBasisG / DON_TO_GRAMS).toFixed(2)}돈
+                              계산 기준: {formatGoldWeightPair(planBasisG)}
                             </span>
                           )}
 
@@ -1804,31 +1785,23 @@ export default function ExchangeList() {
                           </span>
                           <span>
                             골드바 총중량:{" "}
-                            {gramsText(plan.selected?.usedGrams)} /{" "}
-                            {Number(
-                              plan.selected?.usedDon || 0
-                            ).toFixed(2)}
-                            돈
+                            {formatGoldWeightPair(plan.selected?.usedGrams)}
                           </span>
                           {plan.requiresTopUp || Number(plan.topUpGrams) > 0 ? (
                             <NoticeCard>
                               <p><strong>부족 예상</strong></p>
                               <p>
-                                고객 예상 순금: {gramsText(planBasisG)} / {(planBasisG / DON_TO_GRAMS).toFixed(2)}돈
+                                고객 예상 순금: {formatGoldWeightPair(planBasisG)}
                               </p>
                               <p>
-                                부족 예상: <strong>{gramsText(plan.topUpGrams)} / {Number(plan.topUpDon || 0).toFixed(2)}돈</strong>
+                                부족 예상: <strong>{formatGoldWeightPair(plan.topUpGrams)}</strong>
                               </p>
                               <p>방문 시 실측 후 실제 부족량과 당일 적용 기준을 확인한 뒤 고객 동의 후 확정하세요.</p>
                             </NoticeCard>
                           ) : (
                             <span>
                               {isBonusUsed ? "최종 잔여" : "예상 잔여"}:{" "}
-                              {gramsText(plan.leftoverGrams)} /{" "}
-                              {Number(
-                                plan.leftoverDon || 0
-                              ).toFixed(2)}
-                              돈
+                              {formatGoldWeightPair(plan.leftoverGrams)}
                             </span>
                           )}
                           {Array.isArray(plan.autoBreakdown) &&
@@ -1894,7 +1867,7 @@ export default function ExchangeList() {
                                     inputMode="decimal"
                                     value={
                                       bonusForm.finalRecognizedG ??
-                                      roundTo3(totalG).toFixed(3)
+                                      formatGoldNumber2(totalG)
                                     }
                                     onChange={(event) =>
                                       updateBonusForm(
@@ -1928,11 +1901,11 @@ export default function ExchangeList() {
                           {bonusStatus === "used" && (
                             <span>
                               현장 인정{" "}
-                              {Number(group.finalRecognizedG || 0).toFixed(3)}g +
+                              {formatGoldWeightPair(group.finalRecognizedG || 0)} +
                               적립{" "}
-                              {Number(group.bonusGoldUsedG || 0).toFixed(2)}g =
+                              {formatGoldGrams(group.bonusGoldUsedG || 0)} =
                               최종{" "}
-                              {Number(group.finalAppliedG || 0).toFixed(3)}g
+                              {formatGoldWeightPair(group.finalAppliedG || 0)}
                             </span>
                           )}
                         </BonusCard>

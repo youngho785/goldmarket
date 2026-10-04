@@ -23,6 +23,7 @@ import {
   findGoldProduct,
   listGoldProducts,
 } from "@/lib/goldRates";
+import { formatGoldNumber2 } from "@/lib/goldDisplay";
 
 // ✅ callable 래퍼 사용 (클라 단 로직 최소화)
 import { submitGoldExchangeGroup } from "@/services/exchangeClient";
@@ -487,8 +488,8 @@ export default function GoldExchange() {
 
   /* 합계/포맷 */
   const { totalGrams, totalDon } = getExchangeTotals(products);
-  const fmtG = (n) => Number(n || 0).toFixed(2);
-  const fmtD = (n) => Number(n).toFixed(2);
+  const fmtG = (n) => formatGoldNumber2(n);
+  const fmtD = (n) => formatGoldNumber2(n);
 
   /* 계산 후 골드바 기본 선택
    * - 앱 GOLD JOURNEY에서 bar=<g>를 전달하면 해당 규격을 1개 우선 선택

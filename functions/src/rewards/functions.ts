@@ -1417,7 +1417,7 @@ export const bonusAdminConfirmGoldUsage = onCall<{
         title: "적립 순금 사용 완료",
         body:
           `적립 순금 ${result.amountG.toFixed(2)}g을 적용해 ` +
-          `최종 ${result.finalAppliedG.toFixed(3)}g으로 확인했습니다.`,
+          `최종 ${result.finalAppliedG.toFixed(2)}g으로 확인했습니다.`,
         link: "/my-exchanges",
         meta: {
           groupId,

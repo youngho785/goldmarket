@@ -1259,11 +1259,11 @@ export default function Profile() {
                   {goldBonus.usage.status === "used" && (
                     <span>
                       현장 인정{" "}
-                      {Number(goldBonus.usage.finalRecognizedG || 0).toFixed(3)}g
+                      {Number(goldBonus.usage.finalRecognizedG || 0).toFixed(2)}g
                       {" + "}적립{" "}
                       {Number(goldBonus.usage.amountG || 0).toFixed(2)}g
                       {" = "}최종{" "}
-                      {Number(goldBonus.usage.finalAppliedG || 0).toFixed(3)}g
+                      {Number(goldBonus.usage.finalAppliedG || 0).toFixed(2)}g
                     </span>
                   )}
                 </RewardUsagePanel>

@@ -137,7 +137,7 @@ export default function OverviewDashboard() {
     <Page>
       <Intro>
         <h2>운영 개요</h2>
-        <p>오늘 처리할 일과 회원·내금고·금교환 흐름을 한눈에 확인합니다.</p>
+        <p>오늘 처리할 일과 회원·MY GOLD·금교환 흐름을 한눈에 확인합니다.</p>
       </Intro>
 
       <Grid>
@@ -149,10 +149,10 @@ export default function OverviewDashboard() {
 
       <Section>
         <h3>전환 퍼널</h3>
-        <p>회원가입 → 내금고 등록 → 알림 허용 → 금교환 신청으로 이어지는 핵심 전환 상태입니다.</p>
+        <p>회원가입 → MY GOLD 등록 → 알림 허용 → 금교환 신청으로 이어지는 핵심 전환 상태입니다.</p>
         <Grid>
           <Card to="members"><strong>{count(myGoldStats.userCount)}명</strong><span>전체 회원</span></Card>
-          <Card to="members"><strong>{count(myGoldStats.vaultUserCount)}명</strong><span>내금고 등록 · {Number(myGoldStats.vaultUsageRate || 0).toFixed(1)}%</span></Card>
+          <Card to="members"><strong>{count(myGoldStats.vaultUserCount)}명</strong><span>MY GOLD 등록 · {Number(myGoldStats.vaultUsageRate || 0).toFixed(1)}%</span></Card>
           <Card to="notification-send"><strong>{count(myGoldStats.marketingPushReadyCount)}명</strong><span>푸시 수신 가능</span></Card>
           <Card to="gold-exchange"><strong>{count(myGoldStats.weekExchangeRequestCount)}건</strong><span>이번 주 금교환 신청</span></Card>
         </Grid>
@@ -163,7 +163,7 @@ export default function OverviewDashboard() {
         <p>한국시간 자정 이후 새로 발생한 활동입니다.</p>
         <Grid>
           <InsightCard to="members"><strong>{count(myGoldStats.todayNewUserCount)}명</strong><span>신규 회원</span></InsightCard>
-          <InsightCard to="members"><strong>{count(myGoldStats.todayVaultItemCount)}건</strong><span>내금고 추가 등록</span></InsightCard>
+          <InsightCard to="members"><strong>{count(myGoldStats.todayVaultItemCount)}건</strong><span>MY GOLD 추가 등록</span></InsightCard>
           <InsightCard to="gold-exchange"><strong>{count(myGoldStats.todayExchangeRequestCount)}건</strong><span>금교환 신청</span></InsightCard>
           <InsightCard to="gold-exchange?status=completed"><strong>{count(myGoldStats.todayExchangeCompletedCount)}건</strong><span>금교환 완료</span></InsightCard>
         </Grid>
@@ -174,7 +174,7 @@ export default function OverviewDashboard() {
         <p>월요일 00:00부터 현재까지의 흐름입니다.</p>
         <Grid>
           <InsightCard to="members"><strong>{count(myGoldStats.weekNewUserCount)}명</strong><span>신규 회원</span></InsightCard>
-          <InsightCard to="members"><strong>{count(myGoldStats.weekVaultItemCount)}건</strong><span>내금고 추가 등록</span></InsightCard>
+          <InsightCard to="members"><strong>{count(myGoldStats.weekVaultItemCount)}건</strong><span>MY GOLD 추가 등록</span></InsightCard>
           <InsightCard to="gold-exchange"><strong>{count(myGoldStats.weekExchangeRequestCount)}건</strong><span>금교환 신청</span></InsightCard>
           <InsightCard to="gold-exchange?status=completed"><strong>{count(myGoldStats.weekExchangeCompletedCount)}건</strong><span>금교환 완료</span></InsightCard>
         </Grid>
@@ -184,9 +184,9 @@ export default function OverviewDashboard() {
         <h3>회원 기반</h3>
         <p>개인 금제품의 종류·중량·메모는 표시하지 않고 이용 현황만 집계합니다.</p>
         <Grid>
-          <Card to="members"><strong>{count(myGoldStats.vaultUserCount)}명</strong><span>내금고 등록 회원 · 등록률 {Number(myGoldStats.vaultUsageRate || 0).toFixed(1)}%</span></Card>
-          <Card to="members"><strong>{count(myGoldStats.vaultItemCount)}개</strong><span>등록된 내금고</span></Card>
-          <Card to="members"><strong>{count(myGoldStats.bonusHolderCount)}명</strong><span>적립 순금 보유 · 총 {Number(myGoldStats.bonusBalanceG || 0).toFixed(3)}g</span></Card>
+          <Card to="members"><strong>{count(myGoldStats.vaultUserCount)}명</strong><span>MY GOLD 등록 회원 · 등록률 {Number(myGoldStats.vaultUsageRate || 0).toFixed(1)}%</span></Card>
+          <Card to="members"><strong>{count(myGoldStats.vaultItemCount)}개</strong><span>등록된 MY GOLD</span></Card>
+          <Card to="members"><strong>{count(myGoldStats.bonusHolderCount)}명</strong><span>적립 순금 보유 · 총 {Number(myGoldStats.bonusBalanceG || 0).toFixed(2)}g</span></Card>
           <Card to="notification-send"><strong>{count(myGoldStats.marketingPushReadyCount)}명</strong><span>광고 푸시 가능 · 수신동의 {count(myGoldStats.marketingConsentCount)}명</span></Card>
         </Grid>
       </Section>

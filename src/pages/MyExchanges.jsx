@@ -16,9 +16,10 @@ import {
   cancelGoldExchangeGroup,
   rescheduleGoldExchangeGroup,
 } from '@/services/exchangeClient';
+import { formatGoldNumber2 } from '@/lib/goldDisplay';
+import { DON_TO_GRAMS } from '@/lib/goldRates';
 
 /* ── 상수/유틸 ─────────────────────────────────── */
-const DON_TO_GRAMS = 3.75;
 
 const STATUS_LABEL = {
   requested: '예약 확인 대기',
@@ -98,44 +99,26 @@ const toJSDate = (v) => {
 
 const fmt = (d, f = 'yyyy.MM.dd HH:mm') => (d && isValid(d) ? format(d, f) : '-');
 
-/* ── GoldExchange와 동일한 라운딩 규칙 ─────────── */
-/** 0.0007 이상이면 0.001 올림 (4번째 자리 7-올림) */
-const roundTo3Custom = (n) => {
-  if (!isFinite(n)) return 0;
-  const sign = n < 0 ? -1 : 1;
-  const abs = Math.abs(n);
-  const t = Math.floor(abs * 10000 + 1e-8);
-  let thousands = Math.floor(t / 10);
-  const fourth = t % 10;
-  if (fourth >= 7) thousands += 1;
-  return sign * (thousands / 1000);
-};
-const toFixed3CustomStr = (n) => roundTo3Custom(n).toFixed(3);
-
-const fmtG3 = (n) => toFixed3CustomStr(Number(n || 0));  // g: 소수점 셋째자리, 커스텀 반올림
-const fmtD2 = (n) => (Number(n || 0)).toFixed(2);        // 돈: 둘째자리
-const fmtG2Min = (n) => {                                // 안내용: 최소 0.01g
+/* ── 금 중량 표시: 계산/저장 정밀도와 별개로 화면은 2자리 ── */
+const fmtG2 = (n) => formatGoldNumber2(Number(n || 0));
+const fmtD2 = (n) => formatGoldNumber2(Number(n || 0));
+const fmtG2Min = (n) => {
   const x = Number(n || 0);
-  if (x > 0 && x < 0.01) return '0.01';
-  return (Math.round(x * 100) / 100).toFixed(2);
+  if (x > 0 && x < 0.005) return '<0.01';
+  return formatGoldNumber2(x);
 };
 
-/** 원래 입력 수량 표기 (GoldExchange와 동일한 감각의 반올림/환산) */
+/** 원래 입력 수량 표기 */
 const displayOriginalQty = (doc) => {
   const origQ = doc.originalQuantity;
-  const unit = doc.inputUnit; // 'g' | 'don'
-  // 새 문서에 originalQuantity, inputUnit이 있으면 그걸 우선
+  const unit = doc.inputUnit;
   if (origQ != null && unit) {
     const n = Number(origQ) || 0;
-    if (unit === 'g') {
-      return `${toFixed3CustomStr(n)} g (${fmtD2(roundTo3Custom(n / DON_TO_GRAMS))} 돈)`;
-    }
-    // unit === 'don'
-    return `${toFixed3CustomStr(roundTo3Custom(n * DON_TO_GRAMS))} g (${fmtD2(roundTo3Custom(n))} 돈)`;
+    const grams = unit === 'don' ? n * DON_TO_GRAMS : n;
+    return `${fmtG2(grams)}g (${fmtD2(grams / DON_TO_GRAMS)}돈)`;
   }
-  // 레거시: grams만 있는 경우
   const grams = Number(doc.quantity) || 0;
-  return `${toFixed3CustomStr(grams)} g (${fmtD2(roundTo3Custom(grams / DON_TO_GRAMS))} 돈)`;
+  return `${fmtG2(grams)}g (${fmtD2(grams / DON_TO_GRAMS)}돈)`;
 };
 
 /* ── 스타일 ───────────────────────────────────── */
@@ -1742,8 +1725,7 @@ export default function MyExchanges() {
                       {isFinalized ? '확정 순금량' : '예상 순금량'}
                     </small>
                     <strong>
-                      {fmtG3(finalDisplayG)}g ·{' '}
-                      {fmtD2(finalDisplayG / DON_TO_GRAMS)}돈
+                      {fmtG2(finalDisplayG)}g ({fmtD2(finalDisplayG / DON_TO_GRAMS)}돈)
                     </strong>
                   </FinalWeight>
 
@@ -1871,18 +1853,18 @@ export default function MyExchanges() {
                               <td>
                                 <Chips>
                                   <Chip $tone="grams">
-                                    {fmtG3(
+                                    {fmtG2(
                                       isFinalized && it._confirmedPureGoldG != null
                                         ? it._confirmedPureGoldG
                                         : it._finalWeight
-                                    )} g
+                                    )}g
                                   </Chip>
                                   <Chip $tone="don">
                                     {fmtD2(
                                       (isFinalized && it._confirmedPureGoldG != null
                                         ? it._confirmedPureGoldG
                                         : it._finalWeight) / DON_TO_GRAMS
-                                    )} 돈
+                                    )}돈
                                   </Chip>
                                 </Chips>
                               </td>
@@ -1896,11 +1878,11 @@ export default function MyExchanges() {
                       {isFinalized ? '확정 순금량 합계:' : '예상 순금량 합계:'}
                       <Chips>
                         <Chip $tone="grams">
-                          {fmtG3(
+                          {fmtG2(
                             isFinalized && g.measurement?.finalRecognizedG
                               ? g.measurement.finalRecognizedG
                               : g.totalG
-                          )} g
+                          )}g
                         </Chip>
                         <Chip $tone="don">
                           {fmtD2(
@@ -1909,7 +1891,7 @@ export default function MyExchanges() {
                                 ? g.measurement.finalRecognizedG
                                 : g.totalG || 0
                             ) / DON_TO_GRAMS
-                          )} 돈
+                          )}돈
                         </Chip>
                       </Chips>
                     </TotalRow>
@@ -1923,14 +1905,13 @@ export default function MyExchanges() {
                         <PlanRow>
                           <PlanLabel>실측 확정 순금량</PlanLabel>
                           <PlanValue>
-                            {fmtG3(g.measurement.finalRecognizedG)} g /{' '}
-                            {fmtD2(Number(g.measurement.finalRecognizedG || 0) / DON_TO_GRAMS)} 돈
+                            {fmtG2(g.measurement.finalRecognizedG)}g ({fmtD2(Number(g.measurement.finalRecognizedG || 0) / DON_TO_GRAMS)}돈)
                           </PlanValue>
                         </PlanRow>
                         <PlanRow>
                           <PlanLabel>최종 적용량</PlanLabel>
                           <PlanValue>
-                            <strong>{fmtG3(g.measurement.finalAppliedG)} g</strong>
+                            <strong>{fmtG2(g.measurement.finalAppliedG)}g ({fmtD2(Number(g.measurement.finalAppliedG || 0) / DON_TO_GRAMS)}돈)</strong>
                           </PlanValue>
                         </PlanRow>
                         <PlanRow>
@@ -1952,11 +1933,11 @@ export default function MyExchanges() {
                       <PlanCard aria-label="적립 순금 적용 명세">
                         <strong>적립 순금 적용</strong>
                         <PlanValue>
-                          {fmtG3(g.bonus.finalRecognizedG)}g
+                          {fmtG2(g.bonus.finalRecognizedG)}g
                           {' + '}
                           적립 {Number(g.bonus.amountG || 0).toFixed(2)}g
                           {' = '}
-                          <strong>최종 {fmtG3(g.bonus.finalAppliedG)}g</strong>
+                          <strong>최종 {fmtG2(g.bonus.finalAppliedG)}g</strong>
                         </PlanValue>
                         <Help>
                           매장에서 본인 확인 후 확정된 사용 내역입니다.
@@ -1981,32 +1962,24 @@ export default function MyExchanges() {
                             <PlanRow>
                               <PlanLabel>현장 인정</PlanLabel>
                               <PlanValue>
-                                {fmtG3(
-                                  g.bonus.finalRecognizedG
-                                )} g
+                                {fmtG2(g.bonus.finalRecognizedG)}g
                               </PlanValue>
                             </PlanRow>
                             <PlanRow>
                               <PlanLabel>적립 순금</PlanLabel>
                               <PlanValue>
-                                +{fmtG3(g.bonus.amountG)} g
+                                +{fmtG2(g.bonus.amountG)}g
                               </PlanValue>
                             </PlanRow>
                             <PlanRow>
                               <PlanLabel>최종 합계</PlanLabel>
                               <PlanValue>
                                 <strong>
-                                  {fmtG3(
+                                  {fmtG2(
                                     g.bonus.finalAppliedG
-                                  )} g
+                                  )}g
                                 </strong>{' '}
-                                /{' '}
-                                {fmtD2(
-                                  Number(
-                                    g.bonus.finalAppliedG || 0
-                                  ) / DON_TO_GRAMS
-                                )}{' '}
-                                돈
+                                ({fmtD2(Number(g.bonus.finalAppliedG || 0) / DON_TO_GRAMS)}돈)
                               </PlanValue>
                             </PlanRow>
                           </>
@@ -2014,11 +1987,7 @@ export default function MyExchanges() {
                           <PlanRow>
                             <PlanLabel>{isFinalized ? '최종 적용 기준' : '계산 기준'}</PlanLabel>
                             <PlanValue>
-                              {fmtG3(planBasisG)} g /{' '}
-                              {fmtD2(
-                                planBasisG / DON_TO_GRAMS
-                              )}{' '}
-                              돈
+                              {fmtG2(planBasisG)}g ({fmtD2(planBasisG / DON_TO_GRAMS)}돈)
                             </PlanValue>
                           </PlanRow>
                         )}
@@ -2033,19 +2002,14 @@ export default function MyExchanges() {
                         <PlanRow>
                           <PlanLabel>골드바 총중량</PlanLabel>
                           <PlanValue>
-                            {fmtG3(
-                              g.plan.selected?.usedGrams
-                            )} g /{' '}
-                            {fmtD2(
-                              g.plan.selected?.usedDon
-                            )} 돈
+                            {fmtG2(g.plan.selected?.usedGrams)}g ({fmtD2(g.plan.selected?.usedDon)}돈)
                           </PlanValue>
                         </PlanRow>
                         {g.plan.requiresTopUp || Number(g.plan.topUpGrams) > 0 ? (
                           <PlanRow>
                             <PlanLabel>{isBonusUsed ? '부족분' : '부족 예상'}</PlanLabel>
                             <PlanValue>
-                              <strong>{fmtG3(g.plan.topUpGrams)} g / {fmtD2(g.plan.topUpDon)} 돈</strong>
+                              <strong>{fmtG2(g.plan.topUpGrams)}g ({fmtD2(g.plan.topUpDon)}돈)</strong>
                               {' · '}골드바 총중량이 현재 계산 기준보다 많은 양입니다. {isBonusUsed
                                 ? '확정된 부족분은 안내된 정산 기준을 따릅니다.'
                                 : '매장 실측 후 부족분을 당일 적용 기준으로 정산합니다.'}
@@ -2057,12 +2021,7 @@ export default function MyExchanges() {
                               {isBonusUsed ? '최종 잔여' : '잔여 예상'}
                             </PlanLabel>
                             <PlanValue>
-                              {fmtG2Min(
-                                g.plan.leftoverGrams
-                              )} g /{' '}
-                              {fmtD2(
-                                g.plan.leftoverDon
-                              )} 돈
+                              {fmtG2Min(g.plan.leftoverGrams)}g ({fmtD2(g.plan.leftoverDon)}돈)
                               {Number(g.plan.leftoverGrams) > 0
                                 ? ' · 잔여 금 처리방법은 교환 확정 시 안내합니다.'
                                 : ''}

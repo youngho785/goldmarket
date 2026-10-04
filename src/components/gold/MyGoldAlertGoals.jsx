@@ -244,7 +244,8 @@ function formatWon(value, fallback = "-") {
 
 function formatGrams(value) {
   const number = Number(value) || 0;
-  return `${number < 1 ? number.toFixed(3) : number.toFixed(2)}g`;
+  if (number > 0 && number < 0.005) return "<0.01g";
+  return `${number.toFixed(2)}g`;
 }
 
 function toInput(value) {

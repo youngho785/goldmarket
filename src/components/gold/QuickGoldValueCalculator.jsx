@@ -6,6 +6,7 @@ import { ArrowRight, Gem } from "lucide-react";
 import { useAuthContext } from "@/context/AuthContext";
 import useGoldVaultDashboard from "@/hooks/useGoldVaultDashboard";
 import { DEFAULT_GOLD_PRODUCTS, DON_TO_GRAMS } from "@/lib/goldRates";
+import { formatGoldWeightPair } from "@/lib/goldDisplay";
 import {
   computeVaultMarketValueWon,
   computeVaultPureGoldG,
@@ -388,7 +389,7 @@ export default function QuickGoldValueCalculator({
           </Result>
           <Result>
             <small>예상 순금량</small>
-            <strong>{validWeight ? `${Number(pureGoldG || 0).toFixed(3)}g` : grams > 0 ? "입력 확인" : "—"}</strong>
+            <strong>{validWeight ? formatGoldWeightPair(pureGoldG) : grams > 0 ? "입력 확인" : "—"}</strong>
           </Result>
         </Results>
 

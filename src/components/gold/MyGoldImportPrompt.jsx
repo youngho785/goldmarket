@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import styled from "styled-components";
 import { ArrowRight, Save, X } from "lucide-react";
 
-import { DON_TO_GRAMS } from "@/lib/goldRates";
+import { formatGoldWeightPair } from "@/lib/goldDisplay";
 import { getGoldVaultTypeLabel } from "@/lib/goldVaultCatalog";
 
 const Card = styled.section`
@@ -141,8 +141,7 @@ const CalculatorLink = styled(Link)`
 `;
 
 function formatWeight(weightG) {
-  const grams = Number(weightG || 0);
-  return `${grams.toFixed(2)}g · ${(grams / DON_TO_GRAMS).toFixed(2)}돈`;
+  return formatGoldWeightPair(weightG);
 }
 
 export default function MyGoldImportPrompt({

@@ -18,7 +18,7 @@ import {
   SectionHead,
   VaultSection,
 } from "@/components/myGoldVault/MyGoldVault.styles";
-import { DON_TO_GRAMS } from "@/lib/goldRates";
+import { formatGoldWeightPair } from "@/lib/goldDisplay";
 import { getGoldVaultTypeLabel, summarizeGoldVaultItems } from "@/lib/goldVaultCatalog";
 
 function formatWon(value) {
@@ -31,7 +31,7 @@ function formatWon(value) {
 function formatGramsAndDon(value) {
   const grams = Number(value);
   if (!Number.isFinite(grams) || grams <= 0) return "-";
-  return `${grams.toFixed(2)}g · ${(grams / DON_TO_GRAMS).toFixed(2)}돈`;
+  return formatGoldWeightPair(grams);
 }
 
 function toVaultExchangeProduct(item) {

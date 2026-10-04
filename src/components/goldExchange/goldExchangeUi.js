@@ -1,4 +1,5 @@
 import { DON_TO_GRAMS, roundTo3Custom } from "@/lib/goldRates";
+import { formatGoldDon, formatGoldGrams, formatGoldWeightPair } from "@/lib/goldDisplay";
 
 export const STORE_INFO = {
   name: "원일귀금속",
@@ -51,15 +52,15 @@ export const displayOriginal = (qty, unit) => {
   const n = parseFloat(qty);
   if (isNaN(n) || n <= 0) return "0";
   return unit === "g"
-    ? `${Number(n).toFixed(2)} g (${(roundTo3Custom(n / DON_TO_GRAMS_CONST)).toFixed(2)} 돈)`
-    : `${Number(n * DON_TO_GRAMS_CONST).toFixed(2)} g (${(roundTo3Custom(n)).toFixed(2)} 돈)`;
+    ? formatGoldWeightPair(n)
+    : formatGoldWeightPair(n * DON_TO_GRAMS_CONST);
 };
 export const qtyHelperText = (qty, unit) => {
   const n = parseFloat(qty);
   if (isNaN(n) || n <= 0) return "그램(g) 또는 돈 단위를 선택하고 값을 입력하면 자동 환산됩니다.";
   return unit === "g"
-    ? `${Number(n).toFixed(2)} g ≈ ${(roundTo3Custom(n / DON_TO_GRAMS_CONST)).toFixed(2)} 돈`
-    : `${(roundTo3Custom(n)).toFixed(2)} 돈 ≈ ${Number(n * DON_TO_GRAMS_CONST).toFixed(2)} g`;
+    ? `${formatGoldGrams(n)} ≈ ${formatGoldDon(n / DON_TO_GRAMS_CONST)}`
+    : `${formatGoldDon(n)} ≈ ${formatGoldGrams(n * DON_TO_GRAMS_CONST)}`;
 };
 
 /** 잔여 조합(그리디) — 부동소수 보정 강화 */
