@@ -294,7 +294,7 @@ function buildMilestones(currentGrams) {
   };
 }
 
-export default function AppGoldJourney({ pureGoldG = 0, onExchangeClick }) {
+export default function AppGoldJourney({ pureGoldG = 0, vaultProducts = [], onExchangeClick }) {
   const current = Math.max(0, Number(pureGoldG) || 0);
   const readiness = useMemo(() => getGoldBarReadiness(current), [current]);
   const milestoneData = useMemo(() => buildMilestones(current), [current]);
@@ -333,6 +333,7 @@ export default function AppGoldJourney({ pureGoldG = 0, onExchangeClick }) {
       {readiness?.available && (
         <ExchangeNow
           to={exchangeTo}
+          state={{ source: "my-gold", vaultProducts }}
           onClick={onExchangeClick}
           aria-label={`${readiness.label} 골드바 교환 예상 보기`}
         >

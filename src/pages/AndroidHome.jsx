@@ -291,6 +291,15 @@ export default function AndroidHome() {
       {hasMyGold && (
         <AppGoldJourney
           pureGoldG={Number(dashboard.summary.pureGoldG || 0)}
+          vaultProducts={(dashboard.items || []).slice(0, 20).map((item) => ({
+            productId: item.productId || "",
+            goldType: item.goldType,
+            quantity: Number(item.weightG || 0),
+            inputUnit: "g",
+            exchangeType: "999.9???",
+            sourceItemId: item.id,
+            sourceLabel: item.label || "???",
+          }))}
           onExchangeClick={() => trackProductEventOncePerSession(
             "gold_to_gold_cta_clicked",
             { source: "app_home" },
