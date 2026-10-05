@@ -317,7 +317,7 @@ export default function AppGoldJourney({ pureGoldG = 0, vaultProducts = [], onEx
           <h2 id="app-gold-journey-title">
             {readiness?.available
               ? `${readiness.label} 교환 가능합니다.`
-              : "다음 골드바 목표를 향하고 있습니다."}
+              : "다음 골드바까지 조금 더 필요합니다."}
           </h2>
           <p>
             {next
@@ -339,7 +339,7 @@ export default function AppGoldJourney({ pureGoldG = 0, vaultProducts = [], onEx
         >
           <div>
             <small>GOLD TO GOLD · 기록 기준 예상</small>
-            <strong>{readiness.label} 교환 예상 확인</strong>
+            <strong>{readiness.label} 예상 교환량 보기</strong>
             <p>MY GOLD 기록으로 온라인 예상값을 확인하고, 실제 교환은 매장 실측 후 확정합니다.</p>
           </div>
           <ChevronRight aria-hidden />
@@ -372,7 +372,7 @@ export default function AppGoldJourney({ pureGoldG = 0, vaultProducts = [], onEx
             {next ? <>다음 <strong>{formatGoldGrams(next.grams)}</strong></> : <strong>달성</strong>}
           </span>
         </ProgressLabels>
-        <ProgressTrack $progress={progress} aria-label={`다음 마일스톤 진행률 ${progress.toFixed(0)}%`}>
+        <ProgressTrack $progress={progress} aria-label={`다음 골드바 목표 진행률 ${progress.toFixed(0)}%`}>
           <span />
         </ProgressTrack>
       </div>
@@ -383,7 +383,7 @@ export default function AppGoldJourney({ pureGoldG = 0, vaultProducts = [], onEx
           to="/gold-exchange?mode=vault&auto=1"
           state={{ source: "my-gold", vaultProducts }}
         >
-          {readiness?.available ? "다른 규격 보기" : "GOLD TO GOLD 예상 보기"}
+          {readiness?.available ? "다른 규격 보기" : "예상 교환량 보기"}
         </Link>
       </Footer>
     </Card>

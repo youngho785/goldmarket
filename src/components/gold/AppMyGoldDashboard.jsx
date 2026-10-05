@@ -438,7 +438,7 @@ export default function AppMyGoldDashboard({ user, dashboard, animateValue = fal
             <LivingGoldCompanion
               size={28}
               delay={90}
-              ariaLabel="Living Gold로 MY GOLD 체험 열기"
+              ariaLabel="MY GOLD 체험 안내 열기"
               title="오늘도 금의 가치는 움직여요."
               description="금의 종류와 중량만 기록하면 지금 내 금의 가치가 작은 금빛으로 이어집니다."
               actionLabel="MY GOLD 체험하기"
@@ -479,7 +479,7 @@ export default function AppMyGoldDashboard({ user, dashboard, animateValue = fal
             <LivingGoldCompanion
               size={28}
               delay={90}
-              ariaLabel="Living Gold로 첫 금 기록 안내 열기"
+              ariaLabel="첫 금 기록 안내 열기"
               title="첫 금빛을 이어보세요."
               description="금 하나를 기록하면 오늘 가치와 변화가 MY GOLD에 이어집니다."
               actionLabel="첫 금 기록하기"
@@ -572,7 +572,7 @@ export default function AppMyGoldDashboard({ user, dashboard, animateValue = fal
       <SummaryGoldCompanion
         size={28}
         delay={90}
-        ariaLabel="Living Gold로 오늘 MY GOLD 보기"
+        ariaLabel="오늘 MY GOLD 안내 열기"
         title="오늘의 MY GOLD"
         value={ratesReady && dashboard.publicPriceEnabled ? formatWon(totals.current) : undefined}
         description={

@@ -131,7 +131,7 @@ test("MY GOLD는 저장한 금으로 GOLD TO GOLD 결과 단계까지 자동 연
 test("MY GOLD는 회원혜택 잔액을 합산하지 않고 기록한 금만 보여준다", () => {
   assert.match(myGoldSource, /MY GOLD는 사용자가 실제로 보유한 금을 기록해 보는 개인 기록 공간/);
   assert.match(myGoldSource, /const vaultValueWon = Number\(activeSummary\.estimatedValueWon \|\| 0\)/);
-  assert.match(myGoldSource, /MEMBER GOLD는 별도 회원혜택으로 MY GOLD 참고가치에 포함되지 않습니다/);
+  assert.match(myGoldSource, /MEMBER GOLD는 별도 회원혜택이며 MY GOLD 참고가치에는 합산하지 않습니다/);
   assert.doesNotMatch(appHomeSource, /<BenefitCard/);
 });
 
@@ -159,8 +159,8 @@ test("Android 앱 홈은 MY GOLD를 최우선으로 보여주고 예약은 그 �
   const dashboardIndex = androidHomeSource.indexOf("<AppMyGoldDashboard");
   const reservationIndex = androidHomeSource.indexOf('<ReservationCard');
   assert.ok(dashboardIndex >= 0 && reservationIndex > dashboardIndex);
-  assert.match(androidHomeSource, /다가오는 부산 방문 일정/);
-  assert.match(androidHomeSource, /GOLD TO GOLD 예약 내용을 확인하세요/);
+  assert.match(androidHomeSource, /다가오는 방문 일정/);
+  assert.match(androidHomeSource, /방문 예약 내용을 확인하세요/);
 });
 
 test("게스트 MY GOLD는 가짜 기본 금과 회원혜택 없이 실제 입력부터 시작한다", () => {

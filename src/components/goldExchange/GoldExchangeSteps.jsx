@@ -142,7 +142,7 @@ export function StartMethodScreen({ onChoose }) {
         </StartChoice>
         <StartChoice type="button" onClick={() => onChoose("visit")}>
           <strong>매장에서 확인하기</strong>
-          <span>순도·중량을 몰라도 됩니다. 계산 없이 방문예약으로 이동합니다.</span>
+          <span>순도·중량을 몰라도 됩니다. 계산 없이 방문 예약으로 이동합니다.</span>
         </StartChoice>
       </StartChoiceGrid>
     </>
@@ -187,7 +187,7 @@ export function CalcStep({
               {p.calculationMethod === "manual" && (
                 <HelpText>
                   정확한 환산률 안내가 어려운 품목입니다. <b>010-7713-3739</b>로 문의하시거나
-                  <b>현장 확인 방문예약</b> 방식으로 진행해 주세요.
+                  <b>현장 확인 예약</b> 방식으로 진행해 주세요.
                 </HelpText>
               )}
 
@@ -228,12 +228,12 @@ export function CalcStep({
           </SmallButton>
 
           <SectionSeparator />
-          <Button type="submit">예상 순금량과 골드바 조합 확인</Button>
+          <Button type="submit">예상 순금량과 받을 골드바 확인</Button>
         </form>
       </Card>
 
       <ModeSwitch type="button" onClick={onGoReserveDirect}>
-        순도·무게를 잘 모르겠다면 현장 확인 방문예약으로 전환 →
+        순도·무게를 잘 모르겠다면 현장 확인 예약으로 전환 →
       </ModeSwitch>
     </>
   );
@@ -265,7 +265,7 @@ export function BarStep({
         </InfoCard>
         <SectionSeparator />
         <div style={{ display: "grid", gap: 10 }}>
-          <Button type="button" onClick={onGoReserve}>현장 확인 방문예약</Button>
+          <Button type="button" onClick={onGoReserve}>현장 확인 예약</Button>
           <OutlineButton type="button" onClick={onSaveToMyGold}>MY GOLD에 저장하고 가치 추적</OutlineButton>
           <GhostButton type="button" onClick={() => setStep(STEP.CALC)}>이전(제품 추가)</GhostButton>
         </div>
@@ -305,7 +305,7 @@ export function BarStep({
 
       <ExchangeOutcome aria-label="예상 금교환 결과">
         <div>
-          <small>MY GOLD 기록 → 999.9 GOLD 예상</small>
+          <small>MY GOLD 기록 → 999.9 골드바 예상</small>
           <strong>예상 순금량 {fmtG(totalGrams)}g → {selectedBar.label} × {safeQty}</strong>
           <p>
             {roundTo3Custom(totalGrams - selectedBar.grams * safeQty) >= 0
@@ -492,7 +492,7 @@ export function BarStep({
         </Inline>
         <HelpText>
           선택 골드바 총중량: <b>{fmtG(roundTo3Custom(selectedBar.grams * safeQty))}g</b> (<b>{fmtD((selectedBar.grams * safeQty) / DON_TO_GRAMS)}돈</b>){" "}
-          (선택 가능 최대 {maxSelectableQty}개)
+          (최대 {maxSelectableQty}개 선택 가능)
         </HelpText>
       </FormGroup>
 

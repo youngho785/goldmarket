@@ -200,7 +200,7 @@ export default function AppGoldPriceSummary({
       <Inner>
         <Head>
           <TitleWrap>
-            <small>TODAY&apos;S GOLD</small>
+            <small>오늘 금시세</small>
             <h2 id="app-gold-price-title">오늘 금시세 · 내가 팔 때</h2>
           </TitleWrap>
           <More>전체 <ChevronRight aria-hidden /></More>

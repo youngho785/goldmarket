@@ -253,9 +253,9 @@ export default function AndroidHome() {
         <ReservationCard to="/my-exchanges" aria-label="다가오는 방문 예약 확인">
           <span><CalendarDays aria-hidden /></span>
           <ReservationCopy>
-            <small>다가오는 부산 방문 일정</small>
+            <small>다가오는 방문 일정</small>
             <strong>{formatReservationSchedule(upcomingReservation.visitDate, upcomingReservation.visitTime)}</strong>
-            <p>GOLD TO GOLD 예약 내용을 확인하세요.</p>
+            <p>방문 예약 내용을 확인하세요.</p>
           </ReservationCopy>
           <ChevronRight aria-hidden />
         </ReservationCard>
@@ -315,7 +315,7 @@ export default function AndroidHome() {
       {!dashboard.publicPriceLoading && dashboard.publicPriceEnabled && purePrice > 0 && (
         <PriceCard to="/gold-price" aria-label="오늘 순금 시세 보기">
           <div>
-            <small>TODAY&apos;S GOLD</small>
+            <small>오늘 금시세</small>
             <strong>오늘 순금 · 내가 팔 때 · 1돈(3.75g)</strong>
           </div>
           <b>{formatWon(purePrice)}</b>

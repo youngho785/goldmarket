@@ -492,7 +492,7 @@ export default function GoldExchange() {
   const fmtD = (n) => formatGoldNumber2(n);
 
   /* 계산 후 골드바 기본 선택
-   * - 앱 GOLD JOURNEY에서 bar=<g>를 전달하면 해당 규격을 1개 우선 선택
+   * - 앱 MY GOLD → 골드바 카드에서 bar=<g>를 전달하면 해당 규격을 1개 우선 선택
    * - 실제 계산 결과가 부족하거나 유효하지 않으면 기존 자동 추천으로 안전하게 fallback
    */
   useEffect(() => {
@@ -657,7 +657,7 @@ export default function GoldExchange() {
         )}
         {!showStartMethod && (
           <FlowTrack aria-label="금교환 진행 단계">
-            {["01 예상계산", "02 조합선택", "03 방문예약", "04 접수완료"].map(
+            {["01 예상 계산", "02 골드바 선택", "03 방문 예약", "04 접수 완료"].map(
               (label, index) => (
                 <FlowItem
                   key={label}

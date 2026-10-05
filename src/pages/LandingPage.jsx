@@ -407,7 +407,7 @@ export default function LandingPage() {
         </CalculatorAnchor>
       </Hero>
 
-      <FlowStrip aria-label="한국골드마켓 GOLD JOURNEY">
+      <FlowStrip aria-label="한국골드마켓 이용 흐름">
         <FlowItem type="button" onClick={startValueCheck} aria-label="오늘 가치 확인 계산기로 이동">
           <span>01</span>
           <div><strong>오늘 가치 확인</strong><p>금 종류와 중량으로 지금 내 금의 참고가치를 바로 확인합니다.</p></div>
@@ -433,7 +433,7 @@ export default function LandingPage() {
       <CompactSection aria-labelledby="live-title">
         <SectionHead>
           <SectionHeadCopy>
-            <Kicker>TODAY&apos;S GOLD</Kicker>
+            <Kicker>오늘 시세</Kicker>
             <SectionTitle id="live-title">오늘 금시세</SectionTitle>
             <SectionLead>시세는 빠르게 확인하고, 내 금의 가치는 위 계산기와 MY GOLD에서 이어서 봅니다.</SectionLead>
           </SectionHeadCopy>
@@ -466,7 +466,7 @@ export default function LandingPage() {
           />
         </VerificationImage>
         <ExchangeCopy>
-          <Kicker>GOLD TO GOLD · OFFLINE VERIFICATION</Kicker>
+          <Kicker>GOLD TO GOLD · 매장 실측·확정</Kicker>
           <h2 id="exchange-trust-title">기록은 MY GOLD에서, 실제 교환은 매장에서 확인합니다.</h2>
           <p>온라인 계산은 예상값입니다. GOLD TO GOLD는 부산 범천동 원일귀금속에서 실물의 순도·중량과 비용을 고객과 함께 확인하고, 최종 조건에 동의한 뒤 확정합니다.</p>
           <TrustList>

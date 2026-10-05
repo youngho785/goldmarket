@@ -820,13 +820,13 @@ export default function GoldToGoldIntro() {
             size={84}
             delay={120}
             hint
-            ariaLabel="Living Gold로 GOLD TO GOLD 알아보기"
+            ariaLabel="GOLD TO GOLD 안내 열기"
             title="금의 가치는 이어지고 있어요."
-            description="모양은 달라져도 금의 가치는 999.9 GOLD로 이어갈 수 있어요. 지금 가진 금으로 얼마나 이어지는지 확인해 보세요."
+            description="모양은 달라져도 금의 가치는 999.9 골드바로 이어갈 수 있어요. 지금 가진 금으로 얼마나 바꿀 수 있는지 확인해 보세요."
             actionLabel="내 금으로 확인하기"
             actionTo="/gold-exchange"
           />
-          <small>VALUE → GOLD</small>
+          <small>내 금 → 골드바</small>
         </HeroGoldScene>
         <Kicker>
           <Sparkles aria-hidden />
@@ -906,7 +906,7 @@ export default function GoldToGoldIntro() {
           <ArrowRight aria-hidden />
           <FlowItem>
             <span>가치 이어가기</span>
-            <strong>999.9 GOLD</strong>
+            <strong>999.9 골드바</strong>
           </FlowItem>
         </Flow>
         <DarkFooter>
@@ -916,7 +916,7 @@ export default function GoldToGoldIntro() {
       </DarkStory>
 
       <CTA>
-        <h2>그 금, 지금 얼마나 많은<br />999.9 GOLD가 될까요?</h2>
+        <h2>그 금, 999.9 골드바로<br />얼마나 바꿀 수 있을까요?</h2>
         <p>
           금 종류와 중량만 입력하면 예상 순금량과 가능한 골드바 조합을 먼저 확인할 수 있습니다.
         </p>

@@ -224,7 +224,7 @@ export default function MyGoldAlertSummary({ uid, demoMode = false, compact = fa
       <CompactCard id="my-gold-alert-summary" to="/my-gold/alerts" aria-label="내 금 알림 설정 보기">
         <div>
           <strong id="my-gold-alert-summary-title"><BellRing size={16} aria-hidden /> 내 금 알림</strong>
-          <p>{summaryText}{pushReady && !demoMode ? " · 푸시 ON" : ""}</p>
+          <p>{summaryText}{pushReady && !demoMode ? " · 알림 켜짐" : ""}</p>
         </div>
         <ChevronRight aria-hidden />
       </CompactCard>
@@ -251,7 +251,7 @@ export default function MyGoldAlertSummary({ uid, demoMode = false, compact = fa
           </Title>
           <Status $ready={pushReady}>
             {pushReady ? <BellRing size={12} aria-hidden /> : <Bell size={12} aria-hidden />}
-            {demoMode ? "체험" : pushReady ? "푸시 ON" : "푸시 확인"}
+            {demoMode ? "체험" : pushReady ? "알림 켜짐" : "알림 설정 확인"}
           </Status>
         </Head>
 

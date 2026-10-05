@@ -235,9 +235,9 @@ export default function AppHome() {
         <ReservationCard to="/my-exchanges" aria-label="다가오는 방문 예약 확인">
           <span><CalendarDays aria-hidden /></span>
           <ReservationCopy>
-            <small>지금 가장 먼저 확인할 일정</small>
+            <small>다가오는 방문 일정</small>
             <strong>{formatReservationSchedule(upcomingReservation.visitDate, upcomingReservation.visitTime)}</strong>
-            <p>GOLD TO GOLD 방문 일정을 확인하세요.</p>
+            <p>방문 예약 내용을 확인하세요.</p>
           </ReservationCopy>
           <ChevronRight aria-hidden />
         </ReservationCard>
@@ -269,7 +269,7 @@ export default function AppHome() {
         </QuickLink>
         <QuickLink to="/gold-exchange?reserve=1">
           <span><CalendarDays aria-hidden /></span>
-          <strong>방문예약</strong>
+          <strong>방문 예약</strong>
         </QuickLink>
         <QuickLink to="/my-exchanges">
           <span><ClipboardList aria-hidden /></span>

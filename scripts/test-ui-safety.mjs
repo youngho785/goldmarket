@@ -169,7 +169,7 @@ test("2.3.1 MY GOLD는 참고가치 표현과 간결한 안내, 안정적인 가
   const myGoldTrendSource = await read("src/components/gold/MyGoldValueTrend.jsx");
   assert.match(myGoldVaultSource, /내 금의 오늘 참고가치/);
   assert.match(myGoldVaultSource, /실물 금을 보관·예치하는 서비스가 아닙니다/);
-  assert.match(myGoldVaultSource, /MEMBER GOLD는 별도 회원혜택으로 MY GOLD 참고가치에 포함되지 않습니다/);
+  assert.match(myGoldVaultSource, /MEMBER GOLD는 별도 회원혜택이며 MY GOLD 참고가치에는 합산하지 않습니다/);
   assert.match(myGoldItemsSource, /오늘 참고가치/);
   assert.match(myGoldItemsSource, /선택해서 예상 확인/);
   assert.match(myGoldItemsSource, /전체 예상 확인/);
@@ -191,6 +191,46 @@ test("3.0 웹 홈·Android 홈·MY GOLD는 공용 GOLD JOURNEY를 사용한다",
   assert.match(appGoldJourneySource, /실제 교환은 매장 실측 후 확정합니다/);
 });
 
+test("3.1 고객 화면의 설명 문구는 쉬운 한국어로 통일한다", async () => {
+  const [goldToGoldIntroSource, myGoldAlertSummarySource, myGoldDashboardCopySource] =
+    await Promise.all([
+      read("src/pages/GoldToGoldIntro.jsx"),
+      read("src/components/gold/MyGoldAlertSummary.jsx"),
+      read("src/components/gold/AppMyGoldDashboard.jsx"),
+    ]);
+
+  assert.match(landingSource, /aria-label="한국골드마켓 이용 흐름"/);
+  assert.match(landingSource, /GOLD TO GOLD · 매장 실측·확정/);
+  assert.doesNotMatch(landingSource, /GOLD JOURNEY|OFFLINE VERIFICATION|TODAY&apos;S GOLD/);
+
+  assert.match(appHomeSource, /다가오는 방문 일정/);
+  assert.match(androidHomeSource, /다가오는 방문 일정/);
+  assert.doesNotMatch(androidHomeSource, /다가오는 부산 방문 일정|TODAY&apos;S GOLD/);
+
+  assert.match(appGoldJourneySource, /다음 골드바까지 조금 더 필요합니다/);
+  assert.match(appGoldJourneySource, /예상 교환량 보기/);
+  assert.doesNotMatch(appGoldJourneySource, /마일스톤|GOLD TO GOLD 예상 보기/);
+
+  assert.match(
+    goldExchangeSource,
+    /"01 예상 계산", "02 골드바 선택", "03 방문 예약", "04 접수 완료"/
+  );
+  assert.match(goldExchangeStepsSource, /MY GOLD 기록 → 999\.9 골드바 예상/);
+  assert.doesNotMatch(
+    goldExchangeStepsSource,
+    /현장 확인 방문예약|선택 가능 최대|999\.9 GOLD 예상/
+  );
+
+  assert.match(goldToGoldIntroSource, /내 금 → 골드바/);
+  assert.match(goldToGoldIntroSource, /얼마나 바꿀 수 있을까요/);
+
+  assert.match(myGoldAlertSummarySource, /알림 켜짐/);
+  assert.match(myGoldAlertSummarySource, /알림 설정 확인/);
+  assert.doesNotMatch(myGoldAlertSummarySource, /푸시 ON|푸시 확인/);
+
+  assert.doesNotMatch(myGoldDashboardCopySource, /Living Gold로/);
+  assert.doesNotMatch(myGoldVaultSource, /Living Gold로/);
+});
 test("2.4 GOLD TO GOLD는 온라인 예상과 실제 매장 확정을 분리하고 방문 예약 흐름을 명확히 한다", () => {
   assert.match(goldExchangeStylesSource, /max-width: 1160px/);
   assert.match(goldExchangeSource, /온라인 화면은 예상값입니다/);

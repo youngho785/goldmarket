@@ -758,7 +758,7 @@ export default function MyGoldVault() {
             size={62}
             delay={80}
             hint
-            ariaLabel="Living Gold로 오늘 MY GOLD 보기"
+            ariaLabel="오늘 MY GOLD 안내 열기"
             title={hasVaultContent ? "오늘의 MY GOLD" : "첫 금빛을 이어보세요."}
             value={
               vaultLoading
@@ -1092,7 +1092,7 @@ export default function MyGoldVault() {
         {isGuest ? (
           <>체험 중 입력한 금 기록은 이 기기에만 임시 보관되며 <strong>MY GOLD 기록 저장</strong> 전에는 계정에 저장되지 않습니다. MY GOLD는 <strong>실물 금을 보관·예치하는 서비스가 아닙니다.</strong> 기록한 금의 참고가치와 예상 순금량을 확인하는 개인 기록 공간이며, 실제 교환량은 매장 실측 후 확정됩니다.</>
         ) : (
-          <>MY GOLD는 <strong>실물 금을 보관·예치하는 서비스가 아닙니다.</strong> 기록한 금의 참고가치와 예상 순금량을 확인하는 개인 기록 공간이며, 실제 교환량은 매장 실측 후 확정됩니다. <strong>MEMBER GOLD는 별도 회원혜택으로 MY GOLD 참고가치에 포함되지 않습니다.</strong></>
+          <>MY GOLD는 <strong>실물 금을 보관·예치하는 서비스가 아닙니다.</strong> 기록한 금의 참고가치와 예상 순금량을 확인하는 개인 기록 공간이며, 실제 교환량은 매장 실측 후 확정됩니다. <strong>MEMBER GOLD는 별도 회원혜택이며 MY GOLD 참고가치에는 합산하지 않습니다.</strong></>
         )}
       </Notice>
 

@@ -394,7 +394,7 @@ export default function MyGoldAlertGoals({
         <h2 id="my-gold-alert-goals-title">알림 설정</h2>
         <Status $ready={pushReady}>
           {pushReady ? <BellRing size={13} aria-hidden /> : <Bell size={13} aria-hidden />}
-          {demoMode ? "체험" : pushReady ? "푸시 ON" : "푸시 OFF"}
+          {demoMode ? "체험" : pushReady ? "알림 켜짐" : "알림 꺼짐"}
         </Status>
       </Head>
 
