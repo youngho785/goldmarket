@@ -17,7 +17,6 @@ import {
   HeroChange,
   HeroStats,
   HeroStat,
-  ReadinessPanel,
   HeroActions,
   HeroAddAction,
   HeroExchangeAction,
@@ -32,8 +31,6 @@ import {
   SummaryHead,
   SummaryItems,
   SummaryItem,
-  GoalProgress,
-  GoalTrack,
   AddGoldButton,
   FormOverlay,
   FormSheet,
@@ -73,6 +70,7 @@ import useGoldVaultDashboard from "@/hooks/useGoldVaultDashboard";
 import MyGoldValueTrend from "@/components/gold/MyGoldValueTrend";
 import MyGoldAlertSummary from "@/components/gold/MyGoldAlertSummary";
 import MyGoldImportPrompt from "@/components/gold/MyGoldImportPrompt";
+import AppGoldJourney from "@/components/gold/AppGoldJourney";
 import MyGoldItemsSection from "@/components/myGoldVault/MyGoldItemsSection";
 import { DON_TO_GRAMS, findGoldProduct } from "@/lib/goldRates";
 import {
@@ -191,45 +189,6 @@ function guestVaultFingerprint(items) {
       note: String(item?.note || "").trim(),
     }))
   );
-}
-
-const MY_GOLD_BAR_DENOMS = Object.freeze([
-  { grams: 500, label: "500g 골드바" },
-  { grams: 100, label: "100g 골드바" },
-  { grams: 75, label: "20돈(75g) 골드바" },
-  { grams: 56.25, label: "15돈(56.25g) 골드바" },
-  { grams: 50, label: "50g 골드바" },
-  { grams: 37.5, label: "10돈(37.5g) 골드바" },
-  { grams: 30, label: "30g 골드바" },
-  { grams: 20, label: "20g 골드바" },
-  { grams: 18.75, label: "5돈(18.75g) 골드바" },
-  { grams: 11.25, label: "3돈(11.25g) 골드바" },
-  { grams: 10, label: "10g 골드바" },
-  { grams: 7.5, label: "2돈(7.5g) 골드바" },
-  { grams: 5, label: "5g 골드바" },
-  { grams: 3.75, label: "1돈(3.75g) 골드바" },
-  { grams: 3, label: "3g 골드바" },
-  { grams: 1, label: "1g 골드바" },
-]);
-
-function getGoldBarReadiness(pureGoldG) {
-  const grams = Number(pureGoldG) || 0;
-  if (grams <= 0) return null;
-  const available = MY_GOLD_BAR_DENOMS.find((item) => item.grams <= grams + 1e-9);
-  if (available) {
-    return {
-      available: true,
-      label: available.label,
-      grams: available.grams,
-      remainingG: Math.max(0, grams - available.grams),
-    };
-  }
-  return {
-    available: false,
-    label: "1g 골드바",
-    grams: 1,
-    neededG: Math.max(0, 1 - grams),
-  };
 }
 
 export default function MyGoldVault() {
@@ -464,22 +423,6 @@ export default function MyGoldVault() {
   const previousVaultValueWon = Number(activeSummary.previousEstimatedValueWon || 0);
   const vaultPureGoldG = Number(activeSummary.pureGoldG || 0);
   const hasVaultContent = activeSummary.itemCount > 0;
-  const barReadiness = useMemo(
-    () => getGoldBarReadiness(activeSummary.pureGoldG),
-    [activeSummary.pureGoldG]
-  );
-  const nextBarTarget = useMemo(() => {
-    const grams = Number(activeSummary.pureGoldG) || 0;
-    if (grams <= 0) return MY_GOLD_BAR_DENOMS[MY_GOLD_BAR_DENOMS.length - 1];
-    const larger = MY_GOLD_BAR_DENOMS.filter((item) => item.grams > grams + 1e-9);
-    return larger.length > 0 ? larger[larger.length - 1] : null;
-  }, [activeSummary.pureGoldG]);
-  const nextBarProgress = useMemo(() => {
-    const grams = Number(activeSummary.pureGoldG) || 0;
-    const target = Number(nextBarTarget?.grams) || 0;
-    if (target <= 0) return 100;
-    return Math.max(0, Math.min(100, (grams / target) * 100));
-  }, [activeSummary.pureGoldG, nextBarTarget]);
   const previewItems = useMemo(() => sortedItems.slice(0, 2), [sortedItems]);
   const handleWeeklyTrendChange = useCallback((next) => {
     setWeeklyTrendChange(next || null);
@@ -955,31 +898,17 @@ export default function MyGoldVault() {
             )}
           </VaultSection>
           {hasVaultContent && ratesReady && (
-            <ReadinessPanel
-              to="/gold-exchange?mode=vault&auto=1"
-              state={{ source: "my-gold", vaultProducts: exchangeProducts }}
-              aria-label="MY GOLD 기록 기준 예상 교환량 확인 페이지 열기"
-            >
-              <div>
-                <small>GOLD TO GOLD · 기록 기준 예상</small>
-                <strong>기록한 금으로 예상 교환량 확인</strong>
-                <p>
-                  {barReadiness?.available
-                    ? `현재 기록 기준으로 ${barReadiness.label} 교환 가능 예상 · 실제 교환은 매장 실측 후 확정`
-                    : `1g 골드바 예상량까지 약 ${Number(barReadiness?.neededG || 0).toFixed(2)}g 더 필요`}
-                </p>
-                {nextBarTarget && (
-                  <GoalProgress>
-                    <div className="labels">
-                      <span>현재 {Number(activeSummary.pureGoldG || 0).toFixed(2)}g</span>
-                      <span>다음 {nextBarTarget.label}까지 {Math.max(0, Number(nextBarTarget.grams) - Number(activeSummary.pureGoldG || 0)).toFixed(2)}g</span>
-                    </div>
-                    <GoalTrack $progress={nextBarProgress} aria-hidden><span /></GoalTrack>
-                  </GoalProgress>
-                )}
-              </div>
-              <ChevronRight aria-hidden />
-            </ReadinessPanel>
+            <AppGoldJourney
+              pureGoldG={vaultPureGoldG}
+              vaultProducts={exchangeProducts}
+              onExchangeClick={() =>
+                trackProductEventOncePerSession(
+                  "gold_to_gold_cta_clicked",
+                  { source: "my_gold_summary" },
+                  "my-gold-summary-gold-journey"
+                )
+              }
+            />
           )}
           </SummarySideStack>
         </SummaryOverviewGrid>

@@ -20,6 +20,7 @@ const [
   goldExchangeFunctionsSource,
   myExchangesSource,
   appHomeSource,
+  appGoldJourneySource,
   androidHomeSource,
   appGoldPriceSummarySource,
   myGoldVaultSource,
@@ -51,6 +52,7 @@ const [
   read("functions/src/goldExchange/functions.ts"),
   read("src/pages/MyExchanges.jsx"),
   read("src/pages/AppHome.jsx"),
+  read("src/components/gold/AppGoldJourney.jsx"),
   read("src/pages/AndroidHome.jsx"),
   read("src/components/gold/AppGoldPriceSummary.jsx"),
   read("src/pages/MyGoldVault.jsx"),
@@ -137,9 +139,11 @@ test("2.2 최종 홈은 데이터 숫자와 2열 높이 균형, 기록 기준 �
   assert.match(myGoldDashboardSource, /const SummaryInner = styled\(Inner\)`[\s\S]*min-height: 242px[\s\S]*height: 100%/);
   assert.match(myGoldDashboardSource, /font-family: "Segoe UI", "Malgun Gothic", Arial, sans-serif/);
   assert.match(appGoldPriceSummarySource, /font-family: "Segoe UI", "Malgun Gothic", Arial, sans-serif/);
-  assert.match(appHomeSource, /GOLD TO GOLD · 기록 기준 예상/);
-  assert.match(appHomeSource, /기록한 금 기준 · \$\{readiness\.label\} 교환 가능 예상/);
-  assert.match(appHomeSource, /실제 교환량은 매장 실측 후 확정합니다/);
+  assert.match(appHomeSource, /import AppGoldJourney from "@\/components\/gold\/AppGoldJourney"/);
+  assert.match(appHomeSource, /<AppGoldJourney[\s\S]*pureGoldG=\{pureGoldG\}[\s\S]*vaultProducts=\{vaultProducts\}/);
+  assert.match(appGoldJourneySource, /GOLD JOURNEY · MY GOLD에서 골드바까지/);
+  assert.match(appGoldJourneySource, /GOLD TO GOLD · 기록 기준 예상/);
+  assert.match(appGoldJourneySource, /온라인은 예상값입니다/);
 });
 
 test("2.3 MY GOLD는 PC 핵심 화면을 2열로 넓히고 기록·가치·예상교환의 우선순위를 분리한다", async () => {
@@ -149,8 +153,9 @@ test("2.3 MY GOLD는 PC 핵심 화면을 2열로 넓히고 기록·가치·예�
   assert.match(myGoldVaultSource, /<SummaryOverviewGrid aria-label="MY GOLD 요약">/);
   assert.match(myGoldVaultSource, /<span>기록한 금<\/span>[\s\S]*activeSummary\.itemCount/);
   assert.match(myGoldVaultSource, /내 금 관리/);
-  assert.match(myGoldVaultSource, /GOLD TO GOLD · 기록 기준 예상/);
-  assert.match(myGoldVaultSource, /실제 교환은 매장 실측 후 확정/);
+  assert.match(myGoldVaultSource, /<AppGoldJourney[\s\S]*pureGoldG=\{vaultPureGoldG\}[\s\S]*vaultProducts=\{exchangeProducts\}/);
+  assert.doesNotMatch(myGoldVaultSource, /ReadinessPanel/);
+  assert.doesNotMatch(myGoldVaultSource, /MY_GOLD_BAR_DENOMS|function getGoldBarReadiness/);
   assert.doesNotMatch(myGoldVaultSource, /같은 양의 999\.9를 오늘 새로 구입하면/);
   assert.match(myGoldItemsSource, /선택해서 예상 확인/);
   assert.match(myGoldItemsSource, /선택 금 예상 확인/);
@@ -173,6 +178,17 @@ test("2.3.1 MY GOLD는 참고가치 표현과 간결한 안내, 안정적인 가
   assert.match(myGoldTrendSource, /const chartLineIn = keyframes/);
   assert.doesNotMatch(myGoldTrendSource, /stroke-dasharray:\s*1|stroke-dashoffset:\s*1/);
   assert.doesNotMatch(myGoldTrendSource, /pathLength="1"/);
+});
+
+test("3.0 웹 홈·Android 홈·MY GOLD는 공용 GOLD JOURNEY를 사용한다", () => {
+  assert.match(appHomeSource, /<AppGoldJourney/);
+  assert.match(androidHomeSource, /<AppGoldJourney/);
+  assert.match(myGoldVaultSource, /<AppGoldJourney/);
+  assert.doesNotMatch(appHomeSource, /const GoldToGoldCard/);
+  assert.doesNotMatch(myGoldVaultSource, /MY_GOLD_BAR_DENOMS|function getGoldBarReadiness/);
+  assert.match(appGoldJourneySource, /GOLD JOURNEY · MY GOLD에서 골드바까지/);
+  assert.match(appGoldJourneySource, /GOLD TO GOLD · 기록 기준 예상/);
+  assert.match(appGoldJourneySource, /실제 교환은 매장 실측 후 확정합니다/);
 });
 
 test("2.4 GOLD TO GOLD는 온라인 예상과 실제 매장 확정을 분리하고 방문 예약 흐름을 명확히 한다", () => {

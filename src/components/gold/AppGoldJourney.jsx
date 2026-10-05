@@ -313,16 +313,16 @@ export default function AppGoldJourney({ pureGoldG = 0, vaultProducts = [], onEx
     <Card aria-labelledby="app-gold-journey-title">
       <Head>
         <div>
-          <small><Sparkles aria-hidden /> GOLD JOURNEY · GOLD TO GOLD</small>
+          <small><Sparkles aria-hidden /> GOLD JOURNEY · MY GOLD에서 골드바까지</small>
           <h2 id="app-gold-journey-title">
             {readiness?.available
-              ? `${readiness.label}까지 이미 도달했습니다.`
-              : "첫 골드바 MILESTONE을 향하고 있습니다."}
+              ? `${readiness.label} 교환 목표에 도달했습니다.`
+              : "다음 골드바 목표를 향하고 있습니다."}
           </h2>
           <p>
             {next
-              ? `다음 ${next.label}까지 ${needed.toFixed(2)}g 남았습니다.`
-              : "현재 표시 가능한 가장 높은 MILESTONE에 도달했습니다."}
+              ? `현재 예상 순금 ${current.toFixed(2)}g · 다음 ${next.label}까지 ${needed.toFixed(2)}g 남았습니다.`
+              : `현재 예상 순금 ${current.toFixed(2)}g · 표시 가능한 가장 높은 목표에 도달했습니다.`}
           </p>
         </div>
         {readiness?.available && (
@@ -338,9 +338,9 @@ export default function AppGoldJourney({ pureGoldG = 0, vaultProducts = [], onEx
           aria-label={`${readiness.label} 골드바 교환 예상 보기`}
         >
           <div>
-            <small>지금 교환 가능한 최대 규격 · 기록 기준 예상</small>
-            <strong>{readiness.label} 지금 교환 예상 보기</strong>
-            <p>선택한 규격을 금교환 화면에서 미리 선택해 보여드립니다.</p>
+            <small>GOLD TO GOLD · 기록 기준 예상</small>
+            <strong>{readiness.label} 교환 예상 확인</strong>
+            <p>MY GOLD 기록으로 온라인 예상값을 확인하고, 실제 교환은 매장 실측 후 확정합니다.</p>
           </div>
           <ChevronRight aria-hidden />
         </ExchangeNow>
@@ -348,7 +348,7 @@ export default function AppGoldJourney({ pureGoldG = 0, vaultProducts = [], onEx
 
       <MilestoneWrap>
         <MilestoneHead>
-          <strong>MILESTONE LADDER</strong>
+          <strong>GOLD JOURNEY MILESTONE</strong>
           <span>{next ? `${needed.toFixed(2)}g 남음` : "현재 최고 단계"}</span>
         </MilestoneHead>
         <Milestones aria-label="GOLD TO GOLD 마일스톤">
@@ -378,8 +378,13 @@ export default function AppGoldJourney({ pureGoldG = 0, vaultProducts = [], onEx
       </div>
 
       <Footer>
-        <span>실제 순도·중량과 교환량은 부산 매장 실측 후 확정됩니다.</span>
-        <Link to="/gold-exchange?mode=vault&auto=1">다른 규격 보기</Link>
+        <span>온라인은 예상값입니다. 실제 순도·중량과 교환량은 부산 매장 실측 후 확정됩니다.</span>
+        <Link
+          to="/gold-exchange?mode=vault&auto=1"
+          state={{ source: "my-gold", vaultProducts }}
+        >
+          {readiness?.available ? "다른 규격 보기" : "GOLD TO GOLD 예상 보기"}
+        </Link>
       </Footer>
     </Card>
   );

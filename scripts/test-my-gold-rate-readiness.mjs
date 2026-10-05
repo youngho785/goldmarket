@@ -69,7 +69,7 @@ test("MY GOLD와 GOLD TO GOLD는 같은 서버 환산율 readiness 원칙을 사
 test("환산율 의존 UI는 readiness 완료 후에만 예상값과 교환 기능을 연다", () => {
   assert.match(
     appHomeSource,
-    /!hasMyGold \|\| myGoldLoading \|\| !myGoldDashboard\.ratesReady/
+    /\{hasMyGold && !myGoldDashboard\.itemsLoading && myGoldDashboard\.ratesReady && \(/
   );
 
   assert.match(

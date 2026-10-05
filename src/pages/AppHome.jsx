@@ -15,7 +15,7 @@ import AppMyGoldDashboard from "@/components/gold/AppMyGoldDashboard";
 import VerifiedReviewSection from "@/components/reviews/VerifiedReviewSection";
 import { useAuthContext } from "@/context/AuthContext";
 import useGoldVaultDashboard from "@/hooks/useGoldVaultDashboard";
-import { getGoldBarReadiness } from "@/utils/goldBarReadiness";
+import AppGoldJourney from "@/components/gold/AppGoldJourney";
 import { db } from "@/firebase/firebase";
 
 const Page = styled.div`
@@ -36,60 +36,6 @@ const OverviewGrid = styled.section`
 
   @media (max-width: 900px) {
     grid-template-columns: 1fr;
-  }
-`;
-
-const GoldToGoldCard = styled(Link)`
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 14px;
-  align-items: center;
-  min-height: 86px;
-  padding: 16px 18px;
-  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 24%, ${({ theme }) => theme.colors.border});
-  border-radius: 20px;
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 58%, ${({ theme }) => theme.colors.surface}),
-    ${({ theme }) => theme.colors.surface}
-  );
-  color: inherit;
-  text-decoration: none;
-  box-shadow: 0 9px 22px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 5%, transparent);
-
-  > svg {
-    width: 19px;
-    height: 19px;
-    color: ${({ theme }) => theme.colors.secondaryDark};
-  }
-`;
-
-const GoldToGoldCopy = styled.div`
-  small {
-    display: block;
-    color: ${({ theme }) => theme.colors.secondaryDark};
-    font-size: .62rem;
-    font-weight: 950;
-    letter-spacing: .1em;
-  }
-
-  h2 {
-    margin: 5px 0 0;
-    color: ${({ theme }) => theme.colors.primary};
-    font-family: ${({ theme }) => theme.fonts.body};
-    font-size: clamp(.92rem, 1.8vw, 1.12rem);
-    font-weight: 850;
-    line-height: 1.35;
-    letter-spacing: -.025em;
-    word-break: keep-all;
-  }
-
-  p {
-    margin: 4px 0 0;
-    color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .65rem;
-    line-height: 1.45;
-    word-break: keep-all;
   }
 `;
 
@@ -269,28 +215,19 @@ export default function AppHome() {
 
   const pureGoldG = Number(myGoldDashboard.summary.pureGoldG || 0);
   const hasMyGold = !!user?.uid && myGoldDashboard.summary.itemCount > 0;
-  const myGoldLoading = !!user?.uid && myGoldDashboard.itemsLoading;
-  const readiness = useMemo(() => getGoldBarReadiness(pureGoldG), [pureGoldG]);
-
-  const goldToGoldHome = useMemo(() => {
-    if (!hasMyGold || myGoldLoading || !myGoldDashboard.ratesReady) return null;
-
-    if (readiness?.available) {
-      return {
-        to: "/gold-exchange?mode=vault&auto=1",
-        kicker: "GOLD TO GOLD · 기록 기준 예상",
-        title: `기록한 금 기준 · ${readiness.label} 교환 가능 예상`,
-        description: "사용자가 기록한 종류·중량으로 계산한 예상치입니다. 실제 교환량은 매장 실측 후 확정합니다.",
-      };
-    }
-
-    return {
-      to: "/gold-exchange?mode=vault&auto=1",
-      kicker: "GOLD TO GOLD · 기록 기준 예상",
-      title: `기록한 금 기준 · ${readiness?.label || "1g 골드바"}까지 약 ${Number(readiness?.neededG || 0).toFixed(2)}g 더 필요`,
-      description: "사용자가 기록한 종류·중량으로 계산한 예상치입니다. 실제 교환 순금량은 매장 실측 후 확정합니다.",
-    };
-  }, [hasMyGold, myGoldLoading, myGoldDashboard.ratesReady, readiness]);
+  const vaultProducts = useMemo(
+    () =>
+      (myGoldDashboard.items || []).slice(0, 20).map((item) => ({
+        productId: item.productId || "",
+        goldType: item.goldType,
+        quantity: Number(item.weightG || 0),
+        inputUnit: "g",
+        exchangeType: "999.9골드바",
+        sourceItemId: item.id,
+        sourceLabel: item.label || "금제품",
+      })),
+    [myGoldDashboard.items]
+  );
 
   return (
     <Page>
@@ -318,18 +255,11 @@ export default function AppHome() {
       </OverviewGrid>
 
 
-      {goldToGoldHome && (
-        <GoldToGoldCard
-          to={goldToGoldHome.to}
-          aria-label="기록한 금으로 금교환 예상 확인"
-        >
-          <GoldToGoldCopy>
-            <small>{goldToGoldHome.kicker}</small>
-            <h2>{goldToGoldHome.title}</h2>
-            <p>{goldToGoldHome.description}</p>
-          </GoldToGoldCopy>
-          <ChevronRight aria-hidden />
-        </GoldToGoldCard>
+      {hasMyGold && !myGoldDashboard.itemsLoading && myGoldDashboard.ratesReady && (
+        <AppGoldJourney
+          pureGoldG={pureGoldG}
+          vaultProducts={vaultProducts}
+        />
       )}
 
       <QuickGrid aria-label="빠른 메뉴">

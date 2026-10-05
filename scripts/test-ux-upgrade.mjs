@@ -106,11 +106,11 @@ test("선택 마케팅 푸시는 사용자 행동으로 요청하고 MY GOLD 서
 });
 
 test("MY GOLD는 저장한 금으로 GOLD TO GOLD 결과 단계까지 자동 연결한다", () => {
-  assert.match(myGoldSource, /\/gold-exchange\?mode=vault&auto=1/);
-  assert.match(appHomeSource, /\/gold-exchange\?mode=vault&auto=1/);
+  assert.match(myGoldSource, /<AppGoldJourney/);
+  assert.match(appHomeSource, /<AppGoldJourney/);
   assert.match(androidHomeSource, /<AppGoldJourney/);
   assert.match(appGoldJourneySource, /\/gold-exchange\?mode=vault&auto=1/);
-  assert.match(appGoldJourneySource, /GOLD JOURNEY · GOLD TO GOLD/);
+  assert.match(appGoldJourneySource, /GOLD JOURNEY · MY GOLD에서 골드바까지/);
   assert.match(androidHomeSource, /weeklyTrend=\{myGoldReady \? \{/);
   assert.doesNotMatch(androidHomeSource, /최근 7일 가치 변화|app-weekly-title/);
   assert.match(appMyGoldDashboardSource, /<span>최근 7일<\/span>/);
