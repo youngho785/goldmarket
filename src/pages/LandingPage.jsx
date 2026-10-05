@@ -416,9 +416,9 @@ export default function LandingPage() {
           <span>02</span>
           <div><strong>MY GOLD 기록</strong><p>계속 보고 싶은 금만 기록해 오늘 이후의 가치를 이어둡니다.</p></div>
         </FlowItem>
-        <FlowItem as={Link} to="/my-gold/alerts" aria-label="MY GOLD 변화와 알림으로 이동">
+        <FlowItem as={Link} to="/my-gold" aria-label="골드바 목표 확인으로 이동">
           <span>03</span>
-          <div><strong>변화·알림</strong><p>가치 변화와 목표 도달을 확인하고 필요한 알림을 설정합니다.</p></div>
+          <div><strong>골드바 목표</strong><p>예상 순금량으로 다음 골드바까지 얼마나 남았는지 확인합니다.</p></div>
         </FlowItem>
         <FlowItem as={Link} to="/gold-to-gold" aria-label="GOLD TO GOLD 안내로 이동">
           <span>04</span>

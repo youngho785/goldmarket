@@ -619,24 +619,13 @@ export default function AndroidAppHeader() {
                     <ChevronRight aria-hidden />
                   </MenuLink>
 
-                  <MenuLink to="/quiz/gold-bonus">
-                    <span>
-                      <Sparkles aria-hidden />
-                    </span>
-                    <div>
-                      <strong>금 퀵퀴즈 · 순금 0.01g</strong>
-                      <small>5문제 모두 정답 시 혜택</small>
-                    </div>
-                    <ChevronRight aria-hidden />
-                  </MenuLink>
-
                   <MenuLink to="/gold-exchange">
                     <span>
                       <Calculator aria-hidden />
                     </span>
                     <div>
-                      <strong>내 금 계산</strong>
-                      <small>999.9 골드바 교환 예상 확인</small>
+                      <strong>GOLD TO GOLD</strong>
+                      <small>내 금으로 받을 골드바 예상 확인</small>
                     </div>
                     <ChevronRight aria-hidden />
                   </MenuLink>
@@ -659,6 +648,17 @@ export default function AndroidAppHeader() {
                     <div>
                       <strong>교환 절차·매장</strong>
                       <small>방문과 현장 확인 안내</small>
+                    </div>
+                    <ChevronRight aria-hidden />
+                  </MenuLink>
+
+                  <MenuLink to="/quiz/gold-bonus">
+                    <span>
+                      <Sparkles aria-hidden />
+                    </span>
+                    <div>
+                      <strong>금 퀵퀴즈 · 순금 0.01g</strong>
+                      <small>5문제 모두 정답 시 혜택</small>
                     </div>
                     <ChevronRight aria-hidden />
                   </MenuLink>

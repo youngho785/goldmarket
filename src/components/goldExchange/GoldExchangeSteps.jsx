@@ -305,7 +305,7 @@ export function BarStep({
 
       <ExchangeOutcome aria-label="예상 금교환 결과">
         <div>
-          <small>MY GOLD 기록 → 999.9 골드바 예상</small>
+          <small>내 금 → 999.9 골드바 예상</small>
           <strong>예상 순금량 {fmtG(totalGrams)}g → {selectedBar.label} × {safeQty}</strong>
           <p>
             {roundTo3Custom(totalGrams - selectedBar.grams * safeQty) >= 0

@@ -4,7 +4,6 @@ import { createPortal } from "react-dom";
 import { NavLink, useLocation } from "react-router-dom";
 import styled, { css } from "styled-components";
 import {
-  BellRing,
   Calculator,
   Gem,
   Home,
@@ -205,7 +204,7 @@ const MEMBER_ANDROID_ITEMS = [
   { to: "/", icon: Home, label: "홈" },
   { to: "/my-gold", icon: Gem, label: "MY GOLD" },
   { to: "/my-gold/items?add=1", icon: Plus, label: "금 추가", center: true },
-  { to: "/my-gold/alerts", icon: BellRing, label: "알림" },
+  { to: "/gold-exchange", icon: Calculator, label: "금교환" },
   { to: "/profile", icon: User, label: "MY" },
 ];
 

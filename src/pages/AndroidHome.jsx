@@ -272,23 +272,6 @@ export default function AndroidHome() {
       )}
 
 
-      {user?.uid && (
-        <QuickActions aria-label="빠른 행동">
-          <QuickAction to="/my-gold/items?add=1">
-            <span><Plus aria-hidden /></span> 금 추가
-          </QuickAction>
-          <QuickAction to="/my-exchanges">
-            <span><ClipboardList aria-hidden /></span> 예약·교환 내역
-          </QuickAction>
-          <QuickAction to="/my-gold/alerts">
-            <span><BellRing aria-hidden /></span> 내 금 알림
-          </QuickAction>
-          <QuickAction to="/gold-price">
-            <span><Scale aria-hidden /></span> 금시세
-          </QuickAction>
-        </QuickActions>
-      )}
-
       {hasMyGold && dashboard.ratesReady && (
         <AppGoldJourney
           pureGoldG={Number(dashboard.summary.pureGoldG || 0)}
@@ -307,6 +290,23 @@ export default function AndroidHome() {
             "app-home-gold-journey"
           )}
         />
+      )}
+
+      {user?.uid && (
+        <QuickActions aria-label="빠른 행동">
+          <QuickAction to="/my-gold/items?add=1">
+            <span><Plus aria-hidden /></span> 금 추가
+          </QuickAction>
+          <QuickAction to="/my-exchanges">
+            <span><ClipboardList aria-hidden /></span> 예약·교환 내역
+          </QuickAction>
+          <QuickAction to="/my-gold/alerts">
+            <span><BellRing aria-hidden /></span> 내 금 알림
+          </QuickAction>
+          <QuickAction to="/gold-price">
+            <span><Scale aria-hidden /></span> 금시세
+          </QuickAction>
+        </QuickActions>
       )}
 
 

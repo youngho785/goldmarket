@@ -87,14 +87,14 @@ test("비회원 하단 메뉴는 보호 화면 대신 공개 핵심 기능과 �
   assert.match(bottomNavSource, /to: "\/gold-price"[\s\S]*label: "금시세"/);
   assert.match(bottomNavSource, /to: "\/login"[\s\S]*label: "로그인"/);
   assert.match(bottomNavSource, /const MEMBER_WEB_ITEMS = \[[\s\S]*label: "금시세"[\s\S]*label: "MY GOLD"[\s\S]*label: "금교환"[\s\S]*label: "MY"/);
-  assert.match(bottomNavSource, /const MEMBER_ANDROID_ITEMS = \[[\s\S]*label: "MY GOLD"[\s\S]*label: "금 추가"[\s\S]*center: true[\s\S]*label: "알림"[\s\S]*label: "MY"/);
+  assert.match(bottomNavSource, /const MEMBER_ANDROID_ITEMS = \[[\s\S]*label: "MY GOLD"[\s\S]*label: "금 추가"[\s\S]*center: true[\s\S]*label: "금교환"[\s\S]*label: "MY"/);
   assert.match(bottomNavSource, /isMember \? MEMBER_WEB_ITEMS : GUEST_WEB_ITEMS/);
   assert.match(bottomNavSource, /isMember \? MEMBER_ANDROID_ITEMS : GUEST_ANDROID_ITEMS/);
 });
 
 test("2.1 상단 메뉴는 비회원과 회원의 핵심 행동을 각각 4개로 정리한다", () => {
   assert.match(navbarSource, /if \(isMember\) \{[\s\S]*label: "MY GOLD"[\s\S]*label: "금시세"[\s\S]*label: "금교환"[\s\S]*label: "교환내역"/);
-  assert.match(navbarSource, /return \[[\s\S]*label: "금시세"[\s\S]*label: "MY GOLD"[\s\S]*label: "금교환"[\s\S]*label: "매장안내"/);
+  assert.match(navbarSource, /return \[[\s\S]*label: "MY GOLD"[\s\S]*label: "금시세"[\s\S]*label: "금교환"[\s\S]*label: "매장안내"/);
   assert.match(navbarSource, /<AccountLink to="\/gold-value">내 금 확인<\/AccountLink>/);
   assert.match(navbarSource, /aria-label="MY 계정 메뉴"/);
 });
@@ -215,7 +215,7 @@ test("3.1 고객 화면의 설명 문구는 쉬운 한국어로 통일한다", a
     goldExchangeSource,
     /"01 예상 계산", "02 골드바 선택", "03 방문 예약", "04 접수 완료"/
   );
-  assert.match(goldExchangeStepsSource, /MY GOLD 기록 → 999\.9 골드바 예상/);
+  assert.match(goldExchangeStepsSource, /내 금 → 999\.9 골드바 예상/);
   assert.doesNotMatch(
     goldExchangeStepsSource,
     /현장 확인 방문예약|선택 가능 최대|999\.9 GOLD 예상/
@@ -230,6 +230,47 @@ test("3.1 고객 화면의 설명 문구는 쉬운 한국어로 통일한다", a
 
   assert.doesNotMatch(myGoldDashboardCopySource, /Living Gold로/);
   assert.doesNotMatch(myGoldVaultSource, /Living Gold로/);
+});
+test("3.2 최종 정보구조는 MY GOLD → 골드바 목표 → GOLD TO GOLD를 우선한다", async () => {
+  const androidHeaderSource = await read("src/components/common/AndroidAppHeader.jsx");
+
+  assert.match(landingSource, /<strong>골드바 목표<\/strong>/);
+  assert.doesNotMatch(landingSource, /to="\/my-gold\/alerts"/);
+
+  assert.match(
+    navbarSource,
+    /return \[[\s\S]*label: "MY GOLD"[\s\S]*label: "금시세"[\s\S]*label: "금교환"[\s\S]*label: "매장안내"/
+  );
+
+  assert.match(
+    bottomNavSource,
+    /const MEMBER_ANDROID_ITEMS = \[[\s\S]*label: "MY GOLD"[\s\S]*label: "금 추가"[\s\S]*center: true[\s\S]*label: "금교환"[\s\S]*label: "MY"/
+  );
+
+  const journeyIndex = androidHomeSource.indexOf("<AppGoldJourney");
+  const quickActionsIndex = androidHomeSource.indexOf("<QuickActions");
+  assert.ok(journeyIndex >= 0 && quickActionsIndex > journeyIndex);
+
+  const serviceIndex = androidHeaderSource.indexOf("<SectionTitle>서비스</SectionTitle>");
+  const exchangeIndex = androidHeaderSource.indexOf('to="/gold-exchange"', serviceIndex);
+  const quizIndex = androidHeaderSource.indexOf('to="/quiz/gold-bonus"', serviceIndex);
+
+  assert.ok(
+    serviceIndex >= 0 &&
+      exchangeIndex > serviceIndex &&
+      quizIndex > exchangeIndex
+  );
+
+  assert.match(
+    androidHeaderSource,
+    /<strong>GOLD TO GOLD<\/strong>[\s\S]*내 금으로 받을 골드바 예상 확인/
+  );
+
+  assert.match(goldExchangeStepsSource, /내 금 → 999\.9 골드바 예상/);
+  assert.doesNotMatch(
+    goldExchangeStepsSource,
+    /MY GOLD 기록 → 999\.9 골드바 예상/
+  );
 });
 test("2.4 GOLD TO GOLD는 온라인 예상과 실제 매장 확정을 분리하고 방문 예약 흐름을 명확히 한다", () => {
   assert.match(goldExchangeStylesSource, /max-width: 1160px/);
@@ -324,13 +365,15 @@ test("홈의 검증 후기는 최신 1건을 2줄 미리보기로만 보여준�
   assert.match(reviewListSource, /!preview && \(/);
 });
 
-test("비회원 랜딩은 계산 → GOLD JOURNEY → 금시세 → GOLD TO GOLD/실측 → 후기 흐름으로 간결해진다", () => {
+test("비회원 랜딩은 계산 → MY GOLD → 골드바 목표 → 금시세 → GOLD TO GOLD/실측 → 후기 흐름으로 간결해진다", () => {
   assert.match(landingSource, /<CalculatorAnchor id="landing-calculator">[\s\S]*<QuickGoldValueCalculator source="landing" \/>/);
   assert.match(landingSource, /먼저 계산하고, 계속 보고 싶은 금만 MY GOLD에 이어두세요/);
   assert.match(landingSource, /const FlowItem = styled\.button/);
   assert.match(landingSource, /onClick=\{startValueCheck\}/);
   assert.match(landingSource, /as=\{Link\} to="\/my-gold"/);
-  assert.match(landingSource, /as=\{Link\} to="\/my-gold\/alerts"/);
+  assert.match(landingSource, /<strong>골드바 목표<\/strong>/);
+  assert.match(landingSource, /예상 순금량으로 다음 골드바까지 얼마나 남았는지 확인합니다/);
+  assert.doesNotMatch(landingSource, /to="\/my-gold\/alerts"/);
   assert.match(landingSource, /as=\{Link\} to="\/gold-to-gold"/);
   assert.match(landingSource, /회원가입 없이 먼저 계산[\s\S]*실제 교환은 매장 실측·고객 동의 후 확정됩니다/);
   assert.doesNotMatch(landingSource, /const TrustStrip|원일귀금속 직접 운영|실제 교환은 확인 후 결정/);
