@@ -1095,3 +1095,13 @@ test("2.8.6 로그인·화면 전환 직후 MY 메뉴는 지연된 route effect�
     /useEffect\(\(\) => \{\s*setDrawerOpen\(false\);\s*setAccountMenuOpen\(false\);\s*\}, \[location\.pathname, location\.search\]\);/
   );
 });
+
+
+test("2.4.2 GOLD JOURNEY 교환 라벨과 예약 요약 문구는 손상 없이 유지된다", () => {
+  assert.match(androidHomeSource, /exchangeType: "999\.9골드바"/);
+  assert.match(androidHomeSource, /sourceLabel: item\.label \|\| "금제품"/);
+  assert.doesNotMatch(androidHomeSource, /999\.9\?\?\?|"\?\?\?"/);
+  assert.match(goldExchangeStepsSource, /교환 예상 \{formatGoldWeightPair\(barsPlan\.totalGrams \|\| 0\)\}/);
+  assert.match(goldExchangeStepsSource, /barsPlan\.selected\?\.label \|\| "골드바"/);
+  assert.doesNotMatch(goldExchangeStepsSource, /\?\? \?\?|"\?\?\?"/);
+});

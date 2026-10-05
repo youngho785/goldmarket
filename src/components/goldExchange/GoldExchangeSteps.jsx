@@ -721,7 +721,7 @@ export function ReserveStep({
         {calculated && barsPlan ? (
           <>
             <strong>
-              ?? ?? {formatGoldWeightPair(barsPlan.totalGrams || 0)} ? {barsPlan.selected?.label || "???"} ? {barsPlan.selected?.qty || 1}
+              교환 예상 {formatGoldWeightPair(barsPlan.totalGrams || 0)} · {barsPlan.selected?.label || "골드바"} × {barsPlan.selected?.qty || 1}
             </strong>
             <p>
               예상 제작 공임 {formatGoldBarFee(getGoldBarFeeEstimate({

@@ -296,9 +296,9 @@ export default function AndroidHome() {
             goldType: item.goldType,
             quantity: Number(item.weightG || 0),
             inputUnit: "g",
-            exchangeType: "999.9???",
+            exchangeType: "999.9골드바",
             sourceItemId: item.id,
-            sourceLabel: item.label || "???",
+            sourceLabel: item.label || "금제품",
           }))}
           onExchangeClick={() => trackProductEventOncePerSession(
             "gold_to_gold_cta_clicked",
