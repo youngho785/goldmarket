@@ -246,6 +246,7 @@ export default function MyGoldVault() {
     customerSellPricePerDon,
     previousCustomerSellPricePerDon,
     rates,
+    ratesReady,
     summary,
   } = useGoldVaultDashboard(user?.uid);
   const isGuest = !user?.uid;
@@ -371,7 +372,9 @@ export default function MyGoldVault() {
   );
 
   const activeItems = isGuest ? guestItems : items;
-  const activeSummary = isGuest ? guestSummary : summary;
+  const activeSummary = isGuest
+    ? (ratesReady ? guestSummary : summarizeGoldVaultItems(guestRawItems))
+    : summary;
   const hasPersonalizedGuestVault = useMemo(() => {
     if (!isGuest || guestRawItems.length === 0) return false;
     return guestVaultFingerprint(guestRawItems) !== guestVaultFingerprint(DEFAULT_GUEST_MY_GOLD_ITEMS);
@@ -817,16 +820,20 @@ export default function MyGoldVault() {
             value={
               vaultLoading
                 ? "가치를 확인하고 있어요"
-                : hasVaultContent && publicPriceEnabled
-                  ? formatWon(vaultValueWon)
-                  : undefined
+                : hasVaultContent && !ratesReady
+                  ? "환산 기준 확인 중"
+                  : ratesReady && hasVaultContent && publicPriceEnabled
+                    ? formatWon(vaultValueWon)
+                    : undefined
             }
             description={
               vaultLoading
-                ? "MY GOLD의 오늘 참고가치를 불러오고 있습니다."
-                : hasVaultContent && publicPriceEnabled
-                  ? `${Number.isFinite(currentChange.percent) ? `어제보다 ${formatSignedWon(currentChange.amount)} · ` : ""}예상 순금 ${Number(activeSummary.pureGoldG || 0).toFixed(2)}g`
-                  : "금 하나를 기록하면 오늘 참고가치와 변화가 이 작은 금빛에 이어집니다."
+                ? "MY GOLD 기록을 불러오고 있습니다."
+                : hasVaultContent && !ratesReady
+                  ? "기록은 확인되었습니다. 서버 환산 기준을 확인하고 있습니다."
+                  : ratesReady && hasVaultContent && publicPriceEnabled
+                    ? `${Number.isFinite(currentChange.percent) ? `어제보다 ${formatSignedWon(currentChange.amount)} · ` : ""}예상 순금 ${Number(activeSummary.pureGoldG || 0).toFixed(2)}g`
+                    : "금 하나를 기록하면 오늘 참고가치와 변화가 이 작은 금빛에 이어집니다."
             }
             actionLabel={hasVaultContent ? "내 금 자세히 보기" : "첫 금 기록하기"}
             actionTo={hasVaultContent ? "/my-gold/items" : "/my-gold/items?add=1"}
@@ -840,16 +847,18 @@ export default function MyGoldVault() {
               ? "불러오는 중"
               : !hasVaultContent
                 ? "첫 금을 기록해 보세요"
-                : publicPriceEnabled
-                  ? formatWon(vaultValueWon)
-                  : "시세 공개 대기"}
+                : !ratesReady
+                  ? "환산 기준 확인 중"
+                  : publicPriceEnabled
+                    ? formatWon(vaultValueWon)
+                    : "시세 공개 대기"}
           </HeroAmount>
-          {!vaultLoading && hasVaultContent && publicPriceEnabled && (
+          {!vaultLoading && ratesReady && hasVaultContent && publicPriceEnabled && (
             <HeroValueNote>
               내가 가진 금을 직접 기록한 정보를 기준으로 계산한 오늘 참고가치입니다.
             </HeroValueNote>
           )}
-          {!vaultLoading && hasVaultContent && publicPriceEnabled && (
+          {!vaultLoading && ratesReady && hasVaultContent && publicPriceEnabled && (
             <HeroChangeGroup>
               <HeroChange $direction={currentChange.direction}>
                 <CurrentChangeIcon aria-hidden />
@@ -879,7 +888,7 @@ export default function MyGoldVault() {
             </HeroStat>
             <HeroStat>
               <span>예상 순금</span>
-              <strong>{Number(activeSummary.pureGoldG || 0).toFixed(2)}g</strong>
+              <strong>{ratesReady ? `${Number(activeSummary.pureGoldG || 0).toFixed(2)}g` : "확인 중"}</strong>
             </HeroStat>
             <HeroStat>
               <span>기록한 금</span>
@@ -933,7 +942,7 @@ export default function MyGoldVault() {
                       <strong>{item.label}</strong>
                       <small>{getGoldVaultTypeLabel(item.goldType, rates, item.productId)} · {Number(item.weightG || 0).toFixed(2)}g</small>
                     </div>
-                    <span className="value">{publicPriceEnabled ? formatWon(item.estimatedValueWon) : `${Number(item.pureGoldG || 0).toFixed(2)}g`}</span>
+                    <span className="value">{!ratesReady ? "환산 기준 확인 중" : publicPriceEnabled ? formatWon(item.estimatedValueWon) : `${Number(item.pureGoldG || 0).toFixed(2)}g`}</span>
                   </SummaryItem>
                 ))}
               </SummaryItems>
@@ -945,7 +954,7 @@ export default function MyGoldVault() {
               </Empty>
             )}
           </VaultSection>
-          {hasVaultContent && (
+          {hasVaultContent && ratesReady && (
             <ReadinessPanel
               to="/gold-exchange?mode=vault&auto=1"
               state={{ source: "my-gold", vaultProducts: exchangeProducts }}
@@ -1014,12 +1023,12 @@ export default function MyGoldVault() {
             </GuestSaveCard>
           )}
 
-          {hasVaultContent && publicPriceEnabled && (
+          {ratesReady && hasVaultContent && publicPriceEnabled && (
             <MyGoldValueTrend
               pureGoldG={vaultPureGoldG}
               currentPricePerDon={customerSellPricePerDon}
               currentMarket={market}
-              enabled={!vaultLoading && hasVaultContent && publicPriceEnabled}
+              enabled={!vaultLoading && ratesReady && hasVaultContent && publicPriceEnabled}
               onWeeklyChange={handleWeeklyTrendChange}
               bonusOnly={false}
               bonusGoldG={0}
@@ -1053,6 +1062,7 @@ export default function MyGoldVault() {
             activeSummary={activeSummary}
             rates={rates}
             publicPriceEnabled={publicPriceEnabled}
+            ratesReady={ratesReady}
             vaultLoading={vaultLoading}
             error={error}
             formOpen={formOpen}
@@ -1081,12 +1091,12 @@ export default function MyGoldVault() {
 
       {isTrendView && (
         <ViewPanel key="trend">
-          {hasVaultContent && publicPriceEnabled ? (
+          {ratesReady && hasVaultContent && publicPriceEnabled ? (
             <MyGoldValueTrend
               pureGoldG={vaultPureGoldG}
               currentPricePerDon={customerSellPricePerDon}
               currentMarket={market}
-              enabled={!vaultLoading && hasVaultContent && publicPriceEnabled}
+              enabled={!vaultLoading && ratesReady && hasVaultContent && publicPriceEnabled}
               onWeeklyChange={handleWeeklyTrendChange}
               bonusOnly={false}
               bonusGoldG={0}
@@ -1101,7 +1111,7 @@ export default function MyGoldVault() {
             </Empty>
           )}
 
-          {hasVaultContent && publicPriceEnabled && (
+          {ratesReady && hasVaultContent && publicPriceEnabled && (
             <FoldPanel>
               <FoldSummary aria-controls="my-gold-history-content">
                 <div>

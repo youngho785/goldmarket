@@ -52,6 +52,7 @@ export default function MyGoldItemsSection({
   activeSummary,
   rates,
   publicPriceEnabled,
+  ratesReady,
   vaultLoading,
   error,
   formOpen,
@@ -163,7 +164,9 @@ export default function MyGoldItemsSection({
           <p>
             {isGuest
               ? "예시 금을 수정하거나 내 금을 새로 기록해 보세요. 변경한 내용이 MY GOLD 요약과 가치 변화에 바로 반영됩니다."
-              : `현재 ${sortedItems.length}개 · 기록 중량 ${Number(activeSummary.totalWeightG || 0).toFixed(2)}g · 예상 순금 ${Number(activeSummary.pureGoldG || 0).toFixed(2)}g`}
+              : ratesReady
+                ? `현재 ${sortedItems.length}개 · 기록 중량 ${Number(activeSummary.totalWeightG || 0).toFixed(2)}g · 예상 순금 ${Number(activeSummary.pureGoldG || 0).toFixed(2)}g`
+                : `현재 ${sortedItems.length}개 · 기록 중량 ${Number(activeSummary.totalWeightG || 0).toFixed(2)}g · 예상 순금 환산 기준 확인 중`}
           </p>
         </div>
 
@@ -173,6 +176,7 @@ export default function MyGoldItemsSection({
               <AddGoldButton
                 type="button"
                 onClick={startSelection}
+                disabled={!ratesReady}
                 aria-label="기록된 금 중 GOLD TO GOLD 예상 확인할 항목 선택"
               >
                 선택해서 예상 확인
@@ -180,6 +184,7 @@ export default function MyGoldItemsSection({
               <AddGoldButton
                 type="button"
                 onClick={openAllItemsExchange}
+                disabled={!ratesReady}
                 aria-label="기록된 금 전체로 GOLD TO GOLD 예상 확인"
               >
                 전체 예상 확인 ({sortedItems.length})
@@ -214,14 +219,14 @@ export default function MyGoldItemsSection({
             <strong>{selectedItems.length}개 선택</strong>
             <span>
               기록 중량 {Number(selectedSummary.totalWeightG || 0).toFixed(2)}g
-              {" · "}예상 순금 {Number(selectedSummary.pureGoldG || 0).toFixed(2)}g
+              {" · "}예상 순금 {ratesReady ? `${Number(selectedSummary.pureGoldG || 0).toFixed(2)}g` : "확인 중"}
               {" · "}실제 교환은 매장 실측 후 확정
             </span>
           </div>
           <button
             type="button"
             onClick={openSelectedItemsExchange}
-            disabled={selectedItems.length === 0}
+            disabled={selectedItems.length === 0 || !ratesReady}
           >
             선택 금 예상 확인
           </button>
@@ -257,9 +262,9 @@ export default function MyGoldItemsSection({
                   </p>
                   <ItemMetrics>
                     <span>기록 <strong>{formatGramsAndDon(item.weightG)}</strong></span>
-                    <span>예상 순금량 <strong>{Number(item.pureGoldG || 0).toFixed(2)}g</strong></span>
+                    <span>예상 순금량 <strong>{ratesReady ? `${Number(item.pureGoldG || 0).toFixed(2)}g` : "확인 중"}</strong></span>
                     {publicPriceEnabled && (
-                      <span>오늘 참고가치 <strong>{formatWon(item.estimatedValueWon)}</strong></span>
+                      <span>오늘 참고가치 <strong>{ratesReady ? formatWon(item.estimatedValueWon) : "확인 중"}</strong></span>
                     )}
                   </ItemMetrics>
                 </ItemMain>
@@ -270,6 +275,7 @@ export default function MyGoldItemsSection({
                       type="button"
                       data-variant="exchange"
                       onClick={() => openSingleItemExchange(item)}
+                      disabled={!ratesReady}
                       aria-label={`${item.label} 금교환 계산`}
                       title="GOLD TO GOLD 교환 예상 확인"
                     >

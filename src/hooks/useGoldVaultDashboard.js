@@ -18,6 +18,7 @@ export default function useGoldVaultDashboard(uid) {
   const [items, setItems] = useState([]);
   const [itemsLoading, setItemsLoading] = useState(!!uid);
   const [rates, setRates] = useState({ purity: DEFAULT_PURITY, exchange: DEFAULT_EXCHANGE, products: {} });
+  const [ratesReady, setRatesReady] = useState(false);
   const [market, setMarket] = useState({});
   const [previousMarket, setPreviousMarket] = useState({});
   const [marketLoading, setMarketLoading] = useState(true);
@@ -46,15 +47,25 @@ export default function useGoldVaultDashboard(uid) {
     );
   }, [uid]);
 
-  useEffect(
-    () =>
-      subscribeGoldRates(
-        db,
-        (next) => setRates(next),
-        (message, error) => console.warn(message, error?.message || error)
-      ),
-    []
-  );
+  useEffect(() => {
+    setRatesReady(false);
+    return subscribeGoldRates(
+      db,
+      (next, snapshot) => {
+        if (!snapshot.exists() || snapshot.metadata.fromCache) {
+          setRatesReady(false);
+          return;
+        }
+        setRates(next);
+        setRatesReady(true);
+      },
+      (message, error) => {
+        setRatesReady(false);
+        console.warn(message, error?.message || error);
+      },
+      { includeMetadataChanges: true }
+    );
+  }, []);
 
   useEffect(
     () =>
@@ -121,11 +132,17 @@ export default function useGoldVaultDashboard(uid) {
   );
 
   const summary = useMemo(() => summarizeGoldVaultItems(enrichedItems), [enrichedItems]);
+  const recordSummary = useMemo(() => summarizeGoldVaultItems(items), [items]);
+  const dashboardItems = ratesReady ? enrichedItems : items;
+  const dashboardSummary = ratesReady ? summary : recordSummary;
 
   return {
-    items: enrichedItems,
+    items: dashboardItems,
     itemsLoading,
+    recordsLoading: itemsLoading,
+    derivedLoading: !ratesReady,
     rates,
+    ratesReady,
     market,
     previousMarket,
     marketLoading,
@@ -137,6 +154,6 @@ export default function useGoldVaultDashboard(uid) {
     // Backward-compatible aliases used by existing UI and bonus-gold calculations.
     customerSellPricePerDon: pureGoldBuyPricePerDon,
     previousCustomerSellPricePerDon: previousPureGoldBuyPricePerDon,
-    summary,
+    summary: dashboardSummary,
   };
 }

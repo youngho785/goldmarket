@@ -395,6 +395,7 @@ function formatSignedPercent(value) {
 export default function AppMyGoldDashboard({ user, dashboard, animateValue = false, weeklyTrend = null }) {
   const hasRealGold = !!user?.uid && dashboard.summary.itemCount > 0;
   const loading = !!user?.uid && dashboard.itemsLoading;
+  const ratesReady = dashboard.ratesReady !== false;
 
   const totals = useMemo(() => {
     const current = Number(dashboard.summary.estimatedValueWon || 0);
@@ -417,6 +418,7 @@ export default function AppMyGoldDashboard({ user, dashboard, animateValue = fal
   );
   const shouldAnimateValue =
     animateValue &&
+    ratesReady &&
     dashboard.publicPriceEnabled &&
     previousValue > 0 &&
     totals.current > 0 &&
@@ -506,7 +508,7 @@ export default function AppMyGoldDashboard({ user, dashboard, animateValue = fal
         ? TrendingDown
         : Minus;
 
-  const showWeeklyTrend = !!weeklyTrend;
+  const showWeeklyTrend = ratesReady && !!weeklyTrend;
   const weeklyDirection = String(weeklyTrend?.direction || "same");
   const weeklyText = weeklyTrend?.hasReference
     ? `${formatSignedWon(weeklyTrend.amount)} · ${formatSignedPercent(weeklyTrend.percent)}`
@@ -529,10 +531,14 @@ export default function AppMyGoldDashboard({ user, dashboard, animateValue = fal
           </Topline>
 
           <Value>
-            {dashboard.publicPriceEnabled ? formatWon(animatedCurrent) : "시세 공개 대기"}
+            {!ratesReady
+              ? "환산 기준 확인 중"
+              : dashboard.publicPriceEnabled
+                ? formatWon(animatedCurrent)
+                : "시세 공개 대기"}
           </Value>
 
-          {dashboard.publicPriceEnabled && Number.isFinite(totals.percent) && (
+          {ratesReady && dashboard.publicPriceEnabled && Number.isFinite(totals.percent) && (
             <Change $direction={totals.direction} $animate={shouldAnimateValue}>
               <ChangeIcon aria-hidden />
               오늘 {formatSignedWon(totals.amount)} · {formatSignedPercent(totals.percent)}
@@ -542,7 +548,7 @@ export default function AppMyGoldDashboard({ user, dashboard, animateValue = fal
           <SummaryMeta>
             <span>
               예상 순금
-              <strong>{Number(dashboard.summary.pureGoldG || 0).toFixed(2)}g</strong>
+              <strong>{ratesReady ? `${Number(dashboard.summary.pureGoldG || 0).toFixed(2)}g` : "확인 중"}</strong>
             </span>
             <span>
               기록한 금
@@ -568,11 +574,13 @@ export default function AppMyGoldDashboard({ user, dashboard, animateValue = fal
         delay={90}
         ariaLabel="Living Gold로 오늘 MY GOLD 보기"
         title="오늘의 MY GOLD"
-        value={dashboard.publicPriceEnabled ? formatWon(totals.current) : undefined}
+        value={ratesReady && dashboard.publicPriceEnabled ? formatWon(totals.current) : undefined}
         description={
-          dashboard.publicPriceEnabled
-            ? `오늘 ${formatSignedWon(totals.amount)} · 예상 순금 ${Number(dashboard.summary.pureGoldG || 0).toFixed(2)}g`
-            : "오늘의 MY GOLD 가치를 확인하고 있어요."
+          !ratesReady
+            ? "서버 환산 기준을 확인하고 있어요."
+            : dashboard.publicPriceEnabled
+              ? `오늘 ${formatSignedWon(totals.amount)} · 예상 순금 ${Number(dashboard.summary.pureGoldG || 0).toFixed(2)}g`
+              : "오늘의 MY GOLD 가치를 확인하고 있어요."
         }
         actionLabel="MY GOLD 자세히 보기"
         actionTo="/my-gold"

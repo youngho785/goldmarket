@@ -273,7 +273,7 @@ export default function AppHome() {
   const readiness = useMemo(() => getGoldBarReadiness(pureGoldG), [pureGoldG]);
 
   const goldToGoldHome = useMemo(() => {
-    if (!hasMyGold || myGoldLoading) return null;
+    if (!hasMyGold || myGoldLoading || !myGoldDashboard.ratesReady) return null;
 
     if (readiness?.available) {
       return {
@@ -290,7 +290,7 @@ export default function AppHome() {
       title: `기록한 금 기준 · ${readiness?.label || "1g 골드바"}까지 약 ${Number(readiness?.neededG || 0).toFixed(2)}g 더 필요`,
       description: "사용자가 기록한 종류·중량으로 계산한 예상치입니다. 실제 교환 순금량은 매장 실측 후 확정합니다.",
     };
-  }, [hasMyGold, myGoldLoading, readiness]);
+  }, [hasMyGold, myGoldLoading, myGoldDashboard.ratesReady, readiness]);
 
   return (
     <Page>

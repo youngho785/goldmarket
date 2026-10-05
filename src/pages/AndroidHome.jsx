@@ -219,6 +219,7 @@ export default function AndroidHome() {
   const myGoldReady =
     hasMyGold &&
     !dashboard.itemsLoading &&
+    dashboard.ratesReady &&
     dashboard.publicPriceEnabled &&
     !dashboard.publicPriceLoading;
 
@@ -288,7 +289,7 @@ export default function AndroidHome() {
         </QuickActions>
       )}
 
-      {hasMyGold && (
+      {hasMyGold && dashboard.ratesReady && (
         <AppGoldJourney
           pureGoldG={Number(dashboard.summary.pureGoldG || 0)}
           vaultProducts={(dashboard.items || []).slice(0, 20).map((item) => ({

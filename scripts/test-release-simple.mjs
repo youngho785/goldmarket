@@ -133,6 +133,9 @@ async function main() {
   const rateReadiness = await step('GOLD RATE READINESS', () => runNode(['scripts/test-gold-exchange-rate-readiness.mjs']));
   if (!rateReadiness) return finish(1);
 
+  const myGoldRateReadiness = await step('MY GOLD RATE READINESS', () => runNode(['scripts/test-my-gold-rate-readiness.mjs']));
+  if (!myGoldRateReadiness) return finish(1);
+
   const authStatic = await step('AUTH SAFETY', () => runNode(['scripts/test-auth-core-safety.mjs']));
   if (!authStatic) return finish(1);
 
