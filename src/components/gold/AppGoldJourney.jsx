@@ -313,10 +313,10 @@ export default function AppGoldJourney({ pureGoldG = 0, vaultProducts = [], onEx
     <Card aria-labelledby="app-gold-journey-title">
       <Head>
         <div>
-          <small><Sparkles aria-hidden /> GOLD JOURNEY · MY GOLD에서 골드바까지</small>
+          <small><Sparkles aria-hidden /> MY GOLD → 골드바</small>
           <h2 id="app-gold-journey-title">
             {readiness?.available
-              ? `${readiness.label} 교환 목표에 도달했습니다.`
+              ? `${readiness.label} 교환 가능합니다.`
               : "다음 골드바 목표를 향하고 있습니다."}
           </h2>
           <p>
@@ -326,7 +326,7 @@ export default function AppGoldJourney({ pureGoldG = 0, vaultProducts = [], onEx
           </p>
         </div>
         {readiness?.available && (
-          <StatusPill><Check aria-hidden /> 달성</StatusPill>
+          <StatusPill><Check aria-hidden /> 교환 가능</StatusPill>
         )}
       </Head>
 
@@ -348,10 +348,10 @@ export default function AppGoldJourney({ pureGoldG = 0, vaultProducts = [], onEx
 
       <MilestoneWrap>
         <MilestoneHead>
-          <strong>GOLD JOURNEY MILESTONE</strong>
+          <strong>다음 목표</strong>
           <span>{next ? `${needed.toFixed(2)}g 남음` : "현재 최고 단계"}</span>
         </MilestoneHead>
-        <Milestones aria-label="GOLD TO GOLD 마일스톤">
+        <Milestones aria-label="골드바 목표">
           {milestoneData.items.map((item) => (
             <Milestone
               key={`${item.grams}-${item.short}`}

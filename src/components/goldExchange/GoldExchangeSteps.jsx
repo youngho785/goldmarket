@@ -409,7 +409,7 @@ export function BarStep({
               $recommended={recommended || topUpRecommended}
               role="radio"
               aria-checked={active}
-              aria-label={`${d.label}${recommended ? " — 현재 금으로 추천" : topUpRecommended ? " — 조금 추가해서 선택 가능" : ""}`}
+              aria-label={`${d.label}${recommended ? " — 현재 금으로 추천" : topUpRecommended ? " — 부족분을 채우면 선택 가능" : ""}`}
               tabIndex={disabled ? -1 : 0}
               disabled={disabled}
               style={disabled ? { opacity: 0.42, cursor: "not-allowed" } : undefined}
@@ -430,19 +430,19 @@ export function BarStep({
               <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "space-between" }}>
                 <div style={{ fontWeight: 900 }}>{d.label}</div>
                 {recommended && <AIBadge>현재 금 추천</AIBadge>}
-                {topUpRecommended && !recommended && <AIBadge>추가해서 선택</AIBadge>}
+                {topUpRecommended && !recommended && <AIBadge>{fmtG(topUpGramsForOne)}g 더 필요</AIBadge>}
               </div>
               <div style={{ fontSize: ".9rem", color: "var(--gm-text-secondary)" }}>
                 {fmtG(d.grams)}g ({fmtD(d.don)}돈)
               </div>
               {topUpRecommended && topUpGramsForOne > 0 && (
                 <div style={{ fontSize: ".82rem", fontWeight: 800, color: "var(--gm-primary)" }}>
-                  + {fmtG(topUpGramsForOne)}g ({fmtD(topUpGramsForOne / DON_TO_GRAMS)}돈) 추가 시 1개 선택 가능
+                  {fmtG(topUpGramsForOne)}g ({fmtD(topUpGramsForOne / DON_TO_GRAMS)}돈) 더 필요 · 채우면 1개 선택 가능
                 </div>
               )}
               {disabled && (
                 <div style={{ fontSize: ".8rem", color: "var(--gm-text-secondary)" }}>
-                  바로 위 규격까지만 추가 선택할 수 있습니다.
+                  현재 금 기준 바로 다음 규격까지만 선택할 수 있습니다.
                 </div>
               )}
             </DenomTile>
@@ -545,7 +545,10 @@ export function BarStep({
                     </span>
                   ))}
                 </div>
-                <p style={{ margin: "10px 0 0", fontWeight: 700 }}>잔여 금 처리방법은 교환 확정 시 안내합니다.</p>
+                <p style={{ margin: "10px 0 0" }}>
+                  위 추가 조합 선택 후 예상 잔여 <b>{fmtG(extraCombo.remain)}g</b> (<b>{fmtD(extraCombo.remain / DON_TO_GRAMS)}돈</b>)입니다.
+                </p>
+                <p style={{ margin: "8px 0 0", fontWeight: 700 }}>실제 잔여 금 처리방법은 교환 확정 시 안내합니다.</p>
               </>
             );
           }

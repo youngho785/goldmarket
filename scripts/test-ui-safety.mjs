@@ -141,7 +141,7 @@ test("2.2 최종 홈은 데이터 숫자와 2열 높이 균형, 기록 기준 �
   assert.match(appGoldPriceSummarySource, /font-family: "Segoe UI", "Malgun Gothic", Arial, sans-serif/);
   assert.match(appHomeSource, /import AppGoldJourney from "@\/components\/gold\/AppGoldJourney"/);
   assert.match(appHomeSource, /<AppGoldJourney[\s\S]*pureGoldG=\{pureGoldG\}[\s\S]*vaultProducts=\{vaultProducts\}/);
-  assert.match(appGoldJourneySource, /GOLD JOURNEY · MY GOLD에서 골드바까지/);
+  assert.match(appGoldJourneySource, /MY GOLD → 골드바/);
   assert.match(appGoldJourneySource, /GOLD TO GOLD · 기록 기준 예상/);
   assert.match(appGoldJourneySource, /온라인은 예상값입니다/);
 });
@@ -186,7 +186,7 @@ test("3.0 웹 홈·Android 홈·MY GOLD는 공용 GOLD JOURNEY를 사용한다",
   assert.match(myGoldVaultSource, /<AppGoldJourney/);
   assert.doesNotMatch(appHomeSource, /const GoldToGoldCard/);
   assert.doesNotMatch(myGoldVaultSource, /MY_GOLD_BAR_DENOMS|function getGoldBarReadiness/);
-  assert.match(appGoldJourneySource, /GOLD JOURNEY · MY GOLD에서 골드바까지/);
+  assert.match(appGoldJourneySource, /MY GOLD → 골드바/);
   assert.match(appGoldJourneySource, /GOLD TO GOLD · 기록 기준 예상/);
   assert.match(appGoldJourneySource, /실제 교환은 매장 실측 후 확정합니다/);
 });
@@ -198,6 +198,13 @@ test("2.4 GOLD TO GOLD는 온라인 예상과 실제 매장 확정을 분리하�
   assert.match(goldExchangeStepsSource, /예상 제작 공임/);
   assert.match(goldExchangeStepsSource, /전체 공임표 보기/);
   assert.match(goldExchangeStepsSource, /이 예상으로 방문 예약 계속/);
+  assert.match(appGoldJourneySource, /\$\{readiness\.label\} 교환 가능합니다\./);
+  assert.match(appGoldJourneySource, /<strong>다음 목표<\/strong>/);
+  assert.match(appGoldJourneySource, /교환 가능<\/StatusPill>/);
+  assert.doesNotMatch(appGoldJourneySource, /GOLD JOURNEY ·|GOLD JOURNEY MILESTONE/);
+  assert.match(goldExchangeStepsSource, /g 더 필요<\/AIBadge>/);
+  assert.match(goldExchangeStepsSource, /위 추가 조합 선택 후 예상 잔여/);
+  assert.doesNotMatch(goldExchangeStepsSource, /<AIBadge>추가해서 선택<\/AIBadge>/);
   assert.match(goldExchangeStepsSource, /<Title>방문 예약 요청<\/Title>/);
   assert.match(goldExchangeStepsSource, /온라인 예상 · 매장 확정 전/);
   assert.match(goldExchangeStepsSource, /현재 상태 · 예약 확인 대기/);
