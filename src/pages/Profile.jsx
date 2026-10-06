@@ -12,14 +12,7 @@ import { requestEmailChange } from "../services/authService";
 import { storage } from "../firebase/firebase";
 import Loader from "../components/common/Loader";
 import { compressImage } from "../utils/imageCompression";
-import {
-  cancelBonusGoldUsage,
-  claimWelcomeGoldBonus,
-  getBonusGoldUsageState,
-  getGoldQuizBonusStatus,
-  getMemberBonusStatus,
-  requestBonusGoldUsage,
-} from "../services/quizClient";
+import useBonusGoldBalance from "@/hooks/useBonusGoldBalance";
 
 /* ───────────── Styled ───────────── */
 const Container = styled.div`
@@ -288,28 +281,6 @@ const RewardTitle = styled.strong`
   font-weight: 900;
 `;
 
-const RewardToggle = styled.button`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  width: 100%;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-
-  svg {
-    width: 18px;
-    height: 18px;
-    flex: 0 0 auto;
-    color: ${({ theme }) => theme.colors.textSecondary};
-    transform: rotate(${({ $open }) => ($open ? "90deg" : "0deg")});
-    transition: transform 160ms ease;
-  }
-`;
 
 const RewardSummary = styled.span`
   display: inline-flex;
@@ -322,28 +293,8 @@ const RewardSummary = styled.span`
   white-space: nowrap;
 `;
 
-const RewardDetails = styled.div`
-  display: grid;
-  gap: 10px;
-`;
 
-const RewardRow = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding-top: 9px;
-  border-top: 1px solid ${({ theme }) => theme.colors.border};
 
-  b {
-    white-space: nowrap;
-  }
-`;
-
-const RewardTotal = styled(RewardRow)`
-  color: ${({ theme }) => theme.colors.primary};
-  font-weight: 800;
-`;
 
 const RewardNote = styled.p`
   margin: 0;
@@ -352,21 +303,6 @@ const RewardNote = styled.p`
   line-height: 1.6;
 `;
 
-const RewardAction = styled.button`
-  min-height: 43px;
-  padding: 9px 13px;
-  border: 1px solid ${({ theme }) => theme.colors.primary};
-  border-radius: 10px;
-  background: ${({ theme }) => theme.colors.primary};
-  color: ${({ theme }) => theme.colors.goldLight};
-  font-weight: 850;
-  cursor: pointer;
-
-  &:disabled {
-    opacity: 0.55;
-    cursor: not-allowed;
-  }
-`;
 
 const RewardLink = styled(Link)`
   display: inline-flex;
@@ -382,44 +318,9 @@ const RewardLink = styled(Link)`
   text-decoration: none;
 `;
 
-const RewardUsagePanel = styled.div`
-  display: grid;
-  gap: 10px;
-  padding: 13px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 12px;
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.text};
-`;
 
-const RewardSelect = styled.select`
-  width: 100%;
-  min-height: 44px;
-  padding: 9px 11px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 10px;
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.text};
-`;
 
-const RewardCode = styled.strong`
-  display: block;
-  padding: 12px;
-  border: 1px dashed ${({ theme }) => theme.colors.secondary};
-  border-radius: 10px;
-  background: ${({ theme }) => theme.semantic.badgeGoldBg};
-  color: ${({ theme }) => theme.colors.primary};
-  font-family: ${({ theme }) => theme.fonts.numeric};
-  font-size: 1.55rem;
-  letter-spacing: 0.16em;
-  text-align: center;
-`;
 
-const RewardError = styled.p`
-  margin: 0;
-  color: ${({ theme }) => theme.semantic.alertErrorText};
-  font-size: 0.9rem;
-`;
 
 
 const MyHub = styled.nav`
@@ -564,29 +465,7 @@ export default function Profile() {
   const [emailPassword, setEmailPassword] = useState("");
   const [changingEmail, setChangingEmail] = useState(false);
 
-  const [goldBonus, setGoldBonus] = useState({
-    loading: true,
-    welcomeClaimed: false,
-    welcomeG: 0,
-    marketingClaimed: false,
-    marketingG: 0,
-    marketingUnavailable: false,
-    quizClaimed: false,
-    quizG: 0,
-    earnedG: 0,
-    maxG: 0.03,
-    balanceG: 0,
-    restoredBalanceG: 0,
-    spendableG: 0,
-    usage: null,
-    eligibleGroups: [],
-    usageUnavailable: false,
-  });
-  const [rewardDetailsOpen, setRewardDetailsOpen] = useState(false);
-  const [bonusUsageOpen, setBonusUsageOpen] = useState(false);
-  const [selectedBonusGroupId, setSelectedBonusGroupId] = useState("");
-  const [bonusActionBusy, setBonusActionBusy] = useState(false);
-  const [bonusActionError, setBonusActionError] = useState("");
+  const { balanceG: memberGoldBalanceG, loading: memberGoldLoading } = useBonusGoldBalance(user?.uid);
 
   useEffect(() => {
     return () => {
@@ -643,225 +522,6 @@ export default function Profile() {
       cancelled = true;
     };
   }, [user?.uid, user?.displayName, user?.email, auth]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    if (!user?.uid) {
-      setGoldBonus({
-        loading: false,
-        welcomeClaimed: false,
-        welcomeG: 0,
-        marketingClaimed: false,
-        marketingG: 0,
-        marketingUnavailable: false,
-        quizClaimed: false,
-        quizG: 0,
-        earnedG: 0,
-        maxG: 0.03,
-        balanceG: 0,
-        restoredBalanceG: 0,
-        spendableG: 0,
-        usage: null,
-        eligibleGroups: [],
-        usageUnavailable: false,
-      });
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    setGoldBonus((current) => ({ ...current, loading: true }));
-
-    (async () => {
-      let welcome = null;
-      let welcomeUnavailable = false;
-      try {
-        welcome = await claimWelcomeGoldBonus();
-      } catch {
-        welcomeUnavailable = true;
-      }
-
-      let usage = null;
-      let usageUnavailable = false;
-      try {
-        usage = await getBonusGoldUsageState();
-      } catch {
-        usageUnavailable = true;
-      }
-
-      let memberBonus = null;
-      let memberBonusUnavailable = false;
-
-      try {
-        memberBonus = await getMemberBonusStatus();
-      } catch {
-        memberBonusUnavailable = true;
-      }
-
-      let quiz = null;
-      let quizUnavailable = false;
-
-      // 새 통합 혜택 조회가 일시적으로 실패하더라도
-      // 기존 퀵퀴즈 상태는 계속 보여줄 수 있게 폴백합니다.
-      if (!memberBonus) {
-        try {
-          quiz = await getGoldQuizBonusStatus(user.uid);
-        } catch {
-          quizUnavailable = true;
-        }
-      }
-
-      if (!cancelled) {
-        const rewards = memberBonus?.rewards || {};
-        const welcomeReward = rewards.welcome || {};
-        const marketingReward = rewards.marketingPush || {};
-        const quizReward = rewards.quiz || {};
-
-        const welcomeClaimed =
-          memberBonus
-            ? !!welcomeReward.claimed
-            : !!welcome?.claimed;
-        const welcomeG = Number(
-          memberBonus
-            ? welcomeReward.creditedG || 0
-            : welcome?.creditedG || 0
-        );
-
-        const marketingClaimed =
-          !!marketingReward.claimed;
-        const marketingG = Number(
-          marketingReward.creditedG || 0
-        );
-
-        const quizClaimed =
-          memberBonus
-            ? !!quizReward.claimed
-            : !!quiz?.claimed;
-        const quizG = Number(
-          memberBonus
-            ? quizReward.creditedG || 0
-            : quiz?.creditedG || 0
-        );
-
-        const earnedG = Number(
-          memberBonus?.earnedG ??
-            welcomeG + marketingG + quizG
-        );
-        const maxG = Number(
-          memberBonus?.maxG ?? 0.03
-        );
-
-        const fallbackBalance = Math.max(
-          Number(memberBonus?.balanceG || 0),
-          Number(welcome?.balanceG || 0),
-          Number(quiz?.balanceG || 0)
-        );
-
-        setGoldBonus({
-          loading: false,
-          welcomeClaimed,
-          welcomeG,
-          welcomeUnavailable:
-            welcomeUnavailable && !memberBonus,
-          marketingClaimed,
-          marketingG,
-          marketingUnavailable:
-            memberBonusUnavailable,
-          quizClaimed,
-          quizG,
-          quizUnavailable:
-            quizUnavailable && !memberBonus,
-          earnedG,
-          maxG,
-          balanceG: Number(
-            usage?.balanceG ?? fallbackBalance
-          ),
-          restoredBalanceG: Number(memberBonus?.restoredBalanceG || 0),
-          spendableG: Number(
-            usage?.spendableG ??
-              usage?.balanceG ??
-              fallbackBalance
-          ),
-          usage: usage?.request || null,
-          eligibleGroups: Array.isArray(
-            usage?.eligibleGroups
-          )
-            ? usage.eligibleGroups
-            : [],
-          usageUnavailable,
-        });
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.uid]);
-
-  useEffect(() => {
-    if (!selectedBonusGroupId && goldBonus.eligibleGroups.length > 0) {
-      setSelectedBonusGroupId(goldBonus.eligibleGroups[0].groupId);
-    }
-    if (goldBonus.usage?.status === "requested") {
-      setBonusUsageOpen(true);
-    }
-  }, [goldBonus.eligibleGroups, goldBonus.usage?.status, selectedBonusGroupId]);
-
-  const handleBonusUsageRequest = async () => {
-    if (!selectedBonusGroupId) {
-      setBonusActionError("적립 순금을 사용할 금교환 예약을 선택해 주세요.");
-      return;
-    }
-
-    setBonusActionBusy(true);
-    setBonusActionError("");
-
-    try {
-      const result = await requestBonusGoldUsage(selectedBonusGroupId);
-      setGoldBonus((current) => ({
-        ...current,
-        balanceG: Number(result?.balanceG ?? current.balanceG),
-        spendableG: Number(result?.spendableG ?? 0),
-        usage: result?.request || current.usage,
-      }));
-      setBonusUsageOpen(true);
-    } catch (requestError) {
-      setBonusActionError(
-        requestError?.message || "사용 신청을 처리하지 못했습니다."
-      );
-    } finally {
-      setBonusActionBusy(false);
-    }
-  };
-
-  const handleBonusUsageCancel = async () => {
-    if (!window.confirm("적립 순금 사용 신청을 취소할까요?")) return;
-
-    setBonusActionBusy(true);
-    setBonusActionError("");
-
-    try {
-      await cancelBonusGoldUsage();
-      const usage = await getBonusGoldUsageState();
-      setGoldBonus((current) => ({
-        ...current,
-        balanceG: Number(usage?.balanceG || 0),
-        spendableG: Number(usage?.spendableG ?? usage?.balanceG ?? 0),
-        usage: usage?.request || null,
-        eligibleGroups: Array.isArray(usage?.eligibleGroups)
-          ? usage.eligibleGroups
-          : [],
-      }));
-      setBonusUsageOpen(false);
-    } catch (cancelError) {
-      setBonusActionError(
-        cancelError?.message || "사용 신청을 취소하지 못했습니다."
-      );
-    } finally {
-      setBonusActionBusy(false);
-    }
-  };
 
   const handlePhotoChange = async (event) => {
     const input = event.currentTarget;
@@ -1064,35 +724,6 @@ export default function Profile() {
     }
   };
 
-  const usageStatusLabel =
-    {
-      requested: "매장 확인 대기",
-      used: "사용 완료",
-      canceled: "신청 취소",
-      restored: "잔액 복구 완료",
-    }[goldBonus.usage?.status] || "";
-
-  const canRequestBonus =
-    goldBonus.balanceG > 0 && goldBonus.usage?.status !== "requested";
-
-  const previousBenefitCount = [
-    goldBonus.welcomeClaimed && goldBonus.welcomeG <= 0,
-    goldBonus.marketingClaimed && goldBonus.marketingG <= 0,
-    goldBonus.quizClaimed && goldBonus.quizG <= 0,
-  ].filter(Boolean).length;
-
-  const claimedBenefitCount = [
-    goldBonus.welcomeClaimed,
-    goldBonus.marketingClaimed,
-    goldBonus.quizClaimed,
-  ].filter(Boolean).length;
-
-  const rewardSummaryText = goldBonus.loading
-    ? "확인 중"
-    : goldBonus.usage?.status === "requested"
-      ? `사용 신청 중 · 순금 ${Number(goldBonus.usage.amountG || 0).toFixed(2)}g`
-      : `사용 가능 순금 ${goldBonus.spendableG.toFixed(2)}g`;
-
   if (!user) {
     return (
       <Container>
@@ -1135,216 +766,23 @@ export default function Profile() {
       </MyHub>
 
       <Section>
-        <RewardPanel aria-label="순금 적립 내역">
-          <RewardToggle
-            type="button"
-            onClick={() => setRewardDetailsOpen((open) => !open)}
-            aria-expanded={rewardDetailsOpen}
-            aria-controls="profile-gold-reward-details"
-            $open={rewardDetailsOpen}
-          >
-            <RewardTitle>
-              <span aria-hidden="true">✨</span>
-              순금 적립 내역
-            </RewardTitle>
-            <RewardSummary>
-              {rewardSummaryText}
-              <ChevronRight aria-hidden="true" />
-            </RewardSummary>
-          </RewardToggle>
-
-          {rewardDetailsOpen && (
-            <RewardDetails id="profile-gold-reward-details">
-              {goldBonus.loading ? (
-                <span>적립 내역을 확인하고 있습니다.</span>
-              ) : (
-                <>
-              <RewardRow>
-                <span>회원가입 혜택</span>
-                <b>
-                  {goldBonus.welcomeClaimed
-                    ? goldBonus.welcomeG > 0
-                      ? `순금 ${goldBonus.welcomeG.toFixed(2)}g 적립`
-                      : "이전 가입에서 지급됨"
-                    : goldBonus.welcomeUnavailable
-                      ? "조회 필요"
-                      : "적립 확인 중"}
-                </b>
-              </RewardRow>
-
-              <RewardRow>
-                <span>금시세 알림</span>
-                {goldBonus.marketingClaimed ? (
-                  <b>
-                    {goldBonus.marketingG > 0
-                      ? `순금 ${goldBonus.marketingG.toFixed(2)}g 적립`
-                      : "이전 가입에서 지급됨"}
-                  </b>
-                ) : goldBonus.marketingUnavailable ? (
-                  <b>조회 필요</b>
-                ) : (
-                  <Link to="/settings">순금 0.01g 더 받기</Link>
-                )}
-              </RewardRow>
-
-              <RewardRow>
-                <span>금 상식 퀵퀴즈</span>
-                {goldBonus.quizClaimed ? (
-                  <b>
-                    {goldBonus.quizG > 0
-                      ? `순금 ${goldBonus.quizG.toFixed(2)}g 적립`
-                      : "이전 가입에서 지급됨"}
-                  </b>
-                ) : goldBonus.quizUnavailable ? (
-                  <b>조회 필요</b>
-                ) : (
-                  <Link to="/quiz/gold-bonus">순금 0.01g 더 받기</Link>
-                )}
-              </RewardRow>
-
-              {previousBenefitCount > 0 && (
-                <RewardNote>
-                  같은 인증 이메일로 이전 가입에서 받은 순금 혜택은 재가입 시 중복 지급되지 않습니다.
-                  {goldBonus.restoredBalanceG > 0
-                    ? ` 이전 계정에서 사용하지 않은 적립 순금 ${goldBonus.restoredBalanceG.toFixed(2)}g은 현재 사용 가능 잔액으로 복원되었습니다.`
-                    : " 혜택 지급 이력과 현재 사용 가능한 적립 순금은 구분해 표시합니다."}
-                </RewardNote>
-              )}
-
-              <RewardTotal>
-                <span>순금 혜택 지급 현황</span>
-                <b>
-                  {claimedBenefitCount}/{3} 지급 완료
-                  {claimedBenefitCount >= 3 ? " 🎉" : ""}
-                </b>
-              </RewardTotal>
-
-              <RewardTotal>
-                <span>지금 사용 가능한 적립 순금</span>
-                <b>순금 {goldBonus.spendableG.toFixed(2)}g</b>
-              </RewardTotal>
-
-              {goldBonus.usage && (
-                <RewardUsagePanel aria-live="polite">
-                  <b>적립 순금 사용 상태 · {usageStatusLabel}</b>
-                  <span>
-                    신청 중량 순금 {Number(goldBonus.usage.amountG || 0).toFixed(2)}g
-                    {goldBonus.usage.visitDate
-                      ? ` · ${goldBonus.usage.visitDate} ${
-                          goldBonus.usage.visitTime || ""
-                        }`
-                      : ""}
-                  </span>
-
-                  {goldBonus.usage.status === "requested" && (
-                    <>
-                      <span>
-                        매장에서 아래 6자리 코드를 관리자에게 보여주세요.
-                      </span>
-                      <RewardCode
-                        aria-label={`매장 확인 코드 ${goldBonus.usage.requestCode}`}
-                      >
-                        {goldBonus.usage.requestCode}
-                      </RewardCode>
-                      <RewardAction
-                        type="button"
-                        disabled={bonusActionBusy}
-                        onClick={handleBonusUsageCancel}
-                      >
-                        {bonusActionBusy ? "처리 중…" : "사용 신청 취소"}
-                      </RewardAction>
-                    </>
-                  )}
-
-                  {goldBonus.usage.status === "used" && (
-                    <span>
-                      현장 인정{" "}
-                      {Number(goldBonus.usage.finalRecognizedG || 0).toFixed(2)}g
-                      {" + "}적립{" "}
-                      {Number(goldBonus.usage.amountG || 0).toFixed(2)}g
-                      {" = "}최종{" "}
-                      {Number(goldBonus.usage.finalAppliedG || 0).toFixed(2)}g
-                    </span>
-                  )}
-                </RewardUsagePanel>
-              )}
-
-              {canRequestBonus && goldBonus.eligibleGroups.length > 0 && (
-                <>
-                  <RewardAction
-                    type="button"
-                    onClick={() => setBonusUsageOpen((open) => !open)}
-                    aria-expanded={bonusUsageOpen}
-                  >
-                    {bonusUsageOpen ? "사용 신청 닫기" : "적립 순금 사용 신청"}
-                  </RewardAction>
-
-                  {bonusUsageOpen &&
-                    goldBonus.usage?.status !== "requested" && (
-                      <RewardUsagePanel>
-                        <label htmlFor="bonus-exchange-group">
-                          <b>사용할 금교환 예약</b>
-                        </label>
-
-                        <RewardSelect
-                          id="bonus-exchange-group"
-                          value={selectedBonusGroupId}
-                          onChange={(event) =>
-                            setSelectedBonusGroupId(event.target.value)
-                          }
-                        >
-                          {goldBonus.eligibleGroups.map((group) => (
-                            <option key={group.groupId} value={group.groupId}>
-                              {group.visitDate || "방문일 미정"}{" "}
-                              {group.visitTime || ""} ·{" "}
-                              {group.status === "requested"
-                                ? "접수"
-                                : group.status === "scheduled"
-                                  ? "예약 승인"
-                                  : "진행 중"}
-                            </option>
-                          ))}
-                        </RewardSelect>
-
-                        <RewardNote>
-                          현재 보유한 적립 순금 전액을 선택한 교환 건에
-                          신청합니다.
-                        </RewardNote>
-
-                        <RewardAction
-                          type="button"
-                          disabled={bonusActionBusy || !selectedBonusGroupId}
-                          onClick={handleBonusUsageRequest}
-                        >
-                          {bonusActionBusy
-                            ? "신청 중…"
-                            : `순금 ${goldBonus.balanceG.toFixed(2)}g 사용 신청`}
-                        </RewardAction>
-                      </RewardUsagePanel>
-                    )}
-                </>
-              )}
-
-              {canRequestBonus &&
-                goldBonus.eligibleGroups.length === 0 &&
-                !goldBonus.usageUnavailable && (
-                  <RewardLink to="/gold-exchange">
-                    금교환 예약 후 사용 신청
-                  </RewardLink>
-                )}
-
-              {bonusActionError && (
-                <RewardError role="alert">{bonusActionError}</RewardError>
-              )}
-
-                  <RewardNote>
-                    각 혜택은 계정당 1회 제공됩니다. 적립 순금은 골드바 교환 시
-                    사용할 수 있으며 현금 환급·양도는 불가합니다.
-                  </RewardNote>
-                </>
-              )}
-            </RewardDetails>
-          )}
+        <RewardPanel aria-label="MEMBER GOLD 요약">
+          <RewardTitle>
+            <span aria-hidden="true">✨</span>
+            MEMBER GOLD
+          </RewardTitle>
+          <RewardSummary>
+            {memberGoldLoading
+              ? "잔액 확인 중"
+              : `MEMBER GOLD 잔액 ${Number(memberGoldBalanceG || 0).toFixed(2)}g`}
+          </RewardSummary>
+          <RewardNote>
+            회원혜택으로 받은 순금입니다. MY GOLD와는 별도로 관리되며 GOLD TO GOLD 교환 시 사용할 수 있습니다.
+          </RewardNote>
+          <RewardLink to="/member-gold">
+            내 MEMBER GOLD 보기
+            <ChevronRight aria-hidden="true" />
+          </RewardLink>
         </RewardPanel>
 
         {error && <MessageText $error>{error}</MessageText>}

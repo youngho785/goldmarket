@@ -211,9 +211,9 @@ async function announceCarryoverRestore(
   try {
     await addNotificationForUser(uid, {
       type: "bonus_gold_carryover_restored",
-      title: "미사용 적립 순금 복원 완료",
+      title: "미사용 MEMBER GOLD 복원 완료",
       body: `이전 계정에서 사용하지 않은 순금 ${result.restoredG.toFixed(2)}g을 복원했습니다. 기존 혜택은 중복 지급되지 않습니다.`,
-      link: "/profile",
+      link: "/member-gold",
       meta: {
         event: BENEFIT_BALANCE_CARRYOVER_LEDGER_SOURCE,
         restoredG: result.restoredG,
@@ -629,7 +629,7 @@ export const welcomeClaimGoldBonus = onCall(
           type: "welcome_bonus",
           title: "웰컴 순금 적립 완료",
           body: `회원가입 웰컴 순금 ${res.creditedG.toFixed(2)}g이 적립되었습니다. 골드바 교환 시 사용할 수 있습니다.`,
-          link: "/profile",
+          link: "/member-gold",
           meta: { event: WELCOME_BONUS_PROMO_ID, creditedG: res.creditedG },
         });
       } catch (error) {
@@ -737,7 +737,7 @@ export const marketingPushClaimGoldBonus = onCall(
           type: "marketing_push_bonus",
           title: "광고성 정보 수신 설정 순금 적립",
           body: `광고성 정보 수신 앱푸시 설정 혜택 순금 ${res.creditedG.toFixed(2)}g이 적립되었습니다. 골드바 교환 시 사용할 수 있습니다.`,
-          link: "/profile",
+          link: "/member-gold",
           meta: {
             event: MARKETING_PUSH_BONUS_PROMO_ID,
             creditedG: res.creditedG,
@@ -752,6 +752,133 @@ export const marketingPushClaimGoldBonus = onCall(
     }
 
     return res;
+  }
+);
+
+export const memberGoldGetOverview = onCall(
+  {
+    region: "asia-northeast3",
+    enforceAppCheck: ENFORCE_APP_CHECK,
+  },
+  async (req) => {
+    const verifiedUser = await requireVerifiedUserRecord(req.auth?.uid);
+    const uid = verifiedUser.uid;
+    const identityHash = benefitIdentityHashForVerifiedUser(verifiedUser);
+
+    // 조회 자체가 신규 혜택을 지급하지는 않습니다. 다만 탈퇴 전 남아 있던
+    // 미사용 MEMBER GOLD carryover는 기존 정책대로 안전하게 복원합니다.
+    const carryover = await restoreBenefitBalanceCarryover(uid, identityHash);
+    await announceCarryoverRestore(uid, carryover);
+
+    const userRef = db().doc(`users/${uid}`);
+    const claimLockRef = benefitClaimLockRef(identityHash);
+    const requestRef = db().doc(`bonusGoldRedemptionRequests/${uid}`);
+    const groupsQuery = db().collection("goldExchangeGroups").where("ownerUid", "==", uid);
+
+    const [
+      userSnap,
+      welcomeSnap,
+      marketingSnap,
+      quizSnap,
+      claimLockSnap,
+      requestSnap,
+      groupsSnap,
+    ] = await Promise.all([
+      userRef.get(),
+      userRef.collection("promotions").doc(WELCOME_BONUS_PROMO_ID).get(),
+      userRef.collection("promotions").doc(MARKETING_PUSH_BONUS_PROMO_ID).get(),
+      userRef.collection("promotions").doc(QUIZ_BONUS_PROMO_ID).get(),
+      claimLockRef.get(),
+      requestRef.get(),
+      groupsQuery.get(),
+    ]);
+
+    const creditedMg = (
+      snap: FirebaseFirestore.DocumentSnapshot,
+      fallbackMg: number
+    ): number => {
+      if (!snap.exists) return 0;
+      const data = snap.data() || {};
+      return toNonNegativeInteger(
+        data.creditedMilliGrams,
+        Math.round(Number(data.creditedG || fallbackMg / 1000) * 1000)
+      );
+    };
+
+    const welcomeMg = creditedMg(welcomeSnap, WELCOME_BONUS_CREDIT_MG);
+    const marketingMg = creditedMg(marketingSnap, MARKETING_PUSH_BONUS_CREDIT_MG);
+    const quizMg = creditedMg(quizSnap, QUIZ_BONUS_CREDIT_MG);
+    const earnedMg = welcomeMg + marketingMg + quizMg;
+    const maxMg =
+      WELCOME_BONUS_CREDIT_MG +
+      MARKETING_PUSH_BONUS_CREDIT_MG +
+      QUIZ_BONUS_CREDIT_MG;
+
+    const userData = userSnap.data();
+    const balanceMg = bonusBalanceMilliGrams(userData);
+    const restoredBalanceMg = toNonNegativeInteger(
+      userData?.bonusGoldCarryoverRestoredMilliGrams
+    );
+    const requestData = requestSnap.exists ? requestSnap.data() : undefined;
+    const requestStatus = String(requestData?.status || "");
+    const requestedMg = requestStatus === "requested"
+      ? toNonNegativeInteger(requestData?.amountMilliGrams)
+      : 0;
+
+    const rewardState = (
+      snap: FirebaseFirestore.DocumentSnapshot,
+      rewardKey: "welcome" | "marketingPush" | "quiz",
+      amountMg: number
+    ) => ({
+      claimed: snap.exists || benefitClaimedFromLock(claimLockSnap, rewardKey),
+      claimedThisAccount: snap.exists,
+      previouslyClaimed: !snap.exists && benefitClaimedFromLock(claimLockSnap, rewardKey),
+      creditedMilliGrams: amountMg,
+      creditedG: amountMg / 1000,
+    });
+
+    const rewards = {
+      welcome: rewardState(welcomeSnap, "welcome", welcomeMg),
+      marketingPush: rewardState(marketingSnap, "marketingPush", marketingMg),
+      quiz: rewardState(quizSnap, "quiz", quizMg),
+    };
+    const completedBenefitCount = Object.values(rewards).filter((reward) => reward.claimed).length;
+
+    // 기존 레거시 상태("교환중")까지 안전하게 포함하기 위해 1차 통합에서는
+    // ownerUid 기준 조회 후 비활성 상태만 제외합니다. 이후 데이터 정리 후 쿼리 최적화합니다.
+    const eligibleGroups = groupsSnap.docs
+      .map((document) => {
+        const data = document.data() || {};
+        return {
+          groupId: document.id,
+          status: String(data.repStatus || "requested"),
+          visitDate: String(data.visitDate || ""),
+          visitTime: String(data.visitTime || ""),
+          totalG: Number(data.totalG || 0),
+        };
+      })
+      .filter((group) => !["completed", "canceled", "rejected"].includes(group.status))
+      .sort((a, b) => `${a.visitDate} ${a.visitTime}`.localeCompare(`${b.visitDate} ${b.visitTime}`));
+
+    return {
+      ok: true,
+      maxMilliGrams: maxMg,
+      earnedMilliGrams: earnedMg,
+      balanceMilliGrams: balanceMg,
+      restoredBalanceMilliGrams: restoredBalanceMg,
+      spendableMilliGrams: Math.max(0, balanceMg - requestedMg),
+      maxG: maxMg / 1000,
+      earnedG: roundTo3(earnedMg / 1000),
+      balanceG: balanceMg / 1000,
+      restoredBalanceG: restoredBalanceMg / 1000,
+      spendableG: Math.max(0, balanceMg - requestedMg) / 1000,
+      completedBenefitCount,
+      totalBenefitCount: Object.keys(rewards).length,
+      carryoverRestoredNow: carryover.restoredNow,
+      rewards,
+      request: publicBonusUsageRequest(requestData),
+      eligibleGroups,
+    };
   }
 );
 
@@ -818,7 +945,7 @@ export const memberBonusGetStatus = onCall(
 
     return {
       ok: true,
-      maxG: 0.03,
+      maxG: (WELCOME_BONUS_CREDIT_MG + MARKETING_PUSH_BONUS_CREDIT_MG + QUIZ_BONUS_CREDIT_MG) / 1000,
       earnedG: roundTo3(
         welcomeG + marketingG + quizG
       ),
@@ -907,7 +1034,7 @@ export const quizClaimGoldBonus = onCall<{
           type: "promo_bonus",
           title: "퀵퀴즈 보너스 지급",
           body: `축하합니다! ${res.creditedG.toFixed(2)}g 보너스가 적립되었습니다.`,
-          link: "/profile",
+          link: "/member-gold",
           meta: { event: QUIZ_BONUS_PROMO_ID, creditedG: res.creditedG, score },
         });
       } catch (error) {
@@ -920,7 +1047,7 @@ export const quizClaimGoldBonus = onCall<{
 );
 
 /* ─────────────────────────────────────────────────────────────
- * 적립 순금 사용 신청·매장 확정·복구
+ * MEMBER GOLD 사용 신청·매장 확정·복구
  * 잔액은 mg 정수로 보관하며, 모든 차감과 복구를 서버 트랜잭션으로 처리합니다.
  * ───────────────────────────────────────────────────────────── */
 type BonusUsageStatus = "requested" | "used" | "canceled" | "restored";
@@ -939,6 +1066,7 @@ function publicBonusUsageRequest(data: FirebaseFirestore.DocumentData | undefine
   const amountMg = toNonNegativeInteger(data.amountMilliGrams);
   return {
     status: String(data.status) as BonusUsageStatus,
+    amountMilliGrams: amountMg,
     amountG: amountMg / 1000,
     groupId: String(data.groupId || ""),
     requestCode: data.status === "requested" ? String(data.requestCode || "") : "",
@@ -1013,7 +1141,7 @@ export const bonusRequestGoldUsage = onCall<{ groupId: string }>(
 
     const groupId = cleanGroupId(req.data?.groupId);
     if (!groupId) {
-      throw new HttpsError("invalid-argument", "적립 순금을 사용할 금교환 예약을 선택해 주세요.");
+      throw new HttpsError("invalid-argument", "MEMBER GOLD를 사용할 금교환 예약을 선택해 주세요.");
     }
 
     const userRef = db().doc(`users/${uid}`);
@@ -1049,7 +1177,7 @@ export const bonusRequestGoldUsage = onCall<{ groupId: string }>(
 
       const balanceMg = bonusBalanceMilliGrams(userSnap.data());
       if (balanceMg <= 0) {
-        throw new HttpsError("failed-precondition", "사용 가능한 적립 순금이 없습니다.");
+        throw new HttpsError("failed-precondition", "사용 가능한 MEMBER GOLD가 없습니다.");
       }
 
       const now = FieldValue.serverTimestamp();
@@ -1098,14 +1226,14 @@ export const bonusRequestGoldUsage = onCall<{ groupId: string }>(
       await Promise.allSettled([
         addNotificationForUser(uid, {
           type: "bonus_gold_usage_requested",
-          title: "적립 순금 사용 신청 완료",
+          title: "MEMBER GOLD 사용 신청 완료",
           body: `${amountG.toFixed(2)}g 사용 신청을 매장에서 확인합니다. 6자리 확인 코드를 준비해 주세요.`,
-          link: "/profile",
+          link: "/member-gold",
           meta: { groupId, amountG },
         }),
         addNotificationForAdmins({
           type: "admin_bonus_gold_usage_requested",
-          title: "적립 순금 사용 신청",
+          title: "MEMBER GOLD 사용 신청",
           body: `${amountG.toFixed(2)}g 사용 확인이 필요한 금교환 예약입니다.`,
           link: `/admin/gold-exchange?groupId=${encodeURIComponent(groupId)}`,
           meta: { groupId, customerUid: uid, amountG },
@@ -1132,7 +1260,7 @@ export const bonusCancelGoldUsage = onCall(
     const result = await db().runTransaction(async (tx) => {
       const requestSnap = await tx.get(requestRef);
       if (!requestSnap.exists) {
-        throw new HttpsError("not-found", "적립 순금 사용 신청을 찾을 수 없습니다.");
+        throw new HttpsError("not-found", "MEMBER GOLD 사용 신청을 찾을 수 없습니다.");
       }
       const data = requestSnap.data() || {};
       if (data.status !== "requested") {
@@ -1160,15 +1288,15 @@ export const bonusCancelGoldUsage = onCall(
     await Promise.allSettled([
       addNotificationForUser(uid, {
         type: "bonus_gold_usage_canceled",
-        title: "적립 순금 사용 신청 취소",
+        title: "MEMBER GOLD 사용 신청 취소",
         body: `${result.amountG.toFixed(2)}g이 다시 사용 가능한 상태입니다.`,
-        link: "/profile",
+        link: "/member-gold",
         meta: { groupId: result.groupId, amountG: result.amountG },
       }),
       addNotificationForAdmins({
         type: "admin_bonus_gold_usage_canceled",
-        title: "적립 순금 사용 신청 취소",
-        body: "고객이 적립 순금 사용 신청을 취소했습니다.",
+        title: "MEMBER GOLD 사용 신청 취소",
+        body: "고객이 MEMBER GOLD 사용 신청을 취소했습니다.",
         link: `/admin/gold-exchange?groupId=${encodeURIComponent(result.groupId)}`,
         meta: { groupId: result.groupId, customerUid: uid },
       }),
@@ -1256,7 +1384,7 @@ export const bonusAdminConfirmGoldUsage = onCall<{
       if (!uid || groupData.bonusGoldUsageStatus !== "requested") {
         throw new HttpsError(
           "failed-precondition",
-          "확인 대기 중인 적립 순금 신청이 없습니다."
+          "확인 대기 중인 MEMBER GOLD 신청이 없습니다."
         );
       }
 
@@ -1304,7 +1432,7 @@ export const bonusAdminConfirmGoldUsage = onCall<{
       if (ledgerSnap.exists) {
         throw new HttpsError(
           "already-exists",
-          "이미 차감 처리된 적립 순금입니다."
+          "이미 차감 처리된 MEMBER GOLD입니다."
         );
       }
 
@@ -1316,7 +1444,7 @@ export const bonusAdminConfirmGoldUsage = onCall<{
       if (amountMg <= 0 || balanceMg < amountMg) {
         throw new HttpsError(
           "failed-precondition",
-          "고객의 적립 순금 잔액을 다시 확인해 주세요."
+          "고객의 MEMBER GOLD 잔액을 다시 확인해 주세요."
         );
       }
 
@@ -1414,9 +1542,9 @@ export const bonusAdminConfirmGoldUsage = onCall<{
     if (!result.alreadyUsed) {
       await addNotificationForUser(result.uid, {
         type: "bonus_gold_usage_completed",
-        title: "적립 순금 사용 완료",
+        title: "MEMBER GOLD 사용 완료",
         body:
-          `적립 순금 ${result.amountG.toFixed(2)}g을 적용해 ` +
+          `MEMBER GOLD ${result.amountG.toFixed(2)}g을 적용해 ` +
           `최종 ${result.finalAppliedG.toFixed(2)}g으로 확인했습니다.`,
         link: "/my-exchanges",
         meta: {
@@ -1443,7 +1571,7 @@ export const bonusAdminCancelGoldUsage = onCall<{ groupId: string; reason?: stri
     const result = await db().runTransaction(async (tx) => {
       const groupSnap = await tx.get(groupRef);
       if (!groupSnap.exists || groupSnap.get("bonusGoldUsageStatus") !== "requested") {
-        throw new HttpsError("failed-precondition", "취소할 적립 순금 사용 신청이 없습니다.");
+        throw new HttpsError("failed-precondition", "취소할 MEMBER GOLD 사용 신청이 없습니다.");
       }
       const uid = String(groupSnap.get("bonusGoldRequestUid") || "");
       const requestRef = db().doc(`bonusGoldRedemptionRequests/${uid}`);
@@ -1466,9 +1594,9 @@ export const bonusAdminCancelGoldUsage = onCall<{ groupId: string; reason?: stri
 
     await addNotificationForUser(result.uid, {
       type: "bonus_gold_usage_canceled",
-      title: "적립 순금 사용 신청 취소",
+      title: "MEMBER GOLD 사용 신청 취소",
       body: `${result.amountG.toFixed(2)}g 사용 신청이 취소되어 다시 사용할 수 있습니다.`,
-      link: "/profile",
+      link: "/member-gold",
       meta: { groupId, amountG: result.amountG, reason },
     });
     return { ok: true, groupId, ...result };

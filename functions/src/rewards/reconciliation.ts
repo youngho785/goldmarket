@@ -143,7 +143,7 @@ export async function reconcileBonusUsageForGroup(args: {
       )
     );
 
-    // 적립 순금 복구 시에는 현장 인정 중량만을 기준으로
+    // MEMBER GOLD 복구 시에는 현장 인정 중량만을 기준으로
     // 골드바 계획과 잔여 중량을 원상 복구합니다.
     const restoredBarsPlan =
       sourceBarsPlan != null && recognizedG > 0
@@ -236,12 +236,12 @@ export async function reconcileBonusUsageForGroup(args: {
       ? "bonus_gold_usage_restored"
       : "bonus_gold_usage_canceled",
     title: result.restored
-      ? "적립 순금이 복구되었습니다"
-      : "적립 순금 사용 신청 취소",
+      ? "MEMBER GOLD가 복구되었습니다"
+      : "MEMBER GOLD 사용 신청 취소",
     body: result.restored
       ? `교환 상태 변경으로 ${result.amountG.toFixed(2)}g이 다시 적립되었습니다.`
       : `${result.amountG.toFixed(2)}g 사용 신청이 취소되었습니다.`,
-    link: "/profile",
+    link: "/member-gold",
     meta: {
       groupId,
       amountG: result.amountG,

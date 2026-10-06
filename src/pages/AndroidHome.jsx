@@ -20,6 +20,7 @@ import {
 
 import AppMyGoldDashboard from "@/components/gold/AppMyGoldDashboard";
 import AppGoldJourney from "@/components/gold/AppGoldJourney";
+import MemberGoldSummaryCard from "@/components/gold/MemberGoldSummaryCard";
 import MyGoldAlertSummary from "@/components/gold/MyGoldAlertSummary";
 import QuickGoldValueCalculator from "@/components/gold/QuickGoldValueCalculator";
 import { useAuthContext } from "@/context/AuthContext";
@@ -260,6 +261,8 @@ export default function AndroidHome() {
           <ChevronRight aria-hidden />
         </ReservationCard>
       )}
+
+      <MemberGoldSummaryCard uid={user?.uid} compact />
 
       {!user?.uid && (
         <QuickGoldValueCalculator

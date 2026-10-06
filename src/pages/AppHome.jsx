@@ -16,6 +16,7 @@ import VerifiedReviewSection from "@/components/reviews/VerifiedReviewSection";
 import { useAuthContext } from "@/context/AuthContext";
 import useGoldVaultDashboard from "@/hooks/useGoldVaultDashboard";
 import AppGoldJourney from "@/components/gold/AppGoldJourney";
+import MemberGoldSummaryCard from "@/components/gold/MemberGoldSummaryCard";
 import { db } from "@/firebase/firebase";
 
 const Page = styled.div`
@@ -254,6 +255,7 @@ export default function AppHome() {
         />
       </OverviewGrid>
 
+      <MemberGoldSummaryCard uid={user?.uid} />
 
       {hasMyGold && !myGoldDashboard.itemsLoading && myGoldDashboard.ratesReady && (
         <AppGoldJourney

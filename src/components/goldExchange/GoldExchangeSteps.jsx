@@ -603,6 +603,11 @@ export function ReserveStep({
   loading,
   calculated, setStep,
   barsPlan,
+  memberGoldBalanceG = 0,
+  memberGoldSpendableG = 0,
+  memberGoldPending = false,
+  useMemberGold = false,
+  setUseMemberGold = () => {},
 }) {
   const dateKey = visitDate ? format(visitDate, "yyyy-MM-dd") : "";
   const taken = useReservedSlots(dateKey); // ✅ 날짜별 선점 시간 Set
@@ -860,6 +865,47 @@ export function ReserveStep({
             )}
           </>
         )}
+        {(memberGoldBalanceG > 0 || memberGoldPending) && (
+          <>
+            <SectionSeparator />
+            <InfoCard role="group" aria-label="MEMBER GOLD 사용 선택">
+              <p style={{ margin: 0, fontWeight: 900 }}>
+                MEMBER GOLD · {Number(memberGoldBalanceG || 0).toFixed(2)}g
+              </p>
+              {memberGoldPending ? (
+                <>
+                  <p style={{ margin: "7px 0 0" }}>
+                    현재 다른 금교환 예약에 MEMBER GOLD 사용 신청이 연결되어 있습니다.
+                    기존 신청을 취소하거나 완료한 뒤 새 예약에 연결할 수 있습니다.
+                  </p>
+                  <OutlineButton as={Link} to="/member-gold" style={{ marginTop: 10 }}>
+                    MEMBER GOLD 확인
+                  </OutlineButton>
+                </>
+              ) : Number(memberGoldSpendableG || 0) > 0 ? (
+                <>
+                  <ConsentRow style={{ marginTop: 8 }}>
+                    <input
+                      type="checkbox"
+                      checked={useMemberGold}
+                      onChange={(e) => setUseMemberGold(e.target.checked)}
+                    />
+                    <span>
+                      이번 GOLD TO GOLD 예약에 <b>{Number(memberGoldSpendableG || 0).toFixed(2)}g 전액</b> 사용 신청
+                    </span>
+                  </ConsentRow>
+                  <ConsentDetails>
+                    선택해도 지금 바로 차감되지 않습니다. 예약 접수 후 사용 신청만 연결되며,
+                    매장에서 6자리 코드를 확인하고 실제 교환을 확정할 때 차감됩니다.
+                  </ConsentDetails>
+                </>
+              ) : (
+                <p style={{ margin: "7px 0 0" }}>현재 사용할 수 있는 MEMBER GOLD가 없습니다.</p>
+              )}
+            </InfoCard>
+          </>
+        )}
+
         <SectionSeparator />
         <ConsentBox>
           <ConsentRow>
@@ -979,7 +1025,7 @@ export function ReserveStep({
 }
 
 /* ── Step 4: 완료 ─────────────────────────────── */
-export function DoneStep({ status }) {
+export function DoneStep({ status, memberGoldUsage = null, memberGoldUsageError = "" }) {
   const gmapUrl = `https://maps.google.com/?q=${encodeURIComponent(STORE_INFO.address)}`;
   const naverUrl = `https://map.naver.com/v5/search/${encodeURIComponent(`${STORE_INFO.address} ${STORE_INFO.name}`)}`;
 
@@ -990,6 +1036,40 @@ export function DoneStep({ status }) {
         <PendingBadge>현재 상태 · 예약 확인 대기</PendingBadge>
         <Title>방문 예약 요청이 접수되었습니다</Title>
         <HelpText>아직 예약 확정이나 교환 완료 상태가 아닙니다. 관리자 확인 후 방문 예약이 확정되면 알림으로 안내드립니다.</HelpText>
+
+        {memberGoldUsage?.status === "requested" && (
+          <InfoCard role="status" style={{ marginTop: 12 }}>
+            <p style={{ margin: 0, fontWeight: 900 }}>
+              MEMBER GOLD {Number(memberGoldUsage.amountG || 0).toFixed(2)}g 사용 신청도 연결되었습니다.
+            </p>
+            <p style={{ margin: "7px 0 0" }}>
+              매장 방문 시 아래 6자리 확인 코드를 관리자에게 보여주세요. 실제 차감은 매장 교환 확정 시 이루어집니다.
+            </p>
+            <p
+              aria-label={`MEMBER GOLD 매장 확인 코드 ${memberGoldUsage.requestCode || ""}`}
+              style={{
+                margin: "12px 0 0",
+                fontSize: "1.7rem",
+                fontWeight: 950,
+                letterSpacing: ".16em",
+                color: "var(--gm-primary)",
+              }}
+            >
+              {memberGoldUsage.requestCode}
+            </p>
+          </InfoCard>
+        )}
+
+        {memberGoldUsageError && (
+          <InfoCard role="alert" style={{ marginTop: 12 }}>
+            <p style={{ margin: 0, fontWeight: 900 }}>예약은 정상 접수되었습니다.</p>
+            <p style={{ margin: "7px 0 0" }}>{memberGoldUsageError}</p>
+            <OutlineButton as={Link} to="/member-gold" style={{ marginTop: 10 }}>
+              MEMBER GOLD에서 다시 확인
+            </OutlineButton>
+          </InfoCard>
+        )}
+
         <OutlineButton as={Link} to="/my-exchanges" style={{ marginTop: 12 }}>
           내 예약 확인하기
         </OutlineButton>

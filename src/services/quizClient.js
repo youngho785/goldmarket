@@ -102,6 +102,31 @@ export async function claimMarketingPushGoldBonus() {
   }
 }
 
+export async function getMemberGoldOverview() {
+  const fn = httpsCallable(functions, "memberGoldGetOverview");
+
+  try {
+    const { data } = await fn();
+    return data;
+  } catch (error) {
+    const code = normalizeCallableCode(error);
+    if (code === "unauthenticated") {
+      throw new Error("로그인이 필요합니다.");
+    }
+    if (code === "failed-precondition") {
+      throw new Error(
+        callableMessage(error, "이메일 인증 후 MEMBER GOLD를 확인해 주세요.")
+      );
+    }
+    if (code === "unavailable") {
+      throw new Error("서버가 혼잡합니다. 잠시 후 다시 확인해 주세요.");
+    }
+    throw new Error(
+      callableMessage(error, "MEMBER GOLD 정보를 확인하지 못했습니다.")
+    );
+  }
+}
+
 export async function getMemberBonusStatus() {
   const fn = httpsCallable(
     functions,
@@ -267,13 +292,13 @@ function bonusUsageError(error, fallback) {
   }
   if (code === "already-exists") {
     return new Error(
-      "이미 처리된 적립 순금 사용 내역입니다."
+      "이미 처리된 MEMBER GOLD 사용 내역입니다."
     );
   }
   if (code === "failed-precondition") {
     return new Error(
       message ||
-        "현재 상태에서는 적립 순금을 사용할 수 없습니다."
+        "현재 상태에서는 MEMBER GOLD를 사용할 수 없습니다."
     );
   }
 
@@ -293,18 +318,18 @@ export async function getBonusGoldUsageState() {
   } catch (error) {
     throw bonusUsageError(
       error,
-      "적립 순금 사용 상태를 확인하지 못했습니다."
+      "MEMBER GOLD 사용 상태를 확인하지 못했습니다."
     );
   }
 }
 
-/** 보유 적립 순금 전액을 선택한 예약에 잠금 신청합니다. */
+/** 보유 MEMBER GOLD 전액을 선택한 예약에 잠금 신청합니다. */
 export async function requestBonusGoldUsage(groupId) {
   const normalizedGroupId = String(groupId || "").trim();
 
   if (!normalizedGroupId) {
     throw new Error(
-      "적립 순금을 사용할 금교환 예약을 선택해 주세요."
+      "MEMBER GOLD를 사용할 금교환 예약을 선택해 주세요."
     );
   }
 
@@ -321,7 +346,7 @@ export async function requestBonusGoldUsage(groupId) {
   } catch (error) {
     throw bonusUsageError(
       error,
-      "적립 순금 사용을 신청하지 못했습니다."
+      "MEMBER GOLD 사용을 신청하지 못했습니다."
     );
   }
 }
@@ -339,7 +364,7 @@ export async function cancelBonusGoldUsage() {
   } catch (error) {
     throw bonusUsageError(
       error,
-      "적립 순금 사용 신청을 취소하지 못했습니다."
+      "MEMBER GOLD 사용 신청을 취소하지 못했습니다."
     );
   }
 }

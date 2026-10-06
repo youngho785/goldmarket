@@ -17,6 +17,7 @@ import {
 } from "@/hooks/useGoldExchangeRemoteData";
 import useGoldExchangeAutoVault from "@/hooks/useGoldExchangeAutoVault";
 import useGoldExchangeVaultImport from "@/hooks/useGoldExchangeVaultImport";
+import useGoldExchangeMemberGold from "@/hooks/useGoldExchangeMemberGold";
 
 // 🔗 공용 goldRates 모듈
 import {
@@ -187,6 +188,15 @@ export default function GoldExchange() {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [exchangeId, setExchangeId] = useState(null); // groupId
+  const {
+    overview: memberGoldOverview,
+    useMemberGold,
+    setUseMemberGold,
+    usageResult: memberGoldUsageResult,
+    usageError: memberGoldUsageError,
+    linkToGroup: linkMemberGoldToGroup,
+    reset: resetMemberGold,
+  } = useGoldExchangeMemberGold({ user, isEmailVerified });
   const previousEntryModeRef = useRef(entryMode);
 
   // Keep URL mode and in-memory flow state synchronized when React Router keeps
@@ -214,6 +224,7 @@ export default function GoldExchange() {
     setPrivacyAccepted(false);
     setSubmitted(false);
     setExchangeId(null);
+    resetMemberGold();
 
     if (entryMode === "vault") {
       if (importedFromMyGold && initialVaultProductsRef.current.length > 0) {
@@ -250,6 +261,7 @@ export default function GoldExchange() {
     importedFromMyGold,
     isRebook,
     location.search,
+    resetMemberGold,
     user?.uid,
   ]);
 
@@ -607,6 +619,9 @@ export default function GoldExchange() {
         source_mode: analyticsSourceMode,
         calculation_mode: calculated ? "calculated" : "visit_only",
       });
+
+      await linkMemberGoldToGroup(res.groupId);
+
       setExchangeId(res.groupId);
       setSubmitted(true);
       setStep(STEP.DONE);
@@ -736,11 +751,20 @@ export default function GoldExchange() {
           calculated={calculated}
           setStep={setStep}
           barsPlan={barsPlanPreview}
+          memberGoldBalanceG={Number(memberGoldOverview?.balanceG || 0)}
+          memberGoldSpendableG={Number(memberGoldOverview?.spendableG || 0)}
+          memberGoldPending={memberGoldOverview?.request?.status === "requested"}
+          useMemberGold={useMemberGold}
+          setUseMemberGold={setUseMemberGold}
         />
       )}
 
       {!showStartMethod && step === STEP.DONE && submitted && (
-        <DoneStep status={status} />
+        <DoneStep
+          status={status}
+          memberGoldUsage={memberGoldUsageResult}
+          memberGoldUsageError={memberGoldUsageError}
+        />
       )}
     </PageContainer>
   );

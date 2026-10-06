@@ -838,8 +838,8 @@ export default function GoldPrice() {
                 </RewardSummary>
               </div>
 
-              <QuizButton to="/quiz/gold-bonus">
-                퀵퀴즈 참여하기
+              <QuizButton to={isMember ? "/member-gold" : "/quiz/gold-bonus"}>
+                {isMember ? "내 MEMBER GOLD 보기" : "퀵퀴즈 참여하기"}
                 <ArrowRight size={15} aria-hidden />
               </QuizButton>
             </RewardTop>

@@ -31,6 +31,16 @@ const EVENT_PARAM_RULES = Object.freeze({
   mygold_alert_saved: Object.freeze({
     mode: new Set(["enabled", "disabled"]),
   }),
+  member_gold_view: Object.freeze({}),
+  member_gold_reward_cta_clicked: Object.freeze({
+    action: new Set(["marketing_push", "quiz", "exchange"]),
+  }),
+  member_gold_exchange_cta_clicked: Object.freeze({
+    source: new Set(["wallet", "exchange"]),
+  }),
+  member_gold_usage_requested: Object.freeze({
+    source: new Set(["wallet", "exchange"]),
+  }),
   gold_to_gold_cta_clicked: Object.freeze({
     source: new Set(["app_home", "mygold"]),
   }),

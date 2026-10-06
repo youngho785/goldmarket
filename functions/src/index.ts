@@ -52,6 +52,7 @@ export {
 export {
   welcomeClaimGoldBonus,
   marketingPushClaimGoldBonus,
+  memberGoldGetOverview,
   memberBonusGetStatus,
   quizGetGoldBonusStatus,
   quizClaimGoldBonus,

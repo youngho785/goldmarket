@@ -1157,7 +1157,7 @@ export default function QuizGoldBonus() {
               <ResultTitle>퀵퀴즈 완료 · 순금 혜택은 이미 지급되었습니다</ResultTitle>
               <ResultText>
                 문제는 언제든 다시 풀 수 있습니다. 순금 0.01g 혜택은 인증 이메일 기준
-                1회만 지급되며, 현재 사용 가능한 적립 순금은
+                1회만 지급되며, 현재 사용 가능한 MEMBER GOLD는
                 <b> {formatBonusG(result.balanceG || 0)}g</b>입니다.
               </ResultText>
 
@@ -1174,8 +1174,8 @@ export default function QuizGoldBonus() {
                     혜택 계속하기
                   </SecondaryButton>
                 ) : (
-                  <SecondaryButton as={Link} to="/profile">
-                    내 적립 순금 확인
+                  <SecondaryButton as={Link} to="/member-gold">
+                    내 MEMBER GOLD 확인
                   </SecondaryButton>
                 )}
               </ResultActions>
@@ -1184,7 +1184,7 @@ export default function QuizGoldBonus() {
             <>
               <ResultTitle>순금 0.01g을 받았습니다 🎉</ResultTitle>
               <ResultText>
-                현재 적립 순금은
+                현재 MEMBER GOLD는
                 <b>
                   {" "}
                   {formatBonusG(
@@ -1209,8 +1209,8 @@ export default function QuizGoldBonus() {
                     <ChevronRight />
                   </PrimaryButton>
                 ) : (
-                  <PrimaryButton as={Link} to="/profile">
-                    내 적립 순금 확인
+                  <PrimaryButton as={Link} to="/member-gold">
+                    내 MEMBER GOLD 확인
                     <ChevronRight />
                   </PrimaryButton>
                 )}

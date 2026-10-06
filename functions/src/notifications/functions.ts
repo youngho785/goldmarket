@@ -1501,11 +1501,12 @@ export const sendExchangeVisitDayBeforeReminders = onSchedule(
 /* ─────────────────────────────────────────────────────────────
  * 9) MY GOLD 주간 리포트
  * - 매주 월요일 오전 10시
- * - MY GOLD(등록 실물 금 또는 적립 순금)가 있는 회원만 대상
+ * - MY GOLD에 실제 등록한 금이 있는 회원만 대상
  * - 광고성 정보 수신동의 + 마케팅 알림 ON 회원에게만 생성
  * - 등록 실물 금 가치는 제품별 매입시세 기준으로 계산
  * - 교환 가능 예상 순금은 현재 goldRates의 교환 정책으로 별도 계산
- * - 7일 전 공개 시세와 비교해 개인 MY GOLD 가치 변화를 안내
+ * - 7일 전 공개 시세와 비교해 등록한 MY GOLD 가치 변화를 안내
+ * - MEMBER GOLD는 MY GOLD 가치에 합산하지 않고 GOLD TO GOLD 준비량에만 별도 표시
  * - 날짜별 고정 알림 ID로 중복 발송 방지
  * ───────────────────────────────────────────────────────────── */
 function readBonusGoldGramsForWeeklyReport(
@@ -1518,18 +1519,6 @@ function readBonusGoldGramsForWeeklyReport(
 
   const grams = Number(userData?.bonusGoldG);
   return Number.isFinite(grams) && grams > 0 ? grams : 0;
-}
-
-function weeklyGoldValueWon(pureGoldG: number, pureGoldBuyPerDon: number): number {
-  if (
-    !Number.isFinite(pureGoldG) ||
-    pureGoldG <= 0 ||
-    !Number.isFinite(pureGoldBuyPerDon) ||
-    pureGoldBuyPerDon <= 0
-  ) {
-    return 0;
-  }
-  return Math.round((pureGoldG / DON_TO_GRAMS) * pureGoldBuyPerDon);
 }
 
 function formatWeeklyWon(value: number): string {
@@ -1679,14 +1668,17 @@ export const sendMyGoldWeeklyReports = onSchedule(
         currentValueWon: 0,
         historicalValueWon: 0,
       };
+      // MY GOLD 리포트는 사용자가 실제로 기록한 금만 대상으로 합니다.
+      // MEMBER GOLD는 별도 회원혜택이며 MY GOLD 참고가치에는 합산하지 않습니다.
+      if (vault.itemCount <= 0 || vault.pureGoldG <= 0) continue;
+
       const bonusGoldG = readBonusGoldGramsForWeeklyReport(userData);
-      const totalPureGoldG = roundTo3(vault.pureGoldG + bonusGoldG);
-      if (totalPureGoldG <= 0) continue;
+      const exchangeReadyG = roundTo3(vault.pureGoldG + bonusGoldG);
 
       eligibleCount += 1;
-      const currentValueWon = vault.currentValueWon + weeklyGoldValueWon(bonusGoldG, currentPrice);
+      const currentValueWon = vault.currentValueWon;
       const historicalValueWon = historicalPrice > 0
-        ? vault.historicalValueWon + weeklyGoldValueWon(bonusGoldG, historicalPrice)
+        ? vault.historicalValueWon
         : 0;
       const changeWon = historicalValueWon > 0
         ? currentValueWon - historicalValueWon
@@ -1695,7 +1687,6 @@ export const sendMyGoldWeeklyReports = onSchedule(
         ? (changeWon / historicalValueWon) * 100
         : null;
 
-      const bonusOnly = vault.itemCount === 0 && bonusGoldG > 0;
       const parts = [
         `현재 참고가치 ${formatWeeklyWon(currentValueWon)}`,
       ];
@@ -1708,10 +1699,7 @@ export const sendMyGoldWeeklyReports = onSchedule(
         parts.push(`실물 금 ${vault.itemCount}개 · 교환기준 예상 ${vault.pureGoldG.toFixed(2)}g`);
       }
       if (bonusGoldG > 0) {
-        parts.push(`회원혜택 순금 ${bonusGoldG.toFixed(2)}g`);
-      }
-      if (bonusOnly) {
-        parts.push("실물 금을 등록하면 내 금 전체 가치 변화도 함께 볼 수 있어요");
+        parts.push(`MEMBER GOLD +${bonusGoldG.toFixed(2)}g · GOLD TO GOLD 예상 적용 ${exchangeReadyG.toFixed(2)}g`);
       }
 
       const notificationId = `my-gold-weekly-${today}`;
@@ -1721,9 +1709,7 @@ export const sendMyGoldWeeklyReports = onSchedule(
 
       await notificationRef.set({
         type: "my_gold_weekly",
-        title: bonusOnly
-          ? `회원혜택 순금 ${bonusGoldG.toFixed(2)}g의 이번 주 가치`
-          : "이번 주 MY GOLD",
+        title: "이번 주 MY GOLD",
         body: parts.join(" · "),
         link: "/my-gold#my-gold-value-trend",
         meta: {
@@ -1736,7 +1722,7 @@ export const sendMyGoldWeeklyReports = onSchedule(
           registeredItemCount: vault.itemCount,
           registeredPureGoldG: vault.pureGoldG,
           bonusGoldG,
-          totalPureGoldG,
+          exchangeReadyG,
         },
         createdAt: FieldValue.serverTimestamp(),
         read: false,

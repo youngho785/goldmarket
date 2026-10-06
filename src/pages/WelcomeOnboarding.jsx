@@ -12,7 +12,7 @@ import { requestNativePushPermission } from "@/push/nativePush";
 import {
   claimGoldQuizBonus,
   claimWelcomeGoldBonus,
-  getMemberBonusStatus,
+  getMemberGoldOverview,
 } from "@/services/quizClient";
 import {
   saveMarketingNotificationConsent,
@@ -294,8 +294,8 @@ function rewardStatus(source) {
     return {
       claimed,
       creditedG,
-      receivedThisAccount: claimed && creditedG > 0,
-      previouslyReceived: claimed && creditedG <= 0,
+      receivedThisAccount: !!reward?.claimedThisAccount,
+      previouslyReceived: !!reward?.previouslyClaimed,
     };
   };
 
@@ -363,7 +363,7 @@ export default function WelcomeOnboarding() {
       }
     }
 
-    const next = await getMemberBonusStatus();
+    const next = await getMemberGoldOverview();
     setStatus(rewardStatus(next));
     return next;
   }, [user?.uid, isEmailVerified]);
@@ -514,9 +514,9 @@ export default function WelcomeOnboarding() {
   };
 
   const claimedCount =
-    Number(status.welcome.receivedThisAccount) +
-    Number(status.marketingPush.receivedThisAccount) +
-    Number(status.quiz.receivedThisAccount);
+    Number(status.welcome.claimed) +
+    Number(status.marketingPush.claimed) +
+    Number(status.quiz.claimed);
   const progress = Math.round((claimedCount / 3) * 100);
 
   const hasRequestedFlow = nextPath !== "/";
@@ -564,7 +564,7 @@ export default function WelcomeOnboarding() {
 
       <ProgressText>
         <span>선택 회원혜택</span>
-        <b>순금 {status.earnedG.toFixed(2)}g / {status.maxG.toFixed(2)}g</b>
+        <b>{claimedCount}/3 완료</b>
       </ProgressText>
       <ProgressTrack aria-label={`선택 회원혜택 진행률 ${progress}%`}>
         <ProgressBar $progress={progress} />

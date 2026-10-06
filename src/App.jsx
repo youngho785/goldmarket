@@ -124,6 +124,7 @@ const GuideIndex = lazy(() => import("@/pages/GuideIndex"));
 const GuideArticle = lazy(() => import("@/pages/GuideArticle"));
 const GoldToGoldIntro = lazy(() => import("@/pages/GoldToGoldIntro"));
 const Profile = lazy(() => import("@/pages/Profile"));
+const MemberGold = lazy(() => import("@/pages/MemberGold"));
 const Settings = lazy(() => import("@/pages/Settings"));
 const GoldExchange = lazy(() => import("@/pages/GoldExchange"));
 const MyExchanges = lazy(() => import("@/pages/MyExchanges"));
@@ -208,6 +209,7 @@ function requiresLoginForPushLink(link) {
 
   return (
     path === "/profile" ||
+    path === "/member-gold" ||
     path === "/settings" ||
     path === "/notifications" ||
     path === "/my-exchanges" ||
@@ -644,6 +646,7 @@ const router = createBrowserRouter([
         element: <ProtectedRoute />,
         children: [
           { path: "/profile", element: <Profile /> },
+          { path: "/member-gold", element: <MemberGold /> },
           { path: "/settings", element: <Settings /> },
           { path: "/notifications", element: <NotificationsPage /> },
           { path: "/my-exchanges", element: <MyExchanges /> },

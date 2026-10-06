@@ -1712,7 +1712,7 @@ export default function MyExchanges() {
                       <>
                         <span>·</span>
                         <span>
-                          적립 순금 {Number(g.bonus.amountG || 0).toFixed(2)}g 적용
+                          MEMBER GOLD {Number(g.bonus.amountG || 0).toFixed(2)}g 적용
                         </span>
                       </>
                     )}
@@ -1930,8 +1930,8 @@ export default function MyExchanges() {
                   {g.bonus?.status === "used" && (
                     <>
                       <Divider />
-                      <PlanCard aria-label="적립 순금 적용 명세">
-                        <strong>적립 순금 적용</strong>
+                      <PlanCard aria-label="MEMBER GOLD 적용 명세">
+                        <strong>MEMBER GOLD 적용</strong>
                         <PlanValue>
                           {fmtG2(g.bonus.finalRecognizedG)}g
                           {' + '}
@@ -1966,7 +1966,7 @@ export default function MyExchanges() {
                               </PlanValue>
                             </PlanRow>
                             <PlanRow>
-                              <PlanLabel>적립 순금</PlanLabel>
+                              <PlanLabel>MEMBER GOLD</PlanLabel>
                               <PlanValue>
                                 +{fmtG2(g.bonus.amountG)}g
                               </PlanValue>

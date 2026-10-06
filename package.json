@@ -24,6 +24,7 @@
     "test:monitoring": "node --test scripts/test-operational-monitoring.mjs functions/scripts/test-monitoring-security.mjs",
     "test:analytics": "node scripts/test-product-analytics.mjs",
     "test:ux-upgrade": "node scripts/test-ux-upgrade.mjs",
+    "test:member-gold": "node scripts/test-member-gold-wallet.mjs",
     "test:gold-display": "node scripts/test-gold-display-consistency.mjs",
     "test:push-safety": "node scripts/test-local-push-safety.mjs",
     "test:release": "node scripts/test-release-simple.mjs",
