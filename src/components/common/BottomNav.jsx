@@ -14,6 +14,7 @@ import {
 
 import { isAndroid } from "@/platform/runtime";
 import { useAuthContext } from "@/context/AuthContext";
+import { hapticTap } from "@/platform/androidUx";
 
 const Nav = styled.nav.attrs({
   role: "navigation",
@@ -234,7 +235,18 @@ export default function BottomNav() {
           ? pathname === "/"
           : center && itemPath === "/my-gold/items"
             ? pathname === itemPath
-            : pathname.startsWith(itemPath);
+            : isAndroid && itemPath === "/my-gold" && pathname === "/my-gold/items"
+              ? false
+              : pathname.startsWith(itemPath);
+
+        const handleItemClick = (event) => {
+          if (isAndroid) void hapticTap();
+
+          if (isAndroid && isCurrent && window.scrollY > 0) {
+            event.preventDefault();
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }
+        };
 
         return (
         <Item
@@ -244,6 +256,7 @@ export default function BottomNav() {
           $android={isAndroid}
           $center={center}
           aria-current={isCurrent ? "page" : undefined}
+          onClick={handleItemClick}
         >
           <IconShell>
             {React.createElement(icon, { "aria-hidden": true })}

@@ -251,15 +251,18 @@ test("3.2 최종 정보구조는 MY GOLD → 골드바 목표 → GOLD TO GOLD�
   const quickActionsIndex = androidHomeSource.indexOf("<QuickActions");
   assert.ok(journeyIndex >= 0 && quickActionsIndex > journeyIndex);
 
+  const myMenuIndex = androidHeaderSource.indexOf("<SectionTitle>내 메뉴</SectionTitle>");
+  const memberGoldIndex = androidHeaderSource.indexOf('to="/member-gold"');
   const serviceIndex = androidHeaderSource.indexOf("<SectionTitle>서비스</SectionTitle>");
   const exchangeIndex = androidHeaderSource.indexOf('to="/gold-exchange"', serviceIndex);
-  const quizIndex = androidHeaderSource.indexOf('to="/quiz/gold-bonus"', serviceIndex);
 
   assert.ok(
-    serviceIndex >= 0 &&
-      exchangeIndex > serviceIndex &&
-      quizIndex > exchangeIndex
+    myMenuIndex >= 0 &&
+      memberGoldIndex >= 0 &&
+      memberGoldIndex < serviceIndex &&
+      exchangeIndex > serviceIndex
   );
+  assert.doesNotMatch(androidHeaderSource, /to="\/quiz\/gold-bonus"[\s\S]*금 퀵퀴즈 · 순금 0\.01g/);
 
   assert.match(
     androidHeaderSource,

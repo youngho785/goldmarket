@@ -1,5 +1,5 @@
 // src/components/common/AndroidAppHeader.jsx
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import styled, { css, keyframes } from "styled-components";
@@ -10,14 +10,15 @@ import {
   ChevronRight,
   ClipboardList,
   FileText,
+  Gem,
   LogIn,
   LogOut,
+  MessageCircle,
   MapPin,
   Menu,
   ReceiptText,
   Settings,
   ShieldCheck,
-  Sparkles,
   TrendingUp,
   User,
   UserPlus,
@@ -27,6 +28,11 @@ import { getAuth, signOut } from "firebase/auth";
 
 import { useAuthContext } from "@/context/AuthContext";
 import { useNotificationContext } from "@/context/NotificationContext";
+import {
+  addAndroidBackButtonListener,
+  exitAndroidApp,
+  hapticTap,
+} from "@/platform/androidUx";
 
 const Header = styled.header`
   position: sticky;
@@ -185,7 +191,6 @@ const Backdrop = styled.button`
   position: fixed;
   inset: 0;
   z-index: 1290;
-  display: ${({ $open }) => ($open ? "block" : "none")};
   width: 100%;
   height: 100%;
   padding: 0;
@@ -193,6 +198,13 @@ const Backdrop = styled.button`
   border-radius: 0;
   background: ${({ theme }) => theme.semantic.overlay};
   box-shadow: none;
+  opacity: ${({ $open, $dragRatio = 0 }) =>
+    $open ? Math.max(0, 1 - $dragRatio) : 0};
+  visibility: ${({ $open }) => ($open ? "visible" : "hidden")};
+  pointer-events: ${({ $open }) => ($open ? "auto" : "none")};
+  transition:
+    opacity 180ms ease,
+    visibility 0s linear ${({ $open }) => ($open ? "0ms" : "180ms")};
 `;
 
 const Drawer = styled.aside`
@@ -200,17 +212,35 @@ const Drawer = styled.aside`
   top: 0;
   right: 0;
   z-index: 1300;
-  display: ${({ $open }) => ($open ? "flex" : "none")};
+  display: flex;
   flex-direction: column;
   width: min(88vw, 370px);
   height: 100dvh;
   overflow-y: auto;
   overscroll-behavior: contain;
+  touch-action: pan-y;
   padding: calc(14px + env(safe-area-inset-top, 0px)) 16px
     calc(20px + env(safe-area-inset-bottom, 0px));
   border-left: 1px solid ${({ theme }) => theme.colors.border};
   background: ${({ theme }) => theme.colors.background};
   box-shadow: ${({ theme }) => theme.shadows.lg};
+  visibility: ${({ $open }) => ($open ? "visible" : "hidden")};
+  pointer-events: ${({ $open }) => ($open ? "auto" : "none")};
+  transform: ${({ $open, $dragX = 0 }) =>
+    $open
+      ? `translate3d(${$dragX}px, 0, 0)`
+      : "translate3d(100%, 0, 0)"};
+  transition: ${({ $dragging, $open }) =>
+    $dragging
+      ? "none"
+      : `transform 220ms cubic-bezier(.22,.61,.36,1), visibility 0s linear ${
+          $open ? "0ms" : "220ms"
+        }`};
+  will-change: transform;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
 `;
 
 const DrawerHead = styled.div`
@@ -418,6 +448,7 @@ function titleForPath(pathname) {
   if (pathname === "/my-gold" || pathname === "/my-gold/items" || pathname === "/my-gold/trend") return "MY GOLD";
   if (pathname === "/my-gold/alerts") return "내 금 알림";
   if (pathname === "/my-exchanges") return "예약";
+  if (pathname === "/member-gold") return "MEMBER GOLD";
   if (pathname === "/profile") return "내정보";
   if (pathname === "/settings") return "설정";
   if (pathname === "/notifications") return "알림";
@@ -442,10 +473,32 @@ export default function AndroidAppHeader() {
   const { user, isMember } = useAuthContext() || {};
   const { unreadNotifications = 0 } = useNotificationContext() || {};
   const [menuOpen, setMenuOpen] = useState(false);
+  const [drawerDragX, setDrawerDragX] = useState(0);
+  const [drawerDragging, setDrawerDragging] = useState(false);
+  const drawerRef = useRef(null);
+  const gestureRef = useRef(null);
 
   const isTopLevel = TOP_LEVEL_PATHS.has(pathname);
+  const drawerWidth = drawerRef.current?.getBoundingClientRect?.().width || 340;
+  const drawerDragRatio = Math.min(1, Math.max(0, drawerDragX / Math.max(1, drawerWidth)));
+
+  const closeMenu = useCallback(({ feedback = false } = {}) => {
+    setDrawerDragX(0);
+    setDrawerDragging(false);
+    setMenuOpen(false);
+    if (feedback) void hapticTap();
+  }, []);
+
+  const openMenu = useCallback(() => {
+    setDrawerDragX(0);
+    setDrawerDragging(false);
+    setMenuOpen(true);
+    void hapticTap();
+  }, []);
 
   useEffect(() => {
+    setDrawerDragX(0);
+    setDrawerDragging(false);
     setMenuOpen(false);
   }, [pathname]);
 
@@ -456,7 +509,7 @@ export default function AndroidAppHeader() {
     document.body.style.overflow = "hidden";
 
     const onKeyDown = (event) => {
-      if (event.key === "Escape") setMenuOpen(false);
+      if (event.key === "Escape") closeMenu({ feedback: true });
     };
 
     window.addEventListener("keydown", onKeyDown);
@@ -465,9 +518,32 @@ export default function AndroidAppHeader() {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [menuOpen]);
+  }, [closeMenu, menuOpen]);
+
+  useEffect(
+    () =>
+      addAndroidBackButtonListener(({ canGoBack }) => {
+        if (menuOpen) {
+          closeMenu({ feedback: true });
+          return;
+        }
+
+        if (pathname !== "/") {
+          if (canGoBack) {
+            navigate(-1);
+          } else {
+            navigate("/", { replace: true });
+          }
+          return;
+        }
+
+        void exitAndroidApp();
+      }),
+    [closeMenu, menuOpen, navigate, pathname]
+  );
 
   const goBack = () => {
+    void hapticTap();
     const historyIndex = Number(window.history.state?.idx);
 
     if (Number.isFinite(historyIndex) && historyIndex > 0) {
@@ -476,6 +552,79 @@ export default function AndroidAppHeader() {
     }
 
     navigate("/", { replace: true });
+  };
+
+  const handleDrawerPointerDown = (event) => {
+    if (!menuOpen || (event.pointerType === "mouse" && event.button !== 0)) return;
+
+    gestureRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      startAt: performance.now(),
+      horizontal: false,
+      cancelled: false,
+    };
+  };
+
+  const handleDrawerPointerMove = (event) => {
+    const gesture = gestureRef.current;
+    if (!gesture || gesture.pointerId !== event.pointerId || gesture.cancelled) return;
+
+    const dx = Math.max(0, event.clientX - gesture.startX);
+    const dy = event.clientY - gesture.startY;
+    const absY = Math.abs(dy);
+
+    if (!gesture.horizontal) {
+      if (absY > 10 && absY > dx) {
+        gesture.cancelled = true;
+        return;
+      }
+      if (dx < 8 || dx <= absY * 1.12) return;
+
+      gesture.horizontal = true;
+      setDrawerDragging(true);
+      try {
+        event.currentTarget.setPointerCapture(event.pointerId);
+      } catch {}
+    }
+
+    const width = drawerRef.current?.getBoundingClientRect?.().width || 340;
+    setDrawerDragX(Math.min(width, dx));
+  };
+
+  const finishDrawerGesture = (event) => {
+    const gesture = gestureRef.current;
+    gestureRef.current = null;
+
+    if (!gesture || gesture.pointerId !== event.pointerId) {
+      setDrawerDragging(false);
+      setDrawerDragX(0);
+      return;
+    }
+
+    if (!gesture.horizontal || gesture.cancelled) {
+      setDrawerDragging(false);
+      setDrawerDragX(0);
+      return;
+    }
+
+    const now = performance.now();
+    const totalDx = Math.max(0, event.clientX - gesture.startX);
+    const elapsedMs = Math.max(1, now - gesture.startAt);
+    const velocity = totalDx / elapsedMs;
+    const width = drawerRef.current?.getBoundingClientRect?.().width || 340;
+    const shouldClose =
+      totalDx >= Math.max(72, width * 0.22) ||
+      velocity >= 0.55;
+
+    setDrawerDragging(false);
+
+    if (shouldClose) {
+      closeMenu({ feedback: true });
+    } else {
+      setDrawerDragX(0);
+    }
   };
 
   const handleLogout = async () => {
@@ -496,14 +645,22 @@ export default function AndroidAppHeader() {
             <Backdrop
               type="button"
               $open={menuOpen}
-              onClick={() => setMenuOpen(false)}
+              $dragRatio={drawerDragRatio}
+              onClick={() => closeMenu({ feedback: true })}
               aria-label="메뉴 닫기"
               tabIndex={menuOpen ? 0 : -1}
             />
 
             <Drawer
+              ref={drawerRef}
               id="android-app-menu"
               $open={menuOpen}
+              $dragX={drawerDragX}
+              $dragging={drawerDragging}
+              onPointerDown={handleDrawerPointerDown}
+              onPointerMove={handleDrawerPointerMove}
+              onPointerUp={finishDrawerGesture}
+              onPointerCancel={finishDrawerGesture}
               role="dialog"
               aria-modal="true"
               aria-label="한국골드마켓 전체 메뉴"
@@ -517,7 +674,7 @@ export default function AndroidAppHeader() {
 
                 <IconButton
                   type="button"
-                  onClick={() => setMenuOpen(false)}
+                  onClick={() => closeMenu({ feedback: true })}
                   aria-label="메뉴 닫기"
                 >
                   <X aria-hidden />
@@ -559,18 +716,18 @@ export default function AndroidAppHeader() {
               ) : (
                 <AccountPanel>
                   <AccountCopy>
-                    <strong>회원 메뉴</strong>
-                    <p>내 순금 혜택과 예약·교환 내역을 확인하세요.</p>
+                    <strong>나의 한국골드마켓</strong>
+                    <p>내 금과 회원혜택, 예약을 한곳에서 관리하세요.</p>
                   </AccountCopy>
 
                   <AccountActions>
                     <AccountLink to="/profile" $primary>
                       <User aria-hidden />
-                      내 정보
+                      MY
                     </AccountLink>
-                    <AccountLink to="/notifications">
-                      <BellRing aria-hidden />
-                      알림함
+                    <AccountLink to="/member-gold">
+                      <Gem aria-hidden />
+                      MEMBER GOLD
                     </AccountLink>
                   </AccountActions>
                 </AccountPanel>
@@ -591,13 +748,39 @@ export default function AndroidAppHeader() {
                       <ChevronRight aria-hidden />
                     </MenuLink>
 
+                    <MenuLink to="/notifications">
+                      <span>
+                        <BellRing aria-hidden />
+                      </span>
+                      <div>
+                        <strong>알림함</strong>
+                        <small>
+                          {unreadNotifications > 0
+                            ? `읽지 않은 알림 ${unreadNotifications}개`
+                            : "예약·금시세·혜택 알림"}
+                        </small>
+                      </div>
+                      <ChevronRight aria-hidden />
+                    </MenuLink>
+
                     <MenuLink to="/settings">
                       <span>
                         <Settings aria-hidden />
                       </span>
                       <div>
-                        <strong>알림 설정</strong>
-                        <small>금시세 알림 받기·해제</small>
+                        <strong>설정</strong>
+                        <small>알림·계정·보안</small>
+                      </div>
+                      <ChevronRight aria-hidden />
+                    </MenuLink>
+
+                    <MenuLink to="/support">
+                      <span>
+                        <MessageCircle aria-hidden />
+                      </span>
+                      <div>
+                        <strong>1:1 문의</strong>
+                        <small>도움이 필요할 때 문의하세요</small>
                       </div>
                       <ChevronRight aria-hidden />
                     </MenuLink>
@@ -652,16 +835,6 @@ export default function AndroidAppHeader() {
                     <ChevronRight aria-hidden />
                   </MenuLink>
 
-                  <MenuLink to="/quiz/gold-bonus">
-                    <span>
-                      <Sparkles aria-hidden />
-                    </span>
-                    <div>
-                      <strong>금 퀵퀴즈 · 순금 0.01g</strong>
-                      <small>5문제 모두 정답 시 혜택</small>
-                    </div>
-                    <ChevronRight aria-hidden />
-                  </MenuLink>
                 </MenuList>
               </Section>
 
@@ -732,7 +905,7 @@ export default function AndroidAppHeader() {
 
             <IconButton
               type="button"
-              onClick={() => setMenuOpen(true)}
+              onClick={openMenu}
               aria-label="전체 메뉴 열기"
               aria-expanded={menuOpen}
               aria-controls="android-app-menu"
