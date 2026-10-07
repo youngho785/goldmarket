@@ -83,3 +83,6 @@ export {
 export {
   reportClientError,
 } from "./monitoring/clientErrorReporting.js";
+export {
+  analyzeGoldHallmark,
+} from "./hallmark/functions.js";

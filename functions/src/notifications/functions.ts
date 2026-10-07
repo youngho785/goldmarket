@@ -11,7 +11,6 @@ import {
   IN_EMULATOR,
   ENFORCE_APP_CHECK,
   requireCurrentAdmin,
-  DON_TO_GRAMS,
   DEFAULT_GOLD_PRODUCTS,
   DEFAULT_EXCHANGE,
   roundTo3,

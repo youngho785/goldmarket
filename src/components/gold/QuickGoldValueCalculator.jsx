@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
 import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
-import { ArrowRight, Gem } from "lucide-react";
+import { ArrowRight, Camera as CameraIcon, Gem } from "lucide-react";
 
 import { useAuthContext } from "@/context/AuthContext";
 import useGoldVaultDashboard from "@/hooks/useGoldVaultDashboard";
@@ -18,6 +19,8 @@ import {
   getAnalyticsWeightBand,
   trackProductEventOncePerSession,
 } from "@/analytics/productAnalytics";
+import { isAndroid } from "@/platform/runtime";
+import { analyzeGoldHallmarkImage } from "@/services/hallmarkClient";
 
 const PRIORITY_PRODUCT_IDS = [
   "gold-18k-jewelry",
@@ -121,6 +124,11 @@ const FieldGroup = styled.div`
 `;
 
 const HelpRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 7px 12px;
+  flex-wrap: wrap;
   margin-top: 7px;
 `;
 
@@ -173,6 +181,60 @@ const HelpAction = styled.button`
   font-size: .68rem;
   font-weight: 950;
   cursor: pointer;
+`;
+
+const HallmarkScanButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 5px 9px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 9px;
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+  color: ${({ theme }) => theme.colors.secondaryDark};
+  font: inherit;
+  font-size: .67rem;
+  font-weight: 950;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: .58;
+    cursor: wait;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.secondary};
+    outline-offset: 2px;
+  }
+`;
+
+const HallmarkStatus = styled.div`
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 11px;
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: .68rem;
+  line-height: 1.5;
+  word-break: keep-all;
+
+  p,
+  small {
+    margin: 0;
+  }
+
+  strong {
+    color: ${({ theme }) => theme.colors.text};
+  }
+
+  small {
+    font-size: .62rem;
+  }
 `;
 
 const SavePrompt = styled.div`
@@ -268,6 +330,61 @@ const Note = styled.p`
   }
 `;
 
+const MAX_HALLMARK_UPLOAD_BYTES = 1_500_000;
+
+function estimateBase64Bytes(value) {
+  const base64 = String(value || "").replace(/\s+/g, "");
+
+  if (!base64) return 0;
+
+  const padding = base64.endsWith("==")
+    ? 2
+    : base64.endsWith("=")
+      ? 1
+      : 0;
+
+  return Math.max(
+    0,
+    Math.floor((base64.length * 3) / 4) - padding
+  );
+}
+
+function isCameraCancelError(error) {
+  const message = String(
+    error?.message || error || ""
+  ).toLowerCase();
+
+  return (
+    message.includes("cancel") ||
+    message.includes("취소")
+  );
+}
+
+function hallmarkErrorMessage(error) {
+  const code = String(error?.code || "").toLowerCase();
+
+  if (
+    code.includes("resource-exhausted")
+  ) {
+    return "각인 확인을 여러 번 시도했습니다. 잠시 후 다시 이용해 주세요.";
+  }
+
+  if (
+    code.includes("permission") ||
+    code.includes("denied")
+  ) {
+    return "카메라 권한을 허용한 뒤 다시 시도해 주세요.";
+  }
+
+  if (
+    code.includes("unavailable") ||
+    code.includes("deadline")
+  ) {
+    return "각인 확인을 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+  }
+
+  return "각인을 확인하지 못했습니다. 다시 촬영하거나 직접 선택해 주세요.";
+}
 function formatWon(value) {
   const number = Number(value);
   return Number.isFinite(number) && number > 0
@@ -291,6 +408,11 @@ export default function QuickGoldValueCalculator({
   const [weightUnit, setWeightUnit] = useState("g");
   const [stampHelpOpen, setStampHelpOpen] = useState(false);
   const [weightHelpOpen, setWeightHelpOpen] = useState(false);
+  const [hallmarkBusy, setHallmarkBusy] = useState(false);
+  const [hallmarkResult, setHallmarkResult] = useState(null);
+  const [hallmarkError, setHallmarkError] = useState("");
+
+
 
   const effectiveRates = useMemo(
     () => ({
@@ -413,6 +535,116 @@ export default function QuickGoldValueCalculator({
     navigate("/stores");
   };
 
+  const scanHallmarkWithSystemCamera = async () => {
+    if (!isAndroid || hallmarkBusy) return;
+
+    setHallmarkBusy(true);
+    setHallmarkError("");
+    setHallmarkResult(null);
+
+    try {
+      const photo = await Camera.getPhoto({
+        quality: 90,
+        width: 1600,
+        height: 1600,
+        allowEditing: false,
+        correctOrientation: true,
+        saveToGallery: false,
+        resultType: CameraResultType.Base64,
+        source: CameraSource.Camera,
+      });
+
+      const imageBase64 = String(
+        photo?.base64String || ""
+      ).trim();
+
+      if (!imageBase64) {
+        throw new Error("camera-image-empty");
+      }
+
+      if (
+        estimateBase64Bytes(imageBase64) >
+        MAX_HALLMARK_UPLOAD_BYTES
+      ) {
+        setHallmarkError(
+          "사진 용량이 큽니다. 각인 부분을 화면에 크게 보이도록 가까이 촬영해 주세요."
+        );
+        return;
+      }
+
+      const format = String(
+        photo?.format || "jpeg"
+      ).toLowerCase();
+
+      if (
+        !["jpeg", "jpg", "png"].includes(format)
+      ) {
+        setHallmarkError(
+          "이 사진 형식은 판독할 수 없습니다. 카메라로 다시 촬영해 주세요."
+        );
+        return;
+      }
+
+      const result = await analyzeGoldHallmarkImage({
+        imageBase64,
+        mimeType:
+          format === "png"
+            ? "image/png"
+            : "image/jpeg",
+      });
+
+      if (!result?.ok) {
+        throw new Error("hallmark-analysis-failed");
+      }
+
+      setHallmarkResult(result);
+    } catch (error) {
+      if (isCameraCancelError(error)) {
+        return;
+      }
+
+      setHallmarkError(
+        hallmarkErrorMessage(error)
+      );
+    } finally {
+      setHallmarkBusy(false);
+    }
+  };
+
+
+  const applyHallmarkRecommendation = () => {
+    const nextProductId = String(
+      hallmarkResult?.recommendationProductId ||
+      hallmarkResult?.suggestedProductId ||
+      ""
+    );
+
+    if (!nextProductId) return;
+
+    const supported = orderedProductOptions.some(
+      (option) =>
+        option.productId === nextProductId
+    );
+
+    if (!supported) {
+      setHallmarkError(
+        "확인한 금 종류를 현재 목록에서 찾지 못했습니다. 직접 선택해 주세요."
+      );
+      return;
+    }
+
+    setProductId(nextProductId);
+    setHallmarkError("");
+    setHallmarkResult((current) =>
+      current
+        ? {
+            ...current,
+            applied: true,
+          }
+        : current
+    );
+  };
+
   const continueToMyGold = () => {
     if (!selected || !validWeight) return;
 
@@ -468,17 +700,89 @@ export default function QuickGoldValueCalculator({
               <HelpButton type="button" onClick={toggleStampHelp} aria-expanded={stampHelpOpen}>
                 금 종류를 모르시나요? <strong>각인 확인 방법</strong>
               </HelpButton>
+
+              {isAndroid && (
+                <HallmarkScanButton
+                  type="button"
+                  onClick={scanHallmarkWithSystemCamera}
+                  disabled={hallmarkBusy}
+                >
+                  <CameraIcon size={14} aria-hidden />
+                  {hallmarkBusy
+                    ? "각인 확인 중..."
+                    : "각인 촬영으로 확인"}
+                </HallmarkScanButton>
+              )}
             </HelpRow>
+{isAndroid && (hallmarkError || hallmarkResult) && (
+              <HallmarkStatus
+                role={hallmarkError ? "alert" : "status"}
+                aria-live="polite"
+              >
+                {hallmarkError ? (
+                  <p>{hallmarkError}</p>
+                ) : (
+                  <>
+                    <p>
+                      <strong>
+                        {hallmarkResult.message}
+                      </strong>
+                    </p>
+
+                    {(hallmarkResult.recommendationProductId ||
+                      hallmarkResult.suggestedProductId) &&
+                      !hallmarkResult.applied && (
+                        <HelpAction
+                          type="button"
+                          onClick={applyHallmarkRecommendation}
+                        >
+                          {hallmarkResult.suggestedProductId
+                            ? `${hallmarkResult.suggestedLabel || "후보"}로 선택하기`
+                            : "이 금 종류로 선택"}
+                        </HelpAction>
+                      )}
+
+                    {(hallmarkResult.suggestedProductId ||
+                      hallmarkResult.matchConfidence === "medium") &&
+                      !hallmarkResult.applied && (
+                        <small>
+                          제품의 실제 각인을 눈으로 확인한 경우에만 선택해 주세요.
+                        </small>
+                      )}
+
+                    {hallmarkResult.applied && (
+                      <small>
+                        금 종류에 반영했습니다. 선택값을 한 번 더 확인해 주세요.
+                      </small>
+                    )}
+
+                    {hallmarkResult.requiresProductForm && (
+                      <small>
+                        순금 계열은 각인만으로 제품 형태를 구분하기 어려울 수 있으므로 아래 목록에서 형태를 직접 선택해 주세요.
+                      </small>
+                    )}
+                  </>
+                )}
+
+                <small>
+                  각인 촬영은 제품의 표시를 읽는 보조 기능이며 실제 금 순도를 판정하지 않습니다. 실제 교환은 매장 실측 후 확정됩니다.
+                </small>
+                <small>
+                  촬영 이미지는 각인 확인을 위해 분석하며 한국골드마켓에는 저장하지 않습니다.
+                </small>
+              </HallmarkStatus>
+            )}
 
             {stampHelpOpen && (
               <HelpPanel>
                 <p><strong>제품 안쪽 각인을 확인해 보세요.</strong></p>
                 <p><strong>585 · 14K · K14</strong> → 14K</p>
                 <p><strong>750 · 18K · K18</strong> → 18K</p>
-                <p><strong>995</strong> → 순금 99.5%</p>
-                <p><strong>999</strong> → 순금 99.9%</p>
-                <p><strong>999.9 · 9999</strong> → 순금 999.9 계열</p>
-                <p>각인이 없거나 확실하지 않다면 매장에서 확인하세요.</p>
+                <p><strong>995 · 99.5</strong> → 순금 99.5%</p>
+                <p><strong>999 · 99.9</strong> → 순금 99.9% 계열</p>
+                <p><strong>24K · K24</strong> → 순금 계열</p>
+                <p><strong>999.9 · 9999 · 99.99</strong> → 순금 999.9 계열</p>
+                <p>각인이 없거나 흐리다면 금 종류를 직접 선택하거나 매장에서 확인할 수 있습니다.</p>
                 <HelpAction type="button" onClick={openStoreMeasurementHelp}>매장에서 확인하기</HelpAction>
               </HelpPanel>
             )}

@@ -28,11 +28,14 @@
     "test:release-safety": "npm run build && npx --yes firebase-tools@15.28.1 --config ../firebase.json --project demo-goldmarket emulators:exec --only firestore \"node scripts/test-release-safety.mjs\"",
     "audit:nicknames": "node scripts/audit-nickname-integrity.mjs",
     "cleanup:nicknames": "npm run build && node scripts/cleanup-nickname-integrity.mjs",
-    "test:dependency-security": "node --test scripts/test-dependency-security-checker.mjs && node scripts/test-dependency-security.mjs"
+    "test:dependency-security": "node --test scripts/test-dependency-security-checker.mjs && node scripts/test-dependency-security.mjs",
+    "test:hallmark": "npm run build && node scripts/test-hallmark-image-payload.mjs && node scripts/test-hallmark-ai-decision.mjs && node scripts/test-hallmark-visible-mark-ai.mjs"
   },
   "dependencies": {
+    "@google/genai": "^2.27.0",
     "firebase-admin": "^14.4.0",
-    "firebase-functions": "^7.4.0"
+    "firebase-functions": "^7.4.0",
+    "goldmarket": "file:.."
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
