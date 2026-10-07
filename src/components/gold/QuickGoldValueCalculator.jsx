@@ -116,6 +116,88 @@ const WeightField = styled.div`
   gap: 7px;
 `;
 
+const FieldGroup = styled.div`
+  min-width: 0;
+`;
+
+const HelpRow = styled.div`
+  margin-top: 7px;
+`;
+
+const HelpButton = styled.button`
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font: inherit;
+  font-size: .68rem;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+
+  strong {
+    color: ${({ theme }) => theme.colors.secondaryDark};
+    font-weight: 950;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.secondary};
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+`;
+
+const HelpPanel = styled.div`
+  display: grid;
+  gap: 5px;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 12px;
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: .68rem;
+  line-height: 1.55;
+
+  p { margin: 0; }
+  strong { color: ${({ theme }) => theme.colors.text}; }
+`;
+
+const HelpAction = styled.button`
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.secondaryDark};
+  font: inherit;
+  font-size: .68rem;
+  font-weight: 950;
+  cursor: pointer;
+`;
+
+const SavePrompt = styled.div`
+  margin-top: 13px;
+  padding: 13px 14px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 14px;
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+
+  > strong {
+    display: block;
+    color: ${({ theme }) => theme.colors.primary};
+    font-size: .78rem;
+    font-weight: 950;
+  }
+
+  p {
+    margin: 5px 0 0;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: .68rem;
+    line-height: 1.55;
+    word-break: keep-all;
+  }
+`;
+
 const Results = styled.div`
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -204,9 +286,11 @@ export default function QuickGoldValueCalculator({
   const navigate = useNavigate();
   const { memberUser: user } = useAuthContext() || {};
   const dashboard = useGoldVaultDashboard(null);
-  const [productId, setProductId] = useState("gold-18k-jewelry");
+  const [productId, setProductId] = useState("");
   const [weightValue, setWeightValue] = useState("");
   const [weightUnit, setWeightUnit] = useState("g");
+  const [stampHelpOpen, setStampHelpOpen] = useState(false);
+  const [weightHelpOpen, setWeightHelpOpen] = useState(false);
 
   const effectiveRates = useMemo(
     () => ({
@@ -240,13 +324,13 @@ export default function QuickGoldValueCalculator({
   }, [productOptions]);
 
   useEffect(() => {
-    if (!orderedProductOptions.length) return;
+    if (!productId) return;
     if (orderedProductOptions.some((option) => option.productId === productId)) return;
-    setProductId(orderedProductOptions[0].productId);
+    setProductId("");
   }, [orderedProductOptions, productId]);
 
   const selected = useMemo(
-    () => orderedProductOptions.find((option) => option.productId === productId) || orderedProductOptions[0] || null,
+    () => orderedProductOptions.find((option) => option.productId === productId) || null,
     [orderedProductOptions, productId]
   );
 
@@ -257,6 +341,7 @@ export default function QuickGoldValueCalculator({
   }, [weightUnit, weightValue]);
 
   const validWeight = grams > 0 && grams <= 10_000;
+  const canCalculate = !!selected && validWeight;
   const item = useMemo(
     () => ({
       label: selected?.label || "금제품",
@@ -270,18 +355,18 @@ export default function QuickGoldValueCalculator({
 
   const estimatedValueWon = useMemo(
     () =>
-      dashboard.publicPriceEnabled && validWeight
+      dashboard.publicPriceEnabled && canCalculate
         ? computeVaultMarketValueWon(item, effectiveRates, dashboard.market)
         : 0,
-    [dashboard.market, dashboard.publicPriceEnabled, effectiveRates, item, validWeight]
+    [canCalculate, dashboard.market, dashboard.publicPriceEnabled, effectiveRates, item]
   );
 
   const pureGoldG = useMemo(
     () =>
-      validWeight
+      canCalculate
         ? computeVaultPureGoldG(item, effectiveRates, dashboard.pureGoldBuyPricePerDon)
         : 0,
-    [dashboard.pureGoldBuyPricePerDon, effectiveRates, item, validWeight]
+    [canCalculate, dashboard.pureGoldBuyPricePerDon, effectiveRates, item]
   );
 
   useEffect(() => {
@@ -315,6 +400,18 @@ export default function QuickGoldValueCalculator({
     }, 700);
     return () => window.clearTimeout(timer);
   }, [estimatedValueWon, grams, pureGoldG, selected, source, validWeight]);
+
+  const toggleStampHelp = () => {
+    setStampHelpOpen((open) => !open);
+  };
+
+  const toggleWeightHelp = () => {
+    setWeightHelpOpen((open) => !open);
+  };
+
+  const openStoreMeasurementHelp = () => {
+    navigate("/stores");
+  };
 
   const continueToMyGold = () => {
     if (!selected || !validWeight) return;
@@ -350,51 +447,110 @@ export default function QuickGoldValueCalculator({
       </Head>
       <Body $compact={compact}>
         <Fields>
-          <Field>
-            <span>금 종류</span>
-            <select value={productId} onChange={(event) => setProductId(event.target.value)}>
-              {orderedProductOptions.map((option) => (
-                <option key={option.productId} value={option.productId}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field>
-            <span>중량</span>
-            <WeightField>
-              <input
-                inputMode="decimal"
-                aria-label="내 금 중량"
-                placeholder={weightUnit === "g" ? "예: 10.0" : "예: 2.0"}
-                value={weightValue}
-                onChange={(event) => setWeightValue(event.target.value.replace(/[^0-9.,]/g, ""))}
-              />
+          <FieldGroup>
+            <Field>
+              <span>금 종류</span>
               <select
-                aria-label="중량 단위"
-                value={weightUnit}
-                onChange={(event) => setWeightUnit(event.target.value)}
+                aria-label="금 종류"
+                value={productId}
+                onChange={(event) => setProductId(event.target.value)}
               >
-                <option value="g">g</option>
-                <option value="don">돈</option>
+                <option value="" disabled>금 종류를 선택하세요</option>
+                {orderedProductOptions.map((option) => (
+                  <option key={option.productId} value={option.productId}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
-            </WeightField>
-          </Field>
+            </Field>
+
+            <HelpRow>
+              <HelpButton type="button" onClick={toggleStampHelp} aria-expanded={stampHelpOpen}>
+                금 종류를 모르시나요? <strong>각인 확인 방법</strong>
+              </HelpButton>
+            </HelpRow>
+
+            {stampHelpOpen && (
+              <HelpPanel>
+                <p><strong>제품 안쪽 각인을 확인해 보세요.</strong></p>
+                <p><strong>585 · 14K · K14</strong> → 14K</p>
+                <p><strong>750 · 18K · K18</strong> → 18K</p>
+                <p><strong>995</strong> → 순금 99.5%</p>
+                <p><strong>999</strong> → 순금 99.9%</p>
+                <p><strong>999.9 · 9999</strong> → 순금 999.9 계열</p>
+                <p>각인이 없거나 확실하지 않다면 매장에서 확인하세요.</p>
+                <HelpAction type="button" onClick={openStoreMeasurementHelp}>매장에서 확인하기</HelpAction>
+              </HelpPanel>
+            )}
+          </FieldGroup>
+
+          <FieldGroup>
+            <Field>
+              <span>중량</span>
+              <WeightField>
+                <input
+                  inputMode="decimal"
+                  aria-label="내 금 중량"
+                  placeholder={weightUnit === "g" ? "예: 10.0" : "예: 2.0"}
+                  value={weightValue}
+                  onChange={(event) => setWeightValue(event.target.value.replace(/[^0-9.,]/g, ""))}
+                />
+                <select
+                  aria-label="중량 단위"
+                  value={weightUnit}
+                  onChange={(event) => setWeightUnit(event.target.value)}
+                >
+                  <option value="g">g</option>
+                  <option value="don">돈</option>
+                </select>
+              </WeightField>
+            </Field>
+
+            <HelpRow>
+              <HelpButton type="button" onClick={toggleWeightHelp} aria-expanded={weightHelpOpen}>
+                무게를 모르시나요? <strong>확인 방법 보기</strong>
+              </HelpButton>
+            </HelpRow>
+
+            {weightHelpOpen && (
+              <HelpPanel>
+                <p><strong>보증서·영수증 확인</strong> · 구입 당시 중량이 표시되어 있는지 확인해 보세요.</p>
+                <p><strong>집에서 참고 측정</strong> · 0.01g 단위 전자저울을 이용하면 참고 중량을 확인할 수 있습니다.</p>
+                <p>일반 주방저울은 작은 귀금속을 측정할 때 오차가 클 수 있습니다.</p>
+                <p><strong>정확한 중량은 매장에서 직접 실측할 수 있습니다.</strong></p>
+                <HelpAction type="button" onClick={openStoreMeasurementHelp}>매장 실측 안내</HelpAction>
+              </HelpPanel>
+            )}
+          </FieldGroup>
         </Fields>
 
         <Results aria-live="polite">
           <Result>
             <small>오늘 참고가치</small>
-            <strong>{validWeight ? formatWon(estimatedValueWon) : grams > 0 ? "입력 확인" : "—"}</strong>
+            <strong>
+              {canCalculate ? formatWon(estimatedValueWon) : grams > 0 && !selected ? "금 종류 선택" : grams > 0 ? "입력 확인" : "—"}
+            </strong>
           </Result>
           <Result>
             <small>예상 순금량</small>
-            <strong>{validWeight ? formatGoldWeightPair(pureGoldG) : grams > 0 ? "입력 확인" : "—"}</strong>
+            <strong>
+              {canCalculate ? formatGoldWeightPair(pureGoldG) : grams > 0 && !selected ? "금 종류 선택" : grams > 0 ? "입력 확인" : "—"}
+            </strong>
           </Result>
         </Results>
 
-        <Action type="button" disabled={!selected || !validWeight} onClick={continueToMyGold}>
-          <Gem size={16} aria-hidden /> MY GOLD에 기록해 보기 <ArrowRight size={16} aria-hidden />
+        {canCalculate && (
+          <SavePrompt>
+            <strong>한 번 기록하면, 매주 내 금의 변화가 보입니다.</strong>
+            <p>
+              다시 무게를 입력하지 않아도 오늘 가치와 이후 변화를 계속 확인할 수 있습니다.
+
+            </p>
+          </SavePrompt>
+        )}
+
+        <Action type="button" disabled={!canCalculate} onClick={continueToMyGold}>
+          <Gem size={16} aria-hidden /> MY GOLD에 기록하기 <ArrowRight size={16} aria-hidden />
         </Action>
         <Note>
           <strong>MY GOLD는 실물을 맡기는 보관 서비스가 아닙니다.</strong> 내가 가진 금의 종류와 중량을 기록해

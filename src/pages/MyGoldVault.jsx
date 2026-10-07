@@ -941,13 +941,13 @@ export default function MyGoldVault() {
         <>
 
           {isGuest && hasPersonalizedGuestVault && activeSummary.itemCount > 0 && (
-            <GuestSaveCard aria-label="MY GOLD 회원가입 저장 안내">
+            <GuestSaveCard aria-label="MY GOLD 가입 안내">
               <GuestSaveCopy>
-                <h2>오늘 확인한 내 금, MY GOLD에 이어두세요.</h2>
-                <p>지금 기록을 그대로 저장하세요. 알림을 켜면 주요 금시세 변동과 MY GOLD의 주간 가치 변화도 받아볼 수 있습니다.</p>
+                <h2>오늘 확인한 내 금, 그대로 이어두세요.</h2>
+                <p>가입하면 지금 만든 MY GOLD 기록을 계속 확인하고, 내 금의 가치 변화를 이어볼 수 있습니다. 알림을 켜면 매주 MY GOLD의 변화도 받아볼 수 있습니다.</p>
               </GuestSaveCopy>
               <GuestSaveAction type="button" onClick={saveGuestVaultToAccount}>
-                <Save aria-hidden /> MY GOLD 기록 저장하기 <ArrowRight aria-hidden />
+                <Save aria-hidden /> 가입하고 이어두기 <ArrowRight aria-hidden />
               </GuestSaveAction>
             </GuestSaveCard>
           )}
@@ -1005,13 +1005,13 @@ export default function MyGoldVault() {
           />
 
           {isGuest && hasPersonalizedGuestVault && activeSummary.itemCount > 0 && (
-            <GuestSaveCard aria-label="MY GOLD 회원가입 저장 안내">
+            <GuestSaveCard aria-label="MY GOLD 가입 안내">
               <GuestSaveCopy>
-                <h2>기록한 금을 계정에 그대로 이어두세요.</h2>
-                <p>지금 만든 금 기록은 가입 후에도 그대로 이어집니다. 알림을 켜면 주요 금시세 변동과 MY GOLD의 주간 가치 변화도 받아볼 수 있습니다.</p>
+                <h2>기록한 금, 그대로 이어두세요.</h2>
+                <p>가입하면 지금 만든 MY GOLD 기록을 계속 확인하고, 내 금의 가치 변화를 이어볼 수 있습니다. 알림을 켜면 매주 MY GOLD의 변화도 받아볼 수 있습니다.</p>
               </GuestSaveCopy>
               <GuestSaveAction type="button" onClick={saveGuestVaultToAccount}>
-                <Save aria-hidden /> MY GOLD 기록 저장하기 <ArrowRight aria-hidden />
+                <Save aria-hidden /> 가입하고 이어두기 <ArrowRight aria-hidden />
               </GuestSaveAction>
             </GuestSaveCard>
           )}
@@ -1090,7 +1090,7 @@ export default function MyGoldVault() {
 
       <Notice>
         {isGuest ? (
-          <>체험 중 입력한 금 기록은 이 기기에만 임시 보관되며 <strong>MY GOLD 기록 저장</strong> 전에는 계정에 저장되지 않습니다. MY GOLD는 <strong>실물 금을 보관·예치하는 서비스가 아닙니다.</strong> 기록한 금의 참고가치와 예상 순금량을 확인하는 개인 기록 공간이며, 실제 교환량은 매장 실측 후 확정됩니다.</>
+          <>체험 중 입력한 금 기록은 <strong>가입 전까지 이 기기에만 임시 보관됩니다.</strong> MY GOLD는 <strong>실물 금을 보관·예치하는 서비스가 아닙니다.</strong> 기록한 금의 참고가치와 예상 순금량을 확인하는 개인 기록 공간이며, 실제 교환량은 매장 실측 후 확정됩니다.</>
         ) : (
           <>MY GOLD는 <strong>실물 금을 보관·예치하는 서비스가 아닙니다.</strong> 기록한 금의 참고가치와 예상 순금량을 확인하는 개인 기록 공간이며, 실제 교환량은 매장 실측 후 확정됩니다. <strong>MEMBER GOLD는 별도 회원혜택이며 MY GOLD 참고가치에는 합산하지 않습니다.</strong></>
         )}

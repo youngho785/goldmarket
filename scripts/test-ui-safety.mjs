@@ -386,11 +386,35 @@ test("비회원 랜딩은 계산 → MY GOLD → 골드바 목표 → 금시세 
   assert.doesNotMatch(landingSource, /MY GOLD PREVIEW|ONE FLOW|0\.01g|0\.03g|금 퀵퀴즈/);
 });
 
-test("비회원 랜딩의 첫 행동은 MY GOLD 기록으로 집중한다", () => {
-  assert.match(quickGoldValueCalculatorSource, /MY GOLD에 기록해 보기/);
+test("비회원 랜딩의 첫 행동은 계산 → MY GOLD 기록 → 가입 후 이어보기로 집중한다", () => {
+  assert.match(quickGoldValueCalculatorSource, /금 종류를 선택하세요/);
+  assert.doesNotMatch(
+    quickGoldValueCalculatorSource,
+    /useState\("gold-18k-jewelry"\)/
+  );
+
+  assert.match(quickGoldValueCalculatorSource, /각인 확인 방법/);
+  assert.match(quickGoldValueCalculatorSource, /585 · 14K · K14/);
+  assert.match(quickGoldValueCalculatorSource, /750 · 18K · K18/);
+  assert.match(quickGoldValueCalculatorSource, /무게를 모르시나요/);
+
+  assert.match(
+    quickGoldValueCalculatorSource,
+    /한 번 기록하면, 매주 내 금의 변화가 보입니다/
+  );
+  assert.match(quickGoldValueCalculatorSource, /MY GOLD에 기록하기/);
+
   assert.match(quickGoldValueCalculatorSource, /saveGuestMyGoldItems\(\[item\]\)/);
   assert.match(quickGoldValueCalculatorSource, /navigate\("\/my-gold"\)/);
   assert.match(landingSource, /<QuickGoldValueCalculator source="landing" \/>/);
+
+  assert.match(myGoldVaultSource, /오늘 확인한 내 금, 그대로 이어두세요/);
+  assert.match(myGoldVaultSource, /가입하고 이어두기/);
+  assert.match(
+    myGoldVaultSource,
+    /알림을 켜면 매주 MY GOLD의 변화도 받아볼 수 있습니다/
+  );
+  assert.doesNotMatch(myGoldVaultSource, /MY GOLD 기록 저장하기/);
 });
 
 test("공용 금 가치 계산기는 MY GOLD 지원 제품 전체를 한 목록에서 선택한다", () => {
