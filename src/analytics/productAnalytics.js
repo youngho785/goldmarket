@@ -18,6 +18,12 @@ const ANALYTICS_EXPLICITLY_DISABLED =
 
 const EVENT_PARAM_RULES = Object.freeze({
   landing_view: Object.freeze({}),
+  quick_calc_help_opened: Object.freeze({
+    source: new Set(["landing", "app-home", "quick-value"]),
+  }),
+  quick_calc_store_visit_clicked: Object.freeze({
+    source: new Set(["landing", "app-home", "quick-value"]),
+  }),
   registration_started: Object.freeze({
     source: new Set(["direct", "mygold", "exchange", "other"]),
   }),

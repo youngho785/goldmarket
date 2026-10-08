@@ -397,7 +397,8 @@ export default function LandingPage() {
             내 금, <em>오늘 얼마일까요?</em>
           </HeroTitle>
           <HeroLead>
-            14K·18K·순금의 종류와 중량만 입력하면 오늘 참고가치와 예상 순금량을 바로 확인할 수 있습니다.
+            14K·18K·순금의 종류와 무게를 알고 있다면 바로 참고가치를 확인해 보세요.
+            잘 모르셔도 확인 방법부터 안내해 드립니다.
             <strong> 먼저 계산하고, 계속 보고 싶은 금만 MY GOLD에 이어두세요.</strong>
           </HeroLead>
         </HeroCopy>

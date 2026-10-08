@@ -237,18 +237,20 @@ export default function AndroidHome() {
   const purePrice = Number(dashboard.market.pureGoldBuyPerDon || 0);
   return (
     <Page>
-      <AppMyGoldDashboard
-        user={user}
-        dashboard={dashboard}
-        animateValue
-        weeklyTrend={myGoldReady ? {
-          loading: trend.loading,
-          hasReference: !!trend.weeklyReference,
-          direction: trend.weeklyChange.direction,
-          amount: trend.weeklyChange.amount,
-          percent: trend.weeklyChange.percent,
-        } : null}
-      />
+      {user?.uid && (
+        <AppMyGoldDashboard
+          user={user}
+          dashboard={dashboard}
+          animateValue
+          weeklyTrend={myGoldReady ? {
+            loading: trend.loading,
+            hasReference: !!trend.weeklyReference,
+            direction: trend.weeklyChange.direction,
+            amount: trend.weeklyChange.amount,
+            percent: trend.weeklyChange.percent,
+          } : null}
+        />
+      )}
 
       {upcomingReservation && (
         <ReservationCard to="/my-exchanges" aria-label="다가오는 방문 예약 확인">
@@ -268,9 +270,9 @@ export default function AndroidHome() {
         <QuickGoldValueCalculator
           source="app-home"
           compact
-          eyebrow="MY GOLD · 첫 기록"
-          title="내 금부터 계산해 보세요"
-          description="금 종류와 중량을 입력하면 오늘 참고가치를 확인하고 바로 MY GOLD에 기록할 수 있습니다."
+          eyebrow="회원가입 없이 금 가치 확인"
+          title="집에 있는 금, 지금 얼마일까요?"
+          description="지금 가치를 먼저 확인하세요. 다음에 또 확인하고 싶다면 내 금 기록에 저장할 수 있습니다."
         />
       )}
 

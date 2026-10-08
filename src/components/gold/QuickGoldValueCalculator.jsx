@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { ArrowRight, Camera as CameraIcon, Gem } from "lucide-react";
 
@@ -44,7 +44,7 @@ const Head = styled.div`
   small {
     display: block;
     color: ${({ theme }) => theme.colors.goldLight};
-    font-size: .62rem;
+    font-size: .8rem;
     font-weight: 950;
     letter-spacing: .12em;
   }
@@ -53,7 +53,7 @@ const Head = styled.div`
     margin: 6px 0 0;
     color: ${({ theme }) => theme.on.primary};
     font-family: ${({ theme }) => theme.fonts.body};
-    font-size: ${({ $compact }) => ($compact ? "1.05rem" : "clamp(1.26rem, 2.4vw, 1.62rem)")};
+    font-size: ${({ $compact }) => ($compact ? "1.2rem" : "clamp(1.26rem, 2.4vw, 1.62rem)")};
     font-weight: 850;
     line-height: 1.18;
     letter-spacing: -.035em;
@@ -63,7 +63,7 @@ const Head = styled.div`
     margin: 7px 0 0;
     max-width: 620px;
     color: color-mix(in srgb, ${({ theme }) => theme.on.primary} 70%, transparent);
-    font-size: .72rem;
+    font-size: .88rem;
     line-height: 1.5;
     word-break: keep-all;
   }
@@ -71,6 +71,105 @@ const Head = styled.div`
 
 const Body = styled.div`
   padding: ${({ $compact }) => ($compact ? "14px 15px 15px" : "18px 20px 20px")};
+`;
+
+const EntryModeChooser = styled.div`
+  display: grid;
+  gap: 10px;
+  margin-bottom: 15px;
+
+  > p {
+    margin: 0;
+    color: ${({ theme }) => theme.colors.text};
+    font-size: .96rem;
+    font-weight: 850;
+    line-height: 1.4;
+  }
+
+  > div {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+  }
+`;
+
+const EntryModeButton = styled.button`
+  min-height: 52px;
+  padding: 12px 10px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 13px;
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
+  font: inherit;
+  font-size: .9rem;
+  font-weight: 850;
+  cursor: pointer;
+
+  &[aria-pressed="true"] {
+    border-color: ${({ theme }) => theme.colors.secondary};
+    background: ${({ theme }) => theme.semantic.badgeGoldBg};
+    color: ${({ theme }) => theme.colors.primary};
+  }
+
+  &:focus-visible {
+    outline: 3px solid ${({ theme }) => theme.colors.secondary};
+    outline-offset: 2px;
+  }
+`;
+
+const UnknownGuide = styled.section`
+  display: grid;
+  gap: 9px;
+  margin-bottom: 16px;
+  padding: 15px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 15px;
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+  color: ${({ theme }) => theme.colors.text};
+  line-height: 1.6;
+  word-break: keep-all;
+
+  strong { font-size: .93rem; }
+  p { margin: 0; font-size: .86rem; color: ${({ theme }) => theme.colors.textSecondary}; }
+`;
+
+const UnknownActions = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+
+  @media (max-width: 440px) { grid-template-columns: 1fr; }
+`;
+
+const UnknownVisitLink = styled(Link)`
+  display: grid;
+  place-items: center;
+  min-height: 46px;
+  padding: 10px 12px;
+  border-radius: 11px;
+  background: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.on.primary};
+  font-size: .88rem;
+  font-weight: 850;
+  text-align: center;
+  text-decoration: none;
+
+  &:focus-visible { outline: 3px solid ${({ theme }) => theme.colors.secondary}; outline-offset: 2px; }
+`;
+
+const UnknownBackButton = styled.button`
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 11px;
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.primary};
+  font: inherit;
+  font-size: .88rem;
+  font-weight: 850;
+  cursor: pointer;
+
+  &:focus-visible { outline: 3px solid ${({ theme }) => theme.colors.secondary}; outline-offset: 2px; }
 `;
 
 const Fields = styled.div`
@@ -89,7 +188,7 @@ const Field = styled.label`
 
   > span {
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .68rem;
+    font-size: .84rem;
     font-weight: 900;
   }
 
@@ -138,7 +237,7 @@ const HelpButton = styled.button`
   background: transparent;
   color: ${({ theme }) => theme.colors.textSecondary};
   font: inherit;
-  font-size: .68rem;
+  font-size: .84rem;
   font-weight: 800;
   text-align: left;
   cursor: pointer;
@@ -164,7 +263,7 @@ const HelpPanel = styled.div`
   border-radius: 12px;
   background: ${({ theme }) => theme.colors.surfaceAlt};
   color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: .68rem;
+  font-size: .84rem;
   line-height: 1.55;
 
   p { margin: 0; }
@@ -178,7 +277,7 @@ const HelpAction = styled.button`
   background: transparent;
   color: ${({ theme }) => theme.colors.secondaryDark};
   font: inherit;
-  font-size: .68rem;
+  font-size: .84rem;
   font-weight: 950;
   cursor: pointer;
 `;
@@ -188,14 +287,14 @@ const HallmarkScanButton = styled.button`
   align-items: center;
   justify-content: center;
   gap: 5px;
-  min-height: 30px;
+  min-height: 44px;
   padding: 5px 9px;
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 9px;
   background: ${({ theme }) => theme.colors.surfaceAlt};
   color: ${({ theme }) => theme.colors.secondaryDark};
   font: inherit;
-  font-size: .67rem;
+  font-size: .84rem;
   font-weight: 950;
   cursor: pointer;
 
@@ -219,7 +318,7 @@ const HallmarkStatus = styled.div`
   border-radius: 11px;
   background: ${({ theme }) => theme.colors.surfaceAlt};
   color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: .68rem;
+  font-size: .84rem;
   line-height: 1.5;
   word-break: keep-all;
 
@@ -233,7 +332,7 @@ const HallmarkStatus = styled.div`
   }
 
   small {
-    font-size: .62rem;
+    font-size: .8rem;
   }
 `;
 
@@ -247,14 +346,14 @@ const SavePrompt = styled.div`
   > strong {
     display: block;
     color: ${({ theme }) => theme.colors.primary};
-    font-size: .78rem;
+    font-size: .92rem;
     font-weight: 950;
   }
 
   p {
     margin: 5px 0 0;
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .68rem;
+    font-size: .84rem;
     line-height: 1.55;
     word-break: keep-all;
   }
@@ -280,7 +379,7 @@ const Result = styled.div`
   small {
     display: block;
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .64rem;
+    font-size: .83rem;
     font-weight: 850;
   }
 
@@ -308,7 +407,7 @@ const Action = styled.button`
   border-radius: 13px;
   background: ${({ theme }) => theme.colors.primary};
   color: ${({ theme }) => theme.on.primary};
-  font-size: .78rem;
+  font-size: .92rem;
   font-weight: 950;
   cursor: pointer;
 
@@ -321,7 +420,7 @@ const Action = styled.button`
 const Note = styled.p`
   margin: 9px 2px 0;
   color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: .62rem;
+  font-size: .8rem;
   line-height: 1.5;
   word-break: keep-all;
 
@@ -394,7 +493,7 @@ function formatWon(value) {
 
 export default function QuickGoldValueCalculator({
   source = "quick-value",
-  eyebrow = "MY GOLD · 바로 확인",
+  eyebrow = "회원가입 없이 먼저 확인",
   title = "내 금, 오늘 얼마일까요?",
   description = "금 종류와 중량만 입력하면 오늘 참고가치와 예상 순금량을 바로 확인합니다.",
   compact = false,
@@ -406,6 +505,7 @@ export default function QuickGoldValueCalculator({
   const [productId, setProductId] = useState("");
   const [weightValue, setWeightValue] = useState("");
   const [weightUnit, setWeightUnit] = useState("g");
+  const [entryMode, setEntryMode] = useState("known");
   const [stampHelpOpen, setStampHelpOpen] = useState(false);
   const [weightHelpOpen, setWeightHelpOpen] = useState(false);
   const [hallmarkBusy, setHallmarkBusy] = useState(false);
@@ -522,6 +622,17 @@ export default function QuickGoldValueCalculator({
     }, 700);
     return () => window.clearTimeout(timer);
   }, [estimatedValueWon, grams, pureGoldG, selected, source, validWeight]);
+
+  const selectEntryMode = (nextMode) => {
+    setEntryMode(nextMode);
+    if (nextMode === "unknown") {
+      trackProductEventOncePerSession(
+        "quick_calc_help_opened",
+        { source },
+        `quick-calc-help-${source}`
+      );
+    }
+  };
 
   const toggleStampHelp = () => {
     setStampHelpOpen((open) => !open);
@@ -678,6 +789,50 @@ export default function QuickGoldValueCalculator({
         <p>{description}</p>
       </Head>
       <Body $compact={compact}>
+        <EntryModeChooser>
+          <p>금 종류와 무게를 알고 계신가요?</p>
+          <div role="group" aria-label="금 가치 확인 시작 방법">
+            <EntryModeButton
+              type="button"
+              aria-pressed={entryMode === "known"}
+              onClick={() => selectEntryMode("known")}
+            >
+              네, 알고 있어요
+            </EntryModeButton>
+            <EntryModeButton
+              type="button"
+              aria-pressed={entryMode === "unknown"}
+              onClick={() => selectEntryMode("unknown")}
+            >
+              잘 모르겠어요
+            </EntryModeButton>
+          </div>
+        </EntryModeChooser>
+
+        {entryMode === "unknown" && (
+          <UnknownGuide role="region" aria-label="금 종류와 무게 확인 방법">
+            <strong>모르셔도 괜찮습니다. 확인 방법부터 안내해 드릴게요.</strong>
+            <p>① 금 종류: 반지·목걸이 안쪽의 14K·585, 18K·750 등의 표시를 살펴보세요. 각인은 참고용이며 실제 순도를 확정하지 않습니다.</p>
+            <p>② 무게: 보증서·구매 영수증을 확인하거나 정밀 저울로 참고 측정할 수 있어요. 사진만으로 무게를 알 수는 없습니다.</p>
+            <p>정보를 확인할 수 없으면 계산 없이 매장 실측 방문 예약을 진행할 수 있습니다.</p>
+            <UnknownActions>
+              <UnknownVisitLink
+                to="/gold-exchange?mode=visit"
+                onClick={() => trackProductEventOncePerSession(
+                  "quick_calc_store_visit_clicked",
+                  { source },
+                  `quick-calc-store-visit-${source}`
+                )}
+              >
+                매장에서 확인 예약하기
+              </UnknownVisitLink>
+              <UnknownBackButton type="button" onClick={() => selectEntryMode("known")}>
+                입력해서 계산하기
+              </UnknownBackButton>
+            </UnknownActions>
+          </UnknownGuide>
+        )}
+
         <Fields>
           <FieldGroup>
             <Field>
@@ -847,8 +1002,7 @@ export default function QuickGoldValueCalculator({
           <SavePrompt>
             <strong>한 번 기록하면, 매주 내 금의 변화가 보입니다.</strong>
             <p>
-              다시 무게를 입력하지 않아도 오늘 가치와 이후 변화를 계속 확인할 수 있습니다.
-
+              다음에 다시 입력하지 않고 가치를 확인할 수 있습니다. 주간 알림은 가입 후 알림 수신에 동의하면 이용할 수 있습니다.
             </p>
           </SavePrompt>
         )}
