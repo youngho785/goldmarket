@@ -1,6 +1,7 @@
 // src/pages/ResetPassword.js
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, Link, useNavigate } from 'react-router-dom';
+import { useSearchParams, Link, useNavigate, useLocation } from 'react-router-dom';
+import { buildAuthPath, getAuthReturnPath } from '@/lib/authReturn';
 import {
   sendPasswordResetEmail,
   verifyPasswordResetCode,
@@ -42,6 +43,10 @@ export default function ResetPassword() {
   try { auth.languageCode = 'ko'; } catch {}
 
   const navigate = useNavigate();
+  const location = useLocation();
+  // 비밀번호 재설정 뒤에도 원래 진행하던 MY GOLD·금교환 화면으로 돌아갑니다.
+  const returnTo = getAuthReturnPath(location, '/');
+  const loginPath = buildAuthPath('/login', returnTo);
   const [searchParams] = useSearchParams();
   const oobCode = searchParams.get('oobCode');
 
@@ -84,7 +89,7 @@ export default function ResetPassword() {
 
     try {
       const actionCodeSettings = {
-        url: `${window.location.origin}/reset-password?mode=resetPassword`,
+        url: `${window.location.origin}/reset-password?mode=resetPassword&next=${encodeURIComponent(returnTo)}`,
         handleCodeInApp: true
       };
       await sendPasswordResetEmail(auth, normalized, actionCodeSettings);
@@ -127,7 +132,7 @@ export default function ResetPassword() {
       await confirmPasswordReset(auth, oobCode, newPwd);
       setStep('success');
       setMsg('비밀번호가 성공적으로 변경되었습니다!');
-      setTimeout(() => navigate('/login'), 2000);
+      setTimeout(() => navigate(loginPath), 2000);
     } catch (err) {
       if (err.code === 'auth/weak-password') {
         setError('새 비밀번호가 너무 약합니다. 8자 이상이어야 합니다.');
@@ -211,7 +216,7 @@ export default function ResetPassword() {
       {step === 'success' && (
         <div>
           <SuccessTitle>{msg}</SuccessTitle>
-          <Link to="/login">로그인 페이지로 이동</Link>
+          <Link to={loginPath}>로그인 후 원래 작업 이어가기</Link>
         </div>
       )}
 

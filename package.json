@@ -36,6 +36,7 @@
     "test:smoke": "node scripts/run-smoke.mjs",
     "test:smoke:headed": "node scripts/run-smoke.mjs --headed",
     "test:ux-exchange-decision": "node scripts/test-ux-exchange-decision.mjs",
+    "test:ux-auth-continuity": "node scripts/test-ux-auth-continuity.mjs",
     "test:mobile": "node scripts/run-mobile-smoke.mjs",
     "test:mobile:headed": "node scripts/run-mobile-smoke.mjs --headed"
   },

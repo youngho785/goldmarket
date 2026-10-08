@@ -13,6 +13,7 @@ import {
   sendVerificationEmailIfNeeded,
 } from "../services/authService";
 import { readMemberOnboardingPath } from "@/lib/memberOnboarding";
+import { getAuthReturnPath } from "@/lib/authReturn";
 import { isNative } from "@/platform/runtime";
 import {
   buildEmailActionSettings,
@@ -261,7 +262,15 @@ export default function VerifyEmail() {
     let cancelled = false;
 
     if (mode === "resetPassword" && oobCode) {
-      navigate(`/reset-password?oobCode=${encodeURIComponent(oobCode)}`, { replace: true });
+      // Firebase 이메일 액션 링크가 새 탭에서 열려도 로그인 복귀 위치를 복원합니다.
+      // continuePath는 위에서 이미 허용된 출처의 내부 경로로 확인했습니다.
+      const resetReturnTo = continuePath.startsWith("/reset-password?")
+        ? getAuthReturnPath({ search: continuePath.slice(continuePath.indexOf("?")) }, "/")
+        : "/";
+      navigate(
+        `/reset-password?oobCode=${encodeURIComponent(oobCode)}&next=${encodeURIComponent(resetReturnTo)}`,
+        { replace: true }
+      );
       return;
     }
     const isEmailAction =
@@ -418,7 +427,7 @@ export default function VerifyEmail() {
     })();
 
     return () => { cancelled = true; };
-  }, [mode, oobCode, appReturnRequested, isAndroidBrowser, destination, navigate]);
+  }, [mode, oobCode, continuePath, appReturnRequested, isAndroidBrowser, destination, navigate]);
 
   /* 2) 웹 커스텀 인증페이지 -> Android 앱 자동 복귀 */
   useEffect(() => {

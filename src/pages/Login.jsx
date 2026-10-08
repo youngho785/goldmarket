@@ -197,6 +197,7 @@ export default function Login() {
   const returningToMyGold = returnTo === "/my-gold" || returnTo.startsWith("/my-gold?") || returnTo.startsWith("/my-gold/");
   const returningToExchange = returnTo.startsWith("/gold-exchange");
   const registerPath = buildAuthPath("/register", returnTo);
+  const resetPasswordPath = `/reset-password?next=${encodeURIComponent(returnTo)}`;
   const registerState = {
     from: returnTo,
     intent: location.state?.intent || "auth-return",
@@ -447,7 +448,7 @@ export default function Login() {
         <div id="login-mfa-recaptcha" />
 
         <LinkText>
-          <Link to="/reset-password">비밀번호를 잊으셨나요?</Link>
+          <Link to={resetPasswordPath}>비밀번호를 잊으셨나요?</Link>
         </LinkText>
         <LinkText>
           처음이세요?{" "}

@@ -488,8 +488,8 @@ export default function GoldExchange() {
     openGate({
       unifiedContinue: true,
       purposeLabel: "방문 예약",
-      message: "입력한 금 정보와 선택한 방문 일정을 잠시 보관했습니다. 로그인 후 예약을 이어서 완료할 수 있습니다.",
-      verificationMessage: "입력한 금 정보와 선택한 방문 일정을 잠시 보관했습니다. 이메일 인증 후 예약을 이어서 완료할 수 있습니다.",
+      message: "금 종류·중량과 방문 일정은 이 브라우저에 최대 2시간 임시 저장됩니다(공용 기기 주의). 로그인 후 예약을 이어갈 수 있습니다.",
+      verificationMessage: "금 종류·중량과 방문 일정은 이 브라우저에 최대 2시간 임시 저장됩니다(공용 기기 주의). 이메일 인증 후 예약을 이어갈 수 있습니다.",
       requireVerified: true,
       intent: "exchange-reservation-final",
       next: "/gold-exchange?resume=reservation",
@@ -692,6 +692,13 @@ export default function GoldExchange() {
           </EstimateBoundary>
         )}
       </FlowHeader>
+      {resumeRequested && !isRebook && (
+        <InfoCard role="status" style={{ marginBottom: 16 }}><strong>{authDraft ? "이전에 선택한 금 정보와 방문 일정을 불러왔습니다." : "이전 예약 정보를 불러오지 못했습니다."}</strong>
+          <p style={{ margin: "7px 0 0" }}>{authDraft
+            ? "예약 요청은 아직 완료되지 않았습니다. 방문 날짜와 시간을 다시 확인한 뒤 요청해 주세요."
+            : "임시 정보가 만료되었거나 다른 기기·브라우저에서 인증했을 수 있습니다. 다시 계산하거나 매장 확인 예약을 선택해 주세요. 아직 예약이 접수된 상태는 아닙니다."}</p>
+        </InfoCard>
+      )}
       {showStartMethod && <StartMethodScreen onChoose={chooseStartMethod} />}
       {!showStartMethod && vaultImportLoading && (
         <Card><InfoCard role="status">MY GOLD에서 내 금 기록을 불러오고 있습니다.</InfoCard></Card>
