@@ -222,11 +222,11 @@ export async function waitForFirestoreValue(
 export async function createExchangeRequestViaUi(page, member, suffix = "") {
   await loginFromUi(page, member.email, member.password, "/gold-exchange");
   await page.goto("/gold-exchange", { waitUntil: "domcontentloaded" });
-  await page.getByRole("button", { name: /직접 입력하기/ }).click();
+  await page.getByRole("button", { name: /내 금으로 받을 골드바 계산/ }).click();
   await page.locator("#product-0").selectOption("gold-14k-jewelry");
   await page.locator("#quantity-0").fill("20");
   await page.locator("#quantity-0").blur();
-  const calculateButton = page.getByRole("button", { name: "예상 순금량과 골드바 조합 확인" });
+  const calculateButton = page.getByRole("button", { name: "예상 순금량과 받을 골드바 확인" });
   const barHeading = page.getByRole("heading", { name: "내 금으로 받을 골드바를 선택하세요" });
   await expect.poll(async () => {
     if (await barHeading.isVisible().catch(() => false)) return true;
@@ -236,7 +236,7 @@ export async function createExchangeRequestViaUi(page, member, suffix = "") {
     timeout: 20_000,
     message: "Gold rates did not become ready for GOLD TO GOLD calculation.",
   }).toBe(true);
-  await page.getByRole("button", { name: "이 예상으로 방문 예약 계속" }).click();
+  await page.getByRole("button", { name: "선택한 골드바로 방문 예약 계속" }).click();
 
   await page.locator("#exchange-visit-date").fill(nextBookableDate(2));
   await page.locator("#exchange-visit-date").press("Tab");
