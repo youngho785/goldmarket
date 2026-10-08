@@ -94,7 +94,7 @@ const Item = styled(NavLink)`
   min-height: 54px;
   padding: 5px 2px;
   color: ${({ theme }) => theme.colors.textLight};
-  font-size: 0.67rem;
+  font-size: 0.76rem;
   font-weight: 800;
   text-align: center;
   text-decoration: none;
@@ -213,7 +213,7 @@ const GUEST_ANDROID_ITEMS = [
   { to: "/", icon: Home, label: "홈" },
   { to: "/gold-price", icon: Scale, label: "금시세" },
   { to: "/my-gold/items?add=1", icon: Plus, label: "금 추가", center: true },
-  { to: "/my-gold", icon: Gem, label: "MY GOLD" },
+  { to: "/gold-exchange", icon: Calculator, label: "금교환" },
   { to: "/login", icon: User, label: "로그인" },
 ];
 

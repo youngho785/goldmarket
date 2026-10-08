@@ -14,13 +14,14 @@ import {
   CalendarDays,
   ChevronRight,
   ClipboardList,
-  Plus,
   Scale,
 } from "lucide-react";
 
 import AppMyGoldDashboard from "@/components/gold/AppMyGoldDashboard";
 import AppGoldJourney from "@/components/gold/AppGoldJourney";
 import MemberGoldSummaryCard from "@/components/gold/MemberGoldSummaryCard";
+import HomePriorityActions from "@/components/home/HomePriorityActions";
+import HomeOptionalDetails from "@/components/home/HomeOptionalDetails";
 import MyGoldAlertSummary from "@/components/gold/MyGoldAlertSummary";
 import QuickGoldValueCalculator from "@/components/gold/QuickGoldValueCalculator";
 import { useAuthContext } from "@/context/AuthContext";
@@ -105,7 +106,7 @@ const QuickAction = styled(Link)`
   background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.text};
   text-decoration: none;
-  font-size: .76rem;
+  font-size: .86rem;
   font-weight: 900;
 
   span {
@@ -119,6 +120,7 @@ const QuickAction = styled(Link)`
   }
   svg { width: 16px; height: 16px; }
 `;
+
 
 function formatWon(value) {
   const number = Number(value);
@@ -264,6 +266,8 @@ export default function AndroidHome() {
         </ReservationCard>
       )}
 
+      {hasMyGold && <HomePriorityActions />}
+
       <MemberGoldSummaryCard uid={user?.uid} compact />
 
       {!user?.uid && (
@@ -278,8 +282,9 @@ export default function AndroidHome() {
 
 
       {hasMyGold && dashboard.ratesReady && (
-        <AppGoldJourney
-          pureGoldG={Number(dashboard.summary.pureGoldG || 0)}
+        <HomeOptionalDetails>
+          <AppGoldJourney
+            pureGoldG={Number(dashboard.summary.pureGoldG || 0)}
           vaultProducts={(dashboard.items || []).slice(0, 20).map((item) => ({
             productId: item.productId || "",
             goldType: item.goldType,
@@ -294,14 +299,12 @@ export default function AndroidHome() {
             { source: "app_home" },
             "app-home-gold-journey"
           )}
-        />
+          />
+        </HomeOptionalDetails>
       )}
 
       {user?.uid && (
-        <QuickActions aria-label="빠른 행동">
-          <QuickAction to="/my-gold/items?add=1">
-            <span><Plus aria-hidden /></span> 금 추가
-          </QuickAction>
+        <QuickActions aria-label="예약과 부가 메뉴">
           <QuickAction to="/my-exchanges">
             <span><ClipboardList aria-hidden /></span> 예약·교환 내역
           </QuickAction>
@@ -315,7 +318,9 @@ export default function AndroidHome() {
       )}
 
 
-      <MyGoldAlertSummary uid={user?.uid} demoMode={!user?.uid} compact />
+      {user?.uid && (
+        <MyGoldAlertSummary uid={user?.uid} demoMode={!user?.uid} compact />
+      )}
 
       {!dashboard.publicPriceLoading && dashboard.publicPriceEnabled && purePrice > 0 && (
         <PriceCard to="/gold-price" aria-label="오늘 순금 시세 보기">

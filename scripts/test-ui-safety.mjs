@@ -660,7 +660,9 @@ test("Android 홈은 7일 변화를 별도 카드 없이 MY GOLD 요약에 통�
   assert.match(androidHomeSource, /<AppGoldJourney/);
   assert.match(androidHomeSource, /gold_to_gold_cta_clicked/);
   assert.match(androidHomeSource, /<MyGoldAlertSummary[\s\S]*demoMode=\{!user\?\.uid\}/);
-  assert.match(androidHomeSource, /to="\/my-gold\/items\?add=1"/);
+  const homePriorityActionsSource = await read("src/components/home/HomePriorityActions.jsx");
+  assert.match(androidHomeSource, /<HomePriorityActions \/>/);
+  assert.match(homePriorityActionsSource, /to="\/my-gold\/items\?add=1"/);
   assert.doesNotMatch(androidHomeSource, /GOLD JOURNEY · GOLD TO GOLD|MILESTONE LADDER/);
 });
 

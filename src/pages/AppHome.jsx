@@ -6,7 +6,6 @@ import {
   CalendarDays,
   ChevronRight,
   ClipboardList,
-  Plus,
   ReceiptText,
 } from "lucide-react";
 
@@ -17,6 +16,8 @@ import { useAuthContext } from "@/context/AuthContext";
 import useGoldVaultDashboard from "@/hooks/useGoldVaultDashboard";
 import AppGoldJourney from "@/components/gold/AppGoldJourney";
 import MemberGoldSummaryCard from "@/components/gold/MemberGoldSummaryCard";
+import HomePriorityActions from "@/components/home/HomePriorityActions";
+import HomeOptionalDetails from "@/components/home/HomeOptionalDetails";
 import { db } from "@/firebase/firebase";
 
 const Page = styled.div`
@@ -70,25 +71,25 @@ const ReservationCopy = styled.div`
   small {
     display: block;
     color: ${({ theme }) => theme.colors.secondaryDark};
-    font-size: .61rem;
+    font-size: .78rem;
     font-weight: 950;
   }
   strong {
     display: block;
     margin-top: 2px;
     color: ${({ theme }) => theme.colors.primary};
-    font-size: .77rem;
+    font-size: .92rem;
   }
   p {
     margin: 2px 0 0;
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .61rem;
+    font-size: .78rem;
   }
 `;
 
 const QuickGrid = styled.section`
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 9px;
 
   @media (max-width: 720px) {
@@ -120,8 +121,9 @@ const QuickLink = styled(Link)`
   }
 
   svg { width: 16px; height: 16px; }
-  strong { font-size: .66rem; line-height: 1.25; word-break: keep-all; }
+  strong { font-size: .86rem; line-height: 1.25; word-break: keep-all; }
 `;
+
 
 const toLocalDateKey = (date = new Date()) => {
   const year = date.getFullYear();
@@ -255,20 +257,20 @@ export default function AppHome() {
         />
       </OverviewGrid>
 
+      {hasMyGold && <HomePriorityActions />}
+
       <MemberGoldSummaryCard uid={user?.uid} />
 
       {hasMyGold && !myGoldDashboard.itemsLoading && myGoldDashboard.ratesReady && (
-        <AppGoldJourney
-          pureGoldG={pureGoldG}
-          vaultProducts={vaultProducts}
-        />
+        <HomeOptionalDetails>
+          <AppGoldJourney
+            pureGoldG={pureGoldG}
+            vaultProducts={vaultProducts}
+          />
+        </HomeOptionalDetails>
       )}
 
-      <QuickGrid aria-label="빠른 메뉴">
-        <QuickLink to="/my-gold/items?add=1">
-          <span><Plus aria-hidden /></span>
-          <strong>내 금 기록</strong>
-        </QuickLink>
+      <QuickGrid aria-label="예약과 부가 메뉴">
         <QuickLink to="/gold-exchange?reserve=1">
           <span><CalendarDays aria-hidden /></span>
           <strong>방문 예약</strong>
