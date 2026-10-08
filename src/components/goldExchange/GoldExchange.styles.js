@@ -209,8 +209,8 @@ export const StartChoiceGrid = styled.div`
 `;
 
 export const StartChoice = styled.button`
-  min-height: 66px;
-  padding: 10px 12px;
+  min-height: 108px;
+  padding: 15px;
   border: 1px solid ${({ $active, theme }) =>
     $active ? theme.colors.secondary : theme.colors.border};
   border-radius: 14px;
@@ -221,25 +221,30 @@ export const StartChoice = styled.button`
   cursor: ${({ $static }) => ($static ? "default" : "pointer")};
   box-shadow: 0 7px 18px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 5%, transparent);
 
+  &:focus-visible {
+    outline: 3px solid ${({ theme }) => theme.colors.gold};
+    outline-offset: 2px;
+  }
+
   small {
     display: block;
     color: ${({ theme }) => theme.colors.secondaryDark};
-    font-size: .6rem;
-    font-weight: 950;
-    letter-spacing: .08em;
+    font-size: .8rem;
+    font-weight: 900;
+    letter-spacing: .01em;
   }
   strong {
     display: block;
-    margin-top: 3px;
-    font-size: .84rem;
-    line-height: 1.25;
+    margin-top: 4px;
+    font-size: 1rem;
+    line-height: 1.35;
   }
   span {
     display: block;
-    margin-top: 3px;
+    margin-top: 6px;
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .65rem;
-    line-height: 1.35;
+    font-size: .86rem;
+    line-height: 1.45;
   }
 `;
 
@@ -292,6 +297,40 @@ export const ExchangeOutcome = styled.div`
 
   @media (max-width: 520px) {
     grid-template-columns: 1fr;
+  }
+`;
+
+export const ExchangeDecisionSummary = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 10px;
+
+  @media (max-width: 620px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+export const ExchangeDecisionFact = styled.div`
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 13px;
+  background: ${({ theme }) => theme.colors.surface};
+
+  span {
+    display: block;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: .82rem;
+    line-height: 1.4;
+  }
+  strong {
+    display: block;
+    margin-top: 5px;
+    color: ${({ theme }) => theme.colors.primary};
+    font-size: 1.05rem;
+    line-height: 1.35;
+    word-break: keep-all;
   }
 `;
 

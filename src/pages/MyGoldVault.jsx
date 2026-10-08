@@ -893,7 +893,7 @@ export default function MyGoldVault() {
               <Empty>
                 <GoldSeed aria-hidden />
                 <strong>아직 기록한 금이 없습니다.</strong>
-                <span>금 하나를 기록하면 오늘 참고가치와 가격 변화를 바로 확인할 수 있습니다.</span>
+                <span>금 하나만 기록해 두면 다음에 다시 입력하지 않고 가치를 확인할 수 있습니다.</span>
               </Empty>
             )}
           </VaultSection>
@@ -978,7 +978,8 @@ export default function MyGoldVault() {
           <ViewIntro>
             <div>
               <h1>{isGuest ? "체험 중인 금 관리" : "내가 기록한 금"}</h1>
-              <p>금마다 이름을 붙이고 종류와 중량을 기록해 오늘 참고가치와 예상 순금량을 관리합니다.</p>
+              <p>금을 한 번 기록하면 다음에 다시 입력하지 않고 오늘 참고가치를 확인할 수 있습니다.</p>
+              <p><Link to="/gold-exchange?mode=visit">금 종류나 무게를 모르시나요? 매장에서 확인하기 →</Link></p>
             </div>
             <AddGoldButton type="button" onClick={openAddForm} disabled={!canAddMore}>
               <Plus size={15} aria-hidden /> 금 추가

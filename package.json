@@ -35,6 +35,7 @@
     "test:smoke:setup": "npm --prefix tests/smoke run setup",
     "test:smoke": "node scripts/run-smoke.mjs",
     "test:smoke:headed": "node scripts/run-smoke.mjs --headed",
+    "test:ux-exchange-decision": "node scripts/test-ux-exchange-decision.mjs",
     "test:mobile": "node scripts/run-mobile-smoke.mjs",
     "test:mobile:headed": "node scripts/run-mobile-smoke.mjs --headed"
   },

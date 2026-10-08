@@ -32,6 +32,8 @@ import {
   OutlineButton,
   GhostButton,
   ExchangeOutcome,
+  ExchangeDecisionSummary,
+  ExchangeDecisionFact,
   MiniGoldBar,
   SubTitle,
   TableWrap,
@@ -131,18 +133,24 @@ const QuantityField = React.memo(function QuantityField({
 export function StartMethodScreen({ onChoose }) {
   return (
     <>
+      <h2 style={{ width: "100%", maxWidth: 1160, margin: "8px 0 12px", fontSize: "1.1rem", color: "var(--gm-primary)" }}>
+        내 금 정보에 맞춰 시작하세요
+      </h2>
       <StartChoiceGrid aria-label="금교환 시작 방법">
-        <StartChoice type="button" onClick={() => onChoose("vault")}>
-          <strong>MY GOLD에서 불러오기</strong>
-          <span>내가 기록해 둔 금 종류·중량을 불러와 예상 교환량을 계산합니다. 로그인 전에는 이 브라우저의 MY GOLD 기록으로 계속할 수 있습니다.</span>
-        </StartChoice>
-        <StartChoice type="button" onClick={() => onChoose("manual")}>
-          <strong>직접 입력하기</strong>
-          <span>14K·18K·순금의 종류와 중량을 직접 입력합니다.</span>
+        <StartChoice type="button" $active onClick={() => onChoose("manual")}>
+          <small>종류와 무게를 알고 있다면</small>
+          <strong>내 금으로 받을 골드바 계산</strong>
+          <span>금 종류와 중량만 입력하면 예상 교환량과 제작 공임을 확인할 수 있어요.</span>
         </StartChoice>
         <StartChoice type="button" onClick={() => onChoose("visit")}>
-          <strong>매장에서 확인하기</strong>
-          <span>순도·중량을 몰라도 됩니다. 계산 없이 방문 예약으로 이동합니다.</span>
+          <small>정확한 정보를 모르겠다면</small>
+          <strong>매장에서 확인하고 예약</strong>
+          <span>순도나 무게를 몰라도 괜찮습니다. 계산 없이 방문 날짜부터 선택하세요.</span>
+        </StartChoice>
+        <StartChoice type="button" onClick={() => onChoose("vault")}>
+          <small>MY GOLD에 금을 기록했다면</small>
+          <strong>기록한 내 금 불러오기</strong>
+          <span>저장한 종류·중량을 다시 입력하지 않고 예상 교환량을 확인합니다.</span>
         </StartChoice>
       </StartChoiceGrid>
     </>
@@ -266,7 +274,7 @@ export function BarStep({
         <SectionSeparator />
         <div style={{ display: "grid", gap: 10 }}>
           <Button type="button" onClick={onGoReserve}>현장 확인 예약</Button>
-          <OutlineButton type="button" onClick={onSaveToMyGold}>MY GOLD에 저장하고 가치 추적</OutlineButton>
+          <OutlineButton type="button" onClick={onSaveToMyGold}>지금 교환하지 않고 내 금 기록하기</OutlineButton>
           <GhostButton type="button" onClick={() => setStep(STEP.CALC)}>이전(제품 추가)</GhostButton>
         </div>
       </Card>
@@ -294,6 +302,12 @@ export function BarStep({
     don: selectedBar.don,
     qty: safeQty,
   });
+  const selectedTotalG = roundTo3Custom(selectedBar.grams * safeQty);
+  const neededG = roundTo3Custom(Math.max(0, selectedTotalG - totalGrams));
+  const remainingG = roundTo3Custom(Math.max(0, totalGrams - selectedTotalG));
+  const feeLabel = feeEstimate.totalFee == null
+    ? "매장 확인"
+    : formatGoldBarFee(feeEstimate.totalFee);
 
   const isTileRecommended = (i) => i === recIdx;
   const isTileTopUp = (i) => i === topUpIdx;
@@ -305,14 +319,9 @@ export function BarStep({
 
       <ExchangeOutcome aria-label="예상 금교환 결과">
         <div>
-          <small>내 금 → 999.9 골드바 예상</small>
-          <strong>예상 순금량 {fmtG(totalGrams)}g → {selectedBar.label} × {safeQty}</strong>
-          <p>
-            {roundTo3Custom(totalGrams - selectedBar.grams * safeQty) >= 0
-              ? `예상 잔여 순금 ${fmtG(roundTo3Custom(totalGrams - selectedBar.grams * safeQty))}g (${fmtD(roundTo3Custom(totalGrams - selectedBar.grams * safeQty) / DON_TO_GRAMS)}돈)`
-              : `선택 규격까지 ${fmtG(roundTo3Custom(selectedBar.grams * safeQty - totalGrams))}g (${fmtD(roundTo3Custom(selectedBar.grams * safeQty - totalGrams) / DON_TO_GRAMS)}돈) 추가 필요`}
-            · 실제 순금량은 매장 실측 후 확정됩니다.
-          </p>
+          <small>내 금 → 999.9 골드바 예상 · 온라인 안내</small>
+          <strong>{selectedBar.label} × {safeQty}개</strong>
+          <p>현재 금의 교환 기준 예상 순금량은 {fmtG(totalGrams)}g입니다. 선택한 골드바와 비용은 방문 시 확정됩니다.</p>
         </div>
         <MiniGoldBar aria-hidden="true">
           <small>KOREA GOLD MARKET</small>
@@ -321,7 +330,24 @@ export function BarStep({
         </MiniGoldBar>
       </ExchangeOutcome>
 
-
+      <ExchangeDecisionSummary role="group" aria-label="교환 예상 핵심 요약">
+        <ExchangeDecisionFact>
+          <span>선택한 골드바 총중량</span>
+          <strong>{fmtG(selectedTotalG)}g</strong>
+        </ExchangeDecisionFact>
+        <ExchangeDecisionFact>
+          <span>{neededG > 0 ? "추가로 필요한 금" : "예상 남는 순금"}</span>
+          <strong>{neededG > 0 ? `${fmtG(neededG)}g 추가 필요` : `${fmtG(remainingG)}g`}</strong>
+        </ExchangeDecisionFact>
+        <ExchangeDecisionFact>
+          <span>예상 제작 공임</span>
+          <strong>{feeLabel}</strong>
+        </ExchangeDecisionFact>
+      </ExchangeDecisionSummary>
+      <HelpText style={{ margin: "6px 0 10px", lineHeight: 1.6 }}>
+        금의 순도·중량, 부족분 정산 및 실제 공임은 매장에서 고객과 확인하고 동의 후 확정합니다.
+        {" "}<FeeLink href="/goldbar-fee">전체 공임표 보기</FeeLink>
+      </HelpText>
 
       <details style={{ margin: "14px 0 4px" }}>
         <summary style={{ cursor: "pointer", color: "var(--gm-primary)", fontWeight: 850, fontSize: ".88rem" }}>
@@ -570,16 +596,10 @@ export function BarStep({
 
       <SectionSeparator />
       <div style={{ display: "grid", gap: 10 }}>
-        <HelpText style={{ margin: "0", textAlign: "center", lineHeight: 1.55 }}>
-          {"예상 제작 공임 "}
-          <b>{feeEstimate.totalFee == null ? "매장 확인" : formatGoldBarFee(feeEstimate.totalFee)}</b>
-          {" · 최종 공임은 교환 확정 전에 매장에서 확인합니다. "}
-          <FeeLink href="/goldbar-fee">{"전체 공임표 보기"}</FeeLink>
-        </HelpText>
-        <Button type="button" onClick={onGoReserve}>이 예상으로 방문 예약 계속</Button>
-        <OutlineButton type="button" onClick={onSaveToMyGold}>MY GOLD에 저장하고 가치 추적</OutlineButton>
+        <Button type="button" onClick={onGoReserve}>선택한 골드바로 방문 예약 계속</Button>
+        <OutlineButton type="button" onClick={onSaveToMyGold}>지금 교환하지 않고 내 금 기록하기</OutlineButton>
         <HelpText style={{ margin: 0, textAlign: "center" }}>
-          지금 교환하지 않아도 저장해 두면 오늘 가치와 시세 변화를 계속 확인할 수 있습니다.
+          금을 기록하면 다음에 중량을 다시 입력하지 않고 현재 참고가치를 확인할 수 있습니다.
         </HelpText>
         <GhostButton type="button" onClick={() => setStep(STEP.CALC)}>이전(수정)</GhostButton>
       </div>
