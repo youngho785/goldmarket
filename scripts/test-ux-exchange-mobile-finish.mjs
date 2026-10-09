@@ -53,3 +53,15 @@ test('모바일 카드·진행 단계 글꼴과 요약 배치, 회귀 명령이 
   assert.match(styles, /export const ReservationSummary/);
   assert.equal(pkg.scripts['test:ux-exchange-mobile-finish'], 'node scripts/test-ux-exchange-mobile-finish.mjs');
 });
+
+// Step 2 displays grams and don together, emphasizing estimated pure gold before the bar choice.
+test('Step 2 최상단에 예상 순금량을 강조하고 g·돈을 병행 표기한다', () => {
+  assert.match(steps, /<ExchangePureGoldTotal role="group" aria-label="내 금의 예상 순금량">/);
+  assert.match(steps, /<strong>\{fmtG\(totalGrams\)\}g<\/strong>/);
+  assert.match(steps, /<span>\(\{fmtD\(totalDon\)\}돈\)<\/span>/);
+  assert.match(steps, /1돈 = 3\.75g · 매장 실측 후 최종 확정/);
+  assert.match(bar, /fmtD\(selectedTotalG \/ DON_TO_GRAMS\)/);
+  assert.match(bar, /fmtD\(\(neededG > 0 \? neededG : remainingG\) \/ DON_TO_GRAMS\)/);
+  assert.match(styles, /export const ExchangePureGoldTotal = styled\.div/);
+  assert.match(styles, /\.pure-gold-amount strong/);
+});

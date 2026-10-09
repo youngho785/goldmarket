@@ -28,6 +28,7 @@
     "test:ux-first-contact": "node scripts/test-ux-first-contact.mjs",
     "test:ux-home-priority": "node scripts/test-ux-home-priority.mjs",
     "test:ux-android-home-finish": "node scripts/test-ux-android-home-finish.mjs",
+    "test:ux-app-first-experience": "node scripts/test-ux-app-first-experience.mjs",
     "test:member-gold": "node scripts/test-member-gold-wallet.mjs",
     "test:gold-display": "node scripts/test-gold-display-consistency.mjs",
     "test:push-safety": "node scripts/test-local-push-safety.mjs",

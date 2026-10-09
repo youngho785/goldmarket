@@ -32,6 +32,7 @@ import {
   OutlineButton,
   GhostButton,
   ExchangeOutcome,
+  ExchangePureGoldTotal,
   ExchangeDecisionSummary,
   ExchangeDecisionFact,
   MiniGoldBar,
@@ -263,7 +264,7 @@ export function BarStep({
         <Title>예상 순금이 1g 미만입니다</Title>
         <InfoCard role="status">
           <p style={{ margin: 0 }}>
-            예상 순금량은 <b>{fmtG(totalGrams)}g</b>이며, 최소 골드바 1g까지
+            예상 순금량은 <b>{fmtG(totalGrams)}g ({fmtD(totalDon)}돈)</b>이며, 최소 골드바 1g까지
             <b> {fmtG(needed)}g</b>이 더 필요합니다.
           </p>
           <p style={{ margin: "8px 0 0" }}>
@@ -317,11 +318,20 @@ export function BarStep({
       <StepCenter><StepMark>스텝 2</StepMark></StepCenter>
       <Title>내 금으로 받을 골드바를 선택하세요</Title>
 
+      <ExchangePureGoldTotal role="group" aria-label="내 금의 예상 순금량">
+        <span className="pure-gold-label">내 금의 예상 순금량</span>
+        <div className="pure-gold-amount">
+          <strong>{fmtG(totalGrams)}g</strong>
+          <span>({fmtD(totalDon)}돈)</span>
+        </div>
+        <small>1돈 = 3.75g · 매장 실측 후 최종 확정</small>
+      </ExchangePureGoldTotal>
+
       <ExchangeOutcome aria-label="예상 금교환 결과">
         <div>
           <small>내 금 → 999.9 골드바 예상 · 온라인 안내</small>
           <strong>{selectedBar.label} × {safeQty}개</strong>
-          <p>내 금의 예상 순금량 <b>{fmtG(totalGrams)}g</b> · 방문 시 실측 후 확정</p>
+          <p>선택한 골드바의 예상 결과입니다.</p>
         </div>
         <MiniGoldBar aria-hidden="true">
           <small>KOREA GOLD MARKET</small>
@@ -333,11 +343,14 @@ export function BarStep({
       <ExchangeDecisionSummary role="group" aria-label="교환 예상 핵심 요약" aria-live="polite">
         <ExchangeDecisionFact>
           <span>선택한 골드바 총중량</span>
-          <strong>{fmtG(selectedTotalG)}g</strong>
+          <strong>{fmtG(selectedTotalG)}g <em>({fmtD(selectedTotalG / DON_TO_GRAMS)}돈)</em></strong>
         </ExchangeDecisionFact>
         <ExchangeDecisionFact>
           <span>{neededG > 0 ? "추가로 필요한 금" : "예상 남는 순금"}</span>
-          <strong>{neededG > 0 ? `${fmtG(neededG)}g 추가 필요` : `${fmtG(remainingG)}g`}</strong>
+          <strong>
+            {fmtG(neededG > 0 ? neededG : remainingG)}g
+            {" "}<em>({fmtD((neededG > 0 ? neededG : remainingG) / DON_TO_GRAMS)}돈)</em>
+          </strong>
         </ExchangeDecisionFact>
         <ExchangeDecisionFact>
           <span>예상 제작 공임</span>

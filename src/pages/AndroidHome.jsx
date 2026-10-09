@@ -244,7 +244,7 @@ export default function AndroidHome() {
   const purePrice = Number(dashboard.market.pureGoldBuyPerDon || 0);
   return (
     <Page>
-      {user?.uid && (
+      {user?.uid && (dashboard.itemsLoading || hasMyGold) && (
         <AppMyGoldDashboard
           user={user}
           dashboard={dashboard}
@@ -272,6 +272,16 @@ export default function AndroidHome() {
       )}
 
       {hasMyGold && <HomePriorityActions />}
+
+      {user?.uid && !dashboard.itemsLoading && !hasMyGold && (
+        <QuickGoldValueCalculator
+          source="app-first-gold"
+          compact
+          eyebrow="첫 금 기록"
+          title="내 금의 가치부터 확인해 보세요"
+          description="금 종류와 무게를 입력하면 바로 계산하고 기록할 수 있어요."
+        />
+      )}
 
       <MemberGoldSummaryCard uid={user?.uid} compact />
 

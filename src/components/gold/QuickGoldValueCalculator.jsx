@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
 import { Link, useNavigate } from "react-router-dom";
 import styled from "styled-components";
-import { ArrowRight, Camera as CameraIcon, Gem } from "lucide-react";
+import { ArrowRight, Camera as CameraIcon, Circle, CircleDashed, Coins, Gem, Link2 } from "lucide-react";
 
 import { useAuthContext } from "@/context/AuthContext";
 import useGoldVaultDashboard from "@/hooks/useGoldVaultDashboard";
@@ -14,6 +14,7 @@ import {
   getGoldVaultProductOptions,
 } from "@/lib/goldVaultCatalog";
 import { saveGuestMyGoldItems } from "@/lib/myGoldGuestDemo";
+import { isGoldToGoldInputProduct } from "@/lib/goldExchangeForm";
 import {
   getAnalyticsGoldCategory,
   getAnalyticsWeightBand,
@@ -21,6 +22,14 @@ import {
 } from "@/analytics/productAnalytics";
 import { isAndroid } from "@/platform/runtime";
 import { analyzeGoldHallmarkImage } from "@/services/hallmarkClient";
+
+// 제품 형태는 탐색을 돕는 선택입니다. 순도나 교환율을 추정하지 않습니다.
+const PRODUCT_SHAPES = [
+  { id: "ring", label: "반지", Icon: Circle },
+  { id: "necklace", label: "목걸이", Icon: Link2 },
+  { id: "bracelet", label: "팔찌", Icon: CircleDashed },
+  { id: "other", label: "기타 금제품", Icon: Coins },
+];
 
 const PRIORITY_PRODUCT_IDS = [
   "gold-18k-jewelry",
@@ -71,6 +80,103 @@ const Head = styled.div`
 
 const Body = styled.div`
   padding: ${({ $compact }) => ($compact ? "14px 15px 15px" : "18px 20px 20px")};
+`;
+
+const ProductShapeSection = styled.section`
+  display: grid;
+  gap: 10px;
+  margin-bottom: 17px;
+
+  > strong {
+    color: ${({ theme }) => theme.colors.primary};
+    font-size: .98rem;
+    line-height: 1.4;
+    font-weight: 900;
+  }
+  > small {
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: .77rem;
+    line-height: 1.45;
+  }
+`;
+
+const ProductShapeChoices = styled.div`
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+
+  @media (max-width: 380px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+`;
+
+const ProductShapeButton = styled.button`
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 7px;
+  min-width: 0;
+  min-height: 80px;
+  padding: 10px 4px;
+  border-radius: 13px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.primary};
+  font: inherit;
+  font-size: .8rem;
+  font-weight: 900;
+  cursor: pointer;
+
+  &[aria-pressed="true"] {
+    border-color: ${({ theme }) => theme.colors.secondary};
+    background: ${({ theme }) => theme.semantic.badgeGoldBg};
+    box-shadow: inset 0 0 0 1px ${({ theme }) => theme.colors.secondary};
+  }
+  svg { width: 23px; height: 23px; }
+  &:focus-visible { outline: 3px solid ${({ theme }) => theme.colors.secondary}; outline-offset: 2px; }
+`;
+
+const IntroHelp = styled.button`
+  justify-self: start;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.secondaryDark};
+  font: inherit;
+  font-size: .84rem;
+  font-weight: 900;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  &:focus-visible { outline: 2px solid ${({ theme }) => theme.colors.secondary}; outline-offset: 2px; }
+`;
+
+const NextActions = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 12px;
+
+  @media (max-width: 380px) { grid-template-columns: 1fr; }
+`;
+
+const NextExchangeLink = styled(Link)`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 50px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid ${({ theme }) => theme.colors.secondary};
+  background: ${({ theme }) => theme.semantic.badgeGoldBg};
+  color: ${({ theme }) => theme.colors.primary};
+  font-size: .84rem;
+  font-weight: 900;
+  text-align: center;
+  text-decoration: none;
+  word-break: keep-all;
+  &:focus-visible { outline: 3px solid ${({ theme }) => theme.colors.secondary}; outline-offset: 2px; }
 `;
 
 const EntryModeChooser = styled.div`
@@ -506,6 +612,8 @@ export default function QuickGoldValueCalculator({
   const [weightValue, setWeightValue] = useState("");
   const [weightUnit, setWeightUnit] = useState("g");
   const [entryMode, setEntryMode] = useState("known");
+  const [productShape, setProductShape] = useState("");
+  const appFirstExperience = source === "app-home" || source === "app-first-gold";
   const [stampHelpOpen, setStampHelpOpen] = useState(false);
   const [weightHelpOpen, setWeightHelpOpen] = useState(false);
   const [hallmarkBusy, setHallmarkBusy] = useState(false);
@@ -566,13 +674,15 @@ export default function QuickGoldValueCalculator({
   const canCalculate = !!selected && validWeight;
   const item = useMemo(
     () => ({
-      label: selected?.label || "금제품",
+      label: productShape
+        ? `${PRODUCT_SHAPES.find((shape) => shape.id === productShape)?.label || "금제품"} · ${selected?.label || "금제품"}`.slice(0, 40)
+        : selected?.label || "금제품",
       productId: selected?.productId || "",
       goldType: selected?.value || "",
       weightG: grams,
       note: "",
     }),
-    [grams, selected]
+    [grams, productShape, selected]
   );
 
   const estimatedValueWon = useMemo(
@@ -756,6 +866,20 @@ export default function QuickGoldValueCalculator({
     );
   };
 
+  // GoldExchange의 기존 URL 기반 초기값 로더를 재사용합니다.
+  // 단순 제품 그림 선택은 금의 함량을 추정하지 않으며, 고객이 고른 금 종류만 전달합니다.
+  const exchangeUrl = useMemo(() => {
+    if (!canCalculate || !isGoldToGoldInputProduct(selected?.productId)) return "";
+    const params = new URLSearchParams({
+      mode: "manual",
+      pid: selected.productId,
+      type: selected.value,
+      w: String(Number(String(weightValue).replace(",", "."))),
+      unit: weightUnit,
+    });
+    return `/gold-exchange?${params.toString()}`;
+  }, [canCalculate, selected, weightUnit, weightValue]);
+
   const continueToMyGold = () => {
     if (!selected || !validWeight) return;
 
@@ -789,7 +913,31 @@ export default function QuickGoldValueCalculator({
         <p>{description}</p>
       </Head>
       <Body $compact={compact}>
-        <EntryModeChooser>
+        {appFirstExperience && (
+          <ProductShapeSection aria-label="금 제품 선택">
+            <strong>어떤 금을 가지고 계신가요?</strong>
+            <ProductShapeChoices role="group" aria-label="제품 형태 선택">
+              {PRODUCT_SHAPES.map(({ id, label, Icon }) => (
+                <ProductShapeButton
+                  key={id}
+                  type="button"
+                  aria-pressed={productShape === id}
+                  onClick={() => setProductShape(id)}
+                >
+                  {React.createElement(Icon, { "aria-hidden": true })}
+                  <span>{label}</span>
+                </ProductShapeButton>
+              ))}
+            </ProductShapeChoices>
+            <small>제품을 고른 뒤 각인에 적힌 금 종류와 무게를 입력해 주세요.</small>
+            <IntroHelp type="button" onClick={() => selectEntryMode(entryMode === "unknown" ? "known" : "unknown")}
+              aria-expanded={entryMode === "unknown"}>
+              금 종류나 무게를 모르겠어요
+            </IntroHelp>
+          </ProductShapeSection>
+        )}
+
+        {!appFirstExperience && <EntryModeChooser>
           <p>금 종류와 무게를 알고 계신가요?</p>
           <div role="group" aria-label="금 가치 확인 시작 방법">
             <EntryModeButton
@@ -807,7 +955,7 @@ export default function QuickGoldValueCalculator({
               잘 모르겠어요
             </EntryModeButton>
           </div>
-        </EntryModeChooser>
+        </EntryModeChooser>}
 
         {entryMode === "unknown" && (
           <UnknownGuide role="region" aria-label="금 종류와 무게 확인 방법">
@@ -836,7 +984,7 @@ export default function QuickGoldValueCalculator({
         <Fields>
           <FieldGroup>
             <Field>
-              <span>금 종류</span>
+              <span>{appFirstExperience ? "각인에 적힌 금 종류" : "금 종류"}</span>
               <select
                 aria-label="금 종류"
                 value={productId}
@@ -996,7 +1144,7 @@ export default function QuickGoldValueCalculator({
           </Results>
         )}
 
-        {canCalculate && (
+        {canCalculate && !appFirstExperience && (
           <SavePrompt>
             <strong>한 번 기록하면, 매주 내 금의 변화가 보입니다.</strong>
             <p>다시 입력할 필요 없이 확인할 수 있어요. 주간 알림은 회원의 수신 동의 후 제공됩니다.</p>
@@ -1005,9 +1153,22 @@ export default function QuickGoldValueCalculator({
 
         {canCalculate && (
           <>
-            <Action type="button" onClick={continueToMyGold}>
-              <Gem size={16} aria-hidden /> MY GOLD에 기록하기 <ArrowRight size={16} aria-hidden />
-            </Action>
+            {appFirstExperience ? (
+              <NextActions>
+                <Action type="button" onClick={continueToMyGold} style={{ marginTop: 0 }}>
+                  <Gem size={16} aria-hidden /> 내 금 기록하기 <ArrowRight size={16} aria-hidden />
+                </Action>
+                {exchangeUrl && (
+                  <NextExchangeLink to={exchangeUrl}>
+                    <Coins size={16} aria-hidden /> 골드바로 바꾸면? <ArrowRight size={16} aria-hidden />
+                  </NextExchangeLink>
+                )}
+              </NextActions>
+            ) : (
+              <Action type="button" onClick={continueToMyGold}>
+                <Gem size={16} aria-hidden /> MY GOLD에 기록하기 <ArrowRight size={16} aria-hidden />
+              </Action>
+            )}
             <Note>
               <strong>MY GOLD는 금 실물을 맡기는 보관 서비스가 아닙니다.</strong> 오늘 가치는 참고용이며,
               실제 교환은 매장 실측 후 확정됩니다.

@@ -304,6 +304,52 @@ export const ExchangeOutcome = styled.div`
   }
 `;
 
+/** Step 2: give the user's estimated pure-gold weight visual priority. */
+export const ExchangePureGoldTotal = styled.div`
+  margin: 12px 0 14px;
+  padding: 17px 19px;
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.goldLight} 37%, transparent);
+  border-radius: 17px;
+  background: ${({ theme }) => theme.gradients.primary};
+  color: ${({ theme }) => theme.on.primary};
+
+  .pure-gold-label {
+    display: block;
+    font-size: .89rem;
+    font-weight: 850;
+  }
+  .pure-gold-amount {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: 13px;
+    row-gap: 1px;
+    margin: 6px 0;
+    font-variant-numeric: tabular-nums;
+  }
+  .pure-gold-amount strong {
+    font-size: clamp(1.9rem, 6vw, 2.55rem);
+    line-height: 1.12;
+    font-weight: 950;
+    letter-spacing: -.035em;
+  }
+  .pure-gold-amount span {
+    color: ${({ theme }) => theme.colors.goldLight};
+    font-size: clamp(1.06rem, 3.7vw, 1.3rem);
+    font-weight: 900;
+    white-space: nowrap;
+  }
+  small {
+    display: block;
+    color: color-mix(in srgb, ${({ theme }) => theme.on.primary} 76%, transparent);
+    font-size: .78rem;
+    line-height: 1.5;
+  }
+  @media (max-width: 520px) {
+    padding: 14px 15px;
+  }
+`;
+
 export const ExchangeDecisionSummary = styled.div`
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -340,6 +386,14 @@ export const ExchangeDecisionFact = styled.div`
     font-size: 1.05rem;
     line-height: 1.35;
     word-break: keep-all;
+  }
+  em {
+    display: inline;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: .85em;
+    font-style: normal;
+    font-weight: 800;
+    white-space: nowrap;
   }
   @media (max-width: 520px) {
     padding: 10px 11px;

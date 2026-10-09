@@ -25,7 +25,7 @@ test("unknown-information users can book an in-store measurement without inventi
 });
 
 test("guest Android home shows direct calculator, rather than duplicate MY GOLD marketing card", () => {
-  assert.match(android, /\{user\?\.uid && \(\s*<AppMyGoldDashboard/);
+  assert.match(android, /\{user\?\.uid && \(dashboard\.itemsLoading \|\| hasMyGold\) && \(\s*<AppMyGoldDashboard/);
   assert.match(android, /\{!user\?\.uid && \(\s*<QuickGoldValueCalculator/);
   assert.match(android, /회원가입 없이 금 가치 확인/);
 });
