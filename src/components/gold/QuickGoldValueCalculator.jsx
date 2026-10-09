@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
 import { Link, useNavigate } from "react-router-dom";
 import styled from "styled-components";
-import { ArrowRight, Camera as CameraIcon, Circle, CircleDashed, Coins, Gem, Link2 } from "lucide-react";
+import { ArrowRight, Camera as CameraIcon, Coins, Gem } from "lucide-react";
 
 import { useAuthContext } from "@/context/AuthContext";
 import useGoldVaultDashboard from "@/hooks/useGoldVaultDashboard";
@@ -15,6 +15,7 @@ import {
 } from "@/lib/goldVaultCatalog";
 import { saveGuestMyGoldItems } from "@/lib/myGoldGuestDemo";
 import { isGoldToGoldInputProduct } from "@/lib/goldExchangeForm";
+import { getQuickGoldTypeGroups, isQuickPureGoldType } from "@/lib/quickGoldTypeChoices";
 import {
   getAnalyticsGoldCategory,
   getAnalyticsWeightBand,
@@ -22,14 +23,6 @@ import {
 } from "@/analytics/productAnalytics";
 import { isAndroid } from "@/platform/runtime";
 import { analyzeGoldHallmarkImage } from "@/services/hallmarkClient";
-
-// 제품 형태는 탐색을 돕는 선택입니다. 순도나 교환율을 추정하지 않습니다.
-const PRODUCT_SHAPES = [
-  { id: "ring", label: "반지", Icon: Circle },
-  { id: "necklace", label: "목걸이", Icon: Link2 },
-  { id: "bracelet", label: "팔찌", Icon: CircleDashed },
-  { id: "other", label: "기타 금제품", Icon: Coins },
-];
 
 const PRIORITY_PRODUCT_IDS = [
   "gold-18k-jewelry",
@@ -82,62 +75,9 @@ const Body = styled.div`
   padding: ${({ $compact }) => ($compact ? "14px 15px 15px" : "18px 20px 20px")};
 `;
 
-const ProductShapeSection = styled.section`
-  display: grid;
-  gap: 10px;
-  margin-bottom: 17px;
-
-  > strong {
-    color: ${({ theme }) => theme.colors.primary};
-    font-size: .98rem;
-    line-height: 1.4;
-    font-weight: 900;
-  }
-  > small {
-    color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .77rem;
-    line-height: 1.45;
-  }
-`;
-
-const ProductShapeChoices = styled.div`
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-
-  @media (max-width: 380px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-`;
-
-const ProductShapeButton = styled.button`
-  display: grid;
-  justify-items: center;
-  align-content: center;
-  gap: 7px;
-  min-width: 0;
-  min-height: 80px;
-  padding: 10px 4px;
-  border-radius: 13px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.primary};
-  font: inherit;
-  font-size: .8rem;
-  font-weight: 900;
-  cursor: pointer;
-
-  &[aria-pressed="true"] {
-    border-color: ${({ theme }) => theme.colors.secondary};
-    background: ${({ theme }) => theme.semantic.badgeGoldBg};
-    box-shadow: inset 0 0 0 1px ${({ theme }) => theme.colors.secondary};
-  }
-  svg { width: 23px; height: 23px; }
-  &:focus-visible { outline: 3px solid ${({ theme }) => theme.colors.secondary}; outline-offset: 2px; }
-`;
-
 const IntroHelp = styled.button`
-  justify-self: start;
+  display: inline-block;
+  margin-bottom: 12px;
   padding: 4px 0;
   border: 0;
   background: transparent;
@@ -315,6 +255,88 @@ const Field = styled.label`
     outline: 2px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 28%, transparent);
     outline-offset: 1px;
     border-color: ${({ theme }) => theme.colors.secondary};
+  }
+`;
+
+const QuickTypeGroup = styled.div`
+  display: grid;
+  gap: 9px;
+
+  > span {
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: .84rem;
+    font-weight: 900;
+  }
+`;
+
+const QuickTypeButtons = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+`;
+
+const QuickTypeButton = styled.button`
+  min-width: 0;
+  min-height: 50px;
+  padding: 10px 5px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 13px;
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 900;
+  cursor: pointer;
+
+  &[aria-pressed="true"] {
+    border: 2px solid ${({ theme }) => theme.colors.secondary};
+    background: ${({ theme }) => theme.semantic.badgeGoldBg};
+    color: ${({ theme }) => theme.colors.primary};
+  }
+
+  &:focus-visible {
+    outline: 3px solid ${({ theme }) => theme.colors.secondary};
+    outline-offset: 2px;
+  }
+`;
+
+const QuickDetailGroup = styled.div`
+  display: grid;
+  gap: 8px;
+  padding: 11px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 12px;
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+
+  > span {
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: .84rem;
+    font-weight: 850;
+  }
+
+  > div {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+`;
+
+const MoreTypeToggle = styled.button`
+  justify-self: start;
+  padding: 7px 0;
+  border: 0;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.secondaryDark};
+  font: inherit;
+  font-size: .86rem;
+  font-weight: 900;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.secondary};
+    outline-offset: 2px;
   }
 `;
 
@@ -612,7 +634,8 @@ export default function QuickGoldValueCalculator({
   const [weightValue, setWeightValue] = useState("");
   const [weightUnit, setWeightUnit] = useState("g");
   const [entryMode, setEntryMode] = useState("known");
-  const [productShape, setProductShape] = useState("");
+  const [pureOptionsOpen, setPureOptionsOpen] = useState(false);
+  const [moreTypesOpen, setMoreTypesOpen] = useState(false);
   const appFirstExperience = source === "app-home" || source === "app-first-gold";
   const [stampHelpOpen, setStampHelpOpen] = useState(false);
   const [weightHelpOpen, setWeightHelpOpen] = useState(false);
@@ -664,6 +687,26 @@ export default function QuickGoldValueCalculator({
     [orderedProductOptions, productId]
   );
 
+  const quickTypeGroups = useMemo(
+    () => getQuickGoldTypeGroups(orderedProductOptions),
+    [orderedProductOptions]
+  );
+  const hasPureSelection = isQuickPureGoldType(productId);
+  const hasMoreSelection = quickTypeGroups.more.some((option) => option.productId === productId);
+
+  const chooseQuickType = (id) => {
+    setProductId(id);
+    setPureOptionsOpen(false);
+    setMoreTypesOpen(false);
+  };
+
+  const openPureTypes = () => {
+    // '순금'만으로는 995/999 비율을 확정할 수 없습니다.
+    if (!hasPureSelection) setProductId("");
+    setPureOptionsOpen(true);
+    setMoreTypesOpen(false);
+  };
+
   const grams = useMemo(() => {
     const parsed = Number(String(weightValue || "").replace(",", "."));
     if (!Number.isFinite(parsed) || parsed <= 0) return 0;
@@ -672,17 +715,16 @@ export default function QuickGoldValueCalculator({
 
   const validWeight = grams > 0 && grams <= 10_000;
   const canCalculate = !!selected && validWeight;
+  // 금 가치 계산에는 제품 모양이 필요하지 않습니다. 실제 금 종류와 중량만 사용합니다.
   const item = useMemo(
     () => ({
-      label: productShape
-        ? `${PRODUCT_SHAPES.find((shape) => shape.id === productShape)?.label || "금제품"} · ${selected?.label || "금제품"}`.slice(0, 40)
-        : selected?.label || "금제품",
+      label: selected?.label || "금제품",
       productId: selected?.productId || "",
       goldType: selected?.value || "",
       weightG: grams,
       note: "",
     }),
-    [grams, productShape, selected]
+    [grams, selected]
   );
 
   const estimatedValueWon = useMemo(
@@ -914,27 +956,13 @@ export default function QuickGoldValueCalculator({
       </Head>
       <Body $compact={compact}>
         {appFirstExperience && (
-          <ProductShapeSection aria-label="금 제품 선택">
-            <strong>어떤 금을 가지고 계신가요?</strong>
-            <ProductShapeChoices role="group" aria-label="제품 형태 선택">
-              {PRODUCT_SHAPES.map(({ id, label, Icon }) => (
-                <ProductShapeButton
-                  key={id}
-                  type="button"
-                  aria-pressed={productShape === id}
-                  onClick={() => setProductShape(id)}
-                >
-                  {React.createElement(Icon, { "aria-hidden": true })}
-                  <span>{label}</span>
-                </ProductShapeButton>
-              ))}
-            </ProductShapeChoices>
-            <small>제품을 고른 뒤 각인에 적힌 금 종류와 무게를 입력해 주세요.</small>
-            <IntroHelp type="button" onClick={() => selectEntryMode(entryMode === "unknown" ? "known" : "unknown")}
-              aria-expanded={entryMode === "unknown"}>
-              금 종류나 무게를 모르겠어요
-            </IntroHelp>
-          </ProductShapeSection>
+          <IntroHelp
+            type="button"
+            onClick={() => selectEntryMode(entryMode === "unknown" ? "known" : "unknown")}
+            aria-expanded={entryMode === "unknown"}
+          >
+            금 종류나 무게를 모르겠어요
+          </IntroHelp>
         )}
 
         {!appFirstExperience && <EntryModeChooser>
@@ -983,21 +1011,99 @@ export default function QuickGoldValueCalculator({
 
         <Fields>
           <FieldGroup>
-            <Field>
-              <span>{appFirstExperience ? "각인에 적힌 금 종류" : "금 종류"}</span>
-              <select
-                aria-label="금 종류"
-                value={productId}
-                onChange={(event) => setProductId(event.target.value)}
-              >
-                <option value="" disabled>금 종류를 선택하세요</option>
-                {orderedProductOptions.map((option) => (
-                  <option key={option.productId} value={option.productId}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
+            {appFirstExperience ? (
+              <QuickTypeGroup>
+                <span>금 종류</span>
+                <QuickTypeButtons role="group" aria-label="자주 선택하는 금 종류">
+                  {quickTypeGroups.quick.map((option) => (
+                    <QuickTypeButton
+                      key={option.productId}
+                      type="button"
+                      aria-pressed={productId === option.productId}
+                      onClick={() => chooseQuickType(option.productId)}
+                    >
+                      {option.productId === "gold-14k-jewelry" ? "14K" : "18K"}
+                    </QuickTypeButton>
+                  ))}
+                  {quickTypeGroups.pure.length > 0 && (
+                    <QuickTypeButton
+                      type="button"
+                      aria-pressed={hasPureSelection}
+                      aria-expanded={pureOptionsOpen || hasPureSelection}
+                      aria-controls="quick-pure-gold-types"
+                      onClick={openPureTypes}
+                    >
+                      순금
+                    </QuickTypeButton>
+                  )}
+                </QuickTypeButtons>
+                {(pureOptionsOpen || hasPureSelection) && quickTypeGroups.pure.length > 0 && (
+                  <QuickDetailGroup id="quick-pure-gold-types" role="group" aria-label="순금 종류 선택">
+                    <span>순금의 종류를 선택하세요</span>
+                    <div>
+                      {quickTypeGroups.pure.map((option) => (
+                        <QuickTypeButton
+                          type="button"
+                          key={option.productId}
+                          aria-pressed={productId === option.productId}
+                          onClick={() => chooseQuickType(option.productId)}
+                        >
+                          {option.productId === "gold-995-product" ? "99.5% (995)" : "99.9% (999)"}
+                        </QuickTypeButton>
+                      ))}
+                    </div>
+                  </QuickDetailGroup>
+                )}
+                {quickTypeGroups.more.length > 0 && (
+                  <>
+                    <MoreTypeToggle
+                      type="button"
+                      aria-expanded={moreTypesOpen || hasMoreSelection}
+                      aria-controls="quick-more-gold-types"
+                      onClick={() => {
+                        setMoreTypesOpen((open) => !open);
+                        setPureOptionsOpen(false);
+                      }}
+                    >
+                      다른 금 종류 보기 {moreTypesOpen || hasMoreSelection ? "▴" : "▾"}
+                    </MoreTypeToggle>
+                    {(moreTypesOpen || hasMoreSelection) && (
+                      <Field id="quick-more-gold-types">
+                        <span>기타 금 종류</span>
+                        <select
+                          aria-label="기타 금 종류"
+                          value={hasMoreSelection ? productId : ""}
+                          onChange={(event) => chooseQuickType(event.target.value)}
+                        >
+                          <option value="">금 종류를 선택하세요</option>
+                          {quickTypeGroups.more.map((option) => (
+                            <option key={option.productId} value={option.productId}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </Field>
+                    )}
+                  </>
+                )}
+              </QuickTypeGroup>
+            ) : (
+              <Field>
+                <span>금 종류</span>
+                <select
+                  aria-label="금 종류"
+                  value={productId}
+                  onChange={(event) => setProductId(event.target.value)}
+                >
+                  <option value="" disabled>금 종류를 선택하세요</option>
+                  {orderedProductOptions.map((option) => (
+                    <option key={option.productId} value={option.productId}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            )}
 
             {(!compact || entryMode === "unknown") && <HelpRow>
               <HelpButton type="button" onClick={toggleStampHelp} aria-expanded={stampHelpOpen}>
