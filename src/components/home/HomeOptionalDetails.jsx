@@ -28,11 +28,11 @@ const Disclosure = styled.details`
   > *:not(summary) { margin-top: 10px; }
 `;
 
-export default function HomeOptionalDetails({ children }) {
+export default function HomeOptionalDetails({ children, summary = "골드바 목표와 교환 가능량 자세히 보기" }) {
   const [open, setOpen] = useState(false);
   return (
     <Disclosure onToggle={(event) => setOpen(event.currentTarget.open)}>
-      <summary>골드바 목표와 교환 가능량 자세히 보기</summary>
+      <summary>{summary}</summary>
       {open && children}
     </Disclosure>
   );

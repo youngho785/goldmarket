@@ -40,7 +40,7 @@ const Card = styled.section`
 `;
 
 const Head = styled.div`
-  padding: ${({ $compact }) => ($compact ? "16px 17px 12px" : "20px 21px 15px")};
+  padding: ${({ $compact, $nativeFirst, $webLanding }) => $nativeFirst ? "13px 15px 12px" : $webLanding ? "15px 20px 13px" : $compact ? "16px 17px 12px" : "20px 21px 15px"};
   background: linear-gradient(138deg, ${({ theme }) => theme.colors.primaryDark}, ${({ theme }) => theme.colors.primary});
   color: ${({ theme }) => theme.on.primary};
 
@@ -53,10 +53,10 @@ const Head = styled.div`
   }
 
   h2 {
-    margin: 6px 0 0;
+    margin: ${({ $nativeFirst }) => $nativeFirst ? "4px 0 0" : "6px 0 0"};
     color: ${({ theme }) => theme.on.primary};
     font-family: ${({ theme }) => theme.fonts.body};
-    font-size: ${({ $compact }) => ($compact ? "1.2rem" : "clamp(1.26rem, 2.4vw, 1.62rem)")};
+    font-size: ${({ $compact, $nativeFirst }) => $nativeFirst ? "1.1rem" : $compact ? "1.2rem" : "clamp(1.26rem, 2.4vw, 1.62rem)"};
     font-weight: 850;
     line-height: 1.18;
     letter-spacing: -.035em;
@@ -70,10 +70,27 @@ const Head = styled.div`
     line-height: 1.5;
     word-break: keep-all;
   }
+
+  @media (max-width: 700px) {
+    ${({ $webLanding }) => $webLanding && `
+      padding: 12px 16px 11px;
+      small { font-size: .7rem; }
+      h2 { margin-top: 2px; font-size: 1.15rem; }
+      p { display: none; }
+    `}
+  }
 `;
 
 const Body = styled.div`
-  padding: ${({ $compact }) => ($compact ? "14px 15px 15px" : "18px 20px 20px")};
+  padding: ${({ $compact, $nativeFirst, $webLanding }) => $nativeFirst ? "12px 14px 12px" : $webLanding ? "14px 18px 16px" : $compact ? "14px 15px 15px" : "18px 20px 20px"};
+
+  @media (max-width: 700px) {
+    ${({ $webLanding }) => $webLanding && `padding: 12px 16px 13px;`}
+  }
+
+  ${({ $nativeFirst }) => $nativeFirst && `
+    .quick-calc-fields { gap: 11px; }
+  `}
 `;
 
 const IntroHelp = styled.button`
@@ -261,13 +278,24 @@ const Field = styled.label`
 
 const QuickTypeGroup = styled.div`
   display: grid;
-  gap: 9px;
+  gap: ${({ $nativeFirst }) => $nativeFirst ? "7px" : "9px"};
 
   > span {
     color: ${({ theme }) => theme.colors.textSecondary};
     font-size: .84rem;
     font-weight: 900;
   }
+`;
+
+const QuickTypeHeading = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 5px 10px;
+
+  > span { color: ${({ theme }) => theme.colors.textSecondary}; font-size: .84rem; font-weight: 900; }
+  button { margin: 0; font-size: .77rem; }
 `;
 
 const QuickTypeButtons = styled.div`
@@ -278,8 +306,8 @@ const QuickTypeButtons = styled.div`
 
 const QuickTypeButton = styled.button`
   min-width: 0;
-  min-height: 50px;
-  padding: 10px 5px;
+  min-height: 46px;
+  padding: 9px 5px;
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 13px;
   background: ${({ theme }) => theme.colors.surface};
@@ -324,7 +352,7 @@ const QuickDetailGroup = styled.div`
 
 const MoreTypeToggle = styled.button`
   justify-self: start;
-  padding: 7px 0;
+  padding: 3px 0;
   border: 0;
   background: transparent;
   color: ${({ theme }) => theme.colors.secondaryDark};
@@ -638,6 +666,9 @@ export default function QuickGoldValueCalculator({
   const [pureOptionsOpen, setPureOptionsOpen] = useState(false);
   const [moreTypesOpen, setMoreTypesOpen] = useState(false);
   const appFirstExperience = source === "app-home" || source === "app-first-gold";
+  // Only web landing gets the quick product choice: native home behavior stays unchanged.
+  const webLandingExperience = source === "landing";
+  const quickEntryExperience = appFirstExperience || webLandingExperience;
   const [stampHelpOpen, setStampHelpOpen] = useState(false);
   const [weightHelpOpen, setWeightHelpOpen] = useState(false);
   const [hallmarkBusy, setHallmarkBusy] = useState(false);
@@ -980,13 +1011,13 @@ export default function QuickGoldValueCalculator({
 
   return (
     <Card aria-label="내 금 오늘 가치 계산">
-      <Head $compact={compact}>
+      <Head $compact={compact} $nativeFirst={compact && appFirstExperience} $webLanding={webLandingExperience}>
         <small>{eyebrow}</small>
         <h2>{title}</h2>
-        <p>{description}</p>
+        {!(compact && appFirstExperience) && <p>{description}</p>}
       </Head>
-      <Body $compact={compact}>
-        {appFirstExperience && (
+      <Body $compact={compact} $nativeFirst={compact && appFirstExperience} $webLanding={webLandingExperience}>
+        {appFirstExperience && !compact && (
           <IntroHelp
             type="button"
             onClick={() => selectEntryMode(entryMode === "unknown" ? "known" : "unknown")}
@@ -996,7 +1027,7 @@ export default function QuickGoldValueCalculator({
           </IntroHelp>
         )}
 
-        {!appFirstExperience && <EntryModeChooser>
+        {!quickEntryExperience && <EntryModeChooser>
           <p>금 종류와 무게를 알고 계신가요?</p>
           <div role="group" aria-label="금 가치 확인 시작 방법">
             <EntryModeButton
@@ -1040,11 +1071,22 @@ export default function QuickGoldValueCalculator({
           </UnknownGuide>
         )}
 
-        <Fields>
+        <Fields className="quick-calc-fields">
           <FieldGroup>
-            {appFirstExperience ? (
-              <QuickTypeGroup>
-                <span>금 종류</span>
+            {quickEntryExperience ? (
+              <QuickTypeGroup $nativeFirst={compact}>
+                {(compact || webLandingExperience) ? (
+                  <QuickTypeHeading>
+                    <span>금 종류</span>
+                    <IntroHelp
+                      type="button"
+                      onClick={() => selectEntryMode(entryMode === "unknown" ? "known" : "unknown")}
+                      aria-expanded={entryMode === "unknown"}
+                    >
+                      금 종류·무게를 모르겠어요
+                    </IntroHelp>
+                  </QuickTypeHeading>
+                ) : <span>금 종류</span>}
                 <QuickTypeButtons role="group" aria-label="자주 선택하는 금 종류">
                   {quickTypeGroups.quick.map((option) => (
                     <QuickTypeButton
@@ -1136,7 +1178,7 @@ export default function QuickGoldValueCalculator({
               </Field>
             )}
 
-            {(!compact || entryMode === "unknown") && <HelpRow>
+            {((!compact && !webLandingExperience) || entryMode === "unknown") && <HelpRow>
               <HelpButton type="button" onClick={toggleStampHelp} aria-expanded={stampHelpOpen}>
                 금 종류를 모르시나요? <strong>각인 확인 방법</strong>
               </HelpButton>
@@ -1257,7 +1299,7 @@ export default function QuickGoldValueCalculator({
               )}
             </Field>
 
-            {(!compact || entryMode === "unknown") && <HelpRow>
+            {((!compact && !webLandingExperience) || entryMode === "unknown") && <HelpRow>
               <HelpButton type="button" onClick={toggleWeightHelp} aria-expanded={weightHelpOpen}>
                 무게를 모르시나요? <strong>확인 방법 보기</strong>
               </HelpButton>
@@ -1288,7 +1330,7 @@ export default function QuickGoldValueCalculator({
           </Results>
         )}
 
-        {canCalculate && !appFirstExperience && (
+        {canCalculate && !quickEntryExperience && (
           <SavePrompt>
             <strong>한 번 기록하면, 매주 내 금의 변화가 보입니다.</strong>
             <p>다시 입력할 필요 없이 확인할 수 있어요. 주간 알림은 회원의 수신 동의 후 제공됩니다.</p>
@@ -1297,7 +1339,7 @@ export default function QuickGoldValueCalculator({
 
         {canCalculate && (
           <>
-            {appFirstExperience ? (
+            {quickEntryExperience ? (
               <NextActions>
                 <Action type="button" onClick={continueToMyGold} style={{ marginTop: 0 }}>
                   <Gem size={16} aria-hidden /> 내 금 기록하기 <ArrowRight size={16} aria-hidden />
@@ -1319,13 +1361,16 @@ export default function QuickGoldValueCalculator({
             </Note>
           </>
         )}
-        {!canCalculate && compact && (
+        {!canCalculate && compact && !appFirstExperience && (
           <Note>금 종류와 중량을 입력하면 예상 결과가 나타납니다. 입력한 금은 이곳에 맡기지 않습니다.</Note>
         )}
         {!canCalculate && !compact && (
           <Note>
-            <strong>MY GOLD는 금 실물을 맡기는 보관 서비스가 아닙니다.</strong> 금 종류와 중량을 입력해
-            참고가치를 확인할 수 있으며, 실제 교환은 매장 실측 후 확정됩니다.
+            {webLandingExperience ? (
+              <>예상 가치는 참고용 · 실제 교환은 매장 실측·동의 후 확정됩니다. MY GOLD는 금 실물 보관이 아닙니다.</>
+            ) : (
+              <><strong>MY GOLD는 금 실물을 맡기는 보관 서비스가 아닙니다.</strong> 금 종류와 중량을 입력해 참고가치를 확인할 수 있으며, 실제 교환은 매장 실측 후 확정됩니다.</>
+            )}
           </Note>
         )}
       </Body>

@@ -78,7 +78,7 @@ const Nav = styled.nav`
   margin: 0 auto;
   padding: 10px clamp(16px, 4vw, 64px);
 
-  @media (max-width: 980px) {
+  @media (max-width: 1180px) {
     grid-template-columns: 1fr auto;
     min-height: 62px;
     gap: 12px;
@@ -122,7 +122,7 @@ const BrandSeal = styled.span`
     animation: ${livingGoldPulse} 6.2s ease-in-out 1.4s infinite;
   }
 
-  @media (max-width: 980px) {
+  @media (max-width: 1180px) {
     width: 38px;
     height: 38px;
     font-size: .98rem;
@@ -160,7 +160,7 @@ const DesktopLinks = styled.div`
   justify-content: center;
   gap: clamp(15px, 2vw, 30px);
 
-  @media (max-width: 980px) { display: none; }
+  @media (max-width: 1180px) { display: none; }
 `;
 
 const MenuLink = styled(NavLink)`
@@ -192,7 +192,7 @@ const Account = styled.div`
   align-items: center;
   gap: 14px;
 
-  @media (max-width: 980px) { display: none; }
+  @media (max-width: 1180px) { display: none; }
 `;
 
 const TextButton = styled.button`
@@ -322,7 +322,7 @@ const MobileActions = styled.div`
   justify-content: flex-end;
   gap: 6px;
 
-  @media (max-width: 980px) {
+  @media (max-width: 1180px) {
     display: flex;
   }
 `;
@@ -351,7 +351,7 @@ const MobileButton = styled.button`
   color: ${({ theme }) => theme.colors.primary};
   box-shadow: none;
 
-  @media (max-width: 980px) { display: grid; place-items: center; }
+  @media (max-width: 1180px) { display: grid; place-items: center; }
 `;
 
 const DrawerBackdrop = styled.button`
@@ -646,7 +646,8 @@ export default function Navbar() {
       return [
         { to: "/my-gold", label: "MY GOLD" },
         { to: "/gold-price", label: "금시세" },
-        { to: "/gold-exchange", label: "금교환" },
+        { to: "/gold-exchange", label: "금교환 계산" },
+        { to: "/gold-to-gold", label: "GOLD TO GOLD 이야기" },
         { to: "/my-exchanges", label: "교환내역", badge: formatBadge(exchangeCount) },
       ];
     }
@@ -654,7 +655,8 @@ export default function Navbar() {
     return [
       { to: "/my-gold", label: "MY GOLD" },
       { to: "/gold-price", label: "금시세" },
-      { to: "/gold-exchange", label: "금교환" },
+      { to: "/gold-exchange", label: "금교환 계산" },
+        { to: "/gold-to-gold", label: "GOLD TO GOLD 이야기" },
       { to: "/stores", label: "매장안내" },
     ];
   }, [exchangeCount, isMember]);

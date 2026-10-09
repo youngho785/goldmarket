@@ -99,7 +99,11 @@ export default function GoldExchange() {
   // an explicit mode is treated as the vault flow for backwards compatibility.
   const entryMode = resolveGoldExchangeEntryMode({ requestedEntryMode, importedFromMyGold, nativeAndroid: isNative && isAndroid });
   const isRebook = !!rebook;
+  // The web and Android first visit opens the useful calculation form.
+  // Existing alternative start methods remain available through ?mode=start.
+  const webStartChoicesRequested = !isNative && requestedEntryMode === "start";
   const showStartMethod =
+    (isNative ? !entryMode : webStartChoicesRequested) &&
     !isRebook &&
     !authDraft &&
     !directReservationRequested &&
@@ -656,6 +660,11 @@ export default function GoldExchange() {
           예상 계산과 방문 날짜·시간 선택은 로그인 없이 이용할 수 있습니다.
           예약 요청만 로그인 또는 회원가입 후 완료합니다.
         </PageLead>
+        {!isNative && step === STEP.CALC && !showStartMethod && (
+          <Link to="/gold-exchange?mode=start" style={{ display: "inline-flex", marginTop: 8, color: "#846326", fontSize: ".9rem", fontWeight: 800, textDecoration: "underline", textUnderlineOffset: 3 }}>
+            MY GOLD 불러오기 · 현장 확인 예약 등 다른 시작 방법 →
+          </Link>
+        )}
         {isNative && isAndroid && step === STEP.CALC && !showStartMethod && (
           <Link to="/gold-to-gold" style={{ display: "inline-flex", marginTop: 8, color: "#9b7227", fontSize: ".82rem", fontWeight: 850, textDecoration: "underline", textUnderlineOffset: 3 }}>
             GOLD TO GOLD, 어떤 가치가 있나요? →

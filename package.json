@@ -46,7 +46,11 @@
     "test:ux-exchange-mobile-finish": "node scripts/test-ux-exchange-mobile-finish.mjs",
     "test:mobile": "node scripts/run-mobile-smoke.mjs",
     "test:mobile:headed": "node scripts/run-mobile-smoke.mjs --headed",
-    "test:ux-app-my-settings": "node --test scripts/test-ux-app-my-settings.mjs"
+    "test:ux-app-my-settings": "node --test scripts/test-ux-app-my-settings.mjs",
+    "test:kgm-final-integrated-ux": "node --test scripts/test-kgm-final-integrated-ux.mjs",
+    "test:kgm-web-final-ux": "node --test scripts/test-kgm-web-final-ux.mjs",
+    "test:kgm-web-home-finish": "node --test scripts/test-kgm-web-home-finish.mjs",
+    "test:kgm-android-back": "node --test scripts/test-kgm-android-back-navigation.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",

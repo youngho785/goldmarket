@@ -13,6 +13,7 @@ import { db, registerForPush } from "@/firebase/firebase";
 import { useAuthContext } from "@/context/AuthContext";
 import MyGoldTicker from "@/components/gold/MyGoldTicker";
 import { isNative } from "@/platform/runtime";
+import useKoreaTodayDate from "@/hooks/useKoreaTodayDate";
 import NativeGoldPriceOverview from "@/components/goldPrice/NativeGoldPriceOverview";
 import QuickGoldValueCalculator from "@/components/gold/QuickGoldValueCalculator";
 import GuideLinks from "@/components/guide/GuideLinks";
@@ -42,6 +43,7 @@ import {
   GoldBar,
   BarInner,
   Section,
+  WebActionStrip,
   SectionHead,
   SectionKicker,
   SectionTitle,
@@ -107,20 +109,6 @@ function formatDateKey(value) {
   if (!/^\d{8}$/.test(text)) return text || "-";
   return `${text.slice(0, 4)}.${text.slice(4, 6)}.${text.slice(6, 8)}`;
 }
-function getKoreaTodayDateKey() {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "Asia/Seoul",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(new Date());
-  const values = Object.fromEntries(
-    parts
-      .filter((part) => part.type !== "literal")
-      .map((part) => [part.type, part.value])
-  );
-  return `${values.year}${values.month}${values.day}`;
-}
 function validPrice(value) {
   return Number.isFinite(Number(value)) && Number(value) > 0;
 }
@@ -150,6 +138,7 @@ function compactChangeText(change) {
 }
 export default function GoldPrice() {
   const navigate = useNavigate();
+  const todayKey = useKoreaTodayDate();
   const { user, isEmailVerified } = useAuthContext();
   const [pushStatus, setPushStatus] = useState("checking");
   const [message, setMessage] = useState("");
@@ -340,9 +329,9 @@ export default function GoldPrice() {
 
   const pureRow = marketRows[0];
   const heroChange = changeInfo(pureRow?.buy, pureRow?.previousBuy);
-  const referenceDate = formatDateKey(
-    goldData?.sourceDate || getKoreaTodayDateKey()
-  );
+  const referenceDate = goldData?.sourceDate
+    ? formatDateKey(goldData.sourceDate)
+    : "확인 중";
   const pagePriceAvailable =
     !configLoading && goldEnabled && !goldLoading && !!goldData;
 
@@ -437,11 +426,9 @@ export default function GoldPrice() {
     }
   };
 
-  const notificationActive =
-    pushStatus === "active" ||
-    (isEmailVerified &&
-      marketingAccepted &&
-      marketingNotificationsEnabled);
+  // "This browser receives alerts" must reflect the verified local token;
+  // opt-in saved on another device is not proof of delivery on this browser.
+  const notificationActive = pushStatus === "active";
 
   return (
     <Page>
@@ -475,21 +462,23 @@ export default function GoldPrice() {
                         ? "시세 확인 중"
                         : "관리자 공개 후 표시"}
                   </span>
-                  <Source>기준일 {referenceDate}</Source>
+                  <Source>
+                    {isNative
+                      ? `기준일 ${referenceDate}`
+                      : `기준일 ${formatDateKey(todayKey)} · 시세 등록일 ${referenceDate}`}
+                  </Source>
                 </ChangeLine>
               </HeroPriceBlock>
             </HeroCopy>
 
-            {!isNative && (
-              <>
-                <PriceGoldMark
-                  size={54}
+            <PriceGoldMark
+                  size={isNative ? 37 : 54}
                   delay={240}
                   hint
-                  ariaLabel="Living Gold 반짝이기"
+                  ariaLabel="톡톡이 금빛 효과 보기"
                 />
 
-                <GoldVisual>
+                <GoldVisual $native={isNative}>
                   <GoldBar aria-hidden>
                     <BarInner>
                       <strong>KGM</strong>
@@ -503,23 +492,28 @@ export default function GoldPrice() {
                     </BarInner>
                   </GoldBar>
                 </GoldVisual>
-              </>
-            )}
           </HeroCard>
         </Hero>
 
 
-        <Section aria-labelledby="live-gold-price-title">
-          <SectionHead>
-            <div>
-              <SectionTitle id="live-gold-price-title">
-                지금 금시세
-              </SectionTitle>
-            </div>
-            <SectionNote>
-              1돈(3.75g) 기준 · 내가 살 때는 <b>VAT 포함</b> · 단위 원
-            </SectionNote>
-          </SectionHead>
+        {!isNative && (
+          <WebActionStrip aria-label="금시세 다음 행동">
+            <a href="#web-gold-value-calculator">내 금 가치 계산하기</a>
+            <a href="#web-gold-alerts">금시세 알림·회원 혜택</a>
+            <Link to="/gold-to-gold">GOLD TO GOLD 이야기</Link>
+          </WebActionStrip>
+        )}
+        <Section aria-labelledby={!isNative ? "live-gold-price-title" : undefined} aria-label={isNative ? "24K 18K 14K 금시세 비교" : undefined}>
+          {!isNative && (
+            <SectionHead>
+              <div>
+                <SectionTitle id="live-gold-price-title">지금 금시세</SectionTitle>
+              </div>
+              <SectionNote>
+                1돈(3.75g) 기준 · 내가 살 때는 <b>VAT 포함</b> · 단위 원
+              </SectionNote>
+            </SectionHead>
+          )}
 
           {isNative ? (
             <NativeGoldPriceOverview
@@ -537,7 +531,7 @@ export default function GoldPrice() {
             <>
               <PriceGrid>
                 {marketRows.map((row) => {
-              const sellChange = changeInfo(row.sell, row.previousSell);
+              const customerSellingChange = changeInfo(row.buy, row.previousBuy);
               const showProductText =
                 row.sellKey === "gold14kSellPerDon" &&
                 !display14kSellPrice;
@@ -574,12 +568,10 @@ export default function GoldPrice() {
                     </CardMetric>
                   </CardBody>
 
-                  <CardChange $direction={sellChange?.direction}>
-                    {pagePriceAvailable && !showProductText
-                      ? `전일 대비 ${changeText(sellChange)}`
-                      : showProductText
-                        ? "14K 제품은 공임을 별도 확인합니다."
-                        : "시세 확인 중"}
+                  <CardChange $direction={customerSellingChange?.direction}>
+                    {pagePriceAvailable
+                      ? `팔 때 전일 대비 ${changeText(customerSellingChange)}`
+                      : "시세 확인 중"}
                   </CardChange>
                 </PriceCard>
               );
@@ -630,20 +622,15 @@ export default function GoldPrice() {
               </MatrixCell>
             ))}
 
-            <MatrixCell $first $label>전일</MatrixCell>
+            <MatrixCell $first $label>팔 때 전일</MatrixCell>
             {marketRows.map((row) => {
-              const sellChange = changeInfo(row.sell, row.previousSell);
-              const showProductText =
-                row.sellKey === "gold14kSellPerDon" &&
-                !display14kSellPrice;
+              const customerSellingChange = changeInfo(row.buy, row.previousBuy);
               return (
                 <MatrixCell key={`change-${row.short}`}>
-                  <MatrixChange $direction={sellChange?.direction}>
-                    {pagePriceAvailable && !showProductText
-                      ? compactChangeText(sellChange)
-                      : showProductText
-                        ? "제품별"
-                        : "-"}
+                  <MatrixChange $direction={customerSellingChange?.direction}>
+                    {pagePriceAvailable
+                      ? compactChangeText(customerSellingChange)
+                      : "-"}
                   </MatrixChange>
                 </MatrixCell>
               );
@@ -655,7 +642,7 @@ export default function GoldPrice() {
 
         {!isNative && (
           <>
-        <Section aria-labelledby="gold-price-my-gold-title">
+<Section id="web-gold-value-calculator" aria-labelledby="gold-price-my-gold-title">
           <SectionHead>
             <div>
               <SectionKicker>MY GOLD</SectionKicker>
@@ -677,7 +664,7 @@ export default function GoldPrice() {
           />
         </Section>
 
-        <Section aria-labelledby="gold-price-alert-title">
+<Section id="web-gold-alerts" aria-labelledby="gold-price-alert-title">
           <AlertCard>
             <div>
               <AlertTitle id="gold-price-alert-title">
@@ -789,7 +776,7 @@ export default function GoldPrice() {
                           ? "알림 설정 중…"
                           : !isEmailVerified
                             ? "이메일 인증 후 금시세 알림 받기"
-                            : "금시세 알림 받고 순금 0.01g 더 받기"}
+                            : "금시세 알림 설정하기"}
                     </MainButton>
 
                     {pushStatus === "denied" && (
@@ -828,14 +815,14 @@ export default function GoldPrice() {
                   회원 혜택 <span>최대 순금 0.03g</span>
                 </RewardTitle>
                 <RewardLead>
-                  회원가입 · 퀵퀴즈 · 금시세 알림에 참여하며 순금 혜택을 이어가세요.
+                  회원가입 · 퀵퀴즈 · 금시세 알림에 참여하며 순금 혜택을 이어가세요. 각 혜택은 지급 조건을 충족해야 하며, 알림 수신 설정만으로 지급이 확정되지는 않습니다.
                 </RewardLead>
                 <RewardSummary aria-label="회원 혜택 구성">
                   <span>회원가입 <b>0.01g</b></span>
                   <i>│</i>
                   <span>퀵퀴즈 <b>0.01g</b></span>
                   <i>│</i>
-                  <span>금시세 알림 <b>{notificationActive ? "수신 중" : "0.01g"}</b></span>
+                  <span>금시세 알림 <b>0.01g</b></span>
                 </RewardSummary>
               </div>
 

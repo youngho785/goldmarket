@@ -83,7 +83,7 @@ export const HeroCopy = styled.div`
   @media (max-width: 760px) {
     min-height: ${({ $native }) => ($native ? "0" : "190px")};
     justify-content: flex-start;
-    padding: ${({ $native }) => ($native ? "18px 16px" : "15px 82px 14px 14px")};
+    padding: ${({ $native }) => ($native ? "16px 74px 15px 15px" : "15px 82px 14px 14px")};
   }
 `;
 
@@ -253,10 +253,10 @@ export const GoldVisual = styled.div`
 
   @media (max-width: 760px) {
     position: absolute;
-    right: 5px;
-    bottom: 9px;
-    width: 82px;
-    height: 108px;
+    right: ${({ $native }) => $native ? "7px" : "5px"};
+    bottom: ${({ $native }) => $native ? "10px" : "9px"};
+    width: ${({ $native }) => $native ? "65px" : "82px"};
+    height: ${({ $native }) => $native ? "85px" : "108px"};
     min-height: 0;
     padding: 0;
     background: radial-gradient(circle at 50% 70%, rgba(236, 184, 73, 0.1), transparent 62%);
@@ -274,7 +274,7 @@ export const PriceGoldMark = styled(LivingGoldCompanion)`
   touch-action: manipulation;
 
   @media (max-width: 760px) {
-    top: 10px;
+    top: 7px;
     right: 10px;
     opacity: 1;
   }
@@ -325,7 +325,7 @@ export const GoldBar = styled.div`
   }
 
   @media (max-width: 760px) {
-    width: 58px;
+    width: 52px;
     border-radius: 11px;
     transform: rotate(9deg);
     box-shadow:
@@ -378,7 +378,38 @@ export const BarInner = styled.div`
   }
 `;
 
+export const WebActionStrip = styled.nav`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin: 8px 0 2px;
+
+  a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 9px 15px;
+    border: 1px solid ${({ theme }) => theme.colors.border};
+    border-radius: 999px;
+    background: ${({ theme }) => theme.colors.surface};
+    color: ${({ theme }) => theme.colors.primary};
+    font-size: .88rem;
+    font-weight: 800;
+    text-decoration: none;
+  }
+  a:hover, a:focus-visible {
+    border-color: ${({ theme }) => theme.colors.secondary};
+    background: ${({ theme }) => theme.semantic.badgeGoldBg};
+  }
+  a:focus-visible { outline: 2px solid ${({ theme }) => theme.colors.secondary}; outline-offset: 2px; }
+  @media (max-width: 680px) {
+    a { flex: 1 1 135px; font-size: .84rem; }
+  }
+`;
+
 export const Section = styled.section`
+  scroll-margin-top: 130px;
   padding: clamp(19px, 3vw, 29px) 0 0;
 
   @media (max-width: 760px) {

@@ -10,6 +10,7 @@ import useBookingAvailability, { getBookingAvailabilityEntry } from "@/hooks/use
 import { DON_TO_GRAMS, roundTo3Custom } from "@/lib/goldRates";
 import { getGoldBarFeeEstimate, formatGoldBarFee } from "@/lib/goldBarFee";
 import { formatGoldWeightPair } from "@/lib/goldDisplay";
+import { isNative } from "@/platform/runtime";
 import {
   Card,
   StartChoiceGrid,
@@ -185,7 +186,7 @@ export function CalcStep({
           </HelpText>
           {products.map((p, idx) => (
             <FormGroup key={`row-${idx}`}>
-              <Label htmlFor={`product-${idx}`}>제품 종류</Label>
+              <Label htmlFor={`product-${idx}`}>금 종류·제품 선택</Label>
               <Select
                 id={`product-${idx}`}
                 value={p.productId || ""}
@@ -314,6 +315,7 @@ export function BarStep({
   const selectedTotalG = roundTo3Custom(selectedBar.grams * safeQty);
   const neededG = roundTo3Custom(Math.max(0, selectedTotalG - totalGrams));
   const remainingG = roundTo3Custom(Math.max(0, totalGrams - selectedTotalG));
+  const remainingCombo = remainingG > 0 ? breakdownByDenoms(remainingG) : { items: [], remain: 0 };
   const feeLabel = feeEstimate.totalFee == null
     ? "매장 확인"
     : formatGoldBarFee(feeEstimate.totalFee);
@@ -335,7 +337,7 @@ export function BarStep({
         <small>1돈 = 3.75g · 매장 실측 후 최종 확정</small>
       </ExchangePureGoldTotal>
 
-      <ExchangeOutcome aria-label="예상 금교환 결과">
+      <ExchangeOutcome $native={isNative} aria-label="예상 금교환 결과">
         <div>
           <small>내 금 → 999.9 골드바 예상 · 온라인 안내</small>
           <strong>{selectedBar.label} × {safeQty}개</strong>
@@ -365,12 +367,20 @@ export function BarStep({
           <strong>{feeLabel}</strong>
         </ExchangeDecisionFact>
       </ExchangeDecisionSummary>
-      <HelpText style={{ margin: "6px 0 10px", lineHeight: 1.6 }}>
-        {neededG > 0 && "추가로 필요한 금의 비용은 위 제작 공임에 포함되지 않습니다. "}
-        표시된 제작 공임은 선택한 골드바 기준이며, 추가 조합 공임은 포함되지 않습니다.
-        순도·중량, 잔여 금 처리·부족분 정산 및 실제 공임은 매장에서 고객과 확인하고 동의 후 확정합니다.
+      <HelpText style={{ margin: "6px 0 10px", lineHeight: 1.5 }}>
+        온라인 예상입니다. 실측 순도·중량, 잔여 금 처리 및 공임은 매장에서 고객과 확인하고 동의 후 확정됩니다.
+        {neededG > 0 && " 추가로 필요한 금의 비용은 위 제작 공임에 포함되지 않습니다."}
+        선택한 골드바 외 추가 조합의 공임은 별도입니다.
         {" "}<FeeLink href="/goldbar-fee">전체 공임표 보기</FeeLink>
       </HelpText>
+
+      {neededG === 0 && remainingCombo.items.length > 0 && (
+        <InfoCard role="note" style={{ margin: "8px 0 10px", padding: "10px 12px" }}>
+          <strong>남는 금 활용 참고</strong> · {remainingCombo.items.slice(0, 3).map(({ denom, qty }) => `${denom.label} × ${qty}`).join(", ")}
+          {remainingCombo.items.length > 3 ? " 외" : ""}
+          <br />추가 골드바의 제작 가능 여부·공임·잔여 금 처리는 매장에서 안내하고 동의 후 확정합니다.
+        </InfoCard>
+      )}
 
       <details style={{ margin: "14px 0 4px" }}>
         <summary style={{ cursor: "pointer", color: "var(--gm-primary)", fontWeight: 850, fontSize: ".88rem" }}>
@@ -478,8 +488,8 @@ export function BarStep({
                 }
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "space-between" }}>
-                <div style={{ fontWeight: 900 }}>{d.label}</div>
+              <div style={{ display: "flex", alignItems: "flex-start", flexWrap: "wrap", gap: 6, justifyContent: "space-between" }}>
+                <div style={{ fontWeight: 900, flex: "1 1 75px", minWidth: 0 }}>{d.label}</div>
                 {recommended && <AIBadge>현재 금 추천</AIBadge>}
                 {topUpRecommended && !recommended && <AIBadge>{fmtG(topUpGramsForOne)}g 더 필요</AIBadge>}
               </div>
@@ -550,8 +560,16 @@ export function BarStep({
         </HelpText>
       </FormGroup>
 
-      <SubTitle>안내</SubTitle>
-      <InfoCard>
+      {(() => {
+        const GuideWrapper = isNative ? "details" : "div";
+        return (
+          <GuideWrapper style={isNative ? { marginTop: 14, marginBottom: 9 } : undefined}>
+            {isNative ? (
+              <summary style={{ fontWeight: 850, color: "var(--gm-primary)", cursor: "pointer", padding: "8px 0" }}>
+                남는 금·부족분 처리 자세히 보기
+              </summary>
+            ) : <SubTitle>안내</SubTitle>}
+            <InfoCard>
         {(() => {
           const qty = safeQty;
           const usedExact = selectedBar.grams * qty;
@@ -616,7 +634,10 @@ export function BarStep({
             </>
           );
         })()}
-      </InfoCard>
+            </InfoCard>
+          </GuideWrapper>
+        );
+      })()}
 
       <SectionSeparator />
       <div style={{ display: "grid", gap: 10 }}>

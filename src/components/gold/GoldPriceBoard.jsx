@@ -13,6 +13,7 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
+import useKoreaTodayDate from "@/hooks/useKoreaTodayDate";
 
 const Wrap = styled.section`
   width: ${({ $compact }) => ($compact ? "100%" : "min(1120px, calc(100% - 32px))")};
@@ -90,6 +91,24 @@ const SourceDate = styled.p`
 
 const PriceTable = styled.div`
   width: 100%;
+`;
+
+const PriceContext = styled.p`
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 3px 10px;
+  margin: 0;
+  padding: 7px 10px;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: .72rem;
+  line-height: 1.5;
+  text-align: center;
+
+  strong { color: ${({ theme }) => theme.colors.primary}; }
+  @media (max-width: 520px) { font-size: .68rem; }
 `;
 
 const TableHead = styled.div`
@@ -364,21 +383,22 @@ function formatDateKey(value) {
   return `${text.slice(0, 4)}.${text.slice(4, 6)}.${text.slice(6, 8)}`;
 }
 
-function getKoreaTodayDateKey() {
-  const parts = new Intl.DateTimeFormat("en-US", {
+// Registration time comes from the published record, not the current clock.
+function publicationTime(value) {
+  const date = typeof value?.toDate === "function"
+    ? value.toDate()
+    : value instanceof Date
+      ? value
+      : Number.isFinite(value?.seconds)
+        ? new Date(value.seconds * 1000)
+        : null;
+  if (!date || !Number.isFinite(date.getTime())) return "";
+  return new Intl.DateTimeFormat("ko-KR", {
     timeZone: "Asia/Seoul",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(new Date());
-
-  const values = Object.fromEntries(
-    parts
-      .filter((part) => part.type !== "literal")
-      .map((part) => [part.type, part.value])
-  );
-
-  return `${values.year}${values.month}${values.day}`;
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
 }
 
 function compactDate(value) {
@@ -415,6 +435,7 @@ function changeText(change, prefix = false) {
 }
 
 export default function GoldPriceBoard({ compact = false }) {
+  const todayKey = useKoreaTodayDate();
   const [data, setData] = useState(null);
   const [enabled, setEnabled] = useState(false);
   const [display14kSellPrice, setDisplay14kSellPrice] = useState(false);
@@ -565,7 +586,8 @@ export default function GoldPriceBoard({ compact = false }) {
           <Title>한국골드마켓 금시세</Title>
           {data && (
             <SourceDate>
-              기준일 <strong>{formatDateKey(getKoreaTodayDateKey())}</strong>
+              기준일 <strong>{formatDateKey(todayKey)}</strong>
+              {data.sourceDate && <> · 시세 등록일 {formatDateKey(data.sourceDate)}</>}
             </SourceDate>
           )}
         </HeadTitle>
@@ -577,6 +599,12 @@ export default function GoldPriceBoard({ compact = false }) {
         <Empty>관리자 확인 후 금시세가 공개됩니다.</Empty>
       ) : (
         <>
+          <PriceContext>
+            <span><strong>1돈(3.75g) 기준</strong></span>
+            <span>기준일 <strong>{formatDateKey(todayKey)}</strong></span>
+            <span>시세 등록일 <strong>{data.sourceDate ? formatDateKey(data.sourceDate) : "확인 중"}</strong></span>
+            {publicationTime(data.updatedAt) && <span>등록 시각 {publicationTime(data.updatedAt)} (KST)</span>}
+          </PriceContext>
           <PriceTable>
             <TableHead $compact={compact}>
               <HeadCell $first>종류</HeadCell>

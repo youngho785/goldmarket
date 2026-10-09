@@ -33,6 +33,7 @@ import SwBridge from "@/components/common/SwBridge.jsx";
 import RouteSeo from "@/components/common/RouteSeo.jsx";
 import { auth } from "@/firebase/firebase";
 import { isAndroid } from "@/platform/runtime";
+import { closeAndroidBackOverlay, resolveAndroidBackAction } from "@/platform/androidBackRoute";
 import LandingPage from "@/pages/LandingPage";
 import AppHome from "@/pages/AppHome";
 import AndroidHome from "@/pages/AndroidHome";
@@ -505,11 +506,10 @@ function NativePushNavigationBridge() {
 }
 
 /**
- * Android 시스템 뒤로가기 버튼을 React Router의 이동 기록과 연결합니다.
- *
- * 1) 이전 화면이 있으면 이전 화면으로 이동
- * 2) 앱이 딥링크 등으로 서브페이지에서 시작해 이전 기록이 없으면 홈으로 이동
- * 3) 홈에서 더 이상 돌아갈 곳이 없으면 앱을 종료하지 않고 백그라운드로 보냄
+ * The only Capacitor backButton listener in the customer app.
+ * 1. Open overlays (e.g. the hamburger drawer) consume Back first.
+ * 2. Router history pops exactly once, returning to the entry screen.
+ * 3. Without an internal history entry, use Home or background the app.
  */
 function AndroidBackButtonBridge() {
   const navigate = useNavigate();
@@ -528,31 +528,32 @@ function AndroidBackButtonBridge() {
 
     const registerBackListener = async () => {
       try {
-        backHandle = await CapacitorApp.addListener(
-          "backButton",
-          ({ canGoBack }) => {
-            if (cancelled) return;
+        backHandle = await CapacitorApp.addListener("backButton", () => {
+          if (cancelled) return;
+          if (closeAndroidBackOverlay(window)) return;
 
-            const current = locationRef.current;
+          const action = resolveAndroidBackAction(
+            locationRef.current?.pathname,
+            window.history.state
+          );
 
-            if (canGoBack) {
-              window.history.back();
-              return;
-            }
-
-            if (current?.pathname && current.pathname !== "/") {
-              navigate("/", { replace: true });
-              return;
-            }
-
-            CapacitorApp.minimizeApp().catch((error) => {
+          if (action === "previous") {
+            navigate(-1);
+          } else if (action === "home") {
+            navigate("/", { replace: true });
+          } else {
+            void CapacitorApp.minimizeApp().catch((error) => {
               console.warn(
                 "[Android Back] 앱 백그라운드 전환 실패:",
                 error?.message || error
               );
             });
           }
-        );
+        });
+
+        if (cancelled) {
+          void backHandle.remove();
+        }
       } catch (error) {
         console.error(
           "[Android Back] 뒤로가기 리스너 등록 실패:",
@@ -561,11 +562,11 @@ function AndroidBackButtonBridge() {
       }
     };
 
-    registerBackListener();
+    void registerBackListener();
 
     return () => {
       cancelled = true;
-      backHandle?.remove?.();
+      void backHandle?.remove?.();
     };
   }, [navigate]);
 

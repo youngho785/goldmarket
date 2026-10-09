@@ -11,6 +11,7 @@ import {
   ClipboardList,
   FileText,
   Gem,
+  BookOpen,
   LogIn,
   LogOut,
   MessageCircle,
@@ -28,17 +29,14 @@ import { getAuth, signOut } from "firebase/auth";
 
 import { useAuthContext } from "@/context/AuthContext";
 import { useNotificationContext } from "@/context/NotificationContext";
-import {
-  addAndroidBackButtonListener,
-  exitAndroidApp,
-  hapticTap,
-} from "@/platform/androidUx";
+import { hapticTap } from "@/platform/androidUx";
+import { ANDROID_BACK_OVERLAY_EVENT, resolveAndroidBackAction } from "@/platform/androidBackRoute";
 
 const Header = styled.header`
   position: sticky;
   top: 0;
   z-index: 980;
-  padding-top: env(safe-area-inset-top, 0px);
+  padding-top: max(28px, env(safe-area-inset-top, 0px));
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   background: ${({ theme }) => theme.colors.surface};
   box-shadow: 0 1px 0 ${({ theme }) => theme.colors.border},
@@ -219,7 +217,7 @@ const Drawer = styled.aside`
   overflow-y: auto;
   overscroll-behavior: contain;
   touch-action: pan-y;
-  padding: calc(14px + env(safe-area-inset-top, 0px)) 16px
+  padding: calc(14px + max(28px, env(safe-area-inset-top, 0px))) 16px
     calc(20px + env(safe-area-inset-bottom, 0px));
   border-left: 1px solid ${({ theme }) => theme.colors.border};
   background: ${({ theme }) => theme.colors.background};
@@ -445,6 +443,7 @@ function titleForPath(pathname) {
   if (pathname === "/") return "한국골드마켓";
   if (pathname === "/gold-price") return "금시세";
   if (pathname === "/gold-exchange") return "금교환";
+  if (pathname === "/gold-to-gold") return "GOLD TO GOLD 이야기";
   if (pathname === "/my-gold" || pathname === "/my-gold/items" || pathname === "/my-gold/trend") return "MY GOLD";
   if (pathname === "/my-gold/alerts") return "내 금 알림";
   if (pathname === "/my-exchanges") return "예약";
@@ -476,6 +475,8 @@ export default function AndroidAppHeader() {
   const [drawerDragX, setDrawerDragX] = useState(0);
   const [drawerDragging, setDrawerDragging] = useState(false);
   const drawerRef = useRef(null);
+  const menuButtonRef = useRef(null);
+  const drawerCloseButtonRef = useRef(null);
   const gestureRef = useRef(null);
 
   const isTopLevel = TOP_LEVEL_PATHS.has(pathname);
@@ -483,11 +484,12 @@ export default function AndroidAppHeader() {
   const drawerDragRatio = Math.min(1, Math.max(0, drawerDragX / Math.max(1, drawerWidth)));
 
   const closeMenu = useCallback(({ feedback = false } = {}) => {
+    if (menuOpen) menuButtonRef.current?.focus?.();
     setDrawerDragX(0);
     setDrawerDragging(false);
     setMenuOpen(false);
     if (feedback) void hapticTap();
-  }, []);
+  }, [menuOpen]);
 
   const openMenu = useCallback(() => {
     setDrawerDragX(0);
@@ -507,51 +509,64 @@ export default function AndroidAppHeader() {
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    // Drawer is rendered in a portal: keep keyboard users inside it until closed.
+    const frame = window.requestAnimationFrame(() => drawerCloseButtonRef.current?.focus());
 
     const onKeyDown = (event) => {
-      if (event.key === "Escape") closeMenu({ feedback: true });
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeMenu({ feedback: true });
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const nodes = Array.from(drawerRef.current?.querySelectorAll(
+        'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      ) || []).filter((node) => node.getClientRects().length > 0);
+      if (!nodes.length) return;
+      const first = nodes[0];
+      const last = nodes[nodes.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
 
     window.addEventListener("keydown", onKeyDown);
 
     return () => {
+      window.cancelAnimationFrame(frame);
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [closeMenu, menuOpen]);
 
-  useEffect(
-    () =>
-      addAndroidBackButtonListener(({ canGoBack }) => {
-        if (menuOpen) {
-          closeMenu({ feedback: true });
-          return;
-        }
+  // The RootShell owns the sole native back listener. The open drawer
+  // consumes its event so one press cannot pop the underlying page too.
+  useEffect(() => {
+    if (!menuOpen) return undefined;
 
-        if (pathname !== "/") {
-          if (canGoBack) {
-            navigate(-1);
-          } else {
-            navigate("/", { replace: true });
-          }
-          return;
-        }
+    const onAndroidBack = (event) => {
+      event.preventDefault();
+      closeMenu({ feedback: true });
+    };
 
-        void exitAndroidApp();
-      }),
-    [closeMenu, menuOpen, navigate, pathname]
-  );
+    window.addEventListener(ANDROID_BACK_OVERLAY_EVENT, onAndroidBack);
+    return () => {
+      window.removeEventListener(ANDROID_BACK_OVERLAY_EVENT, onAndroidBack);
+    };
+  }, [closeMenu, menuOpen]);
 
   const goBack = () => {
     void hapticTap();
-    const historyIndex = Number(window.history.state?.idx);
-
-    if (Number.isFinite(historyIndex) && historyIndex > 0) {
+    const action = resolveAndroidBackAction(pathname, window.history.state);
+    if (action === "previous") {
       navigate(-1);
-      return;
+    } else {
+      navigate("/", { replace: true });
     }
-
-    navigate("/", { replace: true });
   };
 
   const handleDrawerPointerDown = (event) => {
@@ -673,6 +688,7 @@ export default function AndroidAppHeader() {
                 </DrawerBrand>
 
                 <IconButton
+                  ref={drawerCloseButtonRef}
                   type="button"
                   onClick={() => closeMenu({ feedback: true })}
                   aria-label="메뉴 닫기"
@@ -802,13 +818,31 @@ export default function AndroidAppHeader() {
                     <ChevronRight aria-hidden />
                   </MenuLink>
 
+                  <MenuLink to="/quiz/gold-bonus">
+                    <span><Gem aria-hidden /></span>
+                    <div>
+                      <strong>금 퀵퀴즈·회원 혜택</strong>
+                      <small>참여 조건과 MEMBER GOLD 확인</small>
+                    </div>
+                    <ChevronRight aria-hidden />
+                  </MenuLink>
+
+                  <MenuLink to="/gold-to-gold">
+                    <span><BookOpen aria-hidden /></span>
+                    <div>
+                      <strong>GOLD TO GOLD 이야기</strong>
+                      <small>쓰임은 달라도 이어지는 금의 가치</small>
+                    </div>
+                    <ChevronRight aria-hidden />
+                  </MenuLink>
+
                   <MenuLink to="/gold-exchange">
                     <span>
                       <Calculator aria-hidden />
                     </span>
                     <div>
-                      <strong>GOLD TO GOLD</strong>
-                      <small>내 금으로 받을 골드바 예상 확인</small>
+                      <strong>골드바 교환 계산</strong>
+                      <small>내 금으로 받을 골드바 미리 확인</small>
                     </div>
                     <ChevronRight aria-hidden />
                   </MenuLink>
@@ -904,6 +938,7 @@ export default function AndroidAppHeader() {
             )}
 
             <IconButton
+              ref={menuButtonRef}
               type="button"
               onClick={openMenu}
               aria-label="전체 메뉴 열기"

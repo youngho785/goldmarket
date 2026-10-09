@@ -235,6 +235,14 @@ export default function MyGoldVault() {
   const isSummaryView = view === "summary";
   const isItemsView = view === "items";
   const isTrendView = view === "trend";
+  useEffect(() => {
+    if (location.hash !== "#goldbar-goal" || !isSummaryView || itemsLoading) return undefined;
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById("goldbar-goal")?.scrollIntoView({ block: "start" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [location.hash, isSummaryView, itemsLoading, ratesReady]);
+
   const importKind = new URLSearchParams(location.search).get("import");
   const addRequested = new URLSearchParams(location.search).get("add") === "1";
   const importRequested = importKind === "calculator" || importKind === "guest";
@@ -915,7 +923,8 @@ export default function MyGoldVault() {
               </Empty>
             )}
           </VaultSection>
-          {hasVaultContent && ratesReady && (
+          <div id="goldbar-goal" style={{ scrollMarginTop: 120 }} aria-label="골드바 목표">
+          {hasVaultContent && ratesReady ? (
             <AppGoldJourney
               pureGoldG={vaultPureGoldG}
               vaultProducts={exchangeProducts}
@@ -927,7 +936,13 @@ export default function MyGoldVault() {
                 )
               }
             />
+          ) : (
+            <VaultSection aria-label="골드바 목표 안내">
+              <SummaryHead><strong>내 골드바 목표</strong></SummaryHead>
+              <Empty>MY GOLD에 금을 기록하면 예상 순금량으로 골드바 목표를 확인할 수 있습니다. 실제 교환량은 매장 실측 후 확정됩니다.</Empty>
+            </VaultSection>
           )}
+          </div>
           </SummarySideStack>
         </SummaryOverviewGrid>
       )}

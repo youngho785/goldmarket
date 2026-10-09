@@ -4,10 +4,11 @@ import test from "node:test";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
-const [header, bottomNav, androidUx] = await Promise.all([
+const [header, bottomNav, androidUx, app] = await Promise.all([
   read("src/components/common/AndroidAppHeader.jsx"),
   read("src/components/common/BottomNav.jsx"),
   read("src/platform/androidUx.js"),
+  read("src/App.jsx"),
 ]);
 
 test("Android 햄버거는 오른쪽 스와이프 닫기 제스처를 제공한다", () => {
@@ -20,13 +21,16 @@ test("Android 햄버거는 오른쪽 스와이프 닫기 제스처를 제공한�
   assert.match(header, /\$dragRatio=\{drawerDragRatio\}/);
 });
 
-test("Android 하드웨어 뒤로가기는 메뉴를 먼저 닫고 홈에서는 앱을 종료한다", () => {
-  assert.match(header, /addAndroidBackButtonListener/);
-  assert.match(header, /if \(menuOpen\)[\s\S]*closeMenu\(\{ feedback: true \}\)/);
-  assert.match(header, /if \(pathname !== "\/"\)/);
-  assert.match(header, /void exitAndroidApp\(\)/);
-  assert.match(androidUx, /CapacitorApp\.addListener\("backButton"/);
-  assert.match(androidUx, /CapacitorApp\.exitApp\(\)/);
+test("Android 하드웨어 뒤로가기는 단일 리스너로 메뉴를 우선 닫고 정확히 한 화면만 돌아간다", () => {
+  assert.match(header, /window\.addEventListener\(ANDROID_BACK_OVERLAY_EVENT, onAndroidBack\)/);
+  assert.match(header, /event\.preventDefault\(\);[\s\S]*closeMenu\(\{ feedback: true \}\)/);
+  assert.doesNotMatch(header, /addAndroidBackButtonListener/);
+  assert.match(app, /CapacitorApp\.addListener\("backButton"/);
+  assert.match(app, /if \(closeAndroidBackOverlay\(window\)\) return/);
+  assert.match(app, /resolveAndroidBackAction\(/);
+  assert.match(app, /navigate\(-1\)/);
+  assert.match(app, /CapacitorApp\.minimizeApp\(\)/);
+  assert.doesNotMatch(androidUx, /CapacitorApp\.addListener\("backButton"/);
 });
 
 test("Android 주요 터치에는 가벼운 햅틱을 사용한다", () => {

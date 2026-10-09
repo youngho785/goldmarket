@@ -48,8 +48,8 @@ const Nav = styled.nav.attrs({
           bottom: max(10px, env(safe-area-inset-bottom, 0px));
           left: 10px;
           display: none;
-          min-height: 66px;
-          padding: 5px;
+          min-height: 62px;
+          padding: 4px;
           border: 1px solid ${theme.colors.border};
           background: color-mix(
             in srgb,
@@ -91,8 +91,8 @@ const Item = styled(NavLink)`
   justify-content: center;
   gap: 3px;
   min-width: 0;
-  min-height: 54px;
-  padding: 5px 2px;
+  min-height: 52px;
+  padding: 4px 2px;
   color: ${({ theme }) => theme.colors.textLight};
   font-size: 0.76rem;
   font-weight: 800;

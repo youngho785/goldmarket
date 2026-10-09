@@ -297,10 +297,14 @@ export const ExchangeOutcome = styled.div`
   }
 
   @media (max-width: 520px) {
-    grid-template-columns: minmax(0, 1fr) 112px;
-    gap: 9px;
+    grid-template-columns: ${({ $native }) => ($native ? "minmax(0, 1fr)" : "minmax(0, 1fr) 112px")};
+    gap: 8px;
     padding: 11px;
-    margin-bottom: 12px;
+    margin: 9px 0 10px;
+    ${({ $native }) => $native && `
+      p { display: none; }
+      > :last-child { display: none; }
+    `}
   }
 `;
 
@@ -696,8 +700,9 @@ export const aiPulse = keyframes`
   100% { box-shadow: 0 0 0 0 transparent; }
 `;
 export const AIBadge = styled.span`
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: .75rem; font-weight: 900;
+  display: inline-flex; align-items: center; gap: 6px; flex: 0 1 auto;
+  max-width: 100%; white-space: normal; overflow-wrap: anywhere;
+  font-size: .7rem; line-height: 1.3; font-weight: 900;
   padding: 4px 8px; border-radius: 9999px;
   color: ${({ theme }) => theme.on.primary};
   background: ${({ theme }) => theme.gradients.primary};

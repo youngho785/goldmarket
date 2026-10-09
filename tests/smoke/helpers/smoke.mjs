@@ -222,7 +222,10 @@ export async function waitForFirestoreValue(
 export async function createExchangeRequestViaUi(page, member, suffix = "") {
   await loginFromUi(page, member.email, member.password, "/gold-exchange");
   await page.goto("/gold-exchange", { waitUntil: "domcontentloaded" });
-  await page.getByRole("button", { name: /내 금으로 받을 골드바 계산/ }).click();
+  const legacyStartButton = page.getByRole("button", { name: /내 금으로 받을 골드바 계산/ });
+  if (await legacyStartButton.isVisible().catch(() => false)) {
+    await legacyStartButton.click();
+  }
   await page.locator("#product-0").selectOption("gold-14k-jewelry");
   await page.locator("#quantity-0").fill("20");
   await page.locator("#quantity-0").blur();

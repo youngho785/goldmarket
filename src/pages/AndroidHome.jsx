@@ -11,6 +11,7 @@ import {
 import styled from "styled-components";
 import {
   CalendarDays,
+  BookOpen,
   ChevronRight,
   ClipboardList,
 } from "lucide-react";
@@ -26,6 +27,7 @@ import { useAuthContext } from "@/context/AuthContext";
 import { db } from "@/firebase/firebase";
 import useGoldVaultDashboard from "@/hooks/useGoldVaultDashboard";
 import useMyGoldValueTrend from "@/hooks/useMyGoldValueTrend";
+import { formatGoldWeightPair } from "@/lib/goldDisplay";
 import { trackProductEventOncePerSession } from "@/analytics/productAnalytics";
 
 const Page = styled.div`
@@ -85,6 +87,27 @@ const PriceCard = styled(Link)`
   small { display: block; color: ${({ theme }) => theme.colors.secondaryDark}; font-size: .68rem; font-weight: 950; }
   strong { display: block; margin-top: 3px; color: ${({ theme }) => theme.colors.primary}; font-size: .86rem; }
   b { color: ${({ theme }) => theme.colors.primary}; font-family: ${({ theme }) => theme.fonts.numeric}; font-size: .92rem; }
+`;
+
+const GoldToGoldStory = styled(Link)`
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  min-height: 76px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 30%, ${({ theme }) => theme.colors.border});
+  border-radius: 16px;
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.primary};
+  text-decoration: none;
+
+  > span:first-child { display: grid; place-items: center; width: 36px; height: 36px;
+    border-radius: 12px; background: ${({ theme }) => theme.semantic.badgeGoldBg}; }
+  svg { width: 18px; height: 18px; }
+  small { display: block; color: ${({ theme }) => theme.colors.secondaryDark}; font-size: .67rem; font-weight: 900; }
+  strong { display: block; margin-top: 3px; font-size: .84rem; line-height: 1.45; }
+  p { margin: 3px 0 0; font-size: .73rem; color: ${({ theme }) => theme.colors.textSecondary}; }
 `;
 
 const MemberUtilities = styled.section`
@@ -315,8 +338,18 @@ export default function AndroidHome() {
         </PriceCard>
       )}
 
+      <GoldToGoldStory to="/gold-to-gold" aria-label="GOLD TO GOLD 금의 가치 이야기 보기">
+        <span><BookOpen aria-hidden /></span>
+        <div>
+          <small>GOLD TO GOLD · 가치의 이야기</small>
+          <strong>쓰임이 달라진 금, 다시 가치 있게.</strong>
+          <p>현금 대신 골드바로 이어가는 이야기를 만나보세요.</p>
+        </div>
+        <ChevronRight aria-hidden />
+      </GoldToGoldStory>
+
       {hasMyGold && dashboard.ratesReady && (
-        <HomeOptionalDetails>
+        <HomeOptionalDetails summary={`기록한 금의 예상 순금 ${formatGoldWeightPair(Number(dashboard.summary.pureGoldG || 0))} · 골드바 목표 보기`}>
           <AppGoldJourney
             pureGoldG={Number(dashboard.summary.pureGoldG || 0)}
           vaultProducts={(dashboard.items || []).slice(0, 20).map((item) => ({
