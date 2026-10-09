@@ -87,7 +87,7 @@ test("비회원 하단 메뉴는 보호 화면 대신 공개 핵심 기능과 �
   assert.match(bottomNavSource, /to: "\/gold-price"[\s\S]*label: "금시세"/);
   assert.match(bottomNavSource, /to: "\/login"[\s\S]*label: "로그인"/);
   assert.match(bottomNavSource, /const MEMBER_WEB_ITEMS = \[[\s\S]*label: "금시세"[\s\S]*label: "MY GOLD"[\s\S]*label: "금교환"[\s\S]*label: "MY"/);
-  assert.match(bottomNavSource, /const MEMBER_ANDROID_ITEMS = \[[\s\S]*label: "MY GOLD"[\s\S]*label: "금 추가"[\s\S]*center: true[\s\S]*label: "금교환"[\s\S]*label: "MY"/);
+  assert.match(bottomNavSource, /const MEMBER_ANDROID_ITEMS = \[[\s\S]*label: "MY GOLD"[\s\S]*label: "금 기록"[\s\S]*center: true[\s\S]*label: "금교환"[\s\S]*label: "MY"/);
   assert.match(bottomNavSource, /isMember \? MEMBER_WEB_ITEMS : GUEST_WEB_ITEMS/);
   assert.match(bottomNavSource, /isMember \? MEMBER_ANDROID_ITEMS : GUEST_ANDROID_ITEMS/);
 });
@@ -244,12 +244,14 @@ test("3.2 최종 정보구조는 MY GOLD → 골드바 목표 → GOLD TO GOLD�
 
   assert.match(
     bottomNavSource,
-    /const MEMBER_ANDROID_ITEMS = \[[\s\S]*label: "MY GOLD"[\s\S]*label: "금 추가"[\s\S]*center: true[\s\S]*label: "금교환"[\s\S]*label: "MY"/
+    /const MEMBER_ANDROID_ITEMS = \[[\s\S]*label: "MY GOLD"[\s\S]*label: "금 기록"[\s\S]*center: true[\s\S]*label: "금교환"[\s\S]*label: "MY"/
   );
 
   const journeyIndex = androidHomeSource.indexOf("<AppGoldJourney");
-  const quickActionsIndex = androidHomeSource.indexOf("<QuickActions");
-  assert.ok(journeyIndex >= 0 && quickActionsIndex > journeyIndex);
+  const utilitiesIndex = androidHomeSource.indexOf("<MemberUtilities");
+  const priceIndex = androidHomeSource.indexOf("<PriceCard");
+  assert.ok(journeyIndex >= 0 && utilitiesIndex >= 0 && priceIndex > utilitiesIndex);
+  assert.ok(journeyIndex > priceIndex);
 
   const myMenuIndex = androidHeaderSource.indexOf("<SectionTitle>내 메뉴</SectionTitle>");
   const memberGoldIndex = androidHeaderSource.indexOf('to="/member-gold"');
@@ -287,7 +289,7 @@ test("2.4 GOLD TO GOLD는 온라인 예상과 실제 매장 확정을 분리하�
   assert.match(appGoldJourneySource, /교환 가능<\/StatusPill>/);
   assert.doesNotMatch(appGoldJourneySource, /GOLD JOURNEY ·|GOLD JOURNEY MILESTONE/);
   assert.match(goldExchangeStepsSource, /g 더 필요<\/AIBadge>/);
-  assert.match(goldExchangeStepsSource, /위 추가 조합 선택 후 예상 잔여/);
+  assert.match(goldExchangeStepsSource, /위 참고 조합까지 모두 제작한다면 예상 잔여/);
   assert.doesNotMatch(goldExchangeStepsSource, /<AIBadge>추가해서 선택<\/AIBadge>/);
   assert.match(goldExchangeStepsSource, /<Title>방문 예약 요청<\/Title>/);
   assert.match(goldExchangeStepsSource, /온라인 예상 · 매장 확정 전/);
@@ -1236,7 +1238,7 @@ test("2.4.2 GOLD JOURNEY 교환 라벨과 예약 요약 문구는 손상 없이 
   assert.match(androidHomeSource, /exchangeType: "999\.9골드바"/);
   assert.match(androidHomeSource, /sourceLabel: item\.label \|\| "금제품"/);
   assert.doesNotMatch(androidHomeSource, /999\.9\?\?\?|"\?\?\?"/);
-  assert.match(goldExchangeStepsSource, /교환 예상 \{formatGoldWeightPair\(barsPlan\.totalGrams \|\| 0\)\}/);
+  assert.match(goldExchangeStepsSource, /내 금 예상 순금 \{formatGoldWeightPair\(barsPlan\.totalGrams \|\| 0\)\}/);
   assert.match(goldExchangeStepsSource, /barsPlan\.selected\?\.label \|\| "골드바"/);
   assert.doesNotMatch(goldExchangeStepsSource, /\?\? \?\?|"\?\?\?"/);
 });

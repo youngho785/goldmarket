@@ -321,7 +321,7 @@ export function BarStep({
         <div>
           <small>내 금 → 999.9 골드바 예상 · 온라인 안내</small>
           <strong>{selectedBar.label} × {safeQty}개</strong>
-          <p>현재 금의 교환 기준 예상 순금량은 {fmtG(totalGrams)}g입니다. 선택한 골드바와 비용은 방문 시 확정됩니다.</p>
+          <p>내 금의 예상 순금량 <b>{fmtG(totalGrams)}g</b> · 방문 시 실측 후 확정</p>
         </div>
         <MiniGoldBar aria-hidden="true">
           <small>KOREA GOLD MARKET</small>
@@ -330,7 +330,7 @@ export function BarStep({
         </MiniGoldBar>
       </ExchangeOutcome>
 
-      <ExchangeDecisionSummary role="group" aria-label="교환 예상 핵심 요약">
+      <ExchangeDecisionSummary role="group" aria-label="교환 예상 핵심 요약" aria-live="polite">
         <ExchangeDecisionFact>
           <span>선택한 골드바 총중량</span>
           <strong>{fmtG(selectedTotalG)}g</strong>
@@ -345,7 +345,9 @@ export function BarStep({
         </ExchangeDecisionFact>
       </ExchangeDecisionSummary>
       <HelpText style={{ margin: "6px 0 10px", lineHeight: 1.6 }}>
-        금의 순도·중량, 부족분 정산 및 실제 공임은 매장에서 고객과 확인하고 동의 후 확정합니다.
+        {neededG > 0 && "추가로 필요한 금의 비용은 위 제작 공임에 포함되지 않습니다. "}
+        표시된 제작 공임은 선택한 골드바 기준이며, 추가 조합 공임은 포함되지 않습니다.
+        순도·중량, 잔여 금 처리·부족분 정산 및 실제 공임은 매장에서 고객과 확인하고 동의 후 확정합니다.
         {" "}<FeeLink href="/goldbar-fee">전체 공임표 보기</FeeLink>
       </HelpText>
 
@@ -426,6 +428,8 @@ export function BarStep({
           const recommended = isTileRecommended(i);
           const topUpRecommended = isTileTopUp(i);
           const disabled = i > maxVisibleIdx;
+          // 실제 선택할 수 없는 큰 규격은 목록에 늘어놓지 않습니다.
+          if (disabled) return null;
           const topUpGramsForOne = roundTo3Custom(Math.max(0, d.grams - totalGrams));
           return (
             <DenomTile
@@ -475,6 +479,9 @@ export function BarStep({
           );
         })}
       </DenomGrid>
+      {maxVisibleIdx < current.length - 1 && (
+        <HelpText>더 큰 규격은 현재 예상 순금량으로 선택할 수 없어 표시하지 않았습니다.</HelpText>
+      )}
 
       <FormGroup style={{ marginTop: 12 }}>
         <Label htmlFor="bar-quantity">수량</Label>
@@ -550,31 +557,27 @@ export function BarStep({
             return (
               <>
                 <p style={{ margin: 0 }}>
-                  남는 무게는 <b>{fmtG(leftoverG)}g</b> (<b>{fmtD(leftoverG / DON_TO_GRAMS)}돈</b>) 입니다. 다음과 같은 추가 조합이 가능합니다:
+                  선택한 골드바를 제외한 예상 남는 순금은 <b>{fmtG(leftoverG)}g</b> (<b>{fmtD(leftoverG / DON_TO_GRAMS)}돈</b>)입니다.
                 </p>
-                <div style={{ marginTop: 8 }}>
-                  {extraCombo.items.map(({ denom, qty: q }) => (
-                    <span
-                      key={`${denom.key}-${q}`}
-                      style={{
-                        display: "inline-block",
-                        padding: "6px 10px",
-                        borderRadius: 9999,
-                        margin: "6px 6px 0 0",
-                        background: "var(--gm-info-soft)",
-                        color: "var(--gm-primary)",
-                        fontWeight: 800,
-                        fontSize: ".9rem",
-                      }}
-                    >
-                      {denom.label} × {q}
-                    </span>
-                  ))}
-                </div>
-                <p style={{ margin: "10px 0 0" }}>
-                  위 추가 조합 선택 후 예상 잔여 <b>{fmtG(extraCombo.remain)}g</b> (<b>{fmtD(extraCombo.remain / DON_TO_GRAMS)}돈</b>)입니다.
-                </p>
-                <p style={{ margin: "8px 0 0", fontWeight: 700 }}>실제 잔여 금 처리방법은 교환 확정 시 안내합니다.</p>
+                <details style={{ marginTop: 10 }}>
+                  <summary style={{ cursor: "pointer", fontWeight: 850 }}>남는 금으로 가능한 추가 골드바 조합 보기 (참고)</summary>
+                  <p style={{ margin: "8px 0 0" }}>
+                    아래 추가 조합은 자동 계산한 참고안이며, 실제 제작 여부는 방문 시 결정됩니다.
+                  </p>
+                  <div style={{ marginTop: 7 }}>
+                    {extraCombo.items.map(({ denom, qty: q }) => (
+                      <span key={`${denom.key}-${q}`} style={{ display: "inline-block", padding: "5px 8px", margin: "4px 5px 0 0", borderRadius: 8, background: "var(--gm-info-soft)", fontWeight: 800 }}>
+                        {denom.label} × {q}
+                      </span>
+                    ))}
+                  </div>
+                  <p style={{ margin: "9px 0 0" }}>
+                    위 참고 조합까지 모두 제작한다면 예상 잔여 <b>{fmtG(extraCombo.remain)}g</b> (<b>{fmtD(extraCombo.remain / DON_TO_GRAMS)}돈</b>)입니다.
+                  </p>
+                  <p style={{ margin: "7px 0 0" }}>
+                    추가 조합의 제작 공임은 위 예상 공임에 포함되지 않으며, 실제 잔여 금 처리방법과 함께 매장에서 안내합니다.
+                  </p>
+                </details>
               </>
             );
           }
@@ -749,14 +752,26 @@ export function ReserveStep({
         {calculated && barsPlan ? (
           <>
             <strong>
-              교환 예상 {formatGoldWeightPair(barsPlan.totalGrams || 0)} · {barsPlan.selected?.label || "골드바"} × {barsPlan.selected?.qty || 1}
+              내 금 예상 순금 {formatGoldWeightPair(barsPlan.totalGrams || 0)} · 받을 골드바 {barsPlan.selected?.label || "골드바"} × {barsPlan.selected?.qty || 1}개
             </strong>
+            <p>
+              {(() => {
+                const chosenGrams = Number(barsPlan.selected?.grams || 0) * Number(barsPlan.selected?.qty || 1);
+                const difference = roundTo3Custom(Number(barsPlan.totalGrams || 0) - chosenGrams);
+                return difference >= 0
+                  ? `선택 후 예상 남는 순금 ${formatGoldWeightPair(difference)}`
+                  : `선택 후 순금 ${formatGoldWeightPair(Math.abs(difference))} 추가 필요 (별도 정산)`;
+              })()}
+            </p>
+            {Array.isArray(barsPlan.autoBreakdown) && barsPlan.autoBreakdown.length > 0 && (
+              <p>남는 금 활용 참고 조합: {barsPlan.autoBreakdown.map((item) => `${item.label} × ${item.qty}`).join(", ")} · 실제 제작 여부는 매장에서 결정합니다.</p>
+            )}
             <p>
               예상 제작 공임 {formatGoldBarFee(getGoldBarFeeEstimate({
                 grams: barsPlan.selected?.grams,
                 don: barsPlan.selected?.don,
                 qty: barsPlan.selected?.qty,
-              }).totalFee)} · 실제 순도·중량·공임과 교환 조건은 매장 실측과 고객 확인 후 확정됩니다.
+              }).totalFee)} (선택한 골드바 기준 · 참고 추가 조합 공임 제외) · 실측과 고객 동의 후 최종 확정됩니다.
             </p>
           </>
         ) : (
@@ -915,7 +930,8 @@ export function ReserveStep({
                     </span>
                   </ConsentRow>
                   <ConsentDetails>
-                    선택해도 지금 바로 차감되지 않습니다. 예약 접수 후 사용 신청만 연결되며,
+                    MEMBER GOLD는 위 내 금 예상 순금량에 합산되지 않은 별도 혜택입니다.
+                    선택해도 지금 차감되지 않으며, 예약 접수 후 사용 신청만 연결됩니다.
                     매장에서 6자리 코드를 확인하고 실제 교환을 확정할 때 차감됩니다.
                   </ConsentDetails>
                 </>
@@ -991,6 +1007,9 @@ export function ReserveStep({
           </PrivacyModalBackdrop>
         )}
 
+        <HelpText style={{ display: "block", margin: "10px 0" }}>
+          이 버튼은 예약 <b>요청</b>입니다. 매장 확인 후 방문 예약이 확정됩니다.
+        </HelpText>
         <div style={{ display: "grid", gap: 10 }}>
           <Button type="submit" disabled={loading} aria-busy={loading}>
             {loading ? "제출 중..." : "방문 예약 요청"}

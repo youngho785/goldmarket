@@ -851,7 +851,7 @@ export default function QuickGoldValueCalculator({
               </select>
             </Field>
 
-            <HelpRow>
+            {(!compact || entryMode === "unknown") && <HelpRow>
               <HelpButton type="button" onClick={toggleStampHelp} aria-expanded={stampHelpOpen}>
                 금 종류를 모르시나요? <strong>각인 확인 방법</strong>
               </HelpButton>
@@ -868,8 +868,8 @@ export default function QuickGoldValueCalculator({
                     : "각인 촬영으로 확인"}
                 </HallmarkScanButton>
               )}
-            </HelpRow>
-{isAndroid && (hallmarkError || hallmarkResult) && (
+            </HelpRow>}
+            {isAndroid && (hallmarkError || hallmarkResult) && (
               <HallmarkStatus
                 role={hallmarkError ? "alert" : "status"}
                 aria-live="polite"
@@ -965,11 +965,11 @@ export default function QuickGoldValueCalculator({
               </WeightField>
             </Field>
 
-            <HelpRow>
+            {(!compact || entryMode === "unknown") && <HelpRow>
               <HelpButton type="button" onClick={toggleWeightHelp} aria-expanded={weightHelpOpen}>
                 무게를 모르시나요? <strong>확인 방법 보기</strong>
               </HelpButton>
-            </HelpRow>
+            </HelpRow>}
 
             {weightHelpOpen && (
               <HelpPanel>
@@ -983,37 +983,46 @@ export default function QuickGoldValueCalculator({
           </FieldGroup>
         </Fields>
 
-        <Results aria-live="polite">
-          <Result>
-            <small>오늘 참고가치</small>
-            <strong>
-              {canCalculate ? formatWon(estimatedValueWon) : grams > 0 && !selected ? "금 종류 선택" : grams > 0 ? "입력 확인" : "—"}
-            </strong>
-          </Result>
-          <Result>
-            <small>예상 순금량</small>
-            <strong>
-              {canCalculate ? formatGoldWeightPair(pureGoldG) : grams > 0 && !selected ? "금 종류 선택" : grams > 0 ? "입력 확인" : "—"}
-            </strong>
-          </Result>
-        </Results>
+        {canCalculate && (
+          <Results aria-live="polite" role="status" aria-label="내 금 예상 계산 결과">
+            <Result>
+              <small>오늘 예상 참고가치</small>
+              <strong>{formatWon(estimatedValueWon)}</strong>
+            </Result>
+            <Result>
+              <small>예상 순금량</small>
+              <strong>{formatGoldWeightPair(pureGoldG)}</strong>
+            </Result>
+          </Results>
+        )}
 
         {canCalculate && (
           <SavePrompt>
             <strong>한 번 기록하면, 매주 내 금의 변화가 보입니다.</strong>
-            <p>
-              다음에 다시 입력하지 않고 가치를 확인할 수 있습니다. 주간 알림은 가입 후 알림 수신에 동의하면 이용할 수 있습니다.
-            </p>
+            <p>다시 입력할 필요 없이 확인할 수 있어요. 주간 알림은 회원의 수신 동의 후 제공됩니다.</p>
           </SavePrompt>
         )}
 
-        <Action type="button" disabled={!canCalculate} onClick={continueToMyGold}>
-          <Gem size={16} aria-hidden /> MY GOLD에 기록하기 <ArrowRight size={16} aria-hidden />
-        </Action>
-        <Note>
-          <strong>MY GOLD는 실물을 맡기는 보관 서비스가 아닙니다.</strong> 내가 가진 금의 종류와 중량을 기록해
-          참고가치와 변화를 확인하는 개인 기록 공간입니다. 실제 교환은 매장 실측 후 확정됩니다.
-        </Note>
+        {canCalculate && (
+          <>
+            <Action type="button" onClick={continueToMyGold}>
+              <Gem size={16} aria-hidden /> MY GOLD에 기록하기 <ArrowRight size={16} aria-hidden />
+            </Action>
+            <Note>
+              <strong>MY GOLD는 금 실물을 맡기는 보관 서비스가 아닙니다.</strong> 오늘 가치는 참고용이며,
+              실제 교환은 매장 실측 후 확정됩니다.
+            </Note>
+          </>
+        )}
+        {!canCalculate && compact && (
+          <Note>금 종류와 중량을 입력하면 예상 결과가 나타납니다. 입력한 금은 이곳에 맡기지 않습니다.</Note>
+        )}
+        {!canCalculate && !compact && (
+          <Note>
+            <strong>MY GOLD는 금 실물을 맡기는 보관 서비스가 아닙니다.</strong> 금 종류와 중량을 입력해
+            참고가치를 확인할 수 있으며, 실제 교환은 매장 실측 후 확정됩니다.
+          </Note>
+        )}
       </Body>
     </Card>
   );

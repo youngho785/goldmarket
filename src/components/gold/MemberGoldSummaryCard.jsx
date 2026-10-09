@@ -70,7 +70,7 @@ export default function MemberGoldSummaryCard({ uid, compact = false }) {
       <Copy>
         <small>MEMBER GOLD</small>
         <strong>{loading ? "잔액 확인 중" : `${Number(balanceG || 0).toFixed(2)}g`}</strong>
-        <p>회원혜택으로 받은 순금 · GOLD TO GOLD 사용 가능</p>
+        <p>MY GOLD와 별도 혜택 · GOLD TO GOLD에 사용</p>
       </Copy>
       <ChevronRight aria-hidden />
     </Card>

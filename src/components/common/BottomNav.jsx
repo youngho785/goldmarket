@@ -204,7 +204,7 @@ const GUEST_WEB_ITEMS = [
 const MEMBER_ANDROID_ITEMS = [
   { to: "/", icon: Home, label: "홈" },
   { to: "/my-gold", icon: Gem, label: "MY GOLD" },
-  { to: "/my-gold/items?add=1", icon: Plus, label: "금 추가", center: true },
+  { to: "/my-gold/items?add=1", icon: Plus, label: "금 기록", center: true },
   { to: "/gold-exchange", icon: Calculator, label: "금교환" },
   { to: "/profile", icon: User, label: "MY" },
 ];
@@ -212,7 +212,7 @@ const MEMBER_ANDROID_ITEMS = [
 const GUEST_ANDROID_ITEMS = [
   { to: "/", icon: Home, label: "홈" },
   { to: "/gold-price", icon: Scale, label: "금시세" },
-  { to: "/my-gold/items?add=1", icon: Plus, label: "금 추가", center: true },
+  { to: "/my-gold/items?add=1", icon: Plus, label: "금 기록", center: true },
   { to: "/gold-exchange", icon: Calculator, label: "금교환" },
   { to: "/login", icon: User, label: "로그인" },
 ];

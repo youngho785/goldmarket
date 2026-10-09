@@ -664,10 +664,10 @@ export default function GoldExchange() {
             기존 제품과 연락처는 유지되며, 새로운 방문 날짜와 시간을 선택해 다시 신청해 주세요.
           </RebookNotice>
         )}
-        {fromVault && (
+        {fromVault && step === STEP.CALC && (
           <RebookNotice role="status">
-            <strong>MY GOLD에 기록한 내 금 {vaultImportedCount || initialVaultProductsRef.current.length}개를 불러왔습니다.</strong><br />
-            저장된 금 종류와 중량으로 예상 교환량을 바로 계산합니다. 필요하면 이전 버튼에서 언제든 수정할 수 있으며, 실제 인정 중량은 매장 실측 후 확정됩니다.
+            <strong>MY GOLD의 금 {vaultImportedCount || initialVaultProductsRef.current.length}개를 불러왔습니다.</strong>{" "}
+            아래에서 내용을 수정할 수 있으며, 인정 중량은 매장 실측 후 확정됩니다.
           </RebookNotice>
         )}
         {!showStartMethod && (
@@ -686,7 +686,7 @@ export default function GoldExchange() {
             )}
           </FlowTrack>
         )}
-        {!showStartMethod && (
+        {!showStartMethod && step === STEP.CALC && (
           <EstimateBoundary>
             온라인 화면은 예상값입니다. 실제 순도·중량·골드바 제작공임과 교환 조건은 매장에서 실물을 확인하고 고객이 동의한 뒤 확정됩니다.
           </EstimateBoundary>

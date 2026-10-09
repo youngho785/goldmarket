@@ -27,6 +27,7 @@
     "test:ux-upgrade": "node scripts/test-ux-upgrade.mjs",
     "test:ux-first-contact": "node scripts/test-ux-first-contact.mjs",
     "test:ux-home-priority": "node scripts/test-ux-home-priority.mjs",
+    "test:ux-android-home-finish": "node scripts/test-ux-android-home-finish.mjs",
     "test:member-gold": "node scripts/test-member-gold-wallet.mjs",
     "test:gold-display": "node scripts/test-gold-display-consistency.mjs",
     "test:push-safety": "node scripts/test-local-push-safety.mjs",
@@ -37,6 +38,7 @@
     "test:smoke:headed": "node scripts/run-smoke.mjs --headed",
     "test:ux-exchange-decision": "node scripts/test-ux-exchange-decision.mjs",
     "test:ux-auth-continuity": "node scripts/test-ux-auth-continuity.mjs",
+    "test:ux-exchange-mobile-finish": "node scripts/test-ux-exchange-mobile-finish.mjs",
     "test:mobile": "node scripts/run-mobile-smoke.mjs",
     "test:mobile:headed": "node scripts/run-mobile-smoke.mjs --headed"
   },

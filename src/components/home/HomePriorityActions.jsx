@@ -7,8 +7,8 @@ import { ArrowRight, Gem, Plus } from "lucide-react";
 // 계산·교환·예약의 데이터 처리 방식은 여기에서 변경하지 않습니다.
 const Panel = styled.section`
   display: grid;
-  gap: 10px;
-  padding: 13px;
+  gap: 9px;
+  padding: 12px;
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 17px;
   background: ${({ theme }) => theme.colors.surface};
@@ -27,7 +27,7 @@ const Links = styled.div`
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 
-  @media (max-width: 400px) {
+  @media (max-width: 340px) {
     grid-template-columns: 1fr;
   }
 `;
@@ -38,7 +38,7 @@ const Action = styled(Link)`
   gap: 11px;
   min-width: 0;
   min-height: 76px;
-  padding: 13px;
+  padding: 10px 11px;
   border: 1px solid ${({ $primary, theme }) => $primary ? theme.colors.primary : theme.colors.border};
   border-radius: 13px;
   background: ${({ $primary, theme }) => $primary ? theme.colors.primary : theme.semantic.badgeGoldBg};
@@ -55,12 +55,20 @@ const Action = styled(Link)`
   span { flex: 1; min-width: 0; }
   strong { display: block; font-size: .94rem; font-weight: 900; line-height: 1.35; word-break: keep-all; }
   small { display: block; margin-top: 4px; font-size: .8rem; line-height: 1.45; word-break: keep-all; opacity: .9; }
+
+  @media (max-width: 560px) {
+    gap: 7px;
+    min-height: 72px;
+    > svg:last-child { display: none; }
+    strong { font-size: .85rem; }
+    small { display: none; }
+  }
 `;
 
 export default function HomePriorityActions() {
   return (
     <Panel aria-labelledby="home-priority-actions-title">
-      <Heading id="home-priority-actions-title">지금 무엇을 하시겠어요?</Heading>
+      <Heading id="home-priority-actions-title">지금 바로 시작하기</Heading>
       <Links>
         <Action to="/my-gold/items?add=1" $primary>
           <Plus aria-hidden="true" />

@@ -10,11 +10,9 @@ import {
 } from "firebase/firestore";
 import styled from "styled-components";
 import {
-  BellRing,
   CalendarDays,
   ChevronRight,
   ClipboardList,
-  Scale,
 } from "lucide-react";
 
 import AppMyGoldDashboard from "@/components/gold/AppMyGoldDashboard";
@@ -89,25 +87,32 @@ const PriceCard = styled(Link)`
   b { color: ${({ theme }) => theme.colors.primary}; font-family: ${({ theme }) => theme.fonts.numeric}; font-size: .92rem; }
 `;
 
-const QuickActions = styled.div`
+const MemberUtilities = styled.section`
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 9px;
+
+  > * { min-width: 0; }
+
+  @media (max-width: 340px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 const QuickAction = styled(Link)`
   display: flex;
   align-items: center;
   gap: 9px;
-  min-height: 54px;
-  padding: 10px 12px;
+  min-height: 70px;
+  padding: 11px 12px;
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 14px;
   background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.text};
   text-decoration: none;
-  font-size: .86rem;
+  font-size: .84rem;
   font-weight: 900;
+  word-break: keep-all;
 
   span {
     display: grid;
@@ -281,6 +286,25 @@ export default function AndroidHome() {
       )}
 
 
+      {user?.uid && (
+        <MemberUtilities aria-label="예약과 내 금 알림">
+          <QuickAction to="/my-exchanges">
+            <span><ClipboardList aria-hidden /></span> 예약·교환 내역
+          </QuickAction>
+          <MyGoldAlertSummary uid={user?.uid} demoMode={!user?.uid} compact />
+        </MemberUtilities>
+      )}
+
+      {!dashboard.publicPriceLoading && dashboard.publicPriceEnabled && purePrice > 0 && (
+        <PriceCard to="/gold-price" aria-label="오늘 순금 시세 보기">
+          <div>
+            <small>오늘 금시세</small>
+            <strong>오늘 순금 · 내가 팔 때 · 1돈(3.75g)</strong>
+          </div>
+          <b>{formatWon(purePrice)}</b>
+        </PriceCard>
+      )}
+
       {hasMyGold && dashboard.ratesReady && (
         <HomeOptionalDetails>
           <AppGoldJourney
@@ -303,34 +327,6 @@ export default function AndroidHome() {
         </HomeOptionalDetails>
       )}
 
-      {user?.uid && (
-        <QuickActions aria-label="예약과 부가 메뉴">
-          <QuickAction to="/my-exchanges">
-            <span><ClipboardList aria-hidden /></span> 예약·교환 내역
-          </QuickAction>
-          <QuickAction to="/my-gold/alerts">
-            <span><BellRing aria-hidden /></span> 내 금 알림
-          </QuickAction>
-          <QuickAction to="/gold-price">
-            <span><Scale aria-hidden /></span> 금시세
-          </QuickAction>
-        </QuickActions>
-      )}
-
-
-      {user?.uid && (
-        <MyGoldAlertSummary uid={user?.uid} demoMode={!user?.uid} compact />
-      )}
-
-      {!dashboard.publicPriceLoading && dashboard.publicPriceEnabled && purePrice > 0 && (
-        <PriceCard to="/gold-price" aria-label="오늘 순금 시세 보기">
-          <div>
-            <small>오늘 금시세</small>
-            <strong>오늘 순금 · 내가 팔 때 · 1돈(3.75g)</strong>
-          </div>
-          <b>{formatWon(purePrice)}</b>
-        </PriceCard>
-      )}
 
     </Page>
   );

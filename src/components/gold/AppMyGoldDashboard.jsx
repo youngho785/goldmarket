@@ -152,6 +152,15 @@ const Value = styled.strong`
   white-space: nowrap;
 `;
 
+const ReferenceLabel = styled.span`
+  display: block;
+  margin-top: 7px;
+  color: color-mix(in srgb, ${({ theme }) => theme.on.primary} 76%, transparent);
+  font-size: .73rem;
+  font-weight: 750;
+  line-height: 1.4;
+`;
+
 const Change = styled.div`
   display: inline-flex;
   align-items: center;
@@ -537,6 +546,10 @@ export default function AppMyGoldDashboard({ user, dashboard, animateValue = fal
                 ? formatWon(animatedCurrent)
                 : "시세 공개 대기"}
           </Value>
+
+          {ratesReady && dashboard.publicPriceEnabled && (
+            <ReferenceLabel>기록한 금의 예상 참고가치 · 실제 금액은 실측 후 확정</ReferenceLabel>
+          )}
 
           {ratesReady && dashboard.publicPriceEnabled && Number.isFinite(totals.percent) && (
             <Change $direction={totals.direction} $animate={shouldAnimateValue}>

@@ -42,8 +42,8 @@ export const FlowHeader = styled.header`
   }
 
   @media (max-width: 640px) {
-    padding: ${({ $compact }) => ($compact ? "12px 13px" : "15px 14px 13px")};
-    border-radius: 20px;
+    padding: ${({ $compact }) => ($compact ? "11px 12px" : "15px 14px 13px")};
+    border-radius: 18px;
   }
 `;
 
@@ -148,8 +148,9 @@ export const FlowItem = styled.li`
   white-space: nowrap;
 
   @media (max-width: 620px) {
-    padding: 8px 3px;
-    font-size: 0.62rem;
+    padding: 9px 3px;
+    font-size: .69rem;
+    letter-spacing: -.035em;
   }
 `;
 
@@ -296,7 +297,10 @@ export const ExchangeOutcome = styled.div`
   }
 
   @media (max-width: 520px) {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) 112px;
+    gap: 9px;
+    padding: 11px;
+    margin-bottom: 12px;
   }
 `;
 
@@ -307,7 +311,12 @@ export const ExchangeDecisionSummary = styled.div`
   margin: 0 0 10px;
 
   @media (max-width: 620px) {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+
+    & > :last-child:nth-child(odd) {
+      grid-column: 1 / -1;
+    }
   }
 `;
 
@@ -332,6 +341,10 @@ export const ExchangeDecisionFact = styled.div`
     line-height: 1.35;
     word-break: keep-all;
   }
+  @media (max-width: 520px) {
+    padding: 10px 11px;
+    span { font-size: .78rem; }
+  }
 `;
 
 export const MiniGoldBar = styled.div`
@@ -347,6 +360,13 @@ export const MiniGoldBar = styled.div`
   small { color: rgba(23,18,10,.68); font-size: 0.62rem; letter-spacing: .11em; }
   b { display: block; margin-top: 3px; font-size: .9rem; }
   em { display: block; margin-top: 2px; font-family: ${({ theme }) => theme.fonts.numeric}; font-size: .7rem; font-style: normal; font-weight: 900; }
+  @media (max-width: 520px) {
+    min-width: 0;
+    padding: 9px 6px;
+    small { font-size: .52rem; letter-spacing: 0; }
+    b { font-size: .7rem; }
+  }
+  @media (max-width: 350px) { display: none; }
 `;
 
 export const Title = styled.h2`
@@ -381,8 +401,8 @@ export const Label = styled.label`
 export const HelpText = styled.small`
   margin-top: 4px;
   color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: .75rem;
-  line-height: 1.42;
+  font-size: .8rem;
+  line-height: 1.5;
 `;
 
 export const ConsentBox = styled.div`
@@ -628,7 +648,9 @@ export const AIBadge = styled.span`
   color: ${({ theme }) => theme.on.primary};
   background: ${({ theme }) => theme.gradients.primary};
   border: 1px solid ${({ theme }) => theme.colors.secondary}66;
-  animation: ${aiPulse} 2.8s ease-in-out infinite;
+  @media (prefers-reduced-motion: no-preference) {
+    animation: ${aiPulse} 2.8s ease-in-out infinite;
+  }
 `;
 
 /* Denoms */
@@ -651,7 +673,8 @@ export const DenomTile = styled.button`
         ? theme.gradients.recommendation
         : "transparent"};
   color: ${({ $active, theme }) => ($active ? theme.colors.primary : theme.colors.text)};
-  border-radius: 0;
+  border-radius: 12px;
+  min-height: 75px;
   padding: 10px 12px;
   text-align: left;
   cursor: pointer;
@@ -671,7 +694,7 @@ export const DenomTile = styled.button`
         content: "";
         position: absolute;
         inset: -2px;
-        border-radius: 0;
+        border-radius: 12px;
         background: ${({ theme }) => theme.gradients.recommendation};
         z-index: -1;
         filter: blur(8px);
@@ -706,7 +729,7 @@ export const EstimateBoundary = styled.div`
   border-radius: 11px;
   background: color-mix(in srgb, ${({ theme }) => theme.on.primary} 6%, transparent);
   color: color-mix(in srgb, ${({ theme }) => theme.on.primary} 78%, transparent);
-  font-size: .7rem;
+  font-size: .78rem;
   font-weight: 750;
   line-height: 1.45;
   text-align: center;
@@ -724,9 +747,9 @@ export const ReservationSummary = styled.div`
     display: block;
     color: ${({ theme }) => theme.colors.secondaryDark};
     font-family: ${({ theme }) => theme.fonts.numeric};
-    font-size: .63rem;
+    font-size: .73rem;
     font-weight: 950;
-    letter-spacing: .09em;
+    letter-spacing: .06em;
   }
   strong {
     display: block;
@@ -738,7 +761,7 @@ export const ReservationSummary = styled.div`
   p {
     margin: 5px 0 0;
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .74rem;
+    font-size: .82rem;
     line-height: 1.5;
   }
 `;

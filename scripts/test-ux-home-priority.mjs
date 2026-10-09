@@ -34,7 +34,7 @@ test("골드바 목표는 선택적으로 펼치는 정보로 제공한다", () 
 
 test("비회원 앱은 회원 전용 알림 카드 대신 계산과 금시세를 우선한다", () => {
   assert.match(android, /\{!user\?\.uid && \(\s*<QuickGoldValueCalculator/);
-  assert.match(android, /\{user\?\.uid && \(\s*<MyGoldAlertSummary/);
+  assert.match(android, /\{user\?\.uid && \(\s*<MemberUtilities[\s\S]*<MyGoldAlertSummary/);
   assert.match(android, /<PriceCard/);
 });
 
