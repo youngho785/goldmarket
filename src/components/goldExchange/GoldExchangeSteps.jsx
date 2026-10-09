@@ -92,11 +92,13 @@ const QuantityField = React.memo(function QuantityField({
     const raw = e.target.value ?? "";
     const norm = raw.replace(/[^0-9.,]/g, "");
     setLocal(norm);
+    // 단위 버튼을 바로 탭하더라도 마지막 입력이 부모 상태에 남아 있어야 합니다.
+    onCommit(norm);
   };
   const handleBlur = () => {
     const str = (local || "").replace(",", ".");
     const v = parseFloat(str);
-    const next = isNaN(v) ? "" : roundTo3Custom(v).toFixed(2);
+    const next = isNaN(v) ? "" : String(Number(v.toFixed(6)));
     setLocal(next);
     onCommit(next);
   };
@@ -162,7 +164,8 @@ export function StartMethodScreen({ onChoose }) {
 export function CalcStep({
   products, productOptions, error, onCalculate,
   handleProductChange, handleProductSelect, addProduct, removeProduct,
-  onGoReserveDirect, fromVault, vaultImportNotice = "",
+  onGoReserveDirect, onImportMyGold, showVaultImportAction = false,
+  fromVault, vaultImportNotice = "",
 }) {
   return (
     <>
@@ -241,6 +244,11 @@ export function CalcStep({
         </form>
       </Card>
 
+      {showVaultImportAction && (
+        <ModeSwitch type="button" onClick={onImportMyGold}>
+          MY GOLD에 기록한 금 불러오기 →
+        </ModeSwitch>
+      )}
       <ModeSwitch type="button" onClick={onGoReserveDirect}>
         순도·무게를 잘 모르겠다면 현장 확인 예약으로 전환 →
       </ModeSwitch>

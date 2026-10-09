@@ -116,7 +116,7 @@ test("2.2.1 로그인·보호 화면의 기본 메시지는 회원혜택보다 M
     read("src/components/common/ProtectedRoute.jsx"),
     read("src/components/common/AndroidAppHeader.jsx"),
   ]);
-  assert.match(loginSource, /가입은 간단하게 · MY GOLD 기록과 가치 확인을 이어가세요/);
+  assert.match(loginSource, /내 금의 가치와 기록을 이어서 확인하세요/);
   assert.match(protectedRouteSource, /MY GOLD 기록을 이어가세요/);
   assert.match(protectedRouteSource, /내가 가진 금의 기록과 오늘 가치 확인/);
   assert.match(androidHeaderSource, /먼저 내 금의 오늘 가치를 확인해 보세요/);
@@ -284,9 +284,9 @@ test("2.4 GOLD TO GOLD는 온라인 예상과 실제 매장 확정을 분리하�
   assert.match(goldExchangeStepsSource, /예상 제작 공임/);
   assert.match(goldExchangeStepsSource, /전체 공임표 보기/);
   assert.match(goldExchangeStepsSource, /선택한 골드바로 방문 예약 계속/);
-  assert.match(appGoldJourneySource, /\$\{readiness\.label\} 교환 가능합니다\./);
+  assert.match(appGoldJourneySource, /\$\{readiness\.label\} 예상 교환 가능/);
   assert.match(appGoldJourneySource, /<strong>다음 목표<\/strong>/);
-  assert.match(appGoldJourneySource, /교환 가능<\/StatusPill>/);
+  assert.match(appGoldJourneySource, /기록 기준 예상<\/StatusPill>/);
   assert.doesNotMatch(appGoldJourneySource, /GOLD JOURNEY ·|GOLD JOURNEY MILESTONE/);
   assert.match(goldExchangeStepsSource, /g 더 필요<\/AIBadge>/);
   assert.match(goldExchangeStepsSource, /위 참고 조합까지 모두 제작한다면 예상 잔여/);
@@ -671,7 +671,7 @@ test("Android 홈은 7일 변화를 별도 카드 없이 MY GOLD 요약에 통�
 test("GoldExchange 진입 모드는 URL을 기준으로 한 곳에서 상태를 전환한다", () => {
   assert.match(
     goldExchangeSource,
-    /const entryMode = explicitEntryMode \|\| \(importedFromMyGold \? "vault" : ""\)/
+    /resolveGoldExchangeEntryMode\(\{ requestedEntryMode, importedFromMyGold, nativeAndroid: isNative && isAndroid \}\)/
   );
   assert.match(goldExchangeSource, /const previousEntryModeRef = useRef\(entryMode\)/);
   assert.match(goldExchangeSource, /if \(previousMode === entryMode\) return/);
@@ -1056,7 +1056,7 @@ test("문의 오류는 브라우저 alert 대신 화면 안에서 복구 가능�
   ]);
 
   assert.doesNotMatch(mySource, /\balert\s*\(/);
-  assert.match(mySource, /<ErrorNotice role="alert">\{error\}<\/ErrorNotice>/);
+  assert.match(mySource, /<ErrorNotice role="alert">[\s\S]*?\{error\}[\s\S]*?다시 불러오기/);
   assert.match(detailSource, /setActionError\(error\?\.message \|\| "답변을 저장하지 못했습니다\."\)/);
   assert.match(detailSource, /<ErrorNotice role="alert">\{actionError\}<\/ErrorNotice>/);
 });

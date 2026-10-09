@@ -19,10 +19,10 @@ const ANALYTICS_EXPLICITLY_DISABLED =
 const EVENT_PARAM_RULES = Object.freeze({
   landing_view: Object.freeze({}),
   quick_calc_help_opened: Object.freeze({
-    source: new Set(["landing", "app-home", "quick-value"]),
+    source: new Set(["landing", "app-home", "app-first-gold", "quick-value"]),
   }),
   quick_calc_store_visit_clicked: Object.freeze({
-    source: new Set(["landing", "app-home", "quick-value"]),
+    source: new Set(["landing", "app-home", "app-first-gold", "quick-value"]),
   }),
   registration_started: Object.freeze({
     source: new Set(["direct", "mygold", "exchange", "other"]),
@@ -34,6 +34,11 @@ const EVENT_PARAM_RULES = Object.freeze({
     destination: new Set(["mygold", "exchange", "profile", "other"]),
   }),
   app_home_view: Object.freeze({}),
+  // 첫 계산까지 걸린 시간의 구간만 허용. 중량·금액·제품 세부 내역을 기록하지 않음.
+  app_first_value_calculated: Object.freeze({
+    elapsed_bucket: new Set(["under_10s", "10_20s", "20_30s", "over_30s"]),
+    audience: new Set(["guest", "new_member"]),
+  }),
   mygold_alert_saved: Object.freeze({
     mode: new Set(["enabled", "disabled"]),
   }),

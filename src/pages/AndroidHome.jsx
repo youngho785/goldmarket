@@ -291,7 +291,7 @@ export default function AndroidHome() {
           compact
           eyebrow="회원가입 없이 금 가치 확인"
           title="집에 있는 금, 지금 얼마일까요?"
-          description="지금 가치를 먼저 확인하세요. 다음에 또 확인하고 싶다면 내 금 기록에 저장할 수 있습니다."
+          description="14K·18K·순금을 선택하고 무게를 입력하세요."
         />
       )}
 

@@ -8,6 +8,8 @@ import { useAuthContext } from "@/context/AuthContext";
 import useGoldVaultDashboard from "@/hooks/useGoldVaultDashboard";
 import { DEFAULT_GOLD_PRODUCTS, DON_TO_GRAMS } from "@/lib/goldRates";
 import { formatGoldWeightPair } from "@/lib/goldDisplay";
+import { switchGoldWeightUnit } from "@/lib/goldWeightInput";
+import { getFirstValueElapsedBucket, markFirstValueStart } from "@/lib/firstValueTiming";
 import {
   computeVaultMarketValueWon,
   computeVaultPureGoldG,
@@ -743,6 +745,35 @@ export default function QuickGoldValueCalculator({
     [canCalculate, dashboard.pureGoldBuyPricePerDon, effectiveRates, item]
   );
 
+  const publishedEstimateReady = canCalculate && dashboard.ratesReady &&
+    !dashboard.marketLoading && !dashboard.publicPriceLoading &&
+    dashboard.publicPriceEnabled && estimatedValueWon > 0;
+  const pureGoldEstimateReady = dashboard.ratesReady && pureGoldG > 0;
+
+  const changeWeightUnit = (nextUnit) => {
+    if (nextUnit === weightUnit) return;
+    setWeightValue((current) => switchGoldWeightUnit(current, weightUnit, nextUnit));
+    setWeightUnit(nextUnit);
+  };
+
+  useEffect(() => {
+    if (appFirstExperience) markFirstValueStart();
+  }, [appFirstExperience]);
+
+  useEffect(() => {
+    if (!appFirstExperience || !publishedEstimateReady || !pureGoldEstimateReady) return undefined;
+    const timer = window.setTimeout(() => {
+      const elapsed_bucket = getFirstValueElapsedBucket();
+      if (!elapsed_bucket) return;
+      trackProductEventOncePerSession(
+        "app_first_value_calculated",
+        { elapsed_bucket, audience: source === "app-home" ? "guest" : "new_member" },
+        "app-first-value-calculated"
+      );
+    }, 700);
+    return () => window.clearTimeout(timer);
+  }, [appFirstExperience, publishedEstimateReady, pureGoldEstimateReady, source]);
+
   useEffect(() => {
     if (!onPreviewChange) return;
     if (!selected || !validWeight) {
@@ -1211,7 +1242,7 @@ export default function QuickGoldValueCalculator({
                 <select
                   aria-label="중량 단위"
                   value={weightUnit}
-                  onChange={(event) => setWeightUnit(event.target.value)}
+                  onChange={(event) => changeWeightUnit(event.target.value)}
                 >
                   <option value="g">g</option>
                   <option value="don">돈</option>
@@ -1241,11 +1272,11 @@ export default function QuickGoldValueCalculator({
           <Results aria-live="polite" role="status" aria-label="내 금 예상 계산 결과">
             <Result>
               <small>오늘 예상 참고가치</small>
-              <strong>{formatWon(estimatedValueWon)}</strong>
+              <strong>{publishedEstimateReady ? formatWon(estimatedValueWon) : "시세 확인 중 · 잠시 후 다시 확인"}</strong>
             </Result>
             <Result>
               <small>예상 순금량</small>
-              <strong>{formatGoldWeightPair(pureGoldG)}</strong>
+              <strong>{pureGoldEstimateReady ? formatGoldWeightPair(pureGoldG) : "환산 기준 확인 중"}</strong>
             </Result>
           </Results>
         )}

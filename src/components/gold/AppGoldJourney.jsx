@@ -316,7 +316,7 @@ export default function AppGoldJourney({ pureGoldG = 0, vaultProducts = [], onEx
           <small><Sparkles aria-hidden /> MY GOLD → 골드바</small>
           <h2 id="app-gold-journey-title">
             {readiness?.available
-              ? `${readiness.label} 교환 가능합니다.`
+              ? `${readiness.label} 예상 교환 가능`
               : "다음 골드바까지 조금 더 필요합니다."}
           </h2>
           <p>
@@ -326,7 +326,7 @@ export default function AppGoldJourney({ pureGoldG = 0, vaultProducts = [], onEx
           </p>
         </div>
         {readiness?.available && (
-          <StatusPill><Check aria-hidden /> 교환 가능</StatusPill>
+          <StatusPill><Check aria-hidden /> 기록 기준 예상</StatusPill>
         )}
       </Head>
 

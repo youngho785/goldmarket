@@ -19,6 +19,16 @@ import {
 
 const SIGNUP_PASSWORD = "Kgm!Signup2345";
 
+// UX 7차: MY 계정 정보는 기본적으로 접혀 있으므로 직접 열어 확인합니다.
+async function expectProfileEmailVisible(page, email) {
+  const profileDetails = page.locator("details").filter({
+    has: page.getByText("내 프로필 · 로그인 이메일", { exact: true })
+  });
+  await expect(profileDetails.locator("summary")).toBeVisible();
+  await profileDetails.locator("summary").click();
+  await expect(profileDetails.getByText(email, { exact: false }).first()).toBeVisible();
+}
+
 test.beforeEach(async () => {
   await resetEmulators();
   await seedCoreData();
@@ -46,7 +56,7 @@ async function actualSignupAndVerify(page) {
     { waitUntil: "domcontentloaded" }
   );
   await expect(page).toHaveURL(/\/profile(?:[?#]|$)/, { timeout: 20_000 });
-  await expect(page.getByText(email, { exact: false }).first()).toBeVisible();
+  await expectProfileEmailVisible(page, email);
   return { email, password: SIGNUP_PASSWORD };
 }
 
@@ -60,7 +70,7 @@ test("1. 회원가입 → 이메일 인증 → 새 브라우저 로그인", asyn
   try {
     await loginFromUi(loginPage, account.email, account.password, "/profile");
     await expect(loginPage).toHaveURL(/\/profile(?:[?#]|$)/);
-    await expect(loginPage.getByText(account.email, { exact: false }).first()).toBeVisible();
+    await expectProfileEmailVisible(loginPage, account.email);
     assertFreshNoProduction();
   } finally {
     await fresh.close();

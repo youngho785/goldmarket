@@ -241,7 +241,7 @@ export default function VerifyEmail() {
     }
     return {
       title: "이메일 인증을 완료해 주세요",
-      lead: "계정 확인이 끝나면 원래 하던 화면으로 돌아가 한국골드마켓을 계속 이용할 수 있습니다.",
+      lead: "메일함에서 인증 링크를 눌러 주세요. 인증이 끝나면 이용하던 화면으로 돌아갑니다.",
     };
   }, [destination]);
 
@@ -721,9 +721,11 @@ export default function VerifyEmail() {
               ) : (
                 <>
                   <Message>
-                    가입하신 이메일로 인증 링크가 발송되었습니다.
+                    아래 이메일로 인증 링크를 보냈습니다.
                     <br />
-                    메일의 링크를 눌러 인증을 완료해 주세요.
+                    {isNative
+                      ? "메일에서 인증을 마친 뒤 앱으로 돌아오면 완료 여부를 자동으로 확인합니다."
+                      : "메일의 인증 링크를 누르면 이메일 확인이 완료됩니다."}
                   </Message>
                   <Message $color="var(--gm-info)"><strong>{displayUser.email}</strong></Message>
 

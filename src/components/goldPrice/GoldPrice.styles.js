@@ -67,8 +67,8 @@ export const HeroCard = styled.div`
 
   @media (max-width: 760px) {
     display: block;
-    min-height: 190px;
-    border-radius: 20px;
+    min-height: ${({ $native }) => ($native ? "0" : "190px")};
+    border-radius: ${({ $native }) => ($native ? "16px" : "20px")};
   }
 `;
 
@@ -81,9 +81,9 @@ export const HeroCopy = styled.div`
   padding: clamp(18px, 2.6vw, 26px);
 
   @media (max-width: 760px) {
-    min-height: 190px;
+    min-height: ${({ $native }) => ($native ? "0" : "190px")};
     justify-content: flex-start;
-    padding: 15px 82px 14px 14px;
+    padding: ${({ $native }) => ($native ? "18px 16px" : "15px 82px 14px 14px")};
   }
 `;
 
@@ -1204,3 +1204,131 @@ export const Footnote = styled.p`
   line-height: 1.5;
 `;
 
+
+// Android/iOS 앱 금시세: 주요 숫자를 우선 배치하고 불필요한 웹 홍보 영역을 숨깁니다.
+export const AppPriceList = styled.div`
+  display: grid;
+  gap: 10px;
+`;
+
+export const AppPriceCard = styled.article`
+  overflow: hidden;
+  border: 1px solid rgba(12, 17, 22, 0.11);
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(14, 18, 22, 0.035);
+`;
+
+export const AppPriceCardHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px 9px;
+  border-bottom: 1px solid rgba(12, 17, 22, 0.07);
+
+  strong {
+    color: #111820;
+    font-size: 1.03rem;
+    font-weight: 900;
+  }
+
+  span {
+    color: #606872;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-align: right;
+  }
+`;
+
+export const AppPriceMetrics = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  > div {
+    min-width: 0;
+    padding: 12px 12px 14px;
+  }
+
+  > div + div {
+    border-left: 1px solid rgba(12, 17, 22, 0.08);
+  }
+
+  span {
+    display: block;
+    color: #66707a;
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+
+  strong {
+    display: block;
+    margin-top: 5px;
+    color: #151b21;
+    font-family: ${({ theme }) => theme.fonts.numeric};
+    font-size: clamp(1.12rem, 4.5vw, 1.43rem);
+    line-height: 1.22;
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    overflow-wrap: anywhere;
+  }
+`;
+
+export const AppPriceLinks = styled.div`
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 9px;
+  margin-top: 16px;
+`;
+
+export const AppPricePrimary = styled(Link)`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 48px;
+  padding: 12px 8px;
+  border-radius: 12px;
+  background: #111b24;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 900;
+  text-align: center;
+  text-decoration: none;
+
+  &:hover { color: #fff; }
+`;
+
+export const AppPriceSecondary = styled(Link)`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 12px 8px;
+  border: 1px solid rgba(13, 20, 26, 0.2);
+  border-radius: 12px;
+  background: #fff;
+  color: #1c252d;
+  font-size: 0.85rem;
+  font-weight: 850;
+  text-align: center;
+  text-decoration: none;
+`;
+
+export const AppPriceDisclaimer = styled.p`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 14px 2px 12px;
+  color: #656e78;
+  font-size: 0.73rem;
+  line-height: 1.5;
+
+  a {
+    align-self: flex-start;
+    color: #76541d;
+    font-weight: 850;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+`;

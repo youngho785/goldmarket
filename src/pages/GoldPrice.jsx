@@ -9,10 +9,11 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { doc, onSnapshot } from "firebase/firestore";
-
 import { db, registerForPush } from "@/firebase/firebase";
 import { useAuthContext } from "@/context/AuthContext";
 import MyGoldTicker from "@/components/gold/MyGoldTicker";
+import { isNative } from "@/platform/runtime";
+import NativeGoldPriceOverview from "@/components/goldPrice/NativeGoldPriceOverview";
 import QuickGoldValueCalculator from "@/components/gold/QuickGoldValueCalculator";
 import GuideLinks from "@/components/guide/GuideLinks";
 import {
@@ -20,7 +21,6 @@ import {
   saveMarketingNotificationConsent,
   saveMarketingPushTarget,
 } from "@/services/notificationPreferences";
-
 import {
   Page,
   Shell,
@@ -77,44 +77,36 @@ import {
   QuizButton,
   RewardSummary,
   CrossLink,
-  Footnote
+  Footnote,
 } from "@/components/goldPrice/GoldPrice.styles";
-
 function getNotificationPermission() {
   if (typeof window === "undefined" || !("Notification" in window)) {
     return "unsupported";
   }
   return window.Notification.permission;
 }
-
 function detectBrowserName() {
   if (typeof navigator === "undefined") return "현재 브라우저";
-
   const ua = String(navigator.userAgent || "");
-
   if (/SamsungBrowser/i.test(ua)) return "삼성인터넷";
   if (/EdgA|EdgiOS|Edg\//i.test(ua)) return "Microsoft Edge";
   if (/OPR|Opera/i.test(ua)) return "Opera";
   if (/Firefox|FxiOS/i.test(ua)) return "Firefox";
   if (/CriOS|Chrome/i.test(ua)) return "Chrome";
   if (/Safari/i.test(ua)) return "Safari";
-
   return "현재 브라우저";
 }
-
 function formatWon(value) {
   const number = Number(value);
   return Number.isFinite(number) && number > 0
     ? Math.round(number).toLocaleString("ko-KR")
     : "-";
 }
-
 function formatDateKey(value) {
   const text = String(value || "");
   if (!/^\d{8}$/.test(text)) return text || "-";
   return `${text.slice(0, 4)}.${text.slice(4, 6)}.${text.slice(6, 8)}`;
 }
-
 function getKoreaTodayDateKey() {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "Asia/Seoul",
@@ -122,54 +114,43 @@ function getKoreaTodayDateKey() {
     month: "2-digit",
     day: "2-digit",
   }).formatToParts(new Date());
-
   const values = Object.fromEntries(
     parts
       .filter((part) => part.type !== "literal")
       .map((part) => [part.type, part.value])
   );
-
   return `${values.year}${values.month}${values.day}`;
 }
-
 function validPrice(value) {
   return Number.isFinite(Number(value)) && Number(value) > 0;
 }
-
 function changeInfo(current, previous) {
   if (!validPrice(current) || !validPrice(previous)) return null;
-
   const diff = Number(current) - Number(previous);
   const percent = (diff / Number(previous)) * 100;
-
   return {
     diff,
     percent,
     direction: diff > 0 ? "up" : diff < 0 ? "down" : "same",
   };
 }
-
 function changeText(change) {
   if (!change) return "전일 비교 없음";
   if (change.diff === 0) return "－ 보합";
-
   const arrow = change.diff > 0 ? "▲" : "▼";
   return `${arrow} ${Math.abs(change.diff).toLocaleString("ko-KR")}원 · ${Math.abs(
     change.percent
   ).toFixed(2)}%`;
 }
-
 function compactChangeText(change) {
   if (!change) return "-";
   if (change.diff === 0) return "보합";
   const arrow = change.diff > 0 ? "▲" : "▼";
   return `${arrow}${Math.abs(change.percent).toFixed(2)}%`;
 }
-
 export default function GoldPrice() {
   const navigate = useNavigate();
   const { user, isEmailVerified } = useAuthContext();
-
   const [pushStatus, setPushStatus] = useState("checking");
   const [message, setMessage] = useState("");
   const [marketingAccepted, setMarketingAccepted] = useState(false);
@@ -177,18 +158,15 @@ export default function GoldPrice() {
     useState(false);
   const [marketingFcmBrowser, setMarketingFcmBrowser] = useState("");
   const [consentChecked, setConsentChecked] = useState(false);
-
   const [goldData, setGoldData] = useState(null);
   const [goldEnabled, setGoldEnabled] = useState(false);
   const [goldLoading, setGoldLoading] = useState(true);
   const [configLoading, setConfigLoading] = useState(true);
   const [display14kSellPrice, setDisplay14kSellPrice] = useState(false);
-
   const currentBrowserName = detectBrowserName();
   const isMember = !!user?.uid && user.isAnonymous !== true && isEmailVerified;
   const registerPath = "/register?from=gold-price";
   const loginState = useMemo(() => ({ from: "/gold-price" }), []);
-
   // GoldPriceBoard는 랜딩페이지 등에서 그대로 사용합니다.
   // 이 전용 페이지는 동일한 공개 시세 문서를 읽어 별도 UI로 표현합니다.
   useEffect(
@@ -209,7 +187,6 @@ export default function GoldPrice() {
       ),
     []
   );
-
   useEffect(
     () =>
       onSnapshot(
@@ -468,16 +445,18 @@ export default function GoldPrice() {
 
   return (
     <Page>
-      <MyGoldTicker />
+      {!isNative && <MyGoldTicker />}
       <Shell>
         <Hero>
-          <HeroCard>
-            <HeroCopy>
+          <HeroCard $native={isNative}>
+            <HeroCopy $native={isNative}>
               <Eyebrow>KOREA GOLD MARKET</Eyebrow>
               <HeroTitle>오늘의 금시세</HeroTitle>
-              <HeroLead>
-                내가 팔 때 가격부터 확인하고, 오늘 시세가 MY GOLD 가치에 미치는 변화까지 이어서 보세요.
-              </HeroLead>
+              {!isNative && (
+                <HeroLead>
+                  내가 팔 때 가격부터 확인하고, 오늘 시세가 MY GOLD 가치에 미치는 변화까지 이어서 보세요.
+                </HeroLead>
+              )}
 
               <HeroPriceBlock>
                 <PriceLabel>순금(24K) 내가 팔 때 · 1돈(3.75g)</PriceLabel>
@@ -501,27 +480,31 @@ export default function GoldPrice() {
               </HeroPriceBlock>
             </HeroCopy>
 
-            <PriceGoldMark
-              size={54}
-              delay={240}
-              hint
-              ariaLabel="Living Gold 반짝이기"
-            />
+            {!isNative && (
+              <>
+                <PriceGoldMark
+                  size={54}
+                  delay={240}
+                  hint
+                  ariaLabel="Living Gold 반짝이기"
+                />
 
-            <GoldVisual>
-              <GoldBar aria-hidden>
-                <BarInner>
-                  <strong>KGM</strong>
-                  <span>
-                    FINE GOLD
-                    <br />
-                    999.9
-                    <br />
-                    3.75g
-                  </span>
-                </BarInner>
-              </GoldBar>
-            </GoldVisual>
+                <GoldVisual>
+                  <GoldBar aria-hidden>
+                    <BarInner>
+                      <strong>KGM</strong>
+                      <span>
+                        FINE GOLD
+                        <br />
+                        999.9
+                        <br />
+                        3.75g
+                      </span>
+                    </BarInner>
+                  </GoldBar>
+                </GoldVisual>
+              </>
+            )}
           </HeroCard>
         </Hero>
 
@@ -538,8 +521,22 @@ export default function GoldPrice() {
             </SectionNote>
           </SectionHead>
 
-          <PriceGrid>
-            {marketRows.map((row) => {
+          {isNative ? (
+            <NativeGoldPriceOverview
+              marketRows={marketRows}
+              pagePriceAvailable={pagePriceAvailable}
+              isLoading={configLoading || goldLoading}
+              display14kSellPrice={display14kSellPrice}
+              isMember={isMember}
+              registerPath={registerPath}
+              formatWon={formatWon}
+              changeInfo={changeInfo}
+              changeText={changeText}
+            />
+          ) : (
+            <>
+              <PriceGrid>
+                {marketRows.map((row) => {
               const sellChange = changeInfo(row.sell, row.previousSell);
               const showProductText =
                 row.sellKey === "gold14kSellPerDon" &&
@@ -651,9 +648,13 @@ export default function GoldPrice() {
                 </MatrixCell>
               );
             })}
-          </MobilePriceMatrix>
+              </MobilePriceMatrix>
+            </>
+          )}
         </Section>
 
+        {!isNative && (
+          <>
         <Section aria-labelledby="gold-price-my-gold-title">
           <SectionHead>
             <div>
@@ -874,6 +875,8 @@ export default function GoldPrice() {
           title="금시세와 함께 읽기"
           slugs={["gold-don-gram", "14k-18k-24k", "gold-selling-price"]}
         />
+          </>
+        )}
       </Shell>
     </Page>
   );

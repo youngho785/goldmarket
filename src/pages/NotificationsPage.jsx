@@ -1,5 +1,5 @@
 //src/pages/NotificationsPage.jsx
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
 import { useAuthContext } from "@/context/AuthContext";
@@ -279,6 +279,7 @@ export default function NotificationsPage() {
   const { user } = useAuthContext();
   const { unreadNotifications, refresh } = useNotificationContext();
   const uid = user?.uid || "";
+  const firstPageRequestRef = useRef(0);
   const navigate = useNavigate();
 
   const [items, setItems] = useState([]);
@@ -288,23 +289,38 @@ export default function NotificationsPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [markingAll, setMarkingAll] = useState(false);
   const [error, setError] = useState("");
+  const [firstPageFailed, setFirstPageFailed] = useState(false);
   const [filter, setFilter] = useState("all");
 
   const loadFirstPage = useCallback(async () => {
-    if (!uid) return;
+    const requestId = ++firstPageRequestRef.current;
+    if (!uid) {
+      setItems([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError("");
+    setFirstPageFailed(false);
+    setItems([]);
+    setCursor(null);
+    setHasMore(false);
 
     try {
       const result = await fetchNotificationsPage(uid, null, PAGE_SIZE);
+      if (requestId !== firstPageRequestRef.current) return;
       setItems(result.items);
       setCursor(result.cursor);
       setHasMore(result.hasMore);
     } catch (loadError) {
+      if (requestId !== firstPageRequestRef.current) return;
       console.error("[NotificationsPage] load failed:", loadError);
-      setError("알림을 불러오지 못했습니다.");
+      setFirstPageFailed(true);
+      setError("알림을 불러오지 못했습니다. 다시 시도해 주세요.");
     } finally {
-      setLoading(false);
+      if (requestId === firstPageRequestRef.current) {
+        setLoading(false);
+      }
     }
   }, [uid]);
 
@@ -324,10 +340,12 @@ export default function NotificationsPage() {
 
   const loadMore = async () => {
     if (!uid || !cursor || !hasMore || loadingMore) return;
+    const pageVersion = firstPageRequestRef.current;
     setLoadingMore(true);
 
     try {
       const result = await fetchNotificationsPage(uid, cursor, PAGE_SIZE);
+      if (pageVersion !== firstPageRequestRef.current) return;
       setItems((current) => {
         const merged = new Map(current.map((item) => [item.id, item]));
         result.items.forEach((item) => merged.set(item.id, item));
@@ -336,6 +354,7 @@ export default function NotificationsPage() {
       setCursor(result.cursor);
       setHasMore(result.hasMore);
     } catch (loadError) {
+      if (pageVersion !== firstPageRequestRef.current) return;
       console.error("[NotificationsPage] load more failed:", loadError);
       setError("추가 알림을 불러오지 못했습니다.");
     } finally {
@@ -352,7 +371,17 @@ export default function NotificationsPage() {
           value.id === item.id ? { ...value, read: true } : value
         )
       );
-      await markNotificationAsRead(item.id, uid).catch(() => refresh());
+      try {
+        await markNotificationAsRead(item.id, uid);
+        refresh();
+      } catch (markError) {
+        console.error("[NotificationsPage] mark read failed:", markError);
+        setItems((current) => current.map((value) =>
+          value.id === item.id ? { ...value, read: false } : value
+        ));
+        setError("알림 읽음 처리에 실패했습니다. 다시 시도해 주세요.");
+        refresh();
+      }
     }
 
     const link = safeInternalLink(item.link || item.data?.link);
@@ -376,8 +405,8 @@ export default function NotificationsPage() {
       refresh();
     } catch (markError) {
       console.error("[NotificationsPage] mark all failed:", markError);
-      setError("전체 읽음 처리에 실패했습니다.");
       await loadFirstPage();
+      setError("전체 읽음 처리에 실패했습니다. 목록을 새로 불러왔습니다.");
     } finally {
       setMarkingAll(false);
     }
@@ -424,14 +453,24 @@ export default function NotificationsPage() {
         ))}
       </FilterRow>
 
-      {error && <ErrorText role="alert">{error}</ErrorText>}
+      {error && (
+        <ErrorText role="alert">
+          {error}
+          {firstPageFailed && (
+            <> <Button type="button" onClick={loadFirstPage}>다시 불러오기</Button></>
+          )}
+        </ErrorText>
+      )}
 
-      {filteredItems.length === 0 ? (
-        <EmptyState>{filter === "all" ? "새로운 알림이 없습니다." : "이 종류의 알림이 없습니다."}</EmptyState>
+      {!firstPageFailed && (filteredItems.length === 0 ? (
+        <EmptyState role="status">
+          {hasMore
+            ? "현재 불러온 목록에 해당 알림이 없습니다. 이전 알림도 확인해 보세요."
+            : filter === "all" ? "새로운 알림이 없습니다." : "이 종류의 알림이 없습니다."}
+        </EmptyState>
       ) : (
-        <>
-          <List>
-            {filteredItems.map((item) => (
+        <List>
+          {filteredItems.map((item) => (
               <Item key={item.id} $unread={!item.read}>
                 <ItemAction
                   role="button"
@@ -444,19 +483,17 @@ export default function NotificationsPage() {
                   <Time>{formatTimestamp(item.createdAt)}</Time>
                 </ItemAction>
               </Item>
-            ))}
-          </List>
-
-          {hasMore && (
-            <LoadMore
-              type="button"
-              disabled={loadingMore}
-              onClick={loadMore}
-            >
-              {loadingMore ? "불러오는 중…" : "알림 더 보기"}
-            </LoadMore>
-          )}
-        </>
+          ))}
+        </List>
+      ))}
+      {!firstPageFailed && hasMore && (
+        <LoadMore
+          type="button"
+          disabled={loadingMore}
+          onClick={loadMore}
+        >
+          {loadingMore ? "불러오는 중…" : "이전 알림 더 보기"}
+        </LoadMore>
       )}
     </Wrap>
   );

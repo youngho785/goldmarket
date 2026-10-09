@@ -1,3 +1,4 @@
+import { switchGoldWeightUnit } from "./goldWeightInput.js";
 import {
   DON_TO_GRAMS,
   computeGoldPolicyResult,
@@ -31,6 +32,20 @@ export function createEmptyExchangeProduct() {
     exchangeType: "999.9골드바",
     finalWeight: 0,
   };
+}
+
+/** UI 항목 편집: 단위 전환 시 기존 중량(그램)을 보존합니다. */
+export function changeExchangeProductField(products, index, field, value) {
+  return (Array.isArray(products) ? products : []).map((row, i) => {
+    if (i !== index) return row;
+    if (field !== "inputUnit") return { ...row, [field]: value, finalWeight: 0 };
+    return {
+      ...row,
+      quantity: switchGoldWeightUnit(row.quantity, row.inputUnit, value),
+      inputUnit: value,
+      finalWeight: 0,
+    };
+  });
 }
 
 export function normalizeExchangeProducts(rawProducts, maxProducts) {

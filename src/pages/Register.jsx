@@ -1,14 +1,14 @@
 // src/pages/Register.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import styled from "styled-components";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { doc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import { db } from "../firebase/firebase";
 import { signUp } from "../services/authService";
 import { AgreementsSection } from "../components/AgreementsSection";
 import { trackProductEventOncePerSession } from "@/analytics/productAnalytics";
-import { buildVerifyEmailPath, getAuthReturnPath } from "@/lib/authReturn";
+import { buildAuthPath, buildVerifyEmailPath, getAuthReturnPath } from "@/lib/authReturn";
 import {
   buildMemberOnboardingPath,
   markMemberOnboardingPending,
@@ -81,21 +81,6 @@ const NoticeBox = styled.div`
     margin-bottom: 3px;
   }
 `;
-const BenefitJourney = styled.div`
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
-  margin: 18px 0 0;
-`;
-const BenefitStep = styled.div`
-  padding: 9px 7px;
-  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 18%, ${({ theme }) => theme.colors.border});
-  border-radius: 12px;
-  background: ${({ theme }) => theme.colors.surfaceAlt};
-  text-align: center;
-  small { display:block; color: ${({ theme }) => theme.colors.textSecondary}; font-size:0.62rem; font-weight:800; }
-  strong { display:block; margin-top:3px; color: ${({ theme }) => theme.colors.secondaryDark}; font-family: ${({ theme }) => theme.fonts.numeric}; font-size:.75rem; }
-`;
 const Form = styled.form`
   display: flex;
   flex-direction: column;
@@ -127,8 +112,7 @@ const Input = styled.input`
 const ToggleButton = styled.button`
   position: absolute;
   right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
+  bottom: 6px;
   width: 36px;
   min-height: 36px;
   background: transparent;
@@ -139,7 +123,7 @@ const ToggleButton = styled.button`
   cursor: pointer;
   color: ${({ theme }) => theme.colors.textSecondary};
   font-size: 1.2rem;
-  &:hover { background: ${({ theme }) => theme.colors.surfaceAlt}; transform: translateY(-50%); box-shadow: none; }
+  &:hover { background: ${({ theme }) => theme.colors.surfaceAlt}; box-shadow: none; }
 `;
 const ErrorText = styled.p`
   color: ${({ theme }) => theme.semantic.alertErrorText};
@@ -162,6 +146,20 @@ const Button = styled.button`
   &:disabled { opacity: .55; cursor: not-allowed; }
   &:hover:enabled { filter: brightness(.96); }
 `;
+const AlreadyMember = styled.p`
+  margin: 2px 0 0;
+  text-align: center;
+  font-size: .93rem;
+  color: ${({ theme }) => theme.colors.textSecondary};
+
+  a {
+    color: ${({ theme }) => theme.colors.link};
+    font-weight: 800;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+`;
+
 const VisuallyHidden = styled.input`
   position: absolute !important;
   height: 1px;
@@ -401,10 +399,12 @@ export default function Register() {
         <Title>{copy.title}</Title>
         <Lead>{copy.lead}</Lead>
 
-        <NoticeBox role="note">
-          <strong>{copy.noticeTitle}</strong>
-          <span>{copy.noticeBody}</span>
-        </NoticeBox>
+        {(returningToMyGold || returningToExchange) && (
+          <NoticeBox role="note">
+            <strong>{copy.noticeTitle}</strong>
+            <span>{copy.noticeBody}</span>
+          </NoticeBox>
+        )}
 
         <Form onSubmit={handleSubmit} autoComplete="on" aria-busy={loading ? "true" : undefined}>
           {error && <ErrorText role="alert" aria-live="assertive">{error}</ErrorText>}
@@ -465,11 +465,15 @@ export default function Register() {
           </Button>
         </Form>
 
-        <BenefitJourney aria-label="가입 후 이어지는 혜택">
-          <BenefitStep><small>이메일 인증</small><strong>+0.01g</strong></BenefitStep>
-          <BenefitStep><small>금시세 알림</small><strong>+0.01g</strong></BenefitStep>
-          <BenefitStep><small>퀵퀴즈</small><strong>+0.01g</strong></BenefitStep>
-        </BenefitJourney>
+        <AlreadyMember>
+          이미 계정이 있으신가요?{" "}
+          <Link
+            to={buildAuthPath("/login", returnTo)}
+            state={{ from: returnTo }}
+          >
+            로그인
+          </Link>
+        </AlreadyMember>
       </Card>
     </Container>
   );

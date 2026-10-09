@@ -225,6 +225,15 @@ export const HeroStat = styled.div`
     white-space: nowrap;
   }
 
+  small {
+    display: block;
+    margin-top: 3px;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: .66rem;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
   @media (max-width: 420px) {
     padding-inline: 7px;
   }

@@ -129,24 +129,50 @@ export default function InquiryDetail() {
   const [saving, setSaving] = useState(false);
   const [editingAnswer, setEditingAnswer] = useState(false);
   const [actionError, setActionError] = useState("");
+  const [loadError, setLoadError] = useState("");
+  const [loadingInquiry, setLoadingInquiry] = useState(true);
 
   const adminContext = Boolean(isAdmin && location.pathname.startsWith("/admin/"));
   const listPath = adminContext ? "/admin/support" : "/support";
 
   const load = async () => {
-    const value = await fetchPostById(postId);
-    setInquiry(value);
-    setAnswerText(value.answer || "");
+    setLoadingInquiry(true);
+    setLoadError("");
+    try {
+      const value = await fetchPostById(postId);
+      setInquiry(value);
+      setAnswerText(value.answer || "");
+    } catch (error) {
+      console.error("[InquiryDetail] load failed:", error);
+      setLoadError("문의 내용을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.");
+    } finally {
+      setLoadingInquiry(false);
+    }
   };
 
   useEffect(() => {
     setActionError("");
-    load().catch(() => navigate(listPath, { replace: true }));
+    setInquiry(null);
+    void load();
     // load only depends on the current post id and list context.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [postId, listPath]);
 
-  if (!inquiry) return <Card>문의를 불러오고 있습니다.</Card>;
+  if (!inquiry) return (
+    <Card>
+      {loadingInquiry ? (
+        <p role="status">문의를 불러오고 있습니다.</p>
+      ) : (
+        <>
+          <ErrorNotice role="alert">{loadError || "문의 내용을 확인할 수 없습니다."}</ErrorNotice>
+          <Actions>
+            <button type="button" onClick={() => void load()}>다시 불러오기</button>
+            <button type="button" onClick={() => navigate(listPath)}>문의 목록</button>
+          </Actions>
+        </>
+      )}
+    </Card>
+  );
   const isAuthor = inquiry.authorId === user?.uid;
   const answered = inquiry.status === "answered";
 

@@ -84,9 +84,9 @@ test("회원가입은 최소 계정 생성과 점진적 프로필 구조를 사�
 test("가입 CTA는 사용자의 원래 목적을 말하고 혜택은 보조로 둔다", () => {
   assert.match(registerSource, /내 금 저장하고 시작하기/);
   assert.match(registerSource, /계산 결과 이어서 예약하기/);
-  assert.match(loginSource, /내 금 저장하고 시작하기/);
-  assert.match(loginSource, /계산 결과 이어서 예약하기/);
-  assert.match(loginSource, /가입은 간단하게 · MY GOLD 기록과 가치 확인을 이어가세요/);
+  assert.match(loginSource, /내 금 기록을 이어가세요/);
+  assert.match(loginSource, /예약을 이어서 진행하세요/);
+  assert.match(loginSource, /내 금의 가치와 기록을 이어서 확인하세요/);
 });
 
 test("이메일 인증 후에는 원래 하던 일을 혜택보다 먼저 이어간다", () => {

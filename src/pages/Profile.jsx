@@ -329,7 +329,7 @@ const MyHub = styled.nav`
   gap: 8px;
   margin-bottom: 12px;
 
-  @media (max-width: 520px) {
+  @media (max-width: 340px) {
     grid-template-columns: 1fr;
   }
 `;
@@ -339,8 +339,8 @@ const MyHubLink = styled(Link)`
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 64px;
-  padding: 12px 13px;
+  min-height: 60px;
+  padding: 12px 11px;
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 14px;
   background: ${({ theme }) => theme.colors.surface};
@@ -354,8 +354,49 @@ const MyHubLink = styled(Link)`
   > span { display: grid; gap: 3px; }
   strong { color: ${({ theme }) => theme.colors.primary}; font-size: .9rem; }
   small { color: ${({ theme }) => theme.colors.textSecondary}; font-size: .72rem; line-height: 1.4; }
-  svg { width: 17px; height: 17px; color: ${({ theme }) => theme.colors.secondaryDark}; }
+  svg { width: 17px; height: 17px; flex: 0 0 auto; color: ${({ theme }) => theme.colors.secondaryDark}; }
+
+  @media (max-width: 520px) {
+    strong { font-size: .83rem; }
+    small { display: none; }
+    svg { width: 15px; height: 15px; }
+  }
 `;
+
+// 계정 정보는 첫 화면의 주요 행동을 가리지 않도록 필요할 때만 엽니다.
+const AccountDetails = styled.details`
+  margin-bottom: 12px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 18px;
+  background: ${({ theme }) => theme.colors.surface};
+  box-shadow: 0 8px 22px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 5%, transparent);
+
+  > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 58px;
+    padding: 14px 16px;
+    color: ${({ theme }) => theme.colors.primary};
+    cursor: pointer;
+    list-style: none;
+  }
+
+  > summary::-webkit-details-marker { display: none; }
+  > summary span { display: grid; gap: 3px; }
+  > summary strong { font-size: .95rem; }
+  > summary small { color: ${({ theme }) => theme.colors.textSecondary}; font-size: .76rem; }
+  > summary svg { width: 18px; height: 18px; flex: 0 0 auto; transition: transform .2s ease; }
+  &[open] > summary svg { transform: rotate(90deg); }
+  > summary:focus-visible { outline: 2px solid ${({ theme }) => theme.colors.secondary}; outline-offset: -3px; }
+`;
+
+const AccountDetailsBody = styled.div`
+  padding: 0 16px 16px;
+  border-top: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
+`;
+
 const SettingsShortcut = styled(Link)`
   display: flex;
   align-items: center;
@@ -742,7 +783,7 @@ export default function Profile() {
       <ProfileHero>
         <ProfileHeroTitle>MY</ProfileHeroTitle>
         <ProfileHeroLead>
-          MY GOLD, 교환 내역, MEMBER GOLD, 고객지원과 계정 설정을 한곳에서 관리합니다.
+          예약·문의·회원 혜택과 계정을 관리하세요.
         </ProfileHeroLead>
       </ProfileHero>
 
@@ -755,18 +796,17 @@ export default function Profile() {
           <span><strong>고객지원 · 1:1 문의</strong><small>문의 작성과 답변 상태를 확인합니다.</small></span>
           <ChevronRight aria-hidden="true" />
         </MyHubLink>
-        <MyHubLink to="/reviews">
-          <span><strong>교환 완료 고객 후기</strong><small>실제 교환 완료가 확인된 후기를 봅니다.</small></span>
+        <MyHubLink to="/reviews" aria-label="교환 완료 고객 후기">
+          <span><strong>고객 후기</strong><small>실제 교환이 확인된 후기를 봅니다.</small></span>
           <ChevronRight aria-hidden="true" />
         </MyHubLink>
         <MyHubLink to="/stores">
-          <span><strong>매장·이용 안내</strong><small>매장 위치, 이용 방법과 교환 정보를 확인합니다.</small></span>
+          <span><strong>매장 안내</strong><small>매장 위치와 이용 방법을 확인합니다.</small></span>
           <ChevronRight aria-hidden="true" />
         </MyHubLink>
       </MyHub>
 
-      <Section>
-        <RewardPanel aria-label="MEMBER GOLD 요약">
+      <RewardPanel aria-label="MEMBER GOLD 요약">
           <RewardTitle>
             <span aria-hidden="true">✨</span>
             MEMBER GOLD
@@ -783,11 +823,20 @@ export default function Profile() {
             내 MEMBER GOLD 보기
             <ChevronRight aria-hidden="true" />
           </RewardLink>
-        </RewardPanel>
+      </RewardPanel>
 
-        {error && <MessageText $error>{error}</MessageText>}
-        {message && <MessageText>{message}</MessageText>}
+      {error && <MessageText $error role="alert">{error}</MessageText>}
+      {message && <MessageText role="status">{message}</MessageText>}
 
+      <AccountDetails>
+        <summary>
+          <span>
+            <strong>내 프로필 · 로그인 이메일</strong>
+            <small>이름, 닉네임, 전화번호 및 이메일 변경</small>
+          </span>
+          <ChevronRight aria-hidden="true" />
+        </summary>
+        <AccountDetailsBody>
         {editing ? (
           <Form onSubmit={handleProfileSubmit} autoComplete="on">
             <FormGroup>
@@ -995,6 +1044,8 @@ export default function Profile() {
             </Form>
           )}
         </EmailChangePanel>
+        </AccountDetailsBody>
+      </AccountDetails>
 
         <SettingsShortcut to="/settings">
           <span>
@@ -1005,7 +1056,6 @@ export default function Profile() {
           </span>
           <ChevronRight aria-hidden="true" />
         </SettingsShortcut>
-      </Section>
     </Container>
   );
 }

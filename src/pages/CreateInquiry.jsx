@@ -3,6 +3,7 @@ import styled from "styled-components";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuthContext } from "../context/AuthContext";
 import { createPost } from "../services/supportService";
+import { buildAuthPath } from "@/lib/authReturn";
 
 const Card = styled.section`
   max-width: 680px;
@@ -74,8 +75,10 @@ export default function CreateInquiry() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!loading && !user) navigate("/login", { replace: true });
-  }, [loading, navigate, user]);
+    if (!loading && !user) {
+      navigate(buildAuthPath("/login", location.pathname + location.search), { replace: true });
+    }
+  }, [loading, location.pathname, location.search, navigate, user]);
 
   const submit = async (event) => {
     event.preventDefault();
@@ -100,8 +103,10 @@ export default function CreateInquiry() {
 
   return (
     <Card>
-      <h1>금교환 문의 작성</h1>
-      <p>예약·감정·보너스 사용 등 금교환 이용 중 궁금한 내용을 남겨 주세요.</p>
+      <h1>{relatedGroupId ? "금교환 문의 작성" : "1:1 문의 작성"}</h1>
+      <p>{relatedGroupId
+        ? "연결된 예약·교환건에 관해 궁금한 내용을 남겨 주세요."
+        : "한국골드마켓 이용 중 궁금한 내용을 남겨 주세요."}</p>
       {relatedGroupId && (
         <Context role="note">
           <strong>이 교환건과 자동으로 연결됩니다.</strong><br />

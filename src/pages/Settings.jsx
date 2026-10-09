@@ -554,9 +554,15 @@ export default function Settings() {
         </SectionTitle>
 
         <SectionDescription>
-          계정과 관련된 중요한 작업을
-          관리합니다.
+          내 프로필과 로그인 이메일은 MY에서 변경할 수 있습니다.
         </SectionDescription>
+
+        <LinkList>
+          <SettingLink to="/profile">
+            <span>프로필 · 로그인 이메일 변경</span>
+            <ChevronRight aria-hidden="true" />
+          </SettingLink>
+        </LinkList>
 
         <DangerDetails>
           <summary>

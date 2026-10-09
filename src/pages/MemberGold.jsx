@@ -314,6 +314,9 @@ export default function MemberGold() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [ledger, setLedger] = useState([]);
+  const [ledgerLoading, setLedgerLoading] = useState(true);
+  const [ledgerError, setLedgerError] = useState("");
+  const [ledgerRetryKey, setLedgerRetryKey] = useState(0);
   const [selectedGroupId, setSelectedGroupId] = useState("");
   const [busy, setBusy] = useState(false);
   const [actionMessage, setActionMessage] = useState("");
@@ -359,9 +362,13 @@ export default function MemberGold() {
   useEffect(() => {
     if (!user?.uid) {
       setLedger([]);
+      setLedgerLoading(false);
+      setLedgerError("");
       return undefined;
     }
 
+    setLedgerLoading(true);
+    setLedgerError("");
     const ledgerQuery = query(
       collection(db, "users", user.uid, "ledger"),
       orderBy("createdAt", "desc"),
@@ -370,10 +377,18 @@ export default function MemberGold() {
 
     return onSnapshot(
       ledgerQuery,
-      (snapshot) => setLedger(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }))),
-      (ledgerError) => console.warn("[MemberGold] ledger read failed:", ledgerError?.message || ledgerError)
+      (snapshot) => {
+        setLedger(snapshot.docs.map((item) => ({ id: item.id, ...item.data() })));
+        setLedgerLoading(false);
+        setLedgerError("");
+      },
+      (snapshotError) => {
+        console.warn("[MemberGold] ledger read failed:", snapshotError?.message || snapshotError);
+        setLedgerLoading(false);
+        setLedgerError("적립·사용 내역을 불러오지 못했습니다. 다시 시도해 주세요.");
+      }
     );
-  }, [user?.uid]);
+  }, [user?.uid, ledgerRetryKey]);
 
   const rewards = overview?.rewards || {};
   const completedCount = [rewards.welcome, rewards.marketingPush, rewards.quiz]
@@ -431,64 +446,7 @@ export default function MemberGold() {
     }
   };
 
-  return (
-    <Page>
-      <Hero>
-        <Eyebrow>MEMBER GOLD</Eyebrow>
-        <HeroTitle>회원혜택으로 받은 순금</HeroTitle>
-        <BalanceLabel>지금 사용 가능한 MEMBER GOLD</BalanceLabel>
-        <Balance>{availableBalanceG.toFixed(2)}<span>g</span></Balance>
-        <Lead>
-          MY GOLD와는 별도로 관리되는 회원혜택 순금입니다. GOLD TO GOLD 교환 시 현재 사용 가능한 잔액을 적용할 수 있습니다.
-        </Lead>
-      </Hero>
-
-      {loading && <Notice>MEMBER GOLD 상태를 확인하고 있습니다.</Notice>}
-      {error && <Notice $error role="alert">{error}</Notice>}
-      {actionMessage && <Notice role="status">{actionMessage}</Notice>}
-
-      <Card>
-        <CardHead>
-          <h2>회원혜택 현황</h2>
-          <b>{completedCount}/3 완료</b>
-        </CardHead>
-        <RewardGrid>
-          {["welcome", "marketingPush", "quiz"].map((key) => {
-            const reward = rewards[key] || {};
-            const meta = rewardMeta(key);
-            const Icon = reward.claimed ? Check : meta.icon;
-            return (
-              <RewardRow key={key} $done={!!reward.claimed}>
-                <span><Icon aria-hidden /></span>
-                <div>
-                  <strong>{meta.title}</strong>
-                  <small>{meta.detail}</small>
-                </div>
-                <b>
-                  {reward.claimed
-                    ? reward.previouslyClaimed
-                      ? "이전 가입에서 완료"
-                      : `+${Number(reward.creditedG || 0).toFixed(2)}g`
-                    : "+0.01g"}
-                </b>
-              </RewardRow>
-            );
-          })}
-        </RewardGrid>
-
-        {!loading && !hasPendingRequest && (
-          <Action
-            to={nextAction.to}
-            onClick={() => void trackProductEvent("member_gold_reward_cta_clicked", {
-              action: nextAction.to.startsWith("/gold-exchange") ? "exchange" : nextAction.to.startsWith("/settings") ? "marketing_push" : "quiz",
-            })}
-          >
-            <span>{nextAction.label}</span>
-            <ChevronRight aria-hidden />
-          </Action>
-        )}
-      </Card>
-
+  const usagePanel = (
       <Card>
         <CardHead>
           <h2>GOLD TO GOLD 사용</h2>
@@ -532,13 +490,88 @@ export default function MemberGold() {
           </Action>
         )}
       </Card>
+  );
+
+  return (
+    <Page>
+      <Hero>
+        <Eyebrow>MEMBER GOLD</Eyebrow>
+        <HeroTitle>금교환에 사용하는 회원 혜택</HeroTitle>
+        <BalanceLabel>현재 사용 가능 잔액</BalanceLabel>
+        <Balance>
+          {loading && balanceLoading ? "확인 중" : availableBalanceG.toFixed(2)}
+          {!(loading && balanceLoading) && <span>g</span>}
+        </Balance>
+        <Lead>
+          MY GOLD는 내가 가진 금의 기록, MEMBER GOLD는 교환에 적용할 수 있는 별도 혜택입니다. 현장 확인 후 사용이 확정됩니다.
+        </Lead>
+      </Hero>
+
+      {loading && <Notice>MEMBER GOLD 상태를 확인하고 있습니다.</Notice>}
+      {error && <Notice $error role="alert">{error}</Notice>}
+      {actionMessage && <Notice role="status">{actionMessage}</Notice>}
+
+      {hasPendingRequest && usagePanel}
+
+      <Card>
+        <CardHead>
+          <h2>회원혜택 현황</h2>
+          <b>{completedCount}/3 완료</b>
+        </CardHead>
+        <RewardGrid>
+          {["welcome", "marketingPush", "quiz"].map((key) => {
+            const reward = rewards[key] || {};
+            const meta = rewardMeta(key);
+            const Icon = reward.claimed ? Check : meta.icon;
+            return (
+              <RewardRow key={key} $done={!!reward.claimed}>
+                <span><Icon aria-hidden /></span>
+                <div>
+                  <strong>{meta.title}</strong>
+                  <small>{meta.detail}</small>
+                </div>
+                <b>
+                  {reward.claimed
+                    ? reward.previouslyClaimed
+                      ? "이전 가입에서 완료"
+                      : `+${Number(reward.creditedG || 0).toFixed(2)}g`
+                    : "+0.01g"}
+                </b>
+              </RewardRow>
+            );
+          })}
+        </RewardGrid>
+
+        {!loading && !hasPendingRequest && (
+          <Action
+            to={nextAction.to}
+            onClick={() => void trackProductEvent("member_gold_reward_cta_clicked", {
+              action: nextAction.to.startsWith("/gold-exchange") ? "exchange" : nextAction.to.startsWith("/settings") ? "marketing_push" : "quiz",
+            })}
+          >
+            <span>{nextAction.label}</span>
+            <ChevronRight aria-hidden />
+          </Action>
+        )}
+      </Card>
+
+      {!hasPendingRequest && usagePanel}
 
       <Card>
         <CardHead>
           <h2>최근 내역</h2>
           <b><History size={15} aria-hidden /> 최근 20건</b>
         </CardHead>
-        {ledger.length === 0 ? (
+        {ledgerError ? (
+          <>
+            <Notice $error role="alert">{ledgerError}</Notice>
+            <SecondaryAction type="button" onClick={() => setLedgerRetryKey((key) => key + 1)}>
+              내역 다시 불러오기
+            </SecondaryAction>
+          </>
+        ) : ledgerLoading ? (
+          <Notice role="status">적립·사용 내역을 불러오는 중입니다.</Notice>
+        ) : ledger.length === 0 ? (
           <Notice>아직 MEMBER GOLD 적립·사용 내역이 없습니다.</Notice>
         ) : (
           <LedgerList>

@@ -67,7 +67,7 @@ const SubTitle = styled.p`
 const TopCtaWrap = styled.div`
   display: flex;
   justify-content: center;
-  margin-bottom: 22px;
+  margin-top: 14px;
 `;
 const LuxuryCta = styled(Link)`
   position: relative;
@@ -108,18 +108,11 @@ const CtaLineSub = styled.span`
   font-weight: 700;
   color: ${({ theme }) => theme.on.primary};
   letter-spacing: 0.1px;
-  opacity: 0.95;
   opacity: .78;
 `;
 
 const Divider = styled.div`
   height: 1px; background: ${({ theme }) => theme.colors.dividerSubtle}; margin: 20px 0;
-`;
-const FormTitle = styled.h2`
-  font-size: 1.18rem;
-  margin: 0 0 16px;
-  color: ${({ theme }) => theme.colors.text};
-  text-align: left;
 `;
 const Form = styled.form`
   display: flex;
@@ -339,49 +332,22 @@ export default function Login() {
   return (
     <Container>
       <Card>
-        <Title>한국골드마켓에 오신것을 환영합니다.</Title>
+        <Title>
+          {returningToExchange
+            ? "예약을 이어서 진행하세요"
+            : returningToMyGold
+              ? "내 금 기록을 이어가세요"
+              : "로그인"}
+        </Title>
         <SubTitle>
           {returningToGuestMyGoldImport
-            ? "로그인하면 지금 만든 MY GOLD 체험 기록을 그대로 저장합니다."
+            ? "로그인하면 지금 만든 MY GOLD 체험 기록을 이어서 저장합니다."
             : returningToMyGoldImport
-              ? "로그인하면 방금 계산한 금을 MY GOLD에 이어서 저장합니다."
+              ? "로그인 후 방금 계산한 금을 MY GOLD에 저장할 수 있습니다."
               : returningToExchange
-                ? "로그인하면 계산 결과와 예약 흐름을 그대로 이어갑니다."
-                : "내 금의 오늘 가치를 기록하고 계속 이어보세요."}
+                ? "로그인 후 계산 결과와 방문 예약을 이어갑니다."
+                : "내 금의 가치와 기록을 이어서 확인하세요."}
         </SubTitle>
-
-        <TopCtaWrap>
-          <LuxuryCta
-            to={registerPath}
-            state={registerState}
-            aria-label={
-              returningToMyGold
-                ? "내 금 저장하고 시작하기"
-                : returningToExchange
-                  ? "계산 결과 이어서 예약하기"
-                  : "한국골드마켓 시작하기"
-            }
-          >
-            <CtaLineMain>
-              {returningToMyGold
-                ? "내 금 저장하고 시작하기"
-                : returningToExchange
-                  ? "계산 결과 이어서 예약하기"
-                  : "한국골드마켓 시작하기"}
-            </CtaLineMain>
-            <CtaLineSub>
-              {returningToMyGold
-                ? "이메일과 비밀번호만으로 지금 만든 MY GOLD를 이어갑니다"
-                : returningToExchange
-                  ? "계산한 금과 선택한 일정은 다시 입력하지 않습니다"
-                  : "가입은 간단하게 · MY GOLD 기록과 가치 확인을 이어가세요"}
-            </CtaLineSub>
-          </LuxuryCta>
-        </TopCtaWrap>
-
-        <Divider />
-
-        <FormTitle>로그인</FormTitle>
 
         {error && <ErrorText role="alert" aria-live="polite">{error}</ErrorText>}
         {showResend && (
@@ -450,12 +416,26 @@ export default function Login() {
         <LinkText>
           <Link to={resetPasswordPath}>비밀번호를 잊으셨나요?</Link>
         </LinkText>
-        <LinkText>
-          처음이세요?{" "}
-          <Link to={registerPath} state={registerState}>
-            회원가입
-          </Link>
-        </LinkText>
+        <Divider />
+        <TopCtaWrap>
+          <LuxuryCta
+            to={registerPath}
+            state={registerState}
+            aria-label="처음이신가요? 회원가입"
+          >
+            <CtaLineMain>처음이신가요? 회원가입</CtaLineMain>
+            <CtaLineSub>
+              {returningToMyGold || returningToExchange
+                ? "계산한 금과 진행 중인 작업을 이어갈 수 있습니다."
+                : "내 금 기록과 가치 변화를 확인할 수 있습니다."}
+            </CtaLineSub>
+          </LuxuryCta>
+        </TopCtaWrap>
+        {!returningToMyGold && !returningToExchange && (
+          <LinkText>
+            <Link to="/">가입 없이 내 금 가치 확인하기</Link>
+          </LinkText>
+        )}
       </Card>
     </Container>
   );

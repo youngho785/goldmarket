@@ -73,6 +73,8 @@ import MyGoldImportPrompt from "@/components/gold/MyGoldImportPrompt";
 import AppGoldJourney from "@/components/gold/AppGoldJourney";
 import MyGoldItemsSection from "@/components/myGoldVault/MyGoldItemsSection";
 import { DON_TO_GRAMS, findGoldProduct } from "@/lib/goldRates";
+import { switchGoldWeightUnit } from "@/lib/goldWeightInput";
+import { formatGoldDon } from "@/lib/goldDisplay";
 import {
   GOLD_VAULT_MAX_ITEMS,
   GOLD_VAULT_MAX_LABEL_LENGTH,
@@ -406,6 +408,14 @@ export default function MyGoldVault() {
       })),
     [sortedItems]
   );
+  const changeRecordWeightUnit = (nextUnit) => {
+    setForm((prev) => ({
+      ...prev,
+      weightValue: switchGoldWeightUnit(prev.weightValue, prev.weightUnit, nextUnit),
+      weightUnit: nextUnit,
+    }));
+  };
+
   const weightReference = useMemo(() => {
     const value = Number(form.weightValue);
     if (!Number.isFinite(value) || value <= 0) return "";
@@ -832,6 +842,7 @@ export default function MyGoldVault() {
             <HeroStat>
               <span>예상 순금</span>
               <strong>{ratesReady ? `${Number(activeSummary.pureGoldG || 0).toFixed(2)}g` : "확인 중"}</strong>
+              {ratesReady && <small>{formatGoldDon(Number(activeSummary.pureGoldG || 0) / DON_TO_GRAMS)}</small>}
             </HeroStat>
             <HeroStat>
               <span>기록한 금</span>
@@ -852,11 +863,17 @@ export default function MyGoldVault() {
               내 금 관리
               <ArrowRight aria-hidden />
             </HeroExchangeAction>
-            <HeroExchangeAction to="/my-gold/trend" aria-label="내 금 참고가치 변화 자세히 보기">
-              <TrendingUp aria-hidden />
-              가치 변화
-              <ArrowRight aria-hidden />
-            </HeroExchangeAction>
+            {hasVaultContent && ratesReady && exchangeProducts.length > 0 && (
+              <HeroExchangeAction
+                to="/gold-exchange?mode=vault&auto=1"
+                state={{ source: "my-gold", vaultProducts: exchangeProducts }}
+                aria-label="기록한 내 금으로 골드바 교환 예상 확인"
+              >
+                <Gem aria-hidden />
+                골드바 예상
+                <ArrowRight aria-hidden />
+              </HeroExchangeAction>
+            )}
           </HeroActions>
           {isGuest && (
             <GuestModeNote>
@@ -1154,8 +1171,8 @@ export default function MyGoldVault() {
                     required
                   />
                   <UnitToggle aria-label="무게 단위 선택">
-                    <UnitButton type="button" $active={form.weightUnit === "g"} aria-pressed={form.weightUnit === "g"} onClick={() => setForm((prev) => ({ ...prev, weightUnit: "g" }))}>g</UnitButton>
-                    <UnitButton type="button" $active={form.weightUnit === "don"} aria-pressed={form.weightUnit === "don"} onClick={() => setForm((prev) => ({ ...prev, weightUnit: "don" }))}>돈</UnitButton>
+                    <UnitButton type="button" $active={form.weightUnit === "g"} aria-pressed={form.weightUnit === "g"} onClick={() => changeRecordWeightUnit("g")}>g</UnitButton>
+                    <UnitButton type="button" $active={form.weightUnit === "don"} aria-pressed={form.weightUnit === "don"} onClick={() => changeRecordWeightUnit("don")}>돈</UnitButton>
                   </UnitToggle>
                 </WeightRow>
                 {weightReference && <WeightConversion aria-live="polite">{weightReference}</WeightConversion>}

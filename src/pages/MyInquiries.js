@@ -102,9 +102,14 @@ export default function MyInquiries() {
   const [cursor, setCursor] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => setUid(user?.uid || null));
+    const unsub = onAuthStateChanged(auth, (user) => {
+      setRows([]);
+      setCursor(null);
+      setUid(user?.uid || null);
+    });
     return () => unsub();
   }, []);
 
@@ -117,8 +122,11 @@ export default function MyInquiries() {
   }, [tab]);
 
   useEffect(() => {
-    if (!uid) return;
+    let cancelled = false;
+    if (!uid) return undefined;
     (async () => {
+      setRows([]);
+      setCursor(null);
       setLoading(true);
       setError("");
       try {
@@ -128,18 +136,23 @@ export default function MyInquiries() {
           limit: 20,
           cursor: null,
         });
-        setRows(items);
-        setCursor(nextCursor);
+        if (!cancelled) {
+          setRows(items);
+          setCursor(nextCursor);
+        }
       } catch (loadError) {
         console.error("내 문의 불러오기 오류:", loadError);
-        setRows([]);
-        setCursor(null);
-        setError("내 문의를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.");
+        if (!cancelled) {
+          setRows([]);
+          setCursor(null);
+          setError("내 문의를 불러오지 못했습니다. 다시 시도해 주세요.");
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     })();
-  }, [uid, tab]);
+    return () => { cancelled = true; };
+  }, [uid, tab, reloadKey]);
 
   const loadMore = async () => {
     if (!uid || !cursor || loading) return;
@@ -185,14 +198,22 @@ export default function MyInquiries() {
             type="button"
             $active={item.key === tab}
             aria-pressed={item.key === tab}
-            onClick={() => setTab(item.key)}
+            onClick={() => {
+              setRows([]);
+              setCursor(null);
+              setTab(item.key);
+            }}
           >
             {item.label}
           </Tab>
         ))}
       </Tabs>
 
-      {error && <ErrorNotice role="alert">{error}</ErrorNotice>}
+      {error && (
+        <ErrorNotice role="alert">
+          {error} <button type="button" onClick={() => setReloadKey((value) => value + 1)}>다시 불러오기</button>
+        </ErrorNotice>
+      )}
       {loading && rows.length === 0 && <div>로딩 중…</div>}
 
       {rows.map((post) => (
@@ -226,7 +247,9 @@ export default function MyInquiries() {
       ))}
 
       {!loading && rows.length === 0 && !error && (
-        <div style={{ color: "var(--gm-text-light)" }}>문의글이 없습니다.</div>
+        <div role="status" style={{ color: "var(--gm-text-light)" }}>
+          {tab === "" ? "아직 작성한 문의가 없습니다." : "이 상태의 문의가 없습니다."}
+        </div>
       )}
 
       {cursor && (

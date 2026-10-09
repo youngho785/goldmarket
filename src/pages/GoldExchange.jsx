@@ -18,6 +18,8 @@ import {
 import useGoldExchangeAutoVault from "@/hooks/useGoldExchangeAutoVault";
 import useGoldExchangeVaultImport from "@/hooks/useGoldExchangeVaultImport";
 import useGoldExchangeMemberGold from "@/hooks/useGoldExchangeMemberGold";
+import { isNative, isAndroid } from "@/platform/runtime";
+import { resolveGoldExchangeEntryMode } from "@/lib/goldExchangeEntryMode";
 
 // 🔗 공용 goldRates 모듈
 import {
@@ -40,6 +42,7 @@ import {
   applyExchangeFinalWeights,
   buildReservationProducts,
   createEmptyExchangeProduct,
+  changeExchangeProductField,
   getInitialExchangeProductsFromSearch,
   isGoldToGoldInputProduct,
   normalizeExchangeProducts,
@@ -79,9 +82,7 @@ export default function GoldExchange() {
     Number.isFinite(requestedBarGramsRaw) && requestedBarGramsRaw > 0
       ? requestedBarGramsRaw
       : 0;
-  const explicitEntryMode = ["vault", "manual", "visit"].includes(requestedEntryMode)
-    ? requestedEntryMode
-    : "";
+  // Android bottom-tab entry goes straight to the calculator.
   const authDraftRef = useRef(
     !rebook && resumeRequested ? readGoldExchangeDraft() : null
   );
@@ -96,7 +97,7 @@ export default function GoldExchange() {
     location.state?.source === "my-gold" && initialVaultProductsRef.current.length > 0;
   // The URL mode is the primary source of truth. A MY GOLD navigation without
   // an explicit mode is treated as the vault flow for backwards compatibility.
-  const entryMode = explicitEntryMode || (importedFromMyGold ? "vault" : "");
+  const entryMode = resolveGoldExchangeEntryMode({ requestedEntryMode, importedFromMyGold, nativeAndroid: isNative && isAndroid });
   const isRebook = !!rebook;
   const showStartMethod =
     !isRebook &&
@@ -105,7 +106,6 @@ export default function GoldExchange() {
     !importedFromMyGold &&
     !entryMode;
   const isDirectRebook = isRebook && (rebook?.directReservation === true || initialRebookProductsRef.current.length === 0);
-
   /* 스텝 상태 */
   const [step, setStep] = useState(
     isRebook || authDraft || directReservationRequested || entryMode === "visit"
@@ -161,7 +161,6 @@ export default function GoldExchange() {
         : entryMode === "visit"
           ? "visit"
           : "manual";
-
 
   /* 골드바 선택 상태 */
   const [barGroup, setBarGroup] = useState(
@@ -309,9 +308,8 @@ export default function GoldExchange() {
   /* 사용자 정보로 기본값 채우기 */
   useGoldExchangeProfileDefaults(user, setName, setPhone);
 
-  const handleProductChange = useCallback((idx, field, value) => {
-    setProducts((prev) => prev.map((p, i) => (i === idx ? { ...p, [field]: value } : p)));
-  }, []);
+  const handleProductChange = useCallback((idx, field, value) =>
+    setProducts((prev) => changeExchangeProductField(prev, idx, field, value)), []);
 
   const handleProductSelect = useCallback((idx, productId) => {
     const policy = findGoldProduct(rates, { productId });
@@ -714,6 +712,8 @@ export default function GoldExchange() {
           addProduct={addProduct}
           removeProduct={removeProduct}
           onGoReserveDirect={onGoReserveDirect}
+          onImportMyGold={() => chooseStartMethod("vault")}
+          showVaultImportAction={isNative && isAndroid && entryMode !== "vault"}
           fromVault={fromVault}
           vaultImportNotice={vaultImportNotice}
         />

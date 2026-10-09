@@ -1282,6 +1282,7 @@ export default function MyExchanges() {
   const [detailsByGroup, setDetailsByGroup] = useState({});
   const detailUnsubscribersRef = useRef(new Map());
   const [err, setErr] = useState('');
+  const [retryKey, setRetryKey] = useState(0);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState({});
   const [statusFilter, setStatusFilter] = useState('all');
@@ -1371,7 +1372,7 @@ export default function MyExchanges() {
       optimizedUnsubscribe?.();
       fallbackUnsubscribe?.();
     };
-  }, [user?.uid]);
+  }, [user?.uid, retryKey]);
 
   useEffect(() => {
     if (!legacyMode || !user?.uid) return undefined;
@@ -1607,7 +1608,20 @@ export default function MyExchanges() {
       </CardGrid>
     </Page>
   );
-  if (err) return <Page><Empty style={{ color: 'var(--gm-error)' }}>{err}</Empty></Page>;
+  if (err) return (
+    <Page>
+      <Empty role="alert">
+        {err}
+        <button
+          type="button"
+          style={{ display: 'block', margin: '12px auto 0' }}
+          onClick={() => setRetryKey((value) => value + 1)}
+        >
+          교환내역 다시 불러오기
+        </button>
+      </Empty>
+    </Page>
+  );
   if (groups.length === 0) return (
     <Page>
       <PageHeader>

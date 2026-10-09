@@ -10,6 +10,16 @@ import {
   waitForFirestore
 } from "../helpers/smoke.mjs";
 
+// UX 7차: MY 계정 정보는 기본적으로 접혀 있으므로 직접 열어 확인합니다.
+async function expectProfileEmailVisible(page, email) {
+  const profileDetails = page.locator("details").filter({
+    has: page.getByText("내 프로필 · 로그인 이메일", { exact: true })
+  });
+  await expect(profileDetails.locator("summary")).toBeVisible();
+  await profileDetails.locator("summary").click();
+  await expect(profileDetails.getByText(email, { exact: false }).first()).toBeVisible();
+}
+
 test.beforeEach(async () => {
   await resetEmulators();
   await seedCoreData();
@@ -21,11 +31,11 @@ test("1. 모바일 로그인 → 세션 유지 → 전체 메뉴 표시", async 
 
   await loginFromUi(page, member.email, member.password, "/profile");
   await expect(page).toHaveURL(/\/profile(?:[?#]|$)/);
-  await expect(page.getByText(member.email, { exact: false }).first()).toBeVisible();
+  await expectProfileEmailVisible(page, member.email);
 
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page).toHaveURL(/\/profile(?:[?#]|$)/);
-  await expect(page.getByText(member.email, { exact: false }).first()).toBeVisible();
+  await expectProfileEmailVisible(page, member.email);
 
   const openMenu = page.getByRole("button", { name: "전체 메뉴 열기" });
   await expect(openMenu).toBeVisible();
@@ -82,7 +92,7 @@ test("4. 모바일 전체 메뉴 → 설정 이동 → 로그아웃", async ({ p
   // route and member UI before opening the drawer, otherwise an intermediate
   // onboarding/navigation transition can immediately close the drawer.
   await expect(page).toHaveURL(/\/profile(?:[?#]|$)/);
-  await expect(page.getByText(member.email, { exact: false }).first()).toBeVisible();
+  await expectProfileEmailVisible(page, member.email);
 
   const openMenu = page.getByRole("button", { name: "전체 메뉴 열기" });
   await expect(openMenu).toBeVisible();
