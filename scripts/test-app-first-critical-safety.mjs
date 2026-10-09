@@ -40,12 +40,15 @@ test("빈 입력과 단위 변경은 금을 임의로 생성하지 않는다", (
   assert.ok(Number.isNaN(toWeightGrams("입력오류", "g")));
 });
 
-test("앱 첫 계산, MY GOLD 기록, GOLD TO GOLD Step1의 3개 경로가 같은 중량변환을 사용한다", () => {
-  assert.match(sources.quick, /setWeightValue\(\(current\) => switchGoldWeightUnit\(current, weightUnit, nextUnit\)\)/);
-  assert.match(sources.quick, /onChange=\{\(event\) => changeWeightUnit\(event\.target\.value\)\}/);
-  assert.match(sources.vault, /weightValue: switchGoldWeightUnit\(prev\.weightValue, prev\.weightUnit, nextUnit\)/);
+test("중량 단위는 입력 숫자의 의미를 결정한다: 10을 넣고 돈을 고르면 10돈(37.5g)", () => {
+  assert.equal(toWeightGrams("10", "don"), 37.5);
+  assert.equal(toWeightGrams("10", "g"), 10);
+  assert.match(sources.quick, /setWeightUnit\(nextUnit\)/);
+  assert.doesNotMatch(sources.quick, /setWeightValue\(\(current\) => switchGoldWeightUnit/);
+  assert.match(sources.quick, /입력한 \{weightValue\}/);
   assert.match(sources.vault, /onClick=\{\(\) => changeRecordWeightUnit\("don"\)\}/);
-  assert.match(sources.exchangeForm, /quantity: switchGoldWeightUnit\(row\.quantity, row\.inputUnit, value\)/);
+  assert.match(sources.vault, /editingId \? switchGoldWeightUnit/);
+  assert.match(sources.exchangeForm, /row\.sourceItemId/);
   assert.match(sources.exchange, /changeExchangeProductField\(prev, idx, field, value\)/);
   assert.match(sources.quantity, /onCommit\(norm\)/);
   assert.doesNotMatch(sources.quantity, /roundTo3Custom\(v\)\.toFixed\(2\)/);

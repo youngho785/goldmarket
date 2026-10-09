@@ -34,14 +34,18 @@ export function createEmptyExchangeProduct() {
   };
 }
 
-/** UI 항목 편집: 단위 전환 시 기존 중량(그램)을 보존합니다. */
+/** UI 항목 편집: 숫자 10을 입력한 다음 돈을 택하면 10돈으로 해석합니다. */
 export function changeExchangeProductField(products, index, field, value) {
   return (Array.isArray(products) ? products : []).map((row, i) => {
     if (i !== index) return row;
     if (field !== "inputUnit") return { ...row, [field]: value, finalWeight: 0 };
     return {
       ...row,
-      quantity: switchGoldWeightUnit(row.quantity, row.inputUnit, value),
+      // MY GOLD에서 불러온 기록은 원래 실중량을 보호합니다.
+      // 직접 입력한 항목은 숫자 10 + 돈 선택을 10돈으로 해석합니다.
+      quantity: row.sourceItemId
+        ? switchGoldWeightUnit(row.quantity, row.inputUnit, value)
+        : row.quantity,
       inputUnit: value,
       finalWeight: 0,
     };

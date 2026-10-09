@@ -1,6 +1,6 @@
 // src/pages/GoldExchange.jsx
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuthContext } from "../context/AuthContext";
 import { useLoginGate } from "@/context/LoginGateContext";
 import {
@@ -656,6 +656,11 @@ export default function GoldExchange() {
           예상 계산과 방문 날짜·시간 선택은 로그인 없이 이용할 수 있습니다.
           예약 요청만 로그인 또는 회원가입 후 완료합니다.
         </PageLead>
+        {isNative && isAndroid && step === STEP.CALC && !showStartMethod && (
+          <Link to="/gold-to-gold" style={{ display: "inline-flex", marginTop: 8, color: "#9b7227", fontSize: ".82rem", fontWeight: 850, textDecoration: "underline", textUnderlineOffset: 3 }}>
+            GOLD TO GOLD, 어떤 가치가 있나요? →
+          </Link>
+        )}
         {isRebook && (
           <RebookNotice role="status">
             <strong>취소된 예약 내용을 불러왔습니다.</strong><br />

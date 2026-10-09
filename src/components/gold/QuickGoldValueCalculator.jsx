@@ -8,7 +8,6 @@ import { useAuthContext } from "@/context/AuthContext";
 import useGoldVaultDashboard from "@/hooks/useGoldVaultDashboard";
 import { DEFAULT_GOLD_PRODUCTS, DON_TO_GRAMS } from "@/lib/goldRates";
 import { formatGoldWeightPair } from "@/lib/goldDisplay";
-import { switchGoldWeightUnit } from "@/lib/goldWeightInput";
 import { getFirstValueElapsedBucket, markFirstValueStart } from "@/lib/firstValueTiming";
 import {
   computeVaultMarketValueWon,
@@ -752,7 +751,8 @@ export default function QuickGoldValueCalculator({
 
   const changeWeightUnit = (nextUnit) => {
     if (nextUnit === weightUnit) return;
-    setWeightValue((current) => switchGoldWeightUnit(current, weightUnit, nextUnit));
+    // 단위 선택은 입력 숫자의 의미를 정합니다. 10 입력 후 돈을 고르면 10돈입니다.
+    // 자동 숫자 환산은 별도 동작이므로 이 선택기에서는 하지 않습니다.
     setWeightUnit(nextUnit);
   };
 
@@ -1235,7 +1235,7 @@ export default function QuickGoldValueCalculator({
                 <input
                   inputMode="decimal"
                   aria-label="내 금 중량"
-                  placeholder={weightUnit === "g" ? "예: 10.0" : "예: 2.0"}
+                  placeholder={weightUnit === "g" ? "예: 37.5" : "예: 10"}
                   value={weightValue}
                   onChange={(event) => setWeightValue(event.target.value.replace(/[^0-9.,]/g, ""))}
                 />
@@ -1248,6 +1248,13 @@ export default function QuickGoldValueCalculator({
                   <option value="don">돈</option>
                 </select>
               </WeightField>
+              {validWeight && (
+                <small aria-live="polite" style={{ color: "#606a75", fontWeight: 750 }}>
+                  입력한 {weightValue}{weightUnit === "don" ? "돈" : "g"} = {weightUnit === "don"
+                    ? `${grams.toFixed(2)}g`
+                    : `${(grams / DON_TO_GRAMS).toFixed(2)}돈`}
+                </small>
+              )}
             </Field>
 
             {(!compact || entryMode === "unknown") && <HelpRow>

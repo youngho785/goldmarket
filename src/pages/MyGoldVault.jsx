@@ -1,5 +1,6 @@
 // src/pages/MyGoldVault.jsx
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { switchGoldWeightUnit } from "@/lib/goldWeightInput";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ArrowRight, ChevronRight, Gem, Minus, Plus, Save, Sparkles, TrendingDown, TrendingUp, X } from "lucide-react";
 
@@ -73,7 +74,6 @@ import MyGoldImportPrompt from "@/components/gold/MyGoldImportPrompt";
 import AppGoldJourney from "@/components/gold/AppGoldJourney";
 import MyGoldItemsSection from "@/components/myGoldVault/MyGoldItemsSection";
 import { DON_TO_GRAMS, findGoldProduct } from "@/lib/goldRates";
-import { switchGoldWeightUnit } from "@/lib/goldWeightInput";
 import { formatGoldDon } from "@/lib/goldDisplay";
 import {
   GOLD_VAULT_MAX_ITEMS,
@@ -411,7 +411,8 @@ export default function MyGoldVault() {
   const changeRecordWeightUnit = (nextUnit) => {
     setForm((prev) => ({
       ...prev,
-      weightValue: switchGoldWeightUnit(prev.weightValue, prev.weightUnit, nextUnit),
+      // 기존 기록 편집은 실중량을 보존하고, 새 기록은 선택한 단위로 입력 숫자를 해석합니다.
+      weightValue: editingId ? switchGoldWeightUnit(prev.weightValue, prev.weightUnit, nextUnit) : prev.weightValue,
       weightUnit: nextUnit,
     }));
   };
@@ -1176,7 +1177,7 @@ export default function MyGoldVault() {
                   </UnitToggle>
                 </WeightRow>
                 {weightReference && <WeightConversion aria-live="polite">{weightReference}</WeightConversion>}
-                <WeightHint>1돈 = 3.75g · 입력한 무게는 반대 단위로도 바로 환산해 보여드립니다.</WeightHint>
+                <WeightHint>입력 숫자는 유지되고 선택한 단위로 계산됩니다. 바로 위의 환산 중량을 확인해 주세요. 1돈 = 3.75g</WeightHint>
               </Field>
 
               <Field>
