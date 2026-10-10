@@ -107,6 +107,24 @@ const WebGoalLink = styled(Link)`
   &:focus-visible { outline: 2px solid ${({ theme }) => theme.colors.secondary}; outline-offset: 3px; }
 `;
 
+const FirstGoldStart = styled.section`
+  display: grid;
+  gap: 8px;
+  padding: 18px 20px;
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 24%, ${({ theme }) => theme.colors.border});
+  border-radius: 16px;
+  background: ${({ theme }) => theme.semantic.badgeGoldBg};
+  > strong { font-size: 1.03rem; font-weight: 950; color: ${({ theme }) => theme.colors.primary}; }
+  p { margin: 0; font-size: .83rem; line-height: 1.55; color: ${({ theme }) => theme.colors.textSecondary}; }
+  > div { display: flex; gap: 9px; flex-wrap: wrap; margin-top: 5px; }
+  a { display: inline-flex; align-items: center; min-height: 42px; padding: 9px 13px;
+    border-radius: 10px; font-size: .82rem; font-weight: 900; text-decoration: none;
+    border: 1px solid ${({ theme }) => theme.colors.primary}; }
+  a:first-child { background: ${({ theme }) => theme.colors.primary}; color: ${({ theme }) => theme.on.primary}; }
+  a:last-child { background: ${({ theme }) => theme.colors.surface}; color: ${({ theme }) => theme.colors.primary}; }
+  a:focus-visible { outline: 2px solid ${({ theme }) => theme.colors.secondary}; outline-offset: 2px; }
+`;
+
 const QuickGrid = styled.section`
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -282,6 +300,17 @@ export default function AppHome() {
           <span><strong>내 골드바 목표 확인</strong> · 예상 순금 {pureGoldG.toFixed(2)}g</span>
           <small>참고값 · 실측 후 최종 확정 →</small>
         </WebGoalLink>
+      )}
+
+      {user?.uid && !myGoldDashboard.itemsLoading && !hasMyGold && (
+        <FirstGoldStart aria-label="처음 사용하는 MY GOLD 안내">
+          <strong>내 금 하나부터 기록해 보세요.</strong>
+          <p>가지고 있는 금의 종류와 중량을 기록하면 오늘의 참고가치와 예상 순금량을 확인할 수 있습니다. 회원 혜택 순금은 별도의 MEMBER GOLD에서 관리됩니다.</p>
+          <div>
+            <Link to="/my-gold/items?add=1">첫 금 기록하기</Link>
+            <Link to="/gold-value">먼저 금 가치 계산하기</Link>
+          </div>
+        </FirstGoldStart>
       )}
 
       {hasMyGold && <HomePriorityActions />}

@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import styled from "styled-components";
 import {
@@ -180,6 +180,31 @@ const FlowItem = styled.button`
 
 const CalculatorAnchor = styled.div`
   scroll-margin-top: 88px;
+`;
+
+const MyGoldPreview = styled.aside`
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 14px 17px;
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 28%, ${({ theme }) => theme.colors.border});
+  border-radius: 15px;
+  background: ${({ theme }) => theme.semantic.badgeGoldBg};
+  color: ${({ theme }) => theme.colors.text};
+
+  > small { color: ${({ theme }) => theme.colors.secondaryDark}; font-size: .71rem; font-weight: 950; }
+  > strong { color: ${({ theme }) => theme.colors.primary}; font-size: .98rem; font-weight: 950; word-break: keep-all; }
+  p { margin: 0; color: ${({ theme }) => theme.colors.textSecondary}; font-size: .73rem; line-height: 1.55; word-break: keep-all; }
+`;
+const PreviewMetrics = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  > div { padding: 9px 10px; border-radius: 10px; background: ${({ theme }) => theme.colors.surface}; min-width: 0; }
+  span { display: block; font-size: .69rem; color: ${({ theme }) => theme.colors.textSecondary}; }
+  b { display: block; margin-top: 3px; font-size: clamp(.85rem, 2.5vw, 1.05rem); font-weight: 950;
+    font-variant-numeric: tabular-nums; overflow-wrap: anywhere; color: ${({ theme }) => theme.colors.primary}; }
+  @media (max-width: 370px) { grid-template-columns: 1fr; }
 `;
 
 const JourneyNote = styled.p`
@@ -399,6 +424,8 @@ const ReviewStore = styled.aside`
 `;
 
 export default function LandingPage() {
+  const [goldPreview, setGoldPreview] = useState(null);
+
   useEffect(() => {
     trackProductEventOncePerSession("landing_view", {}, "landing-view");
   }, []);
@@ -434,7 +461,31 @@ export default function LandingPage() {
             eyebrow="회원가입 없이 바로 계산"
             title="내 금 가치 계산하기"
             description="금 종류와 중량을 입력해 오늘 예상 가치와 순금량을 확인하세요."
+            onPreviewChange={setGoldPreview}
           />
+          {goldPreview && (
+            <MyGoldPreview aria-label="MY GOLD 저장 전 미리보기">
+              <small>MY GOLD · 저장 전 미리보기</small>
+              <strong>
+                방금 입력한 {goldPreview.label} · {Number(goldPreview.weightG || 0).toLocaleString("ko-KR", { maximumFractionDigits: 3 })}g
+              </strong>
+              <PreviewMetrics>
+                <div>
+                  <span>오늘 예상 참고가치</span>
+                  <b>{Number(goldPreview.estimatedValueWon || 0) > 0
+                    ? `${Math.round(goldPreview.estimatedValueWon).toLocaleString("ko-KR")}원`
+                    : "시세 확인 후 표시"}</b>
+                </div>
+                <div>
+                  <span>예상 순금량</span>
+                  <b>{Number(goldPreview.pureGoldG || 0) > 0
+                    ? `${Number(goldPreview.pureGoldG).toFixed(2)}g`
+                    : "환산 기준 확인 중"}</b>
+                </div>
+              </PreviewMetrics>
+              <p>아직 저장되지 않았습니다. 위 계산기의 ‘내 금 기록하기’를 누르면 MY GOLD 체험으로 이어집니다. 가입 전 기록은 현재 기기에만 임시 보관됩니다.</p>
+            </MyGoldPreview>
+          )}
         </CalculatorAnchor>
       </Hero>
 
@@ -476,7 +527,7 @@ export default function LandingPage() {
       <ExchangeTrust aria-labelledby="exchange-trust-title">
         <VerificationImage>
           <img
-            src={import.meta.env.DEV ? goldVerificationImage : "/gold-verification.jpg"}
+            src={goldVerificationImage}
             alt="정밀 저울에서 보유 금의 중량을 확인하는 모습"
             loading="lazy"
             decoding="async"

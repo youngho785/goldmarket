@@ -150,6 +150,23 @@ const QuickAction = styled(Link)`
 `;
 
 
+const FirstGoldOptions = styled.section`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 7px 14px;
+  padding: 11px 13px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 13px;
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.textSecondary};
+
+  p { margin: 0; font-size: .75rem; line-height: 1.5; word-break: keep-all; }
+  a { color: ${({ theme }) => theme.colors.primary}; font-size: .78rem; font-weight: 900;
+    text-underline-offset: 3px; text-decoration: underline; }
+`;
+
 function formatWon(value) {
   const number = Number(value);
   return Number.isFinite(number) && number > 0
@@ -304,6 +321,17 @@ export default function AndroidHome() {
           title="내 금의 가치부터 확인해 보세요"
           description="금 종류와 무게를 입력하면 바로 계산하고 기록할 수 있어요."
         />
+      )}
+
+      {user?.uid && !dashboard.itemsLoading && !hasMyGold && (
+        <FirstGoldOptions aria-label="첫 금 기록 다른 방법">
+          <p>무게를 모르거나 바로 기록하고 싶으신가요?</p>
+          <div>
+            <Link to="/my-gold/items?add=1">직접 기록하기</Link>
+            {' · '}
+            <Link to="/gold-exchange?mode=visit">매장 실측 예약</Link>
+          </div>
+        </FirstGoldOptions>
       )}
 
       <MemberGoldSummaryCard uid={user?.uid} compact />
