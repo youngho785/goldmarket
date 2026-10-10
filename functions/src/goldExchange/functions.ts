@@ -1,3 +1,4 @@
+import { readReservationAdminRecipients, writeReservationAdminNotifications } from "./adminNotifications.js";
 // Gold-exchange booking, reschedule/cancel, status, aggregation, and availability functions.
 import { FieldValue } from "firebase-admin/firestore";
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
@@ -425,8 +426,9 @@ export const rescheduleGoldExchangeGroup = onCall<{
     const availabilityRef = db().doc(BOOKING_AVAILABILITY_REF);
     const groupMetaRef = db().doc(`goldExchangeGroups/${groupId}`);
     const now = FieldValue.serverTimestamp();
-    const result = await db().runTransaction(async (tx) => {
+    await db().runTransaction(async (tx) => {
       const group = await getCustomerEditableGroup(tx, groupId, uid);
+      const adminRecipients = await readReservationAdminRecipients(tx);
       const [slotsSnapshot, availabilitySnapshot] = await Promise.all([
         tx.get(slotsRef),
         tx.get(availabilityRef),
@@ -465,10 +467,10 @@ export const rescheduleGoldExchangeGroup = onCall<{
           scheduleChangeReason: reason,
           scheduleChangeRequestedAt: now,
           scheduleChangeRequestedBy: uid,
-          scheduledAt: FieldValue.delete(),
-          updatedAt: now,
           lastStatusChangedAt: now,
           lastStatusChangedBy: uid,
+          scheduledAt: FieldValue.delete(),
+          updatedAt: now,
         });
       });
 
@@ -485,11 +487,46 @@ export const rescheduleGoldExchangeGroup = onCall<{
           scheduleChangeReason: reason,
           scheduleChangeRequestedAt: now,
           scheduleChangeRequestedBy: uid,
+          lastStatusChangedAt: now,
+          lastStatusChangedBy: uid,
           scheduledAt: FieldValue.delete(),
           updatedAt: now,
         } as FirebaseFirestore.DocumentData,
         { merge: true }
       );
+
+      tx.create(db().collection("notifications").doc(uid).collection("items").doc(), {
+        type: "exchange_reschedule_requested",
+        title: "예약 일정 변경 요청이 접수되었습니다",
+        body: `${visitDate} ${visitTime} 일정으로 변경 요청이 접수되었습니다. 관리자 확인 후 변경된 예약 확정 알림을 보내드립니다.`,
+        link: "/my-exchanges",
+        meta: {
+          groupId,
+          previousVisitDate: group.visitDate,
+          previousVisitTime: group.visitTime,
+          visitDate,
+          visitTime,
+          reason,
+        },
+        createdAt: now,
+        read: false,
+      });
+
+      writeReservationAdminNotifications(tx, adminRecipients, {
+        type: "admin_exchange_rescheduled",
+        title: "예약 일정 변경 확인이 필요합니다",
+        body: `${group.customerName}님 · ${group.visitDate} ${group.visitTime} → ${visitDate} ${visitTime} · ${reason}`,
+        link: `/admin/gold-exchange?groupId=${encodeURIComponent(groupId)}`,
+        meta: {
+          groupId,
+          customerUid: uid,
+          previousVisitDate: group.visitDate,
+          previousVisitTime: group.visitTime,
+          visitDate,
+          visitTime,
+          reason,
+        },
+      });
 
       return {
         previousVisitDate: group.visitDate,
@@ -498,42 +535,8 @@ export const rescheduleGoldExchangeGroup = onCall<{
       };
     });
 
-    await reconcileBonusUsageForGroup({ groupId, targetStatus: "requested", adminUid: uid });
-    const notificationResults = await Promise.allSettled([
-      addNotificationForUser(uid, {
-        type: "exchange_reschedule_requested",
-        title: "예약 일정 변경 요청이 접수되었습니다",
-        body: `${visitDate} ${visitTime} 일정으로 변경 요청이 접수되었습니다. 관리자 확인 후 변경된 예약 확정 알림을 보내드립니다.`,
-        link: "/my-exchanges",
-        meta: {
-          groupId,
-          previousVisitDate: result.previousVisitDate,
-          previousVisitTime: result.previousVisitTime,
-          visitDate,
-          visitTime,
-          reason,
-        },
-      }),
-      addNotificationForAdmins({
-        type: "admin_exchange_rescheduled",
-        title: "예약 일정 변경 확인이 필요합니다",
-        body: `${result.customerName}님 · ${result.previousVisitDate} ${result.previousVisitTime} → ${visitDate} ${visitTime} · ${reason}`,
-        link: `/admin/gold-exchange?groupId=${encodeURIComponent(groupId)}`,
-        meta: {
-          groupId,
-          customerUid: uid,
-          previousVisitDate: result.previousVisitDate,
-          previousVisitTime: result.previousVisitTime,
-          visitDate,
-          visitTime,
-          reason,
-        },
-      }),
-    ]);
-    notificationResults.forEach((notificationResult) => {
-      if (notificationResult.status === "rejected") {
-        console.error("[rescheduleGoldExchangeGroup] 알림 생성 실패", notificationResult.reason);
-      }
+    await reconcileBonusUsageForGroup({ groupId, targetStatus: "requested", adminUid: uid }).catch(() => {
+      console.error("[exchangeBonus] recovery-pending");
     });
 
     return { ok: true, groupId, visitDate, visitTime };
@@ -553,8 +556,9 @@ export const cancelGoldExchangeGroup = onCall<{ groupId: string; reason: string 
     const slotsRef = db().doc("appConfig/reservedSlots");
     const groupMetaRef = db().doc(`goldExchangeGroups/${groupId}`);
     const now = FieldValue.serverTimestamp();
-    const result = await db().runTransaction(async (tx) => {
+    await db().runTransaction(async (tx) => {
       const group = await getCustomerEditableGroup(tx, groupId, uid);
+      const adminRecipients = await readReservationAdminRecipients(tx);
       const slotsSnapshot = await tx.get(slotsRef);
       const slots = slotsSnapshot.exists
         ? (slotsSnapshot.data() as Record<string, unknown>)
@@ -590,10 +594,30 @@ export const cancelGoldExchangeGroup = onCall<{ groupId: string; reason: string 
           cancellationRequestedAt: now,
           cancellationRequestedBy: uid,
           canceledAt: now,
+          lastStatusChangedAt: now,
+          lastStatusChangedBy: uid,
           updatedAt: now,
         } as FirebaseFirestore.DocumentData,
         { merge: true }
       );
+
+      tx.create(db().collection("notifications").doc(uid).collection("items").doc(), {
+        type: "exchange_canceled_by_customer",
+        title: "금교환 예약이 취소되었습니다",
+        body: `${group.visitDate} ${group.visitTime} 방문 예약이 취소되었습니다.`,
+        link: "/my-exchanges",
+        meta: { groupId, visitDate: group.visitDate, visitTime: group.visitTime, customerName: group.customerName, reason },
+        createdAt: now,
+        read: false,
+      });
+
+      writeReservationAdminNotifications(tx, adminRecipients, {
+        type: "admin_exchange_canceled_by_customer",
+        title: "고객이 금교환 예약을 취소했습니다",
+        body: `${group.customerName}님 · ${group.visitDate} ${group.visitTime} · ${reason}`,
+        link: `/admin/gold-exchange?groupId=${encodeURIComponent(groupId)}`,
+        meta: { groupId, customerUid: uid, visitDate: group.visitDate, visitTime: group.visitTime, customerName: group.customerName, reason },
+      });
 
       return {
         visitDate: group.visitDate,
@@ -602,27 +626,8 @@ export const cancelGoldExchangeGroup = onCall<{ groupId: string; reason: string 
       };
     });
 
-    await reconcileBonusUsageForGroup({ groupId, targetStatus: "canceled", adminUid: uid });
-    const notificationResults = await Promise.allSettled([
-      addNotificationForUser(uid, {
-        type: "exchange_canceled_by_customer",
-        title: "금교환 예약이 취소되었습니다",
-        body: `${result.visitDate} ${result.visitTime} 방문 예약이 취소되었습니다.`,
-        link: "/my-exchanges",
-        meta: { groupId, ...result, reason },
-      }),
-      addNotificationForAdmins({
-        type: "admin_exchange_canceled_by_customer",
-        title: "고객이 금교환 예약을 취소했습니다",
-        body: `${result.customerName}님 · ${result.visitDate} ${result.visitTime} · ${reason}`,
-        link: `/admin/gold-exchange?groupId=${encodeURIComponent(groupId)}`,
-        meta: { groupId, customerUid: uid, ...result, reason },
-      }),
-    ]);
-    notificationResults.forEach((notificationResult) => {
-      if (notificationResult.status === "rejected") {
-        console.error("[cancelGoldExchangeGroup] 알림 생성 실패", notificationResult.reason);
-      }
+    await reconcileBonusUsageForGroup({ groupId, targetStatus: "canceled", adminUid: uid }).catch(() => {
+      console.error("[exchangeBonus] recovery-pending");
     });
 
     return { ok: true, groupId };
@@ -1078,6 +1083,62 @@ export const setExchangeGroupStatus = onCall<{
         { merge: true }
       );
 
+      // All customer status notifications commit atomically with the status.
+      if (targetUid && status !== "completed") {
+        const visitSchedule = [visitDate, visitTime].filter(Boolean).join(" ");
+        const notifications = {
+          requested: {
+            type: "exchange_requested",
+            title: "금교환 예약 확인 대기 상태입니다",
+            body: visitSchedule
+              ? `${visitSchedule} 방문 예약을 관리자 확인 중입니다.`
+              : "방문 예약을 관리자 확인 중입니다.",
+          },
+          scheduled:
+            scheduleChangeType === "rescheduled"
+              ? {
+                  type: "exchange_reschedule_scheduled",
+                  title: "변경된 예약이 확정되었습니다",
+                  body: visitSchedule
+                    ? `${visitSchedule} 원일귀금속 방문 예약으로 변경 확정되었습니다.`
+                    : "변경 요청한 원일귀금속 방문 예약이 확정되었습니다.",
+                }
+              : {
+                  type: "exchange_scheduled",
+                  title: "금교환 예약이 확정되었습니다",
+                  body: visitSchedule
+                    ? `${visitSchedule} 원일귀금속 방문 예약이 확정되었습니다.`
+                    : "원일귀금속 방문 예약이 확정되었습니다.",
+                },
+          in_progress: {
+            type: "exchange_in_progress",
+            title: "금 교환을 확인하고 있습니다",
+            body: "순도·중량과 골드바 교환 내용을 확인하고 있습니다.",
+          },
+          canceled: {
+            type: "exchange_canceled",
+            title: "금교환 예약이 취소되었습니다",
+            body: visitSchedule
+              ? `${visitSchedule} 방문 예약이 취소되었습니다.`
+              : "방문 예약이 취소되었습니다.",
+          },
+          rejected: {
+            type: "exchange_rejected",
+            title: "금 교환 요청 확인이 필요합니다",
+            body: "교환내역을 확인하거나 원일귀금속으로 문의해 주세요.",
+          },
+        } as const;
+        const notification = notifications[status];
+
+        tx.create(db().collection("notifications").doc(targetUid).collection("items").doc(), {
+          ...notification,
+          link: "/my-exchanges",
+          meta: { groupId, newStatus: status },
+          createdAt: now,
+          read: false,
+        });
+      }
+
       return {
         targetUid,
         visitDate,
@@ -1103,62 +1164,7 @@ export const setExchangeGroupStatus = onCall<{
         groupId,
         targetStatus: status,
         adminUid,
-      });
-    }
-
-    // completed 알림은 상태 변경과 같은 트랜잭션에서 이미 생성합니다.
-    // 나머지 상태 알림만 여기서 비동기로 생성합니다.
-    if (result.targetUid && status !== "completed") {
-      const visitSchedule = [result.visitDate, result.visitTime].filter(Boolean).join(" ");
-      const notifications = {
-        requested: {
-          type: "exchange_requested",
-          title: "금교환 예약 확인 대기 상태입니다",
-          body: visitSchedule
-            ? `${visitSchedule} 방문 예약을 관리자 확인 중입니다.`
-            : "방문 예약을 관리자 확인 중입니다.",
-        },
-        scheduled:
-          result.scheduleChangeType === "rescheduled"
-            ? {
-                type: "exchange_reschedule_scheduled",
-                title: "변경된 예약이 확정되었습니다",
-                body: visitSchedule
-                  ? `${visitSchedule} 원일귀금속 방문 예약으로 변경 확정되었습니다.`
-                  : "변경 요청한 원일귀금속 방문 예약이 확정되었습니다.",
-              }
-            : {
-                type: "exchange_scheduled",
-                title: "금교환 예약이 확정되었습니다",
-                body: visitSchedule
-                  ? `${visitSchedule} 원일귀금속 방문 예약이 확정되었습니다.`
-                  : "원일귀금속 방문 예약이 확정되었습니다.",
-              },
-        in_progress: {
-          type: "exchange_in_progress",
-          title: "금 교환을 확인하고 있습니다",
-          body: "순도·중량과 골드바 교환 내용을 확인하고 있습니다.",
-        },
-        canceled: {
-          type: "exchange_canceled",
-          title: "금교환 예약이 취소되었습니다",
-          body: visitSchedule
-            ? `${visitSchedule} 방문 예약이 취소되었습니다.`
-            : "방문 예약이 취소되었습니다.",
-        },
-        rejected: {
-          type: "exchange_rejected",
-          title: "금 교환 요청 확인이 필요합니다",
-          body: "교환내역을 확인하거나 원일귀금속으로 문의해 주세요.",
-        },
-      } as const;
-      const notification = notifications[status];
-
-      await addNotificationForUser(result.targetUid, {
-        ...notification,
-        link: "/my-exchanges",
-        meta: { groupId, newStatus: status },
-      });
+      }).catch(() => { console.error("[exchangeBonus] recovery-pending"); });
     }
 
     return { ok: true };

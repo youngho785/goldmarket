@@ -123,7 +123,7 @@ test("MY GOLD는 저장한 금으로 GOLD TO GOLD 결과 단계까지 자동 연
   assert.match(autoVaultSource, /setStep\(STEP\.BARS\)/);
   assert.match(exchangeRemoteDataSource, /const \[ratesReady, setRatesReady\] = useState\(false\)/);
   assert.match(exchangeRemoteDataSource, /setRates\(merged\);[\s\S]*setRatesReady\(true\)/);
-  assert.match(autoVaultSource, /vaultImportLoading \|\| !ratesReady/);
+  assert.match(autoVaultSource, /\(entryMode === "vault" && vaultImportLoading\) \|\| !ratesReady/);
   assert.match(exchangeSource, /const \{ rates, ratesReady, pureGoldBuyPricePerDon \} = useGoldExchangeMarketData\(\)/);
   assert.match(exchangeSource, /if \(!ratesReady\)[\s\S]*현재 금 환산 기준을 불러오는 중입니다/);
 });

@@ -22,7 +22,6 @@ import {
   ShieldCheck,
   TrendingUp,
   User,
-  UserPlus,
   X,
 } from "lucide-react";
 import { getAuth, signOut } from "firebase/auth";
@@ -296,7 +295,7 @@ const AccountCopy = styled.div`
 
 const AccountActions = styled.div`
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: ${({ $single }) => ($single ? "minmax(0, 1fr)" : "repeat(2, minmax(0, 1fr))")};
   gap: 8px;
   margin-top: 11px;
 `;
@@ -704,14 +703,10 @@ export default function AndroidAppHeader() {
                     <p>회원가입 없이 계산하고, 계속 보고 싶은 금만 MY GOLD에 이어둘 수 있어요.</p>
                   </AccountCopy>
 
-                  <AccountActions>
+                  <AccountActions $single>
                     <AccountLink to="/login">
                       <LogIn aria-hidden />
                       로그인
-                    </AccountLink>
-                    <AccountLink to="/my-gold?add=1" $primary>
-                      <UserPlus aria-hidden />
-                      내 금 확인
                     </AccountLink>
                   </AccountActions>
                 </AccountPanel>

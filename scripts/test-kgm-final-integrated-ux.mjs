@@ -25,7 +25,7 @@ test('앱 첫 계산 카드만 간결화하고 기존 g/돈 입력 의미를 유
 test('홈 금 가치 계산·오늘 시세·GOLD TO GOLD 스토리 동선을 유지한다', () => {
   assert.match(home, /source="app-home"/);
   assert.match(home, /<PriceCard to="\/gold-price"/);
-  assert.match(home, /<GoldToGoldStory to="\/gold-to-gold"/);
+  assert.match(home, /<GoldToGoldStory\s+to="\/gold-to-gold"/);
 });
 
 test('회원 홈에서 교환 보장이 아닌 기록 기준 순금과 목표를 표시한다', () => {
@@ -46,12 +46,13 @@ test('네이티브 금시세 비교표·톡톡이·골드바를 함께 제공한
   assert.doesNotMatch(price, /sourceDate \|\| getKoreaTodayDateKey/);
 });
 
-test('금시세 회원혜택에서 퀴즈와 알림 참여를 구분해 찾는다', () => {
+test('앱 금시세는 가입 유도 문구만 제거하고 퀵퀴즈와 회원 알림 설정은 유지한다', () => {
+  assert.doesNotMatch(nativePrices, /회원 혜택 알아보기/);
   assert.match(nativePrices, /최대 순금 0\.03g/);
-  assert.match(nativePrices, /\/quiz\/gold-bonus/);
-  assert.match(nativePrices, /to=\{isMember \? "\/settings" : registerPath\}/);
-  assert.match(nativePrices, /내 혜택 확인/);
-  assert.match(nativePrices, /각각 지급 조건/);
+  assert.match(nativePrices, /to=\{isMember \? "\/member-gold" : "\/quiz\/gold-bonus"\}/);
+  assert.match(nativePrices, /isMember && <Link to="\/settings">금시세 알림 설정<\/Link>/);
+  assert.match(price, /오늘 날짜 \$\{formatDateKey\(todayKey\)\}/);
+  assert.match(price, /최근 공개 시세/);
 });
 
 test('금교환 Step 2는 잔여 참고 조합을 조건부로 표시하고 공임을 분리한다', () => {
@@ -64,7 +65,7 @@ test('금교환 Step 2는 잔여 참고 조합을 조건부로 표시하고 공�
 });
 
 test('햄버거 메뉴의 금교환 계산 및 브랜드 이야기와 접근성 유지', () => {
-  assert.match(header, /padding-top: max\(28px, env\(safe-area-inset-top, 0px\)\)/);
+  assert.match(header, /padding-top: 0; \/\* GlobalStyle body already reserves env/);
   assert.match(header, /aria-label="한국골드마켓 전체 메뉴"/);
   assert.match(header, /to="\/gold-to-gold"/);
   assert.match(header, /to="\/gold-exchange"/);

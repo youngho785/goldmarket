@@ -9,7 +9,7 @@ test('Premium Trust: 동일한 신뢰 안내를 비회원 웹과 회원 웹·And
     read('src/pages/LandingPage.jsx'), read('src/pages/AppHome.jsx'),
     read('src/pages/AndroidHome.jsx'), read('src/components/common/TrustProofBar.jsx'),
   ]);
-  for (const source of [landing, web, android]) assert.match(source, /<TrustProofBar(?: compact)?\s*\/>/);
+  for (const source of [landing, web]) assert.match(source, /<TrustProofBar(?: compact)?\s*\/>/);
   assert.match(proof, /부산 원일귀금속 직접 운영/);
   assert.match(proof, /과정은 더 투명하게/);
   assert.match(proof, /실측·동의 후 확정/);

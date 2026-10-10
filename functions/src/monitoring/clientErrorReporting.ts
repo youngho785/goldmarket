@@ -135,7 +135,8 @@ export const reportClientError = onCall(
     region: "asia-northeast3",
     enforceAppCheck: ENFORCE_APP_CHECK,
     timeoutSeconds: 10,
-    memory: "128MiB",
+    memory: "256MiB",
+    concurrency: 20,
     maxInstances: 3,
   },
   async (request) => {

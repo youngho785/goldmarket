@@ -53,10 +53,10 @@
     "test:kgm-android-back": "node --test scripts/test-kgm-android-back-navigation.mjs"
   },
   "dependencies": {
-    "@capacitor/android": "^8.5.0",
+    "@capacitor/android": "8.5.1",
     "@capacitor/app": "^8.1.1",
     "@capacitor/camera": "^8.2.5",
-    "@capacitor/core": "^8.5.0",
+    "@capacitor/core": "8.5.1",
     "@capacitor/haptics": "^8.0.2",
     "@capacitor/push-notifications": "^8.1.2",
     "date-fns": "^4.1.0",
@@ -72,7 +72,7 @@
     "styled-components": "^6.5.3"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.5.0",
+    "@capacitor/cli": "8.5.1",
     "@eslint/js": "^9.33.0",
     "@types/react": "^19.1.10",
     "@types/react-dom": "^19.1.7",
@@ -88,5 +88,10 @@
     "sharp": "^0.34.3",
     "tailwindcss": "^3.4.17",
     "vite": "^7.1.2"
+  },
+  "overrides": {
+    "proxy-addr": "2.0.8",
+    "@grpc/grpc-js": "1.14.5",
+    "fast-xml-parser@>=4 <5": "4.5.5"
   }
 }

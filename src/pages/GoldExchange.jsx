@@ -79,6 +79,7 @@ export default function GoldExchange() {
   const directReservationRequested = searchParams.get("reserve") === "1";
   const requestedEntryMode = String(searchParams.get("mode") || "").trim();
   const autoVaultRequested = searchParams.get("auto") === "1";
+  const quickBarsRequested = requestedEntryMode === "manual" && searchParams.get("quick") === "1";
   const requestedBarGramsRaw = Number(searchParams.get("bar"));
   const requestedBarGrams =
     Number.isFinite(requestedBarGramsRaw) && requestedBarGramsRaw > 0
@@ -389,11 +390,11 @@ export default function GoldExchange() {
   // 예상 중량 계산은 로그인 없이 이용할 수 있습니다.
   const onCalculate = onCalculateCore;
 
-  const handleAutoVaultCalculated = useCallback(() => {
+  const handleAutoVaultCalculated = useCallback((mode = "vault") => {
     trackProductEventOncePerSession(
       "exchange_calculated",
       {
-        source_mode: "vault",
+        source_mode: mode === "manual" ? "manual" : "vault",
         product_count: Math.min(products.length, MAX_PRODUCTS_PER_BOOKING),
       },
       "exchange-calculated"
@@ -401,8 +402,9 @@ export default function GoldExchange() {
   }, [products.length]);
 
   useGoldExchangeAutoVault({
-    enabled: autoVaultRequested,
+    enabled: autoVaultRequested || quickBarsRequested,
     entryMode,
+    allowManualQuick: quickBarsRequested,
     vaultImportLoading,
     products,
     rates,

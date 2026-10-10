@@ -73,7 +73,7 @@ test("analytics accepts only the small allowlisted KGM funnel schema", () => {
 
 test("landing funnel logs view, a debounced value calculation, and the MY GOLD CTA without exact weight", () => {
   assert.match(landingSource, /"landing_view"/);
-  assert.match(landingSource, /QuickGoldValueCalculator[^\n]*source="landing"/);
+  assert.match(landingSource, /<QuickGoldValueCalculator\s+source="landing"/);
   assert.match(quickGoldValueCalculatorSource, /source !== "landing"/);
   assert.match(quickGoldValueCalculatorSource, /"landing_value_calculated"/);
   assert.match(quickGoldValueCalculatorSource, /getAnalyticsWeightBand\(grams\)/);

@@ -124,6 +124,17 @@ async function main() {
   const functionDeps = await step('FUNCTION DEPENDENCIES', () => runNpm(['--prefix', 'functions', 'run', 'test:dependency-security']));
   if (!functionDeps) return finish(1);
 
+  const operationsUnit = await step('OPERATIONS RECOVERY UNIT',
+    () => runNode(['--test', 'functions/scripts/test-operations-patch.mjs']));
+  if (!operationsUnit) return finish(1);
+  const operationsEmulator = await step('OPERATIONS RECOVERY EMULATOR', () => runFirebase([
+    '--config', 'firebase.json', '--project', 'demo-goldmarket',
+    'emulators:exec', '--only', 'firestore,auth',
+    'node functions/scripts/test-operations-patch-emulator.mjs',
+  ], { env: { GCLOUD_PROJECT: 'demo-goldmarket', GOOGLE_CLOUD_PROJECT: 'demo-goldmarket' } }));
+  if (!operationsEmulator) return finish(1);
+
+
   const goldCalc = await step('GOLD CALCULATION', () => runNode(['scripts/test-gold-bar-fee.mjs']));
   if (!goldCalc) return finish(1);
 

@@ -15,7 +15,7 @@ test("client error callable follows shared App Check rollout and cost bounds", (
   assert.match(reporterSource, /export const reportClientError = onCall/);
   assert.match(reporterSource, /enforceAppCheck:\s*ENFORCE_APP_CHECK/);
   assert.match(reporterSource, /timeoutSeconds:\s*10/);
-  assert.match(reporterSource, /memory:\s*"128MiB"/);
+  assert.match(reporterSource, /memory:\s*"256MiB"/);
   assert.match(reporterSource, /maxInstances:\s*3/);
   assert.match(reporterSource, /RATE_LIMIT_PER_CLIENT = 30/);
   assert.match(reporterSource, /createHash\("sha256"\)/);

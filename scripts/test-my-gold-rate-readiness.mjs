@@ -86,7 +86,7 @@ test("환산율 의존 UI는 readiness 완료 후에만 예상값과 교환 기�
   );
   assert.match(
     myGoldVaultSource,
-    /\{hasVaultContent && ratesReady && \(/
+    /\{hasVaultContent && ratesReady && exchangeProducts\.length > 0 && \(/
   );
   assert.match(myGoldVaultSource, /ratesReady=\{ratesReady\}/);
 

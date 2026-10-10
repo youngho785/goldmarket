@@ -22,9 +22,10 @@ test('web/mobile: value calculator is first; mobile skips duplicate 4-step cards
   assert.match(web, /to="\/my-gold#goldbar-goal"/);
 });
 
-test('Android: guest tries goldbar exchange, member retains educational GOLD TO GOLD link', () => {
-  assert.match(android, /to=\{hasMyGold \? "\/gold-to-gold" : "\/gold-exchange"\}/);
-  assert.match(android, /골드바로 바꾸면 얼마나 될까요/);
+test('Android: guests and members open the GOLD TO GOLD introduction from home', () => {
+  assert.match(android, /<GoldToGoldStory\s+to="\/gold-to-gold"/);
+  assert.doesNotMatch(android, /to=\{hasMyGold \? "\/gold-to-gold" : "\/gold-exchange"\}/);
+  assert.match(android, /GOLD TO GOLD 소개 페이지 보기/);
   assert.match(android, /<QuickGoldValueCalculator/);
   assert.match(android, /<AppMyGoldDashboard/);
   assert.match(android, /<HomePriorityActions/);

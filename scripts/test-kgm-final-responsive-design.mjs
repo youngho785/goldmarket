@@ -36,7 +36,8 @@ test('Android header: use one safe-area and Korean brand mark', () => {
 });
 test('Android visible price references its original registration date', () => {
   assert.match(hook, /const \[marketSourceDate, setMarketSourceDate\] = useState\(""\)/);
-  assert.match(hook, /setMarketSourceDate\(typeof data\.sourceDate/);
+  assert.match(hook, /setMarketSourceDate\(normalizeGoldPriceDate\(data\.sourceDate\)\)/);
+  assert.match(hook, /import \{ normalizeGoldPriceDate \} from "@\/lib\/goldPriceDate"/);
   assert.match(android, /dashboard\.marketSourceDate === toLocalDateKey\(\)/);
   assert.match(android, /최근 등록 금시세/);
   assert.match(android, /시세 등록일/);
@@ -47,6 +48,6 @@ test('Main app journeys remain intact', () => {
   assert.match(android, /<AppMyGoldDashboard/);
   assert.match(android, /<HomePriorityActions/);
   assert.match(android, /<MemberGoldSummaryCard/);
-  assert.match(android, /<TrustProofBar compact \/>/);
+  assert.doesNotMatch(android, /<TrustProofBar compact \/>/);
   assert.match(landing, /to="\/gold-exchange"/);
 });

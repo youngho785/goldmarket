@@ -1,7 +1,8 @@
+import { classifyPushBatch, deliveryHash, withPushDelivery } from "./delivery.js";
 // Push delivery, admin campaigns, reservation reminders, MY GOLD reports, and slot cleanup.
 import { getAuth } from "firebase-admin/auth";
 import { FieldValue } from "firebase-admin/firestore";
-import { type BatchResponse, type SendResponse } from "firebase-admin/messaging";
+import { type BatchResponse } from "firebase-admin/messaging";
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
@@ -233,66 +234,55 @@ async function trackAdminCampaignPushOutcome(
   notificationRef: FirebaseFirestore.DocumentReference,
   outcome: AdminCampaignPushOutcome
 ): Promise<void> {
-  try {
-    await db().runTransaction(async (tx) => {
-      const notificationSnap = await tx.get(notificationRef);
-      if (!notificationSnap.exists) return;
-
-      const notificationData = notificationSnap.data() || {};
-      if (notificationData.campaignDeliveryTrackedAt) return;
-
-      const rawMeta = notificationData.meta;
-      if (!rawMeta || typeof rawMeta !== "object" || Array.isArray(rawMeta)) {
-        return;
-      }
-
-      const meta = rawMeta as Record<string, unknown>;
-      const source = String(meta.source || "").trim();
-      const batchId = String(meta.batchId || "").trim();
-      if (source !== "admin_manual" || !batchId) return;
-
-      const sendRef = db().doc(`adminNotificationSends/${batchId}`);
-      const sendSnap = await tx.get(sendRef);
-      if (!sendSnap.exists) return;
-
-      const sendPatch: FirebaseFirestore.DocumentData = {
-        pushProcessedCount: FieldValue.increment(1),
-        metricsUpdatedAt: FieldValue.serverTimestamp(),
-      };
-
-      if (outcome.attempted) {
-        sendPatch.pushAttemptedCount = FieldValue.increment(1);
-        if (outcome.success) {
-          sendPatch.pushSuccessCount = FieldValue.increment(1);
-        } else {
-          sendPatch.pushFailureCount = FieldValue.increment(1);
-        }
-      } else {
-        sendPatch.pushUnavailableCount = FieldValue.increment(1);
-      }
-
-      tx.update(notificationRef, {
-        campaignDeliveryTrackedAt: FieldValue.serverTimestamp(),
-        campaignPushAttempted: outcome.attempted,
-        campaignPushSuccess: outcome.success,
-        campaignPushStatus: outcome.reason,
-      });
-      tx.set(sendRef, sendPatch, { merge: true });
+  await db().runTransaction(async tx => {
+    const notificationSnap = await tx.get(notificationRef);
+    if (!notificationSnap.exists) return;
+    const data = notificationSnap.data() || {};
+    const previousTracked = !!data.campaignDeliveryTrackedAt;
+    // Final success is monotonic; correct legacy first-attempt failures without
+    // counting the same notification again or downgrading a successful delivery.
+    if (previousTracked && (data.campaignPushSuccess === true || !outcome.success)) return;
+    const meta = data.meta;
+    if (!meta || typeof meta !== "object" || Array.isArray(meta)) return;
+    const batchId = String(meta.batchId || "").trim();
+    if (meta.source !== "admin_manual" || !batchId) return;
+    const sendRef = db().doc(`adminNotificationSends/${batchId}`);
+    const sendSnap = await tx.get(sendRef);
+    if (!sendSnap.exists) return;
+    const previousAttempted = previousTracked && data.campaignPushAttempted === true;
+    const previousSuccess = previousTracked && data.campaignPushSuccess === true;
+    const deltas = {
+      pushProcessedCount: previousTracked ? 0 : 1,
+      pushAttemptedCount: Number(outcome.attempted) - Number(previousAttempted),
+      pushSuccessCount: Number(outcome.attempted && outcome.success) - Number(previousAttempted && previousSuccess),
+      pushFailureCount: Number(outcome.attempted && !outcome.success) - Number(previousAttempted && !previousSuccess),
+      pushUnavailableCount: Number(!outcome.attempted) - Number(previousTracked && !previousAttempted),
+    };
+    const patch: FirebaseFirestore.DocumentData = { metricsUpdatedAt: FieldValue.serverTimestamp() };
+    Object.entries(deltas).forEach(([key, delta]) => {
+      if (delta) patch[key] = FieldValue.increment(delta);
     });
-  } catch (error) {
-    console.warn("[trackAdminCampaignPushOutcome] failed", error);
-  }
+    tx.update(notificationRef, {
+      campaignDeliveryTrackedAt: FieldValue.serverTimestamp(),
+      campaignPushAttempted: outcome.attempted,
+      campaignPushSuccess: outcome.success,
+      campaignPushStatus: outcome.reason,
+    });
+    tx.set(sendRef, patch, { merge: true });
+  });
 }
 
 /* ─────────────────────────────────────────────────────────────
  * 6) 알림 문서 생성 시 FCM 발송
  * ───────────────────────────────────────────────────────────── */
 export const onNotificationCreate = onDocumentCreated(
-  { region: "asia-northeast3", document: "notifications/{uid}/items/{docId}" },
+  { region: "asia-northeast3", document: "notifications/{uid}/items/{docId}", retry: true, timeoutSeconds: 60 },
   async (event) => {
     try {
-      if (IN_EMULATOR) return;
-
+      if (IN_EMULATOR || !event.data) return;
+      const notificationRef = event.data.ref;
+      let skipReason: "preference" | "unavailable" = "unavailable";
+      await withPushDelivery(event.data.ref.path, event.data.createTime.toMillis(), async (receipts, acknowledge) => {
       const { uid } = event.params as { uid: string };
       const notif = (event.data?.data() || {}) as {
         title?: string;
@@ -310,13 +300,7 @@ export const onNotificationCreate = onDocumentCreated(
       );
 
       if (!shouldSendPushForUser(userData, preferences, notif.type)) {
-        if (event.data?.ref) {
-          await trackAdminCampaignPushOutcome(event.data.ref, {
-            attempted: false,
-            success: false,
-            reason: "preference",
-          });
-        }
+        skipReason = "preference";
         return;
       }
 
@@ -392,16 +376,10 @@ export const onNotificationCreate = onDocumentCreated(
         }
       }
 
-      if (!tokens.length) {
-        if (event.data?.ref) {
-          await trackAdminCampaignPushOutcome(event.data.ref, {
-            attempted: false,
-            success: false,
-            reason: "unavailable",
-          });
-        }
-        return;
-      }
+      if (!tokens.length) return;
+
+      tokens = tokens.filter(token => !receipts.has(deliveryHash(token)));
+      if (!tokens.length) return;
 
       const title = String(notif.title || "알림");
       const body = String(notif.body || "");
@@ -440,37 +418,25 @@ export const onNotificationCreate = onDocumentCreated(
       );
 
       const badTokens = new Set<string>();
-      let successfulTokenCount = 0;
+      const acceptedTokens: string[] = [];
+      let transientFailure = false;
 
       const collectBadTokens = (
         response: BatchResponse,
         sentTokens: string[]
       ) => {
-        successfulTokenCount += Number(response.successCount || 0);
-
-        response.responses.forEach((result: SendResponse, index: number) => {
-          if (result.success) return;
-
-          const code =
-            (result.error as { code?: string } | undefined)?.code || "";
-
-          if (
-            code.includes("registration-token-not-registered") ||
-            code.includes("messaging/registration-token-not-registered") ||
-            code.includes("invalid-registration-token") ||
-            code.includes("messaging/invalid-registration-token") ||
-            code.includes("invalid-argument")
-          ) {
-            const failedToken = sentTokens[index];
-
-            if (failedToken) {
-              badTokens.add(failedToken);
-            }
-          }
+        const result = classifyPushBatch(response, sentTokens);
+        acceptedTokens.push(...result.accepted);
+        result.invalid.forEach(token => badTokens.add(token));
+        transientFailure ||= result.transient;
+        result.permanentCodes.forEach(code => {
+          console.error("[pushDelivery] permanent-send-failure", { code });
         });
       };
 
       let pushSendError: unknown = null;
+      // Persist intent before an external send so terminal failures count as attempted.
+      await acknowledge([]);
 
       try {
         /*
@@ -489,6 +455,7 @@ export const onNotificationCreate = onDocumentCreated(
             });
 
           collectBadTokens(webResponse, webTokens);
+          await acknowledge(acceptedTokens.splice(0), webResponse.successCount);
         }
 
         /*
@@ -512,6 +479,7 @@ export const onNotificationCreate = onDocumentCreated(
             });
 
           collectBadTokens(nativeResponse, nativeTokens);
+          await acknowledge(acceptedTokens.splice(0), nativeResponse.successCount);
         }
       } catch (error) {
         pushSendError = error;
@@ -559,17 +527,19 @@ export const onNotificationCreate = onDocumentCreated(
           .catch(() => {});
       }
 
-      if (event.data?.ref) {
-        await trackAdminCampaignPushOutcome(event.data.ref, {
-          attempted: true,
-          success: successfulTokenCount > 0,
-          reason: successfulTokenCount > 0 ? "success" : "failed",
-        });
-      }
-
       if (pushSendError) throw pushSendError;
-    } catch (error) {
-      console.error("[onNotificationCreate] error:", error);
+      if (transientFailure) throw new Error("PUSH_TRANSIENT_FAILURE");
+      }, async summary => {
+        const success = summary.successes > 0;
+        const attempted = summary.attempted || success;
+        await trackAdminCampaignPushOutcome(notificationRef, {
+          attempted, success,
+          reason: success ? "success" : attempted ? "failed" : skipReason,
+        });
+      });
+    } catch {
+      console.error("[onNotificationCreate] delivery-attempt-failed");
+      throw new Error("PUSH_DELIVERY_RETRY");
     }
   }
 );

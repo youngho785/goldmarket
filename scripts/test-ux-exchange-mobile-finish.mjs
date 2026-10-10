@@ -36,10 +36,10 @@ test('추가 골드바 자동 계산안은 참고로만 제시하고 별도 공�
 
 test('예약 화면은 실제 선택·잔여·공임과 요청/확정 차이를 안내하며 서버 처리 로직을 건드리지 않는다', () => {
   assert.match(reservation, /내 금 예상 순금/);
-  assert.match(reservation, /선택 후 예상 남는 순금/);
-  assert.match(reservation, /추가 필요 \(별도 정산\)/);
+  assert.match(reservation, /difference < 0 \? "추가로 필요한 순금" : "예상 남는 순금"/);
+  assert.match(reservation, /부족한 금의 비용과 추가 골드바 제작 공임은 위 공임에 포함되지 않습니다/);
   assert.match(reservation, /예상 제작 공임/);
-  assert.match(reservation, /MEMBER GOLD는 위 내 금 예상 순금량에 합산되지 않은 별도 혜택/);
+  assert.match(reservation, /aria-label="MEMBER GOLD 혜택 사용 선택"/);
   assert.match(reservation, /매장 확인 후 방문 예약이 확정됩니다/);
   assert.match(reservation, /onSubmitReservation\(e\)/);
   assert.doesNotMatch(reservation, /addDoc\(|setDoc\(|updateDoc\(/);

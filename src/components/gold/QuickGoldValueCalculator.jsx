@@ -976,6 +976,7 @@ export default function QuickGoldValueCalculator({
     if (!canCalculate || !isGoldToGoldInputProduct(selected?.productId)) return "";
     const params = new URLSearchParams({
       mode: "manual",
+      quick: "1",
       pid: selected.productId,
       type: selected.value,
       w: String(Number(String(weightValue).replace(",", "."))),
@@ -1012,7 +1013,7 @@ export default function QuickGoldValueCalculator({
   return (
     <Card aria-label="내 금 오늘 가치 계산">
       <Head $compact={compact} $nativeFirst={compact && appFirstExperience} $webLanding={webLandingExperience}>
-        <small>{eyebrow}</small>
+        {eyebrow && <small>{eyebrow}</small>}
         <h2>{title}</h2>
         {!(compact && appFirstExperience) && <p>{description}</p>}
       </Head>

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { doc, onSnapshot } from "firebase/firestore";
 
 import { db } from "@/firebase/firebase";
+import { normalizeGoldPriceDate } from "@/lib/goldPriceDate";
 import {
   DEFAULT_EXCHANGE,
   DEFAULT_PURITY,
@@ -75,7 +76,7 @@ export default function useGoldVaultDashboard(uid) {
         (snapshot) => {
           const data = snapshot.exists() ? snapshot.data() || {} : {};
           setMarket(data.market && typeof data.market === "object" ? data.market : {});
-          setMarketSourceDate(typeof data.sourceDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(data.sourceDate) ? data.sourceDate : "");
+          setMarketSourceDate(normalizeGoldPriceDate(data.sourceDate));
           setPreviousMarket(
             data.previousMarket && typeof data.previousMarket === "object" ? data.previousMarket : {}
           );

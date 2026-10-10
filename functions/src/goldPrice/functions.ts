@@ -1,3 +1,4 @@
+import { KRX_TOTAL_BUDGET_MS, readKrxResponse } from "./krxTransport.js";
 // KRX public gold-price collection and publication management.
 import { FieldValue } from "firebase-admin/firestore";
 import { defineSecret } from "firebase-functions/params";
@@ -150,6 +151,7 @@ function normalizePublicDataServiceKey(rawKey: string): string {
 async function fetchLatestKrxGoldPrice(rawServiceKey: string) {
   const serviceKey = normalizePublicDataServiceKey(rawServiceKey);
   let lastReason = "조회 가능한 금시세가 없습니다.";
+  const deadline = Date.now() + KRX_TOTAL_BUDGET_MS;
 
   for (let daysAgo = 0; daysAgo <= 10; daysAgo += 1) {
     const basDt = dateDaysAgo(daysAgo);
@@ -161,34 +163,7 @@ async function fetchLatestKrxGoldPrice(rawServiceKey: string) {
     url.searchParams.set("basDt", basDt);
 
     try {
-      const response = await fetch(url, {
-        headers: { Accept: "application/json" },
-        signal: AbortSignal.timeout(15_000),
-      });
-
-      const responseText = await response.text();
-
-      if (!response.ok) {
-        lastReason = `공공데이터 API HTTP ${response.status}`;
-        console.warn("[fetchLatestKrxGoldPrice] HTTP error", {
-          basDt,
-          status: response.status,
-          bodyPreview: responseText.slice(0, 300),
-        });
-        continue;
-      }
-
-      let payload: unknown;
-      try {
-        payload = JSON.parse(responseText) as unknown;
-      } catch {
-        lastReason = "공공데이터 API가 JSON이 아닌 응답을 반환했습니다.";
-        console.warn("[fetchLatestKrxGoldPrice] non-JSON response", {
-          basDt,
-          bodyPreview: responseText.slice(0, 500),
-        });
-        continue;
-      }
+      const payload = await readKrxResponse(url, deadline);
 
       const root = asUnknownRecord(payload);
       const responseRoot = asUnknownRecord(root.response);
@@ -201,9 +176,9 @@ async function fetchLatestKrxGoldPrice(rawServiceKey: string) {
         console.warn("[fetchLatestKrxGoldPrice] API error", {
           basDt,
           resultCode,
-          resultMessage,
+          // Avoid logging arbitrary upstream response text.
         });
-        continue;
+        break;
       }
 
       const items = apiItems(payload);
@@ -239,12 +214,12 @@ async function fetchLatestKrxGoldPrice(rawServiceKey: string) {
         tradingValue: toFiniteNumber(item.trPrc, 0),
       };
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      lastReason = `공공데이터 API 호출 실패: ${message}`;
-      console.error("[fetchLatestKrxGoldPrice] request failed", {
-        basDt,
-        message,
-      });
+      // Network/auth/format failures do not improve by querying older dates.
+      const reason = error instanceof Error && /^KRX_[A-Z0-9_]+$/.test(error.message)
+        ? error.message : "KRX_NETWORK_OR_TIMEOUT";
+      lastReason = `공공데이터 API 호출 실패: ${reason}`;
+      console.error("[fetchLatestKrxGoldPrice] request failed", { basDt, reason });
+      break;
     }
   }
 
@@ -310,6 +285,7 @@ export const syncKrxGoldPrice = onSchedule(
     region: "asia-northeast3",
     secrets: [DATA_GO_KR_SERVICE_KEY],
     retryCount: 2,
+    timeoutSeconds: 60,
   },
   async () => {
     try {
@@ -333,7 +309,6 @@ export const refreshGoldPriceNow = onCall(
       await requireCurrentAdmin(req.auth?.uid);
 
       console.log("[refreshGoldPriceNow] request", {
-        uid: req.auth?.uid || null,
         hasSecret: DATA_GO_KR_SERVICE_KEY.value().trim().length > 0,
       });
 
@@ -344,7 +319,6 @@ export const refreshGoldPriceNow = onCall(
       console.error("[refreshGoldPriceNow] failed", {
         message,
         stack: error instanceof Error ? error.stack : null,
-        uid: req.auth?.uid || null,
       });
 
       if (error instanceof HttpsError) throw error;
@@ -405,7 +379,6 @@ export const saveGoldPriceSettings = onCall<{ settings: unknown }>(
         error,
         message: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : null,
-        uid: req.auth?.uid || null,
       });
 
       if (error instanceof HttpsError) {

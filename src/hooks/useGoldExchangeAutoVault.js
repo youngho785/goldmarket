@@ -23,6 +23,7 @@ export default function useGoldExchangeAutoVault({
   setStep,
   initializedChoiceRef,
   onCalculated,
+  allowManualQuick = false,
 }) {
   const completedRef = useRef(false);
 
@@ -31,7 +32,8 @@ export default function useGoldExchangeAutoVault({
   }, [entryMode]);
 
   useEffect(() => {
-    if (!enabled || entryMode !== "vault" || vaultImportLoading || !ratesReady) return;
+    const autoModeAllowed = entryMode === "vault" || (entryMode === "manual" && allowManualQuick);
+    if (!enabled || !autoModeAllowed || (entryMode === "vault" && vaultImportLoading) || !ratesReady) return;
     if (completedRef.current || step !== STEP.CALC || products.length === 0) return;
 
     const validation = validateExchangeProductsForCalculation(products, {
@@ -42,7 +44,10 @@ export default function useGoldExchangeAutoVault({
     });
 
     // 원격 시세/환산율이 아직 준비되지 않은 경우 다음 데이터 갱신에서 다시 시도합니다.
-    if (!validation.ok) return;
+    if (!validation.ok) {
+      if (entryMode === "manual" && allowManualQuick) setError(validation.error);
+      return;
+    }
 
     completedRef.current = true;
     setError("");
@@ -58,10 +63,11 @@ export default function useGoldExchangeAutoVault({
     );
     setCalculated(true);
     initializedChoiceRef.current = false;
-    onCalculated?.();
+    onCalculated?.(entryMode);
     setStep(STEP.BARS);
     window.setTimeout(() => nudgeAppInstall("calculation-complete"), 1400);
   }, [
+    allowManualQuick,
     enabled,
     entryMode,
     initializedChoiceRef,

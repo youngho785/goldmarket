@@ -4,7 +4,6 @@ import {
   db,
   roundTo3,
   buildValidatedBarsPlan,
-  addNotificationForUser,
 } from "../core/runtime.js";
 import {
   requestCreatedMillis,
@@ -46,11 +45,13 @@ export async function reconcileBonusUsageForGroup(args: {
 
   const sourceBarsPlan = sourcePlanDocument?.get("barsPlan") ?? null;
 
-  const result = await db().runTransaction(async (tx) => {
+  await db().runTransaction(async (tx) => {
     const groupSnap = await tx.get(groupRef);
     if (!groupSnap.exists) return null;
 
     const groupData = groupSnap.data() || {};
+    // A delayed recovery event must not reconcile a newer reservation state.
+    if (String(groupData.repStatus || "") !== targetStatus) return null;
     const usageStatus = String(groupData.bonusGoldUsageStatus || "");
     const uid = String(
       groupData.bonusGoldRequestUid || groupData.ownerUid || ""
@@ -66,6 +67,20 @@ export async function reconcileBonusUsageForGroup(args: {
       ? requestSnap.data() || {}
       : {};
     const now = FieldValue.serverTimestamp();
+    const notify = (amountG: number, restored: boolean) => {
+      tx.create(db().collection("notifications").doc(uid).collection("items").doc(), {
+        type: restored ? "bonus_gold_usage_restored" : "bonus_gold_usage_canceled",
+        title: restored ? "MEMBER GOLD가 복구되었습니다" : "MEMBER GOLD 사용 신청 취소",
+        body: restored
+          ? `교환 상태 변경으로 ${amountG.toFixed(2)}g이 다시 적립되었습니다.`
+          : `${amountG.toFixed(2)}g 사용 신청이 취소되었습니다.`,
+        link: "/member-gold",
+        meta: { groupId, amountG, targetStatus },
+        createdAt: now,
+        read: false,
+      });
+    };
+
 
     if (usageStatus === "requested") {
       if (!["canceled", "rejected"].includes(targetStatus)) {
@@ -108,6 +123,7 @@ export async function reconcileBonusUsageForGroup(args: {
         );
       });
 
+      notify(toNonNegativeInteger(groupData.bonusGoldRequestedMilliGrams) / 1000, false);
       return {
         uid,
         amountG:
@@ -222,6 +238,7 @@ export async function reconcileBonusUsageForGroup(args: {
       );
     });
 
+    notify(amountMg / 1000, true);
     return {
       uid,
       amountG: amountMg / 1000,
@@ -229,24 +246,4 @@ export async function reconcileBonusUsageForGroup(args: {
     };
   });
 
-  if (!result) return;
-
-  await addNotificationForUser(result.uid, {
-    type: result.restored
-      ? "bonus_gold_usage_restored"
-      : "bonus_gold_usage_canceled",
-    title: result.restored
-      ? "MEMBER GOLD가 복구되었습니다"
-      : "MEMBER GOLD 사용 신청 취소",
-    body: result.restored
-      ? `교환 상태 변경으로 ${result.amountG.toFixed(2)}g이 다시 적립되었습니다.`
-      : `${result.amountG.toFixed(2)}g 사용 신청이 취소되었습니다.`,
-    link: "/member-gold",
-    meta: {
-      groupId,
-      amountG: result.amountG,
-      targetStatus,
-    },
-  });
 }
-

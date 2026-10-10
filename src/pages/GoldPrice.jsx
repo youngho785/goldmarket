@@ -1,5 +1,5 @@
 // src/pages/GoldPrice.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowRight,
@@ -15,6 +15,7 @@ import MyGoldTicker from "@/components/gold/MyGoldTicker";
 import { isNative } from "@/platform/runtime";
 import useKoreaTodayDate from "@/hooks/useKoreaTodayDate";
 import NativeGoldPriceOverview from "@/components/goldPrice/NativeGoldPriceOverview";
+import MemberBenefitsDialog from "@/components/common/MemberBenefitsDialog";
 import QuickGoldValueCalculator from "@/components/gold/QuickGoldValueCalculator";
 import GuideLinks from "@/components/guide/GuideLinks";
 import {
@@ -141,6 +142,9 @@ export default function GoldPrice() {
   const todayKey = useKoreaTodayDate();
   const { user, isEmailVerified } = useAuthContext();
   const [pushStatus, setPushStatus] = useState("checking");
+  const [benefitOpen, setBenefitOpen] = useState(false);
+  const benefitTriggerRef = useRef(null);
+  const closeBenefitGuide = React.useCallback(() => setBenefitOpen(false), []);
   const [message, setMessage] = useState("");
   const [marketingAccepted, setMarketingAccepted] = useState(false);
   const [marketingNotificationsEnabled, setMarketingNotificationsEnabled] =
@@ -470,7 +474,7 @@ export default function GoldPrice() {
                   </span>
                   <Source>
                     {isNative
-                      ? `시세 등록일 ${referenceDate}${pagePriceAvailable && !isTodayPublished ? " · 최근 공개값" : ""}`
+                      ? `오늘 날짜 ${formatDateKey(todayKey)}${pagePriceAvailable && !isTodayPublished ? " · 최근 공개 시세" : ""}`
                       : `조회일 ${formatDateKey(todayKey)} · 시세 등록일 ${referenceDate}${pagePriceAvailable && !isTodayPublished ? " · 최근 공개값" : ""}`}
                   </Source>
                 </ChangeLine>
@@ -702,14 +706,13 @@ export default function GoldPrice() {
                 {pushStatus === "guest" ? (
                   <>
                     <MainButton
-                      as={Link}
-                      to={registerPath}
-                      state={{
-                        from: "/gold-price",
-                        intent: "gold-price-notification",
-                      }}
+                      ref={benefitTriggerRef}
+                      type="button"
+                      onClick={() => setBenefitOpen(true)}
+                      aria-haspopup="dialog"
+                      aria-expanded={benefitOpen}
                     >
-                      간편가입하고 알림 받기
+                      회원혜택 먼저 알아보기
                       <ArrowRight size={18} aria-hidden />
                     </MainButton>
 
@@ -872,6 +875,14 @@ export default function GoldPrice() {
           </>
         )}
       </Shell>
+      {!isNative && (
+        <MemberBenefitsDialog
+          open={benefitOpen}
+          onClose={closeBenefitGuide}
+          triggerRef={benefitTriggerRef}
+          registerPath={registerPath}
+        />
+      )}
     </Page>
   );
 }

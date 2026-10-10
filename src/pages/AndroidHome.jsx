@@ -12,7 +12,6 @@ import styled from "styled-components";
 import {
   CalendarDays,
   BookOpen,
-  Coins,
   ChevronRight,
   ClipboardList,
 } from "lucide-react";
@@ -24,7 +23,7 @@ import HomePriorityActions from "@/components/home/HomePriorityActions";
 import HomeOptionalDetails from "@/components/home/HomeOptionalDetails";
 import MyGoldAlertSummary from "@/components/gold/MyGoldAlertSummary";
 import QuickGoldValueCalculator from "@/components/gold/QuickGoldValueCalculator";
-import TrustProofBar from "@/components/common/TrustProofBar";
+
 import { useAuthContext } from "@/context/AuthContext";
 import { db } from "@/firebase/firebase";
 import useGoldVaultDashboard from "@/hooks/useGoldVaultDashboard";
@@ -344,8 +343,8 @@ export default function AndroidHome() {
         <QuickGoldValueCalculator
           source="app-home"
           compact
-          eyebrow="회원가입 없이 금 가치 확인"
-          title="집에 있는 금, 지금 얼마일까요?"
+          eyebrow=""
+          title="내 금, 지금 얼마일까요?"
           description="14K·18K·순금을 선택하고 무게를 입력하세요."
         />
       )}
@@ -372,14 +371,14 @@ export default function AndroidHome() {
       )}
 
       <GoldToGoldStory
-        to={hasMyGold ? "/gold-to-gold" : "/gold-exchange"}
-        aria-label={hasMyGold ? "GOLD TO GOLD 금의 가치 이야기" : "골드바 예상 교환량 직접 계산하기"}
+        to="/gold-to-gold"
+        aria-label="GOLD TO GOLD 소개 페이지 보기"
       >
-        <span>{hasMyGold ? <BookOpen aria-hidden /> : <Coins aria-hidden />}</span>
+        <span><BookOpen aria-hidden /></span>
         <div>
           <small>GOLD TO GOLD</small>
-          <strong>{hasMyGold ? "내 금의 다음 가치를 알아보세요" : "골드바로 바꾸면 얼마나 될까요?"}</strong>
-          <p>{hasMyGold ? "골드바 목표와 교환 이야기를 확인하세요." : "회원가입 없이 예상 교환량부터 확인할 수 있어요."}</p>
+          <strong>내 금의 다음 가치를 알아보세요</strong>
+          <p>보유한 금의 가치를 골드바로 이어가는 이야기를 확인하세요.</p>
         </div>
         <ChevronRight aria-hidden />
       </GoldToGoldStory>
@@ -406,7 +405,7 @@ export default function AndroidHome() {
         </HomeOptionalDetails>
       )}
 
-      <TrustProofBar compact />
+
     </Page>
   );
 }

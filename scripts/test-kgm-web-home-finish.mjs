@@ -74,7 +74,8 @@ test("모바일 웹 하단 메뉴 높이는 축소하고 Android 전용 분기�
   assert.match(bottom, /min-height: calc\(72px \+ env\(safe-area-inset-bottom, 0px\)\)/);
   assert.match(bottom, /min-height: 62px/);
   assert.match(bottom, /min-height: 60px/);
-  assert.match(nativeHome, /to=\{hasMyGold \? "\/gold-to-gold" : "\/gold-exchange"\}/);
+  assert.match(nativeHome, /<GoldToGoldStory\s+to="\/gold-to-gold"/);
+  assert.match(nativeHome, /<QuickGoldValueCalculator/);
 });
 
 test("검증된 후기 한 건과 매장 정보의 균형을 맞추며 가짜 후기를 만들지 않는다", () => {

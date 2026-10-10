@@ -19,6 +19,7 @@ import {
 import { useAuthContext } from "@/context/AuthContext";
 import { db } from "@/firebase/firebase";
 import Notifications from "./Notifications";
+import MemberBenefitsDialog from "./MemberBenefitsDialog";
 import usePendingGoldExchangeCount from "@/hooks/usePendingGoldExchangeCount";
 
 const Header = styled.header`
@@ -212,7 +213,7 @@ const TextButton = styled.button`
   }
 `;
 
-const AccountLink = styled(NavLink)`
+const AccountLink = styled.button`
   display: inline-flex;
   align-items: center;
   min-height: 40px;
@@ -221,6 +222,9 @@ const AccountLink = styled(NavLink)`
   color: ${({ theme }) => theme.colors.primary};
   font-size: .82rem;
   font-weight: 800;
+  font-family: inherit;
+  background: ${({ theme }) => theme.colors.surface};
+  cursor: pointer;
 `;
 
 const AccountMenuWrap = styled.div`
@@ -430,6 +434,21 @@ const DrawerAction = styled(NavLink)`
   font-weight: 800;
 `;
 
+const DrawerBenefitButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid ${({ theme }) => theme.colors.borderStrong};
+  border-radius: 0;
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.primary};
+  font-family: inherit;
+  font-weight: 800;
+  cursor: pointer;
+`;
+
 function toInt(value) {
   const number = Number(value);
   return Number.isFinite(number) ? Math.max(0, Math.floor(number)) : 0;
@@ -466,6 +485,15 @@ export default function Navbar() {
   const accountMenuRef = useRef(null);
   const accountMenuButtonRef = useRef(null);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const [benefitOpen, setBenefitOpen] = useState(false);
+  const benefitDesktopTriggerRef = useRef(null);
+  const benefitReturnFocusRef = useRef(null);
+  const closeBenefitGuide = React.useCallback(() => setBenefitOpen(false), []);
+  const openBenefitGuide = (trigger) => {
+    benefitReturnFocusRef.current = trigger === "mobile" ? menuButtonRef.current : benefitDesktopTriggerRef.current;
+    if (trigger === "mobile") setDrawerOpen(false);
+    setBenefitOpen(true);
+  };
 
   // Route transitions must close transient navigation UI before the next paint.
   // Using a normal effect can race with an immediate user click after login/navigation:
@@ -473,6 +501,7 @@ export default function Navbar() {
   useLayoutEffect(() => {
     setDrawerOpen(false);
     setAccountMenuOpen(false);
+    setBenefitOpen(false);
   }, [location.pathname, location.search]);
 
   useEffect(() => {
@@ -693,7 +722,7 @@ export default function Navbar() {
           {!user ? (
             <>
               <MenuLink to="/login" end>로그인</MenuLink>
-              <AccountLink to="/gold-value">내 금 확인</AccountLink>
+              <AccountLink ref={benefitDesktopTriggerRef} type="button" onClick={() => openBenefitGuide("desktop")} aria-haspopup="dialog" aria-expanded={benefitOpen}>🎁 회원혜택</AccountLink>
             </>
           ) : !isMember ? (
             <>
@@ -804,7 +833,7 @@ export default function Navbar() {
           {!user ? (
             <>
               <DrawerAction to="/login" tabIndex={drawerOpen ? 0 : -1}>로그인</DrawerAction>
-              <DrawerAction to="/gold-value" tabIndex={drawerOpen ? 0 : -1}>내 금 확인</DrawerAction>
+              <DrawerBenefitButton type="button" tabIndex={drawerOpen ? 0 : -1} onClick={() => openBenefitGuide("mobile")} aria-haspopup="dialog">🎁 회원혜택</DrawerBenefitButton>
             </>
           ) : !isMember ? (
             <>
@@ -829,6 +858,14 @@ export default function Navbar() {
           )}
         </DrawerAccount>
       </Drawer>
+      {!user && (
+        <MemberBenefitsDialog
+          open={benefitOpen}
+          onClose={closeBenefitGuide}
+          triggerRef={benefitReturnFocusRef}
+          registerPath="/register"
+        />
+      )}
     </Header>
   );
 }

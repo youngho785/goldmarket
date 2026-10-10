@@ -30,6 +30,13 @@ jobs:
       - run: npm run test:seo-guides
       - run: npm --prefix functions run lint
       - run: npm --prefix functions run build
+      - name: Operations recovery unit regression
+        run: node --test functions/scripts/test-operations-patch.mjs
+      - name: Operations recovery emulator regression
+        run: npx --yes firebase-tools@15.30.2 --project demo-goldmarket emulators:exec --only firestore,auth "node functions/scripts/test-operations-patch-emulator.mjs"
+        env:
+          GCLOUD_PROJECT: demo-goldmarket
+          GOOGLE_CLOUD_PROJECT: demo-goldmarket
       - run: node functions/scripts/test-booking-policy.mjs
       - run: npm --prefix functions run test:account-deletion
       - run: npm --prefix functions run test:nickname-security

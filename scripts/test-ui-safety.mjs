@@ -95,7 +95,7 @@ test("비회원 하단 메뉴는 보호 화면 대신 공개 핵심 기능과 �
 test("2.1 상단 메뉴는 금교환 계산과 GOLD TO GOLD 이야기를 구분한다", () => {
   assert.match(navbarSource, /if \(isMember\) \{[\s\S]*label: "MY GOLD"[\s\S]*label: "금시세"[\s\S]*label: "금교환 계산"[\s\S]*label: "GOLD TO GOLD 이야기"[\s\S]*label: "교환내역"/);
   assert.match(navbarSource, /return \[[\s\S]*label: "MY GOLD"[\s\S]*label: "금시세"[\s\S]*label: "금교환 계산"[\s\S]*label: "GOLD TO GOLD 이야기"[\s\S]*label: "매장안내"/);
-  assert.match(navbarSource, /<AccountLink to="\/gold-value">내 금 확인<\/AccountLink>/);
+  assert.match(navbarSource, /<AccountLink ref=\{benefitDesktopTriggerRef\} type="button" onClick=\{\(\) => openBenefitGuide\("desktop"\)\}/);
   assert.match(navbarSource, /aria-label="MY 계정 메뉴"/);
 });
 
@@ -598,7 +598,7 @@ test("2.7.1 관리자 교환 완료는 고객 추가 확인 없이 완료 상태
   assert.match(functionsSource, /exchange-completed-\$\{groupId\}/);
   assert.match(functionsSource, /GOLD TO GOLD 교환이 완료되었습니다/);
   assert.match(functionsSource, /tx\.set\(completionNotificationRef/);
-  assert.match(functionsSource, /result\.targetUid && status !== "completed"/);
+  assert.match(functionsSource, /targetUid && status !== "completed"/);
 });
 
 
@@ -1189,7 +1189,8 @@ test("2.8.3 교환 완료 트랜잭션은 모든 Firestore 읽기 뒤에 완료 
     notificationIndex > lastReadIndex,
     "Firestore transaction의 완료 알림 write는 모든 tx.get read 뒤에 있어야 합니다."
   );
-  assert.match(source, /if \(result\.targetUid && status !== "completed"\)/);
+  assert.match(transactionSource, /if \(targetUid && status !== "completed"\)/);
+  assert.match(transactionSource, /tx\.create\([\s\S]*meta: \{ groupId, newStatus: status \}/);
 });
 
 test("2.8.3 프로필 저장은 보조 Auth 프로필 동기화를 기다리지 않고 즉시 완료 UI로 전환한다", async () => {
@@ -1230,7 +1231,7 @@ test("2.8.6 로그인·화면 전환 직후 MY 메뉴는 지연된 route effect�
   );
   assert.match(
     navbarSource,
-    /useLayoutEffect\(\(\) => \{\s*setDrawerOpen\(false\);\s*setAccountMenuOpen\(false\);\s*\}, \[location\.pathname, location\.search\]\);/
+    /useLayoutEffect\(\(\) => \{\s*setDrawerOpen\(false\);\s*setAccountMenuOpen\(false\);\s*setBenefitOpen\(false\);\s*\}, \[location\.pathname, location\.search\]\);/
   );
   assert.doesNotMatch(
     navbarSource,

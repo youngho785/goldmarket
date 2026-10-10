@@ -87,3 +87,4 @@ export {
 export {
   analyzeGoldHallmark,
 } from "./hallmark/functions.js";
+export { recoverGoldExchangeBonus } from "./rewards/recovery.js";
