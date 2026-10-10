@@ -93,8 +93,10 @@ test("이메일 인증 후에는 원래 하던 일을 혜택보다 먼저 이어
   const continueIndex = welcomeSource.indexOf("<ContinueCard");
   const rewardsIndex = welcomeSource.indexOf("<Steps>");
   assert.ok(continueIndex >= 0 && rewardsIndex > continueIndex);
-  assert.match(welcomeSource, /nextPath && nextPath !== "\/" \? nextPath : "\/my-gold"/);
-  assert.match(welcomeSource, /MY GOLD부터 시작하세요/);
+  assert.match(welcomeSource, /nextPath && nextPath !== "\/" \? nextPath : "\/my-gold\/items\?add=1"/);
+  assert.match(welcomeSource, /내 금 하나부터 기록해 보세요/);
+  assert.match(welcomeSource, /회원가입을 축하합니다/);
+  assert.match(welcomeSource, /optionalClaimedCount/);
 });
 
 test("선택 마케팅 푸시는 사용자 행동으로 요청하고 MY GOLD 서비스 알림과 분리해 설명한다", () => {

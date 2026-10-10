@@ -77,7 +77,8 @@ test("지갑은 현재 잔액과 혜택 완료 상태를 분리하고 기존 led
 
 test("재가입 혜택 진행률은 이번 계정 지급액이 아니라 인증 이메일 기준 완료 여부를 사용한다", () => {
   assert.match(welcomeSource, /getMemberGoldOverview/);
-  assert.match(welcomeSource, /const claimedCount\s*=/);
+  assert.match(welcomeSource, /const optionalClaimedCount\s*=/);
+  assert.match(welcomeSource, /status\.welcome\.previouslyReceived/);
   assert.match(welcomeSource, /status\.welcome\.claimed/);
   assert.match(welcomeSource, /status\.marketingPush\.claimed/);
   assert.match(welcomeSource, /status\.quiz\.claimed/);

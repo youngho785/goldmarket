@@ -250,6 +250,19 @@ const Message = styled.p`
   line-height: 1.55;
 `;
 
+const WelcomeRewardCard = styled.section`
+  display: grid;
+  gap: 5px;
+  margin-top: 14px;
+  padding: 16px 18px;
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 32%, ${({ theme }) => theme.colors.border});
+  border-radius: 14px;
+  background: ${({ theme }) => theme.semantic.badgeGoldBg};
+
+  small { color: ${({ theme }) => theme.colors.secondaryDark}; font-size: .77rem; font-weight: 850; }
+  strong { color: ${({ theme }) => theme.colors.primary}; font-size: clamp(1.1rem, 3.8vw, 1.38rem); line-height: 1.4; }
+  p { color: ${({ theme }) => theme.colors.textSecondary}; font-size: .8rem; line-height: 1.55; margin: 0; }
+`;
 const ContinueCard = styled.section`
   margin-top: 14px;
   padding: 16px;
@@ -510,14 +523,25 @@ export default function WelcomeOnboarding() {
       `onboarding-completed-${destination}`
     );
     clearMemberOnboardingPending();
-    navigate(nextPath && nextPath !== "/" ? nextPath : "/my-gold", { replace: true });
+    navigate(nextPath && nextPath !== "/" ? nextPath : "/my-gold/items?add=1", { replace: true });
   };
 
-  const claimedCount =
-    Number(status.welcome.claimed) +
+  // 기본 가입 보상은 선택 혜택 진행률과 분리합니다.
+  const optionalClaimedCount =
     Number(status.marketingPush.claimed) +
     Number(status.quiz.claimed);
-  const progress = Math.round((claimedCount / 3) * 100);
+  const optionalProgress = Math.round((optionalClaimedCount / 2) * 100);
+  const welcomeRewardLabel = loading
+    ? "가입 혜택 확인 중…"
+    : error
+      ? "적립 상태 확인 필요"
+      : status.welcome.previouslyReceived
+        ? "동일 이메일에서 이미 받은 혜택"
+        : status.welcome.receivedThisAccount && status.welcome.creditedG > 0
+          ? `순금 ${status.welcome.creditedG.toFixed(2)}g 적립 완료`
+          : status.welcome.claimed
+            ? "가입 혜택 지급 기록 확인됨"
+            : "적립 여부를 확인해 주세요";
 
   const hasRequestedFlow = nextPath !== "/";
   const finishLabel = nextPath.startsWith("/gold-exchange")
@@ -526,7 +550,7 @@ export default function WelcomeOnboarding() {
       ? "MY GOLD 계속하기"
       : nextPath.startsWith("/profile")
         ? "내 정보 계속하기"
-        : "MY GOLD 시작하기";
+        : "첫 금 기록하기";
 
   const finishDescription = nextPath.startsWith("/gold-exchange")
     ? "가입 전에 계산하거나 선택한 예약 흐름으로 바로 돌아갑니다."
@@ -541,20 +565,23 @@ export default function WelcomeOnboarding() {
   return (
     <Page>
       <Hero>
-        <Title>MY GOLD를 시작할 준비가 됐습니다.</Title>
+        <Title>회원가입을 축하합니다!</Title>
         <Lead>
-          이메일 인증이 완료되었습니다. 이제 내가 실제로 가진 금을 기록하고 오늘 가치와 변화를 이어서 확인할 수 있습니다.
-          {status.welcome.receivedThisAccount && (
-            <> 신규회원 기본 혜택 <strong>순금 {status.welcome.creditedG.toFixed(2)}g</strong>도 별도로 적립되었습니다.</>
-          )}
+          이메일 인증이 완료되었습니다. 이제 내 금을 기록하거나, 가입 전에 하던 작업을 이어갈 수 있습니다.
           {status.restoredBalanceG > 0 && (
             <> 이전 계정의 미사용 <strong>회원혜택 순금 {status.restoredBalanceG.toFixed(2)}g</strong>도 복원했습니다.</>
           )}
         </Lead>
       </Hero>
 
-      <ContinueCard aria-label="MY GOLD 계속하기">
-        <strong>{hasRequestedFlow ? "하던 일을 먼저 이어가세요." : "MY GOLD부터 시작하세요."}</strong>
+      <WelcomeRewardCard aria-label="기본 회원가입 혜택">
+        <small>기본 혜택 · 인증 이메일 기준 1회</small>
+        <strong aria-live="polite">{welcomeRewardLabel}</strong>
+        <p>회원혜택(MEMBER GOLD)은 내가 기록한 MY GOLD와 별도로 관리됩니다. 적립 여부는 서버에서 확인한 실제 기록에 따라 표시합니다.</p>
+      </WelcomeRewardCard>
+
+      <ContinueCard aria-label="가입 후 다음 행동">
+        <strong>{hasRequestedFlow ? "하던 일을 먼저 이어가세요." : "내 금 하나부터 기록해 보세요."}</strong>
         <p>{finishDescription}</p>
         <ActionButton type="button" onClick={handleFinish}>
           {finishLabel}
@@ -563,11 +590,11 @@ export default function WelcomeOnboarding() {
       </ContinueCard>
 
       <ProgressText>
-        <span>선택 회원혜택</span>
-        <b>{claimedCount}/3 완료</b>
+        <span>추가 선택 혜택 · 최대 순금 0.02g</span>
+        <b>{loading || error ? "상태 확인 중" : `${optionalClaimedCount}/2 완료`}</b>
       </ProgressText>
-      <ProgressTrack aria-label={`선택 회원혜택 진행률 ${progress}%`}>
-        <ProgressBar $progress={progress} />
+      <ProgressTrack aria-label={`추가 혜택 진행률 ${loading || error ? "확인 중" : `${optionalProgress}%`}`}>
+        <ProgressBar $progress={loading || error ? 0 : optionalProgress} />
       </ProgressTrack>
 
       <Steps>
@@ -587,7 +614,7 @@ export default function WelcomeOnboarding() {
               </b>
             </StepTop>
             <StepDescription>
-              주요 금시세 변동, MY GOLD 주간 리포트와 회원혜택 소식을 앱푸시로 받을 수 있습니다.
+              주요 금시세 소식과 회원혜택 알림을 받을 수 있습니다. MY GOLD 주간 리포트는 제공 조건을 충족한 경우 발송됩니다.
               이 항목은 선택이며, MY GOLD 목표 도달 같은 서비스 알림과는 별도로 운영됩니다.
             </StepDescription>
 

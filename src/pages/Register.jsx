@@ -81,6 +81,33 @@ const NoticeBox = styled.div`
     margin-bottom: 3px;
   }
 `;
+const BenefitJourney = styled.section`
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  margin: 17px 0 8px;
+
+  @media (max-width: 360px) { gap: 5px; }
+`;
+const BenefitStep = styled.div`
+  display: grid;
+  gap: 3px;
+  padding: 10px 6px;
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 21%, ${({ theme }) => theme.colors.border});
+  border-radius: 12px;
+  background: ${({ theme }) => theme.semantic.badgeGoldBg};
+  text-align: center;
+  min-width: 0;
+  small { color: ${({ theme }) => theme.colors.textSecondary}; font-size: .69rem; line-height: 1.3; font-weight: 800; }
+  strong { color: ${({ theme }) => theme.colors.primary}; font-family: ${({ theme }) => theme.fonts.numeric}; font-size: .92rem; }
+`;
+const BenefitNote = styled.p`
+  margin: 0 0 20px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: .73rem;
+  line-height: 1.55;
+  word-break: keep-all;
+`;
 const Form = styled.form`
   display: flex;
   flex-direction: column;
@@ -405,6 +432,13 @@ export default function Register() {
             <span>{copy.noticeBody}</span>
           </NoticeBox>
         )}
+
+        <BenefitJourney aria-label="가입 후 받을 수 있는 회원 혜택">
+          <BenefitStep><small>이메일 인증 완료</small><strong>0.01g</strong></BenefitStep>
+          <BenefitStep><small>선택 알림 설정</small><strong>+0.01g</strong></BenefitStep>
+          <BenefitStep><small>금 퀵퀴즈</small><strong>+0.01g</strong></BenefitStep>
+        </BenefitJourney>
+        <BenefitNote>최대 순금 0.03g · 각 혜택은 조건 충족 시 인증 이메일 기준 1회 지급됩니다. 알림 수신은 선택 사항이며 가입만으로 자동 동의되지 않습니다.</BenefitNote>
 
         <Form onSubmit={handleSubmit} autoComplete="on" aria-busy={loading ? "true" : undefined}>
           {error && <ErrorText role="alert" aria-live="assertive">{error}</ErrorText>}
