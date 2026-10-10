@@ -1,3 +1,4 @@
+// KGM_PHASE6_MEMBER_SERVICES_UX
 import React, { useEffect, useMemo, useState } from "react";
 import styled from "styled-components";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -114,6 +115,7 @@ export default function CreateInquiry() {
           예약 내용을 다시 설명하지 않아도 관리자가 연결된 건을 확인할 수 있습니다.
         </Context>
       )}
+      <button type="button" onClick={() => navigate("/support")} style={{ minHeight: 44, marginBottom: 14, border: "1px solid var(--gm-border)", borderRadius: 10, padding: "8px 14px", background: "transparent", cursor: "pointer", color: "var(--gm-text)" }}>← 문의 목록으로</button>
       <Form onSubmit={submit}>
         <Field>
           제목

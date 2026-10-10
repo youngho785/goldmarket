@@ -1,7 +1,8 @@
 // src/pages/MyInquiries.js
+// KGM_PHASE6_MEMBER_SERVICES_UX
 import React, { useEffect, useMemo, useState } from "react";
 import styled from "styled-components";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import { auth } from "../firebase/firebase";
@@ -53,8 +54,12 @@ const ErrorNotice = styled.p`
   background: ${({ theme }) => theme.semantic.alertErrorBg};
   color: ${({ theme }) => theme.semantic.alertErrorText};
 `;
-const Item = styled.div`
+const Item = styled(Link)`
+  display: block;
   padding: 16px;
+  min-height: 56px;
+  color: inherit;
+  text-decoration: none;
   border-bottom: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
   cursor: pointer;
   &:hover, &:focus-visible {
@@ -190,6 +195,7 @@ export default function MyInquiries() {
         <Title>내 문의</Title>
         <NewBtn type="button" onClick={() => navigate("/support/new")}>문의 작성</NewBtn>
       </Header>
+      <p style={{ color: "var(--gm-text-secondary)", fontSize: ".87rem", lineHeight: 1.5 }}>문의 접수 후 답변대기, 답변완료 상태를 여기서 확인할 수 있습니다.</p>
 
       <Tabs aria-label="문의 상태 필터">
         {tabs.map((item) => (
@@ -217,18 +223,7 @@ export default function MyInquiries() {
       {loading && rows.length === 0 && <div>로딩 중…</div>}
 
       {rows.map((post) => (
-        <Item
-          key={post.id}
-          role="button"
-          tabIndex={0}
-          onClick={() => navigate(`/support/${post.id}`)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") {
-              event.preventDefault();
-              navigate(`/support/${post.id}`);
-            }
-          }}
-        >
+        <Item key={post.id} to={`/support/${post.id}`}>
           <Title2>{post.title}</Title2>
           <Meta>
             <span>문의</span>

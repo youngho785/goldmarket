@@ -1,4 +1,5 @@
 // src/pages/MyExchanges.jsx
+// KGM_PHASE6_MEMBER_SERVICES_UX
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
@@ -1644,6 +1645,7 @@ export default function MyExchanges() {
         <SectionTitle>금교환 기록</SectionTitle>
         <HeaderLead>신청부터 방문·완료까지 금교환의 진행 상태와 결과를 한곳에서 기록합니다.</HeaderLead>
       </PageHeader>
+      <Help role="note">예약 요청은 곧 예약 확정이 아닙니다. 각 교환건을 펼치면 매장 확인 상태, 일정 변경·취소 및 해당 건 문의 방법을 확인할 수 있습니다.</Help>
 
       <LedgerSummary aria-label="금교환 진행 요약">
         <LedgerMetric><small>진행 중</small><strong>{!legacyMode && hasMore ? `${counts.active}+` : counts.active}</strong></LedgerMetric>

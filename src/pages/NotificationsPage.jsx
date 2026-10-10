@@ -1,7 +1,8 @@
 //src/pages/NotificationsPage.jsx
+// KGM_PHASE6_MEMBER_SERVICES_UX
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import styled from "styled-components";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuthContext } from "@/context/AuthContext";
 import { useNotificationContext } from "@/context/NotificationContext";
 import {
@@ -304,6 +305,7 @@ export default function NotificationsPage() {
   const uid = user?.uid || "";
   const firstPageRequestRef = useRef(0);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [items, setItems] = useState([]);
   const [cursor, setCursor] = useState(null);
@@ -313,6 +315,7 @@ export default function NotificationsPage() {
   const [markingAll, setMarkingAll] = useState(false);
   const [error, setError] = useState("");
   const [firstPageFailed, setFirstPageFailed] = useState(false);
+  const [moreError, setMoreError] = useState("");
   const [filter, setFilter] = useState("all");
 
   const loadFirstPage = useCallback(async () => {
@@ -325,6 +328,7 @@ export default function NotificationsPage() {
     setLoading(true);
     setError("");
     setFirstPageFailed(false);
+    setMoreError("");
     setItems([]);
     setCursor(null);
     setHasMore(false);
@@ -364,6 +368,7 @@ export default function NotificationsPage() {
   const loadMore = async () => {
     if (!uid || !cursor || !hasMore || loadingMore) return;
     const pageVersion = firstPageRequestRef.current;
+    setMoreError("");
     setLoadingMore(true);
 
     try {
@@ -379,7 +384,7 @@ export default function NotificationsPage() {
     } catch (loadError) {
       if (pageVersion !== firstPageRequestRef.current) return;
       console.error("[NotificationsPage] load more failed:", loadError);
-      setError("추가 알림을 불러오지 못했습니다.");
+      setMoreError("추가 알림을 불러오지 못했습니다. 네트워크 확인 후 다시 시도해 주세요.");
     } finally {
       setLoadingMore(false);
     }
@@ -455,19 +460,18 @@ export default function NotificationsPage() {
               {markingAll ? "처리 중…" : "모두 읽음"}
             </Button>
           )}
-          <Button type="button" onClick={() => navigate(-1)}>
-            ← 돌아가기
+          <Button type="button" onClick={() => navigate(location.pathname.startsWith("/admin") ? "/admin" : "/profile")}>
+            ← {location.pathname.startsWith("/admin") ? "관리자" : "MY"}로
           </Button>
         </Toolbar>
       </HeaderCard>
 
-      <FilterRow role="tablist" aria-label="알림 종류">
+      <FilterRow role="group" aria-label="알림 종류">
         {NOTIFICATION_FILTERS.map(([key, label]) => (
           <FilterChip
             key={key}
             type="button"
-            role="tab"
-            aria-selected={filter === key}
+            aria-pressed={filter === key}
             $active={filter === key}
             onClick={() => setFilter(key)}
           >
@@ -516,6 +520,9 @@ export default function NotificationsPage() {
           ))}
         </List>
       ))}
+      {moreError && !firstPageFailed && (
+        <ErrorText role="alert">{moreError} <Button type="button" disabled={loadingMore} onClick={loadMore}>이전 알림 다시 시도</Button></ErrorText>
+      )}
       {!firstPageFailed && hasMore && (
         <LoadMore
           type="button"

@@ -1,4 +1,5 @@
 // src/pages/Settings.jsx
+// KGM_PHASE6_MEMBER_SERVICES_UX
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -401,6 +402,15 @@ export default function Settings() {
           필요한 설정만 간단히 관리합니다.
         </Intro>
       </PageHeader>
+
+      <Section aria-labelledby="settings-shortcuts-title">
+        <SectionTitle id="settings-shortcuts-title">자주 찾는 메뉴</SectionTitle>
+        <SectionDescription>알림 기록과 진행 중인 예약은 별도 화면에서 확인합니다.</SectionDescription>
+        <LinkList>
+          <SettingLink to="/notifications"><span>알림함 확인</span><ChevronRight aria-hidden="true" /></SettingLink>
+          <SettingLink to="/my-exchanges"><span>내 예약·교환내역</span><ChevronRight aria-hidden="true" /></SettingLink>
+        </LinkList>
+      </Section>
 
       <SettingsNotificationsSection user={user} />
 

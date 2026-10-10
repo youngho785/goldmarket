@@ -1,4 +1,5 @@
 // src/pages/Profile.jsx
+// KGM_PHASE6_MEMBER_SERVICES_UX
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import styled from "styled-components";
@@ -783,13 +784,21 @@ export default function Profile() {
       <ProfileHero>
         <ProfileHeroTitle>MY</ProfileHeroTitle>
         <ProfileHeroLead>
-          예약·문의·회원 혜택과 계정을 관리하세요.
+          내 금 기록·예약·알림·회원 혜택을 한곳에서 확인하세요.
         </ProfileHeroLead>
       </ProfileHero>
 
       <MyHub aria-label="MY 주요 메뉴">
+        <MyHubLink to="/my-gold/items">
+          <span><strong>MY GOLD · 내 금 기록</strong><small>내 금의 예상 가치와 기록을 확인합니다.</small></span>
+          <ChevronRight aria-hidden="true" />
+        </MyHubLink>
         <MyHubLink to="/my-exchanges">
           <span><strong>예약·교환 내역</strong><small>진행 중 예약과 지난 교환 기록을 확인합니다.</small></span>
+          <ChevronRight aria-hidden="true" />
+        </MyHubLink>
+        <MyHubLink to="/notifications">
+          <span><strong>알림함</strong><small>금교환 진행 알림과 새 소식을 확인합니다.</small></span>
           <ChevronRight aria-hidden="true" />
         </MyHubLink>
         <MyHubLink to="/support">
