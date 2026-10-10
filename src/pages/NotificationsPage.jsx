@@ -186,6 +186,18 @@ const Title = styled.div`
   font-weight: 900;
   line-height: 1.35;
 `;
+const CategoryTag = styled.span`
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin-bottom: 6px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: ${({ theme }) => theme.semantic.badgeGoldBg};
+  color: ${({ theme }) => theme.colors.secondaryDark};
+  font-size: .66rem;
+  font-weight: 850;
+`;
 const Body = styled.div`
   color: ${({ theme }) => theme.colors.textSecondary};
   margin-top: 4px;
@@ -259,19 +271,30 @@ const NOTIFICATION_FILTERS = [
 ];
 
 function notificationCategory(item) {
-  const text = [
-    item?.title,
-    item?.body,
-    item?.link,
-    item?.data?.link,
-    item?.type,
-    item?.data?.type,
-  ].filter(Boolean).join(" ").toLowerCase();
+  // 앞으로 저장되는 알림의 명시적 분류를 우선합니다. 기존 기록은 링크·유형·문구로 호환합니다.
+  const explicit = String(item?.category || item?.data?.category || "").trim().toLowerCase();
+  if (["vault", "price", "exchange", "benefit", "notice"].includes(explicit)) return explicit;
+  if (["my_gold", "mygold", "goal"].includes(explicit)) return "vault";
+  if (["member_gold", "reward", "bonus"].includes(explicit)) return "benefit";
+  if (["gold_news", "goldnews", "gold_price"].includes(explicit)) return "price";
 
-  if (/my-gold|내금고|금고|목표가|value goal|vault/.test(text)) return "vault";
-  if (/gold-exchange|금교환|교환|방문예약|예약|schedule|exchange/.test(text)) return "exchange";
-  if (/gold-price|금시세|금값|시세|price/.test(text)) return "price";
-  if (/혜택|퀴즈|적립|bonus|welcome|0\.01g|0\.03g/.test(text)) return "benefit";
+  const link = String(item?.link || item?.data?.link || "").toLowerCase();
+  if (/\/member-gold|\/quiz\/gold-bonus/.test(link)) return "benefit";
+  if (/\/my-gold/.test(link)) return "vault";
+  if (/\/my-exchanges|\/gold-exchange/.test(link)) return "exchange";
+  if (/\/gold-price/.test(link)) return "price";
+
+  const type = String(item?.type || item?.data?.type || "").toLowerCase();
+  if (/my_gold|mygold|vault|goal/.test(type)) return "vault";
+  if (/exchange|reservation|schedule|visit/.test(type)) return "exchange";
+  if (/benefit|bonus|reward|welcome|quiz/.test(type)) return "benefit";
+  if (/gold_news|goldnews|gold_price|price/.test(type)) return "price";
+
+  const text = [item?.title, item?.body].filter(Boolean).join(" ").toLowerCase();
+  if (/my gold|my-gold|내금고|금고|목표가/.test(text)) return "vault";
+  if (/금교환|교환|방문예약|예약/.test(text)) return "exchange";
+  if (/혜택|퀴즈|적립|0\.01g|0\.03g/.test(text)) return "benefit";
+  if (/금시세|금값|시세/.test(text)) return "price";
   return "notice";
 }
 
@@ -453,6 +476,12 @@ export default function NotificationsPage() {
         ))}
       </FilterRow>
 
+      {filter !== "all" && hasMore && !firstPageFailed && (
+        <p style={{ margin: "0 0 10px", fontSize: ".75rem", color: "#666" }}>
+          선택한 종류는 현재 불러온 알림에서 먼저 보여줍니다. 이전 기록은 아래에서 더 불러올 수 있습니다.
+        </p>
+      )}
+
       {error && (
         <ErrorText role="alert">
           {error}
@@ -478,6 +507,7 @@ export default function NotificationsPage() {
                   onClick={() => void openItem(item)}
                   onKeyDown={(event) => handleItemKeyDown(event, item)}
                 >
+                  <CategoryTag>{NOTIFICATION_FILTERS.find(([key]) => key === notificationCategory(item))?.[1] || "안내"}</CategoryTag>
                   <Title>{item.title || "알림"}</Title>
                   {item.body && <Body>{item.body}</Body>}
                   <Time>{formatTimestamp(item.createdAt)}</Time>

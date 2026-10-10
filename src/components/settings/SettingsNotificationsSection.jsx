@@ -1542,8 +1542,17 @@ export default function SettingsNotificationsSection({ user }) {
       </SectionTitle>
 
       <SectionDescription>
-        예약·교환 서비스 안내와 광고성 정보 수신(금시세·MY GOLD 리포트·혜택)을 관리합니다.
+        예약·교환 서비스 알림과 금시세·혜택 소식 수신을 따로 관리합니다.
+        기기 알림 권한과 광고성 정보 수신동의는 서로 다릅니다.
       </SectionDescription>
+
+      <Notice aria-label="알림 상태 한눈에 보기">
+        <strong>알림 상태 한눈에 보기</strong>
+        <span>이 기기 알림 권한: {notificationPermissionLabel(notificationPermission)}</span>
+        <span>금시세·혜택 소식: {notificationPrefsLoading ? "확인 중" : notificationPrefs.marketingNotificationsEnabled ? "선택 동의함" : "받지 않음"}</span>
+        <span>소식 수신 기기: {notificationPrefsLoading ? "확인 중" : notificationPrefs.marketingFcmToken ? (notificationPrefs.marketingFcmBrowser || "등록된 기기") : "지정 필요"}</span>
+        <span>알림 권한·설정·기기 등록이 완료되어도 실제 수신은 기기 환경에 따라 달라질 수 있습니다.</span>
+      </Notice>
 
       <Rows
         aria-busy={
@@ -1576,11 +1585,11 @@ export default function SettingsNotificationsSection({ user }) {
             </strong>
 
             <small>
-              주요 금시세 변동, MY GOLD 주간 리포트와 이벤트·혜택을 받아봅니다.
+              금시세·주요 소식, 수신 조건에 따른 MY GOLD 주간 리포트와 이벤트·혜택을 안내합니다.
             </small>
 
             <em>
-              선택 동의 · 신규회원은 설정 완료 시 순금 0.01g 더 받기
+              선택 동의 · 별도 혜택 지급 조건 충족 시 순금 0.01g 적립 가능
             </em>
           </RowText>
 
@@ -1659,7 +1668,7 @@ export default function SettingsNotificationsSection({ user }) {
                     .marketingFcmBrowser ||
                     "선택한 기기"}
                 </b>
-                로 알림을 받고 있습니다.
+                가 소식 수신 기기로 등록되어 있습니다.
               </span>
             ) : (
               <span>
@@ -1671,8 +1680,8 @@ export default function SettingsNotificationsSection({ user }) {
             {isCurrentMarketingDevice ? (
               <span>
                 지금 사용 중인{" "}
-                {currentDeviceName}에서
-                알림을 받습니다.
+                {currentDeviceName}이
+                소식 수신 기기로 선택되어 있습니다.
               </span>
             ) : (
               <Actions>

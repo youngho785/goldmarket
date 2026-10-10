@@ -20,10 +20,13 @@ test("웹 홈 금시세표는 기준일과 시세 등록일을 명확하게 구�
   assert.match(board, /publicationTime\(data\.updatedAt\)/);
 });
 
-test("웹 금시세 전체 페이지는 오늘 기준일, Android 표시는 유지", () => {
+test("웹·앱 금시세는 조회일과 마지막 시세 등록일을 구분", () => {
   const page = read("src/pages/GoldPrice.jsx");
-  assert.match(page, /isNative\s*\? `기준일 \${referenceDate}`/);
-  assert.match(page, /: `기준일 \${formatDateKey\(todayKey\)} · 시세 등록일 \${referenceDate}`/);
+  assert.match(page, /publishedDateKey/);
+  assert.match(page, /isTodayPublished/);
+  assert.match(page, /최근 공개 금시세/);
+  assert.match(page, /조회일/);
+  assert.match(page, /시세 등록일/);
 });
 
 test("탭을 계속 켜 두어도 날짜가 바뀌도록 주기적으로 재확인", () => {

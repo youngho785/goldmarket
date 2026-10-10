@@ -334,6 +334,12 @@ export default function GoldPrice() {
     : "확인 중";
   const pagePriceAvailable =
     !configLoading && goldEnabled && !goldLoading && !!goldData;
+  // 조회일과 마지막으로 공개된 시세 등록일은 다를 수 있습니다(주말·휴장일 등).
+  const publishedDateKey = String(goldData?.sourceDate || "").replace(/\D/g, "").slice(0, 8);
+  const isTodayPublished = publishedDateKey.length === 8 && publishedDateKey === todayKey;
+  const priceHeading = !pagePriceAvailable
+    ? "금시세 확인"
+    : isTodayPublished ? "오늘의 금시세" : "최근 공개 금시세";
 
   const enableGoldPricePush = async () => {
     if (!isMember) {
@@ -438,10 +444,10 @@ export default function GoldPrice() {
           <HeroCard $native={isNative}>
             <HeroCopy $native={isNative}>
               <Eyebrow>KOREA GOLD MARKET</Eyebrow>
-              <HeroTitle>오늘의 금시세</HeroTitle>
+              <HeroTitle>{priceHeading}</HeroTitle>
               {!isNative && (
                 <HeroLead>
-                  내가 팔 때 가격부터 확인하고, 오늘 시세가 MY GOLD 가치에 미치는 변화까지 이어서 보세요.
+                  내가 팔 때 가격부터 확인하고, 공개된 시세가 MY GOLD 가치에 미치는 변화까지 이어서 보세요.
                 </HeroLead>
               )}
 
@@ -464,8 +470,8 @@ export default function GoldPrice() {
                   </span>
                   <Source>
                     {isNative
-                      ? `기준일 ${referenceDate}`
-                      : `기준일 ${formatDateKey(todayKey)} · 시세 등록일 ${referenceDate}`}
+                      ? `시세 등록일 ${referenceDate}${pagePriceAvailable && !isTodayPublished ? " · 최근 공개값" : ""}`
+                      : `조회일 ${formatDateKey(todayKey)} · 시세 등록일 ${referenceDate}${pagePriceAvailable && !isTodayPublished ? " · 최근 공개값" : ""}`}
                   </Source>
                 </ChangeLine>
               </HeroPriceBlock>
@@ -668,21 +674,22 @@ export default function GoldPrice() {
           <AlertCard>
             <div>
               <AlertTitle id="gold-price-alert-title">
-                금값이 움직일 때, <em>먼저 알려드릴게요.</em>
+                금시세·혜택 소식, <em>설정한 기기로 받아보세요.</em>
               </AlertTitle>
               <AlertText>
-                매번 확인하지 않아도 주요 금시세 변동을 알려드립니다.
-                MY GOLD에 내 금을 기록해 두면 주간 가치 변화도 함께 받아볼 수 있습니다.
+                선택 동의한 회원에게 금시세·주요 소식과 혜택을 안내합니다.
+                원하는 순금 가격 도달 알림은 MY GOLD에서 직접 설정할 수 있습니다.
+                주간 MY GOLD 리포트는 수신 조건에 따라 제공됩니다.
               </AlertText>
 
               <AlertBullets>
                 <AlertBullet>
                   <BellRing size={15} aria-hidden />
-                  주요 금시세 변동 알림
+                  금시세·주요 소식 안내
                 </AlertBullet>
                 <AlertBullet>
                   <CheckCircle2 size={15} aria-hidden />
-                  MY GOLD 주간 가치 리포트
+                  MY GOLD 주간 리포트(수신 조건 충족 시)
                 </AlertBullet>
                 <AlertBullet>
                   <ShieldCheck size={15} aria-hidden />
@@ -718,7 +725,7 @@ export default function GoldPrice() {
                   <>
                     <MainButton type="button" disabled>
                       <CheckCircle2 size={18} aria-hidden />
-                      금시세 알림을 받고 있습니다
+                      금시세·혜택 알림 설정 완료
                     </MainButton>
                     <SecondaryLink to="/settings">
                       알림 설정 관리

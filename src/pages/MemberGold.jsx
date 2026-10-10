@@ -405,7 +405,7 @@ export default function MemberGold() {
 
   const nextAction = useMemo(() => {
     if (!rewards.marketingPush?.claimed) {
-      return { to: "/settings", label: "알림 설정하고 MEMBER GOLD 0.01g 받기" };
+      return { to: "/settings", label: "금시세·혜택 알림 참여 조건 확인" };
     }
     if (!rewards.quiz?.claimed) {
       return { to: "/quiz/gold-bonus?next=%2Fmember-gold", label: "금 퀵퀴즈 풀고 MEMBER GOLD 0.01g 받기" };
@@ -503,7 +503,7 @@ export default function MemberGold() {
           {!(loading && balanceLoading) && <span>g</span>}
         </Balance>
         <Lead>
-          MY GOLD는 내가 가진 금의 기록, MEMBER GOLD는 교환에 적용할 수 있는 별도 혜택입니다. 현장 확인 후 사용이 확정됩니다.
+          MY GOLD는 내가 가진 금의 기록, MEMBER GOLD는 교환에 적용할 수 있는 별도 혜택입니다. 실제 금교환 예약과 현장 확인을 거쳐 사용이 확정됩니다.
         </Lead>
       </Hero>
 

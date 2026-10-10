@@ -386,26 +386,24 @@ export default function MyGoldAlertGoals({
     }
   };
 
-  const metricsUnavailable = loadingMetrics || !publicPriceEnabled;
-
   return (
     <Card id="my-gold-alert-goals" aria-labelledby="my-gold-alert-goals-title">
       <Head>
         <h2 id="my-gold-alert-goals-title">알림 설정</h2>
         <Status $ready={pushReady}>
           {pushReady ? <BellRing size={13} aria-hidden /> : <Bell size={13} aria-hidden />}
-          {demoMode ? "체험" : pushReady ? "알림 켜짐" : "알림 꺼짐"}
+          {demoMode ? "체험" : pushReady ? "기기 준비됨" : "기기 알림 확인 필요"}
         </Status>
       </Head>
 
       <Current aria-label="현재 내 금 알림 기준">
         <CurrentItem>
           <span>현재 MY GOLD</span>
-          <strong>{metricsUnavailable ? "확인 중" : formatWon(currentValueWon)}</strong>
+          <strong>{loadingMetrics ? "불러오는 중" : !publicPriceEnabled ? "시세 미공개" : formatWon(currentValueWon)}</strong>
         </CurrentItem>
         <CurrentItem>
           <span>순금 1돈 참고시세</span>
-          <strong>{metricsUnavailable ? "확인 중" : formatWon(currentPricePerDon)}</strong>
+          <strong>{loadingMetrics ? "불러오는 중" : !publicPriceEnabled ? "시세 미공개" : formatWon(currentPricePerDon)}</strong>
         </CurrentItem>
         <CurrentItem>
           <span>교환 사용 가능 예상</span>
