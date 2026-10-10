@@ -10,6 +10,7 @@ import useBookingAvailability, { getBookingAvailabilityEntry } from "@/hooks/use
 import { DON_TO_GRAMS, roundTo3Custom } from "@/lib/goldRates";
 import { getGoldBarFeeEstimate, formatGoldBarFee } from "@/lib/goldBarFee";
 import { formatGoldWeightPair } from "@/lib/goldDisplay";
+import { getGoldBarVisualWidth } from "./goldBarVisual";
 import { isNative } from "@/platform/runtime";
 import {
   Card,
@@ -43,7 +44,8 @@ import {
   Seg,
   SegBtn,
   DenomGrid,
-  DenomTile,
+  PremiumDenomTile,
+  ExchangeFeeNote,
   AIBadge,
   ConsentBox,
   ConsentRow,
@@ -341,16 +343,16 @@ export function BarStep({
         <div>
           <small>내 금 → 999.9 골드바 예상 · 온라인 안내</small>
           <strong>{selectedBar.label} × {safeQty}개</strong>
-          <p>선택한 골드바의 예상 결과입니다.</p>
+          <p>규격과 수량을 바꾸면 예상 중량·잔여 금과 공임이 함께 바뀝니다.</p>
         </div>
         <MiniGoldBar aria-hidden="true">
           <small>KOREA GOLD MARKET</small>
           <b>FINE GOLD 999.9</b>
-          <em>{selectedBar.label.replace(" 골드바", "")}</em>
+          <em>{fmtG(selectedBar.grams)}g · {fmtD(selectedBar.don)}돈</em>
         </MiniGoldBar>
       </ExchangeOutcome>
 
-      <ExchangeDecisionSummary role="group" aria-label="교환 예상 핵심 요약" aria-live="polite">
+      <ExchangeDecisionSummary $twoColumn role="group" aria-label="교환 예상 핵심 요약" aria-live="polite">
         <ExchangeDecisionFact>
           <span>선택한 골드바 총중량</span>
           <strong>{fmtG(selectedTotalG)}g <em>({fmtD(selectedTotalG / DON_TO_GRAMS)}돈)</em></strong>
@@ -362,11 +364,11 @@ export function BarStep({
             {" "}<em>({fmtD((neededG > 0 ? neededG : remainingG) / DON_TO_GRAMS)}돈)</em>
           </strong>
         </ExchangeDecisionFact>
-        <ExchangeDecisionFact>
-          <span>예상 제작 공임</span>
-          <strong>{feeLabel}</strong>
-        </ExchangeDecisionFact>
       </ExchangeDecisionSummary>
+      <ExchangeFeeNote role="group" aria-label="예상 제작 공임">
+        <span>예상 제작 공임 <small>· 선택한 골드바 {safeQty}개 기준</small></span>
+        <strong>{feeLabel}</strong>
+      </ExchangeFeeNote>
       <HelpText style={{ margin: "6px 0 10px", lineHeight: 1.5 }}>
         온라인 예상입니다. 실측 순도·중량, 잔여 금 처리 및 공임은 매장에서 고객과 확인하고 동의 후 확정됩니다.
         {neededG > 0 && " 추가로 필요한 금의 비용은 위 제작 공임에 포함되지 않습니다."}
@@ -463,7 +465,7 @@ export function BarStep({
           if (disabled) return null;
           const topUpGramsForOne = roundTo3Custom(Math.max(0, d.grams - totalGrams));
           return (
-            <DenomTile
+            <PremiumDenomTile
               key={d.key}
               type="button"
               $active={active}
@@ -488,28 +490,30 @@ export function BarStep({
                 }
               }}
             >
-              <div style={{ display: "flex", alignItems: "flex-start", flexWrap: "wrap", gap: 6, justifyContent: "space-between" }}>
-                <div style={{ fontWeight: 900, flex: "1 1 75px", minWidth: 0 }}>{d.label}</div>
+              <span className="denom-flags">
                 {recommended && <AIBadge>현재 금 추천</AIBadge>}
                 {topUpRecommended && !recommended && <AIBadge>{fmtG(topUpGramsForOne)}g 더 필요</AIBadge>}
-              </div>
-              <div style={{ fontSize: ".9rem", color: "var(--gm-text-secondary)" }}>
-                {fmtG(d.grams)}g ({fmtD(d.don)}돈)
-              </div>
+                {active && <span className="selected-chip">✓ 선택됨</span>}
+              </span>
+              <span className="denom-visual" aria-hidden="true">
+                <span className="denom-ingot" style={{ "--bar-visual-width": `${getGoldBarVisualWidth(d.grams)}%` }}>
+                  <small>KGM</small>
+                  <b>999.9</b>
+                  <em>{barGroup === "don" ? `${d.don} DON` : `${d.grams} G`}</em>
+                </span>
+              </span>
+              <span className="denom-name">{barGroup === "don" ? `${d.don}돈` : `${d.grams}g`}</span>
+              <span className="denom-weight">{fmtG(d.grams)}g · {fmtD(d.don)}돈</span>
               {topUpRecommended && topUpGramsForOne > 0 && (
-                <div style={{ fontSize: ".82rem", fontWeight: 800, color: "var(--gm-primary)" }}>
-                  {fmtG(topUpGramsForOne)}g ({fmtD(topUpGramsForOne / DON_TO_GRAMS)}돈) 더 필요 · 채우면 1개 선택 가능
-                </div>
+                <span className="denom-topup">
+                  추가 예상 순금 {fmtG(topUpGramsForOne)}g 필요
+                </span>
               )}
-              {disabled && (
-                <div style={{ fontSize: ".8rem", color: "var(--gm-text-secondary)" }}>
-                  현재 금 기준 바로 다음 규격까지만 선택할 수 있습니다.
-                </div>
-              )}
-            </DenomTile>
+            </PremiumDenomTile>
           );
         })}
       </DenomGrid>
+      <HelpText>골드바 모형은 규격 선택을 돕는 예시이며, 실제 제품의 디자인과 크기는 다를 수 있습니다.</HelpText>
       {maxVisibleIdx < current.length - 1 && (
         <HelpText>더 큰 규격은 현재 예상 순금량으로 선택할 수 없어 표시하지 않았습니다.</HelpText>
       )}

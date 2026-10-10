@@ -297,13 +297,13 @@ export const ExchangeOutcome = styled.div`
   }
 
   @media (max-width: 520px) {
-    grid-template-columns: ${({ $native }) => ($native ? "minmax(0, 1fr)" : "minmax(0, 1fr) 112px")};
+    grid-template-columns: minmax(0, 1fr) 112px;
     gap: 8px;
     padding: 11px;
     margin: 9px 0 10px;
     ${({ $native }) => $native && `
       p { display: none; }
-      > :last-child { display: none; }
+      > :last-child { display: grid; }
     `}
   }
 `;
@@ -356,7 +356,7 @@ export const ExchangePureGoldTotal = styled.div`
 
 export const ExchangeDecisionSummary = styled.div`
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: ${({ $twoColumn }) => $twoColumn ? "repeat(2, minmax(0, 1fr))" : "repeat(3, minmax(0, 1fr))"};
   gap: 8px;
   margin: 0 0 10px;
 
@@ -410,10 +410,12 @@ export const MiniGoldBar = styled.div`
   padding: 12px 16px;
   border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.secondaryDark} 44%, transparent);
   border-radius: 9px;
-  background: ${({ theme }) => theme.gradients.gold};
-  color: #17120a;
+  background:
+    linear-gradient(115deg, rgba(255,255,255,.65), transparent 33%, rgba(255,245,194,.37) 57%, transparent 74%),
+    linear-gradient(145deg, #c59838, #ffe7a1 35%, #ddaa48 74%, #ac7724);
+  color: #432c0b;
   text-align: center;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 8px 20px rgba(126,88,23,.18);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.8), inset -3px -5px 8px rgba(118,78,21,.24), 0 5px 0 #a97524, 0 10px 22px rgba(126,88,23,.2);
 
   small { color: rgba(23,18,10,.68); font-size: 0.62rem; letter-spacing: .11em; }
   b { display: block; margin-top: 3px; font-size: .9rem; }
@@ -424,7 +426,7 @@ export const MiniGoldBar = styled.div`
     small { font-size: .52rem; letter-spacing: 0; }
     b { font-size: .7rem; }
   }
-  @media (max-width: 350px) { display: none; }
+  @media (max-width: 350px) { small { display: none; } b { font-size: .61rem; } em { font-size: .57rem; } }
 `;
 
 export const Title = styled.h2`
@@ -759,6 +761,170 @@ export const DenomTile = styled.button`
         filter: blur(8px);
       }
     `}
+`;
+
+/** Phase 4A: premium gold-bar choices, purely presentational. */
+export const PremiumDenomTile = styled(DenomTile)`
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 191px;
+  border-radius: 17px;
+  padding: 12px 12px 13px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 6px;
+  background: ${({ $active, theme }) => $active
+    ? `linear-gradient(150deg, ${theme.semantic.badgeGoldBg}, ${theme.colors.surface} 75%)`
+    : theme.colors.surface};
+  border: 1.5px solid ${({ $active, $recommended, theme }) => $active
+    ? theme.colors.secondaryDark
+    : $recommended ? theme.colors.secondary : theme.colors.border};
+  box-shadow: ${({ $active }) => $active
+    ? "0 7px 19px rgba(133, 95, 30, .14), inset 0 1px 0 rgba(255,255,255,.88)"
+    : "0 2px 9px rgba(27,25,22,.035)"};
+  transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+
+  &::after { display: none; }
+  &:hover { transform: translateY(-2px); }
+  &:focus-visible { outline: 3px solid ${({ theme }) => theme.colors.secondary}; outline-offset: 3px; }
+  &:disabled { opacity: .45; cursor: not-allowed; }
+  > .denom-flags {
+    min-height: 23px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  > .denom-flags > .selected-chip {
+    font-size: .67rem;
+    font-weight: 900;
+    border: 1px solid ${({ theme }) => theme.colors.secondaryDark};
+    border-radius: 999px;
+    padding: 2px 7px;
+    color: ${({ theme }) => theme.colors.primary};
+    background: ${({ theme }) => theme.semantic.badgeGoldBg};
+  }
+  > .denom-visual {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1 1 86px;
+    width: 100%;
+    min-height: 79px;
+    padding: 7px 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  > .denom-visual::before {
+    content: "";
+    position: absolute;
+    width: 75%;
+    height: 23%;
+    bottom: 2px;
+    left: 12.5%;
+    border-radius: 50%;
+    background: radial-gradient(ellipse, rgba(120,84,19,.19), transparent 70%);
+    filter: blur(5px);
+  }
+  .denom-ingot {
+    position: relative;
+    display: grid;
+    justify-items: center;
+    align-content: center;
+    gap: 2px;
+    width: var(--bar-visual-width, 75%);
+    height: 72px;
+    flex-shrink: 0;
+    border-radius: 10px / 7px;
+    transform: perspective(420px) rotateX(10deg);
+    background:
+      linear-gradient(120deg, rgba(255,255,255,.76) 0%, transparent 27%, rgba(255,251,219,.6) 45%, transparent 59%),
+      linear-gradient(143deg, #c29330 0%, #f7d888 18%, #ffe7a3 42%, #c18e29 78%, #9c6b19 100%);
+    border: 1px solid rgba(139,97,27,.75);
+    box-shadow:
+      inset 0 2px 2px rgba(255,255,255,.74),
+      inset -4px -5px 9px rgba(120,78,17,.23),
+      inset 3px 0 7px rgba(255,251,219,.4),
+      0 4px 0 #9b691f,
+      0 8px 12px rgba(88,62,24,.19);
+    color: #59390c;
+    text-shadow: 0 1px rgba(255,251,217,.73);
+    font-family: ${({ theme }) => theme.fonts.numeric};
+  }
+  .denom-ingot::after {
+    content: "";
+    position: absolute;
+    inset: 5px 6px;
+    border: 1px solid rgba(120,82,20,.29);
+    border-radius: 6px;
+    pointer-events: none;
+  }
+  .denom-ingot small { font-size: .56rem; font-weight: 850; letter-spacing: .13em; }
+  .denom-ingot b { font-size: .9rem; line-height: 1.1; font-weight: 950; }
+  .denom-ingot em { font-size: .6rem; font-weight: 900; font-style: normal; }
+  .denom-name {
+    display: block;
+    color: ${({ theme }) => theme.colors.primary};
+    font-size: 1.08rem;
+    font-weight: 950;
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+  }
+  .denom-weight {
+    display: block;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: .73rem;
+    line-height: 1.35;
+  }
+  .denom-topup {
+    display: block;
+    margin-top: 1px;
+    color: ${({ theme }) => theme.colors.primary};
+    font-size: .72rem;
+    font-weight: 800;
+    line-height: 1.36;
+  }
+  ${AIBadge} { animation: none; font-size: .64rem; }
+  @media (max-width: 520px) {
+    min-height: 178px;
+    padding: 9px;
+    gap: 4px;
+    .denom-ingot { height: 64px; }
+    .denom-ingot b { font-size: .8rem; }
+    .denom-visual { min-height: 67px; }
+    .denom-name { font-size: 1rem; }
+    .denom-weight { font-size: .68rem; }
+  }
+  @media (prefers-reduced-motion: reduce) { transition: none; &:hover { transform: none; } }
+`;
+
+/** Pricing is deliberately secondary to the selected gold-bar result; never hidden. */
+export const ExchangeFeeNote = styled.div`
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  padding: 9px 12px;
+  margin: 0 0 9px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 11px;
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: .78rem;
+  line-height: 1.5;
+  span { font-weight: 800; }
+  small { font-weight: 650; }
+  strong {
+    color: ${({ theme }) => theme.colors.primary};
+    font-size: .87rem;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+  }
 `;
 
 /* 스텝 마크 */
