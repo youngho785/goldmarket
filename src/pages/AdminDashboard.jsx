@@ -222,6 +222,7 @@ export default function AdminDashboard() {
         <MenuGroup>
           <MenuLabel>가격·기준</MenuLabel>
           <Tab to="gold-rates">환산율</Tab>
+              <Tab to="goldbar-fees">제작공임</Tab>
           <Tab to="gold-price">금시세</Tab>
         </MenuGroup>
 

@@ -8,6 +8,7 @@ export {
   getAdminMyGoldOverview,
   setAdminUserDisabled,
   updateGoldRates,
+  updateGoldBarFees,
 } from "./admin/functions.js";
 
 export {

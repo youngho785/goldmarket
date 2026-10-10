@@ -1041,3 +1041,298 @@ export const PendingBadge = styled.span`
   font-size: .7rem;
   font-weight: 950;
 `;
+
+/* Phase 4-C: booking summary and confirmation. Presentation only. */
+export const ReservationKeySummary = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 14px 0 11px;
+
+  > div {
+    min-width: 0;
+    padding: 12px 14px;
+    border: 1px solid ${({ theme }) => theme.colors.border};
+    border-radius: 12px;
+    background: ${({ theme }) => theme.colors.surface};
+  }
+  span {
+    display: block;
+    font-size: .73rem;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-weight: 750;
+    line-height: 1.5;
+  }
+  b {
+    display: block;
+    margin-top: 5px;
+    color: ${({ theme }) => theme.colors.primary};
+    font-size: clamp(.9rem, 2.4vw, 1.05rem);
+    font-weight: 950;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.4;
+    word-break: keep-all;
+  }
+  @media (max-width: 390px) { gap: 7px; > div { padding: 10px; } }
+`;
+
+export const ReservationFeeLine = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  padding: 10px 2px;
+  border-top: 1px solid ${({ theme }) => theme.colors.border};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: .79rem;
+  line-height: 1.5;
+
+  b {
+    font-size: .86rem;
+    font-weight: 850;
+    font-variant-numeric: tabular-nums;
+    color: ${({ theme }) => theme.colors.text};
+  }
+  em { font-style: normal; opacity: .8; }
+`;
+
+export const ReservationScheduleStatus = styled.div`
+  margin: 4px 0 13px;
+  padding: 13px 15px;
+  border: 1px solid ${({ $selected, theme }) => $selected ? theme.colors.secondary : theme.colors.border};
+  border-radius: 14px;
+  background: ${({ $selected, theme }) => $selected ? theme.semantic.badgeGoldBg : theme.colors.surfaceAlt};
+  span {
+    display: block;
+    margin-bottom: 3px;
+    font-size: .7rem;
+    font-weight: 850;
+    color: ${({ theme }) => theme.colors.textSecondary};
+  }
+  strong {
+    display: block;
+    font-size: clamp(.95rem, 3vw, 1.12rem);
+    font-weight: 950;
+    color: ${({ theme }) => theme.colors.primary};
+    font-variant-numeric: tabular-nums;
+    line-height: 1.4;
+  }
+  small {
+    display: block;
+    margin-top: 4px;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: .73rem;
+    line-height: 1.5;
+  }
+`;
+
+export const ReservationNextSteps = styled.ol`
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+  padding: 0;
+  margin: 14px 0 16px;
+  list-style: none;
+  li {
+    display: grid;
+    align-content: start;
+    min-width: 0;
+    padding: 12px 13px;
+    border: 1px solid ${({ theme }) => theme.colors.border};
+    border-radius: 13px;
+    background: ${({ theme }) => theme.colors.surface};
+  }
+  span {
+    font-size: .66rem;
+    font-weight: 950;
+    color: ${({ theme }) => theme.colors.secondaryDark};
+  }
+  strong {
+    margin-top: 4px;
+    font-size: .83rem;
+    color: ${({ theme }) => theme.colors.primary};
+    line-height: 1.3;
+  }
+  small {
+    margin-top: 3px;
+    font-size: .71rem;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    line-height: 1.5;
+  }
+  @media (max-width: 650px) { grid-template-columns: 1fr; li { padding: 11px 13px; } }
+`;
+
+export const StoreVisitDetails = styled.details`
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 14px;
+  background: ${({ theme }) => theme.colors.surface};
+  summary {
+    cursor: pointer;
+    font-size: .84rem;
+    font-weight: 900;
+    line-height: 1.5;
+    color: ${({ theme }) => theme.colors.primary};
+  }
+  summary:focus-visible { outline: 2px solid ${({ theme }) => theme.colors.secondary}; outline-offset: 3px; }
+  &[open] summary { margin-bottom: 13px; }
+`;
+
+/* Phase 4-D: MEMBER GOLD is a separate member benefit, not physical MY GOLD.
+   Presentation-only, accessible on compact Android and web layouts. */
+export const MemberGoldPanel = styled.section`
+  min-width: 0;
+  display: grid;
+  gap: 12px;
+  padding: clamp(13px, 3vw, 18px);
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 17px;
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+
+  .member-gold-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 9px 16px;
+  }
+  .member-gold-header > div { min-width: 0; }
+  .member-gold-header small {
+    display: block;
+    margin-bottom: 3px;
+    color: ${({ theme }) => theme.colors.secondaryDark};
+    font-size: .68rem;
+    font-weight: 900;
+    letter-spacing: .09em;
+  }
+  .member-gold-header strong {
+    display: block;
+    color: ${({ theme }) => theme.colors.primary};
+    font-size: 1.03rem;
+    font-weight: 950;
+  }
+  .member-gold-header p {
+    margin: 5px 0 0;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: .8rem;
+    line-height: 1.55;
+    word-break: keep-all;
+  }
+  .member-gold-detail {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 8px 10px;
+    color: ${({ theme }) => theme.colors.primary};
+    font-size: .79rem;
+    font-weight: 850;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .member-gold-detail:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.secondary};
+    outline-offset: 3px;
+  }
+`;
+
+export const MemberGoldAmounts = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  > div {
+    min-width: 0;
+    padding: 12px;
+    border: 1px solid ${({ theme }) => theme.colors.border};
+    border-radius: 12px;
+    background: ${({ theme }) => theme.colors.surface};
+  }
+  span {
+    display: block;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: .73rem;
+    line-height: 1.4;
+  }
+  b {
+    display: block;
+    margin-top: 4px;
+    color: ${({ theme }) => theme.colors.primary};
+    font-size: clamp(.95rem, 2.8vw, 1.14rem);
+    font-weight: 950;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+  @media (max-width: 360px) { gap: 6px; > div { padding: 10px; } }
+`;
+
+export const MemberGoldSelection = styled.label`
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-height: 58px;
+  padding: 12px 14px;
+  border: 1.5px solid ${({ $selected, theme }) => $selected ? theme.colors.secondary : theme.colors.borderStrong};
+  border-radius: 13px;
+  background: ${({ $selected, theme }) => $selected ? theme.semantic.badgeGoldBg : theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
+  cursor: pointer;
+  transition: border-color .16s ease, background .16s ease;
+  &:focus-within {
+    outline: 2px solid ${({ theme }) => theme.colors.secondary};
+    outline-offset: 3px;
+  }
+  input {
+    width: 22px;
+    height: 22px;
+    margin: 0;
+    accent-color: ${({ theme }) => theme.colors.primary};
+    cursor: pointer;
+  }
+  b { display: block; font-weight: 900; font-size: .85rem; line-height: 1.45; word-break: keep-all; }
+  small { display: block; margin-top: 3px; color: ${({ theme }) => theme.colors.textSecondary}; font-size: .74rem; line-height: 1.45; }
+  @media (prefers-reduced-motion: reduce) { transition: none; }
+`;
+
+export const MemberGoldStatusNote = styled.p`
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: ${({ $selected, theme }) => $selected ? theme.semantic.badgeGoldBg : theme.colors.surface};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: .79rem;
+  line-height: 1.55;
+  word-break: keep-all;
+`;
+
+export const MemberGoldReceipt = styled.div`
+  min-width: 0;
+  margin-top: 14px;
+  padding: clamp(13px, 3vw, 18px);
+  border: 1px solid ${({ theme }) => theme.colors.secondary};
+  border-radius: 15px;
+  background: ${({ theme }) => theme.semantic.badgeGoldBg};
+  color: ${({ theme }) => theme.colors.primary};
+  strong { display: block; font-size: .94rem; line-height: 1.5; }
+  p { margin: 8px 0 0; font-size: .82rem; line-height: 1.55; }
+  .member-gold-code-label { margin-top: 14px; font-size: .73rem; font-weight: 900; }
+  .member-gold-code {
+    display: block;
+    width: fit-content;
+    max-width: 100%;
+    margin: 6px 0 8px;
+    padding: 9px 15px;
+    border: 1px solid ${({ theme }) => theme.colors.borderStrong};
+    border-radius: 10px;
+    background: ${({ theme }) => theme.colors.surface};
+    font-family: ${({ theme }) => theme.fonts.numeric};
+    font-size: clamp(1.35rem, 6.4vw, 2rem);
+    font-weight: 950;
+    letter-spacing: .14em;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+  small { display: block; color: ${({ theme }) => theme.colors.textSecondary}; font-size: .75rem; line-height: 1.5; }
+`;

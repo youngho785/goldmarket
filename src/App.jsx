@@ -140,6 +140,7 @@ const OverviewDashboard = lazy(() => import("@/pages/admin/OverviewDashboard"));
 const AdminGoldExchange = lazy(() => import("@/pages/admin/AdminGoldExchange"));
 const AdminGoldPrice = lazy(() => import("@/pages/admin/AdminGoldPrice"));
 const AdminGoldRates = lazy(() => import("@/pages/admin/AdminGoldRates"));
+const AdminGoldBarFees = lazy(() => import("@/pages/admin/AdminGoldBarFees"));
 const AdminMembers = lazy(() => import("@/pages/admin/AdminMembers"));
 const AdminNotifications = lazy(() => import("@/pages/admin/AdminNotifications"));
 const AdminAuditLogs = lazy(() => import("@/pages/admin/AdminAuditLogs"));
@@ -675,6 +676,7 @@ const router = createBrowserRouter([
               { path: "gold-exchange", element: <AdminGoldExchange /> },
               { path: "gold-price", element: <AdminGoldPrice /> },
               { path: "gold-rates", element: <AdminGoldRates /> },
+              { path: "goldbar-fees", element: <AdminGoldBarFees /> },
               { path: "members", element: <AdminMembers /> },
 
               // 관리자 본인의 알림함

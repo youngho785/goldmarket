@@ -60,3 +60,6 @@ export const setManagedUserRole = (uid, role) =>
 
 export const saveGoldRates = ({ products, exchange, expectedVersion, reason }) =>
   call("updateGoldRates", { products, exchange, expectedVersion, reason });
+
+export const updateGoldBarFees = ({ fees, expectedVersion, reason }) =>
+  call("updateGoldBarFees", { fees, expectedVersion, reason });

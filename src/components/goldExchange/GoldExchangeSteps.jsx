@@ -9,6 +9,7 @@ import useReservedSlots from "@/hooks/useReservedSlots";
 import useBookingAvailability, { getBookingAvailabilityEntry } from "@/hooks/useBookingAvailability";
 import { DON_TO_GRAMS, roundTo3Custom } from "@/lib/goldRates";
 import { getGoldBarFeeEstimate, formatGoldBarFee } from "@/lib/goldBarFee";
+import { useGoldBarFeeConfig } from "@/lib/goldBarFeeSettings";
 import { formatGoldWeightPair } from "@/lib/goldDisplay";
 import { getGoldBarVisualWidth } from "./goldBarVisual";
 import { isNative } from "@/platform/runtime";
@@ -59,6 +60,16 @@ import {
   PrivacyFrame,
   Input,
   ReservationSummary,
+  ReservationKeySummary,
+  ReservationFeeLine,
+  MemberGoldPanel,
+  MemberGoldAmounts,
+  MemberGoldSelection,
+  MemberGoldStatusNote,
+  MemberGoldReceipt,
+  ReservationScheduleStatus,
+  ReservationNextSteps,
+  StoreVisitDetails,
   FeeLink,
   PendingBadge
 } from "./GoldExchange.styles";
@@ -267,6 +278,8 @@ export function BarStep({
   onSaveToMyGold,
   setStep,
 }) {
+  const feeSettings = useGoldBarFeeConfig();
+  const feeConfig = { fees: feeSettings.fees };
   if (totalGrams < MIN_BAR_GRAMS) {
     const needed = roundTo3Custom(MIN_BAR_GRAMS - totalGrams);
     return (
@@ -313,13 +326,14 @@ export function BarStep({
     grams: selectedBar.grams,
     don: selectedBar.don,
     qty: safeQty,
+    feeConfig,
   });
   const selectedTotalG = roundTo3Custom(selectedBar.grams * safeQty);
   const neededG = roundTo3Custom(Math.max(0, selectedTotalG - totalGrams));
   const remainingG = roundTo3Custom(Math.max(0, totalGrams - selectedTotalG));
   const remainingCombo = remainingG > 0 ? breakdownByDenoms(remainingG) : { items: [], remain: 0 };
   const feeLabel = feeEstimate.totalFee == null
-    ? "매장 확인"
+    ? feeSettings.status === "loading" ? "공임 확인 중" : "매장 확인"
     : formatGoldBarFee(feeEstimate.totalFee);
 
   const isTileRecommended = (i) => i === recIdx;
@@ -678,6 +692,7 @@ export function ReserveStep({
   useMemberGold = false,
   setUseMemberGold = () => {},
 }) {
+  const feeSettings = useGoldBarFeeConfig();
   const dateKey = visitDate ? format(visitDate, "yyyy-MM-dd") : "";
   const taken = useReservedSlots(dateKey); // ✅ 날짜별 선점 시간 Set
   const { dates: bookingAvailabilityDates } = useBookingAvailability();
@@ -794,36 +809,43 @@ export function ReserveStep({
       {error && <ErrorText role="alert">{error}</ErrorText>}
 
       <ReservationSummary role="note" aria-label="방문 전 예상 정보">
-        <small>{calculated && barsPlan ? "온라인 예상 · 매장 확정 전" : "현장 확인 방문"}</small>
+        <small>{calculated && barsPlan ? "ONLINE ESTIMATE · 방문 전 참고" : "STORE MEASUREMENT · 현장 확인"}</small>
         {calculated && barsPlan ? (
           <>
-            <strong>
-              내 금 예상 순금 {formatGoldWeightPair(barsPlan.totalGrams || 0)} · 받을 골드바 {barsPlan.selected?.label || "골드바"} × {barsPlan.selected?.qty || 1}개
-            </strong>
-            <p>
-              {(() => {
-                const chosenGrams = Number(barsPlan.selected?.grams || 0) * Number(barsPlan.selected?.qty || 1);
-                const difference = roundTo3Custom(Number(barsPlan.totalGrams || 0) - chosenGrams);
-                return difference >= 0
-                  ? `선택 후 예상 남는 순금 ${formatGoldWeightPair(difference)}`
-                  : `선택 후 순금 ${formatGoldWeightPair(Math.abs(difference))} 추가 필요 (별도 정산)`;
-              })()}
-            </p>
-            {Array.isArray(barsPlan.autoBreakdown) && barsPlan.autoBreakdown.length > 0 && (
-              <p>남는 금 활용 참고 조합: {barsPlan.autoBreakdown.map((item) => `${item.label} × ${item.qty}`).join(", ")} · 실제 제작 여부는 매장에서 결정합니다.</p>
-            )}
-            <p>
-              예상 제작 공임 {formatGoldBarFee(getGoldBarFeeEstimate({
-                grams: barsPlan.selected?.grams,
-                don: barsPlan.selected?.don,
-                qty: barsPlan.selected?.qty,
-              }).totalFee)} (선택한 골드바 기준 · 참고 추가 조합 공임 제외) · 실측과 고객 동의 후 최종 확정됩니다.
-            </p>
+            <strong>내 금 예상 순금 {formatGoldWeightPair(barsPlan.totalGrams || 0)} · 받을 골드바 {barsPlan.selected?.label || "골드바"} × {barsPlan.selected?.qty || 1}개</strong>
+            <ReservationKeySummary aria-label="예약 전 중량 요약">
+              <div>
+                <span>선택한 골드바 총중량</span>
+                <b>{formatGoldWeightPair(Number(barsPlan.selected?.grams || 0) * Number(barsPlan.selected?.qty || 1))}</b>
+              </div>
+              <div>
+                {(() => {
+                  const difference = roundTo3Custom(Number(barsPlan.totalGrams || 0) - Number(barsPlan.selected?.grams || 0) * Number(barsPlan.selected?.qty || 1));
+                  return <>
+                    <span>{difference < 0 ? "추가로 필요한 순금" : "예상 남는 순금"}</span>
+                    <b>{formatGoldWeightPair(Math.abs(difference))}</b>
+                  </>;
+                })()}
+              </div>
+            </ReservationKeySummary>
+            <ReservationFeeLine role="group" aria-label="방문 전 예상 제작 공임">
+              <span>예상 제작 공임 <em>· 선택한 규격 기준</em></span>
+              <b>{feeSettings.status === "loading"
+                ? "공임 확인 중"
+                : formatGoldBarFee(getGoldBarFeeEstimate({
+                  grams: barsPlan.selected?.grams,
+                  don: barsPlan.selected?.don,
+                  qty: barsPlan.selected?.qty,
+                  feeConfig: { fees: feeSettings.fees },
+                }).totalFee)}</b>
+            </ReservationFeeLine>
+            <p>부족한 금의 비용과 추가 골드바 제작 공임은 위 공임에 포함되지 않습니다. 온라인 계산은 예상이며 실제 순도·중량·비용은 매장 실측 및 고객 동의 후 확정됩니다.</p>
+            <p>적용 예정 공임표 버전 {feeSettings.version} · 예약 접수 시 서버에서 최신 공임을 다시 검증합니다.</p>
           </>
         ) : (
           <>
             <strong>금 종류·중량을 매장에서 직접 확인하는 방문 예약입니다.</strong>
-            <p>온라인에서 교환량을 확정하지 않습니다. 매장에서 실물의 순도와 중량, 공임을 확인한 뒤 동의한 경우에만 실제 교환을 진행합니다.</p>
+            <p>온라인에서 교환량을 확정하지 않습니다. 실물 순도·중량과 공임을 매장에서 확인하고 동의 후 진행합니다.</p>
           </>
         )}
       </ReservationSummary>
@@ -864,6 +886,11 @@ export function ReserveStep({
           })}
         </Select>
       </FormGroup>
+      <ReservationScheduleStatus $selected={!!dateKey && !!visitTime} role="status" aria-live="polite">
+        <span>현재 선택한 방문 일정 · 아직 예약 전</span>
+        <strong>{dateKey && visitTime ? `${dateKey} · ${visitTime}` : dateKey ? `${dateKey} · 방문 시간 선택 필요` : "방문 날짜부터 선택해 주세요"}</strong>
+        <small>날짜와 시간을 골라도 예약이 선점되지는 않습니다. 예약 요청 제출 후 관리자 확인을 거쳐 확정됩니다.</small>
+      </ReservationScheduleStatus>
       <HelpText>
         일요일과 휴무일은 예약할 수 없으며, <b>예약 마감</b> 또는 <b>이미 예약된 시간</b>은 선택할 수 없습니다.
         가능한 다른 날짜와 시간을 선택해 주세요.
@@ -949,42 +976,50 @@ export function ReserveStep({
         {(memberGoldBalanceG > 0 || memberGoldPending) && (
           <>
             <SectionSeparator />
-            <InfoCard role="group" aria-label="MEMBER GOLD 사용 선택">
-              <p style={{ margin: 0, fontWeight: 900 }}>
-                MEMBER GOLD · {Number(memberGoldBalanceG || 0).toFixed(2)}g
-              </p>
+            <MemberGoldPanel role="group" aria-label="MEMBER GOLD 혜택 사용 선택">
+              <div className="member-gold-header">
+                <div>
+                  <small>MEMBER BENEFIT</small>
+                  <strong>MEMBER GOLD 혜택</strong>
+                  <p>MY GOLD에 기록한 내 금과 별도로 관리되는 회원 혜택입니다.</p>
+                </div>
+                <Link to="/member-gold" className="member-gold-detail">혜택 내역 보기</Link>
+              </div>
+              <MemberGoldAmounts role="group" aria-label="MEMBER GOLD 잔액과 사용 가능 혜택">
+                <div><span>회원 혜택 잔액</span><b>{Number(memberGoldBalanceG || 0).toFixed(2)}g</b></div>
+                <div><span>이번 예약 신청 가능</span><b>{memberGoldPending ? "신청 중" : `${Number(memberGoldSpendableG || 0).toFixed(2)}g`}</b></div>
+              </MemberGoldAmounts>
               {memberGoldPending ? (
-                <>
-                  <p style={{ margin: "7px 0 0" }}>
-                    현재 다른 금교환 예약에 MEMBER GOLD 사용 신청이 연결되어 있습니다.
-                    기존 신청을 취소하거나 완료한 뒤 새 예약에 연결할 수 있습니다.
-                  </p>
-                  <OutlineButton as={Link} to="/member-gold" style={{ marginTop: 10 }}>
-                    MEMBER GOLD 확인
-                  </OutlineButton>
-                </>
+                <MemberGoldStatusNote role="status">
+                  다른 금교환 예약에 MEMBER GOLD 사용 신청이 연결되어 있습니다. 해당 신청을 취소하거나 완료한 뒤 새 예약에서 신청할 수 있습니다.
+                </MemberGoldStatusNote>
               ) : Number(memberGoldSpendableG || 0) > 0 ? (
                 <>
-                  <ConsentRow style={{ marginTop: 8 }}>
+                  <MemberGoldSelection $selected={useMemberGold}>
                     <input
                       type="checkbox"
                       checked={useMemberGold}
                       onChange={(e) => setUseMemberGold(e.target.checked)}
+                      aria-describedby="member-gold-usage-details"
                     />
                     <span>
-                      이번 GOLD TO GOLD 예약에 <b>{Number(memberGoldSpendableG || 0).toFixed(2)}g 전액</b> 사용 신청
+                      <b>이번 예약에 {Number(memberGoldSpendableG || 0).toFixed(2)}g 전액 사용 신청</b>
+                      <small>선택 사항 · 선택하지 않아도 방문 예약은 가능합니다.</small>
                     </span>
-                  </ConsentRow>
-                  <ConsentDetails>
-                    MEMBER GOLD는 위 내 금 예상 순금량에 합산되지 않은 별도 혜택입니다.
-                    선택해도 지금 차감되지 않으며, 예약 접수 후 사용 신청만 연결됩니다.
-                    매장에서 6자리 코드를 확인하고 실제 교환을 확정할 때 차감됩니다.
-                  </ConsentDetails>
+                  </MemberGoldSelection>
+                  <p id="member-gold-usage-details" style={{ margin: 0, fontSize: ".79rem", lineHeight: 1.55, color: "var(--gm-text-secondary)" }}>
+                    선택해도 지금 바로 차감되지 않습니다. 예약 접수 후 사용 신청이 연결되며 매장에서 6자리 확인 코드를 확인하고 실제 교환을 확정할 때 차감됩니다.
+                  </p>
+                  <MemberGoldStatusNote role="status" $selected={useMemberGold}>
+                    {useMemberGold
+                      ? "사용 신청 선택됨 · 예약이 접수되면 MEMBER GOLD 신청을 연결합니다. 아직 차감되지 않았습니다."
+                      : "사용 신청을 선택하지 않았습니다. 방문 예약은 MEMBER GOLD와 관계없이 진행할 수 있습니다."}
+                  </MemberGoldStatusNote>
                 </>
               ) : (
-                <p style={{ margin: "7px 0 0" }}>현재 사용할 수 있는 MEMBER GOLD가 없습니다.</p>
+                <MemberGoldStatusNote>현재 이번 예약에 사용할 수 있는 MEMBER GOLD가 없습니다. 예약은 그대로 진행할 수 있습니다.</MemberGoldStatusNote>
               )}
-            </InfoCard>
+            </MemberGoldPanel>
           </>
         )}
 
@@ -1056,6 +1091,7 @@ export function ReserveStep({
         <HelpText style={{ display: "block", margin: "10px 0" }}>
           이 버튼은 예약 <b>요청</b>입니다. 매장 확인 후 방문 예약이 확정됩니다.
         </HelpText>
+        <HelpText>선택한 날짜·시간은 아직 확정되지 않았습니다. 아래 버튼은 예약 <b>요청</b>이며, 접수 후 매장 확인 알림을 받습니다.</HelpText>
         <div style={{ display: "grid", gap: 10 }}>
           <Button type="submit" disabled={loading} aria-busy={loading}>
             {loading ? "제출 중..." : "방문 예약 요청"}
@@ -1118,31 +1154,37 @@ export function DoneStep({ status, memberGoldUsage = null, memberGoldUsageError 
     <>
       <GoldExchangeTracker status={status} />
       <Card>
-        <PendingBadge>현재 상태 · 예약 확인 대기</PendingBadge>
-        <Title>방문 예약 요청이 접수되었습니다</Title>
-        <HelpText>아직 예약 확정이나 교환 완료 상태가 아닙니다. 관리자 확인 후 방문 예약이 확정되면 알림으로 안내드립니다.</HelpText>
+        {status === "scheduled" ? (
+          <><PendingBadge>현재 상태 · 예약 확정</PendingBadge><Title>방문 예약이 확정되었습니다</Title><HelpText>방문 일정은 내 예약에서 확인할 수 있습니다. 실제 교환은 매장 실측과 고객 동의 후 확정됩니다.</HelpText></>
+        ) : status === "in_progress" ? (
+          <><PendingBadge>현재 상태 · 매장 진행 중</PendingBadge><Title>금교환을 진행하고 있습니다</Title></>
+        ) : status === "completed" ? (
+          <><PendingBadge>현재 상태 · 교환 완료</PendingBadge><Title>금교환이 완료되었습니다</Title></>
+        ) : status === "canceled" || status === "rejected" ? (
+          <><PendingBadge>현재 상태 · 예약 종료</PendingBadge><Title>예약 상태를 확인해 주세요</Title><HelpText>취소 또는 반려 사유와 재예약 가능 여부는 내 예약에서 확인해 주세요.</HelpText></>
+        ) : (
+          <><PendingBadge>현재 상태 · 예약 확인 대기</PendingBadge><Title>방문 예약 요청이 접수되었습니다</Title><HelpText>아직 예약 확정이나 교환 완료 상태가 아닙니다. 관리자 확인 후 방문 예약이 확정되면 알림으로 안내드립니다.</HelpText></>
+        )}
+        <ReservationNextSteps aria-label="금교환 이후 진행 절차">
+          <li><span>STEP 01</span><strong>매장 확인</strong><small>요청 일정과 예약 가능 여부 확인</small></li>
+          <li><span>STEP 02</span><strong>방문·실측</strong><small>순도·중량·공임과 교환 조건 안내</small></li>
+          <li><span>STEP 03</span><strong>고객 동의 후 교환</strong><small>실측 결과 확인 후 최종 진행</small></li>
+        </ReservationNextSteps>
 
         {memberGoldUsage?.status === "requested" && (
-          <InfoCard role="status" style={{ marginTop: 12 }}>
-            <p style={{ margin: 0, fontWeight: 900 }}>
-              MEMBER GOLD {Number(memberGoldUsage.amountG || 0).toFixed(2)}g 사용 신청도 연결되었습니다.
-            </p>
-            <p style={{ margin: "7px 0 0" }}>
-              매장 방문 시 아래 6자리 확인 코드를 관리자에게 보여주세요. 실제 차감은 매장 교환 확정 시 이루어집니다.
-            </p>
-            <p
-              aria-label={`MEMBER GOLD 매장 확인 코드 ${memberGoldUsage.requestCode || ""}`}
-              style={{
-                margin: "12px 0 0",
-                fontSize: "1.7rem",
-                fontWeight: 950,
-                letterSpacing: ".16em",
-                color: "var(--gm-primary)",
-              }}
-            >
-              {memberGoldUsage.requestCode}
-            </p>
-          </InfoCard>
+          <MemberGoldReceipt role="status" aria-label="MEMBER GOLD 사용 신청 접수 정보">
+            <strong>MEMBER GOLD {Number(memberGoldUsage.amountG || 0).toFixed(2)}g 사용 신청도 연결되었습니다.</strong>
+            <p>예약 접수와 별개로 혜택 사용 신청이 연결된 상태입니다. 실제 차감은 매장에서 교환을 확정할 때 이루어집니다.</p>
+            {memberGoldUsage.requestCode ? (
+              <>
+                <div className="member-gold-code-label">매장 확인 코드 · 6자리</div>
+                <p className="member-gold-code" aria-label={`MEMBER GOLD 매장 확인 코드 ${memberGoldUsage.requestCode}`}>{memberGoldUsage.requestCode}</p>
+                <small>방문 시 담당자에게만 이 코드를 보여주세요.</small>
+              </>
+            ) : (
+              <p>확인 코드가 보이지 않으면 MEMBER GOLD 내역에서 신청 상태를 확인해 주세요.</p>
+            )}
+          </MemberGoldReceipt>
         )}
 
         {memberGoldUsageError && (
@@ -1155,9 +1197,9 @@ export function DoneStep({ status, memberGoldUsage = null, memberGoldUsageError 
           </InfoCard>
         )}
 
-        <OutlineButton as={Link} to="/my-exchanges" style={{ marginTop: 12 }}>
+        <Button as={Link} to="/my-exchanges" style={{ marginTop: 12 }}>
           내 예약 확인하기
-        </OutlineButton>
+        </Button>
 
         <PushPermissionPrompt
           context="exchange-complete"
@@ -1166,6 +1208,12 @@ export function DoneStep({ status, memberGoldUsage = null, memberGoldUsageError 
         />
 
         <SectionSeparator />
+        <InfoCard role="note" style={{ marginTop: 12 }}>
+          <strong>방문 장소 · {STORE_INFO.name}</strong>
+          <p style={{ margin: "5px 0 0" }}>{STORE_INFO.address}</p>
+        </InfoCard>
+        <StoreVisitDetails>
+          <summary>매장 위치·연락처·지도 보기</summary>
         <Title style={{ fontSize: "1.2rem" }}>매장 방문 안내</Title>
         <img
           src={shopLogo}
@@ -1197,6 +1245,7 @@ export function DoneStep({ status, memberGoldUsage = null, memberGoldUsageError 
             네이버 지도
           </OutlineButton>
         </Inline>
+        </StoreVisitDetails>
       </Card>
 
     </>

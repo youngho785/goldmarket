@@ -18,6 +18,7 @@ import {
 import useGoldExchangeAutoVault from "@/hooks/useGoldExchangeAutoVault";
 import useGoldExchangeVaultImport from "@/hooks/useGoldExchangeVaultImport";
 import useGoldExchangeMemberGold from "@/hooks/useGoldExchangeMemberGold";
+import { useGoldBarFeeConfig } from "@/lib/goldBarFeeSettings";
 import { isNative, isAndroid } from "@/platform/runtime";
 import { resolveGoldExchangeEntryMode } from "@/lib/goldExchangeEntryMode";
 
@@ -68,6 +69,7 @@ import {
 
 export default function GoldExchange() {
   const { memberUser: user, isEmailVerified } = useAuthContext();
+  const feeSettings = useGoldBarFeeConfig();
   const { openGate } = useLoginGate();
   const location = useLocation();
   const navigate = useNavigate();
@@ -588,6 +590,10 @@ export default function GoldExchange() {
 
     const visitDateStr = format(visitDate, "yyyy-MM-dd");
     const barsPlan = makeBarsPlan();
+    if (barsPlan && feeSettings.status !== "ready" && feeSettings.status !== "defaults") {
+      setError("제작공임표를 확인 중입니다. 네트워크 연결 후 다시 시도해 주세요.");
+      return;
+    }
     const hasValidProducts =
       calculated &&
       products.every((p) => p.goldType && !isNaN(parseFloat(p.quantity)) && parseFloat(p.quantity) > 0);
@@ -603,6 +609,7 @@ export default function GoldExchange() {
         ? buildReservationProducts(products)
         : [], // 비계산(현장확인) 시 빈 배열
       barsPlan: barsPlan || null,
+      ...(barsPlan ? { feePolicyVersion: feeSettings.version } : {}),
     };
 
     setLoading(true);

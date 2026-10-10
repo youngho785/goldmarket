@@ -40,6 +40,7 @@ import {
   addNotificationForAdmins,
 } from "../core/runtime.js";
 import { reconcileBonusUsageForGroup } from "../rewards/reconciliation.js";
+import { calculateBookedBarFee, readBarFeePolicy } from "./goldBarFeePolicy.js";
 
 /* ─────────────────────────────────────────────────────────────
  * 3) 그룹 생성 + 슬롯 선점 (사용자 제출)
@@ -59,6 +60,7 @@ export const requestGoldExchangeGroup = onCall<{
     exchangeType?: string;
   }>;
   barsPlan?: Record<string, unknown> | null;
+  feePolicyVersion?: number;
 }>({ region: "asia-northeast3", enforceAppCheck: ENFORCE_APP_CHECK }, async (req) => {
   const uid = await requireVerifiedUser(req.auth?.uid);
 
@@ -120,6 +122,7 @@ export const requestGoldExchangeGroup = onCall<{
   const pureGoldBuyPricePerDon = Number(currentPriceSnap.get("market.pureGoldBuyPerDon")) || 0;
 
   const slotsRef = db().doc("appConfig/reservedSlots");
+  const feePolicyRef = db().doc("appConfig/goldBarFees");
   const availabilityRef = db().doc(BOOKING_AVAILABILITY_REF);
   const exchanges = db().collection("goldExchanges");
   const exchangeGroups = db().collection("goldExchangeGroups");
@@ -168,14 +171,21 @@ export const requestGoldExchangeGroup = onCall<{
       : null;
 
   await db().runTransaction(async (tx) => {
-    const [sSnap, availabilitySnap, userGroupsSnapshot] = await Promise.all([
+    const [sSnap, availabilitySnap, userGroupsSnapshot, feePolicySnap] = await Promise.all([
       tx.get(slotsRef),
       tx.get(availabilityRef),
       // 예약 한 건에 제품 문서가 여러 개 생길 수 있으므로 제품 전체 이력 대신
       // 예약 단위 요약(goldExchangeGroups)만 읽어 진행 중 예약 수를 계산합니다.
       tx.get(exchangeGroups.where("ownerUid", "==", uid)),
+      tx.get(feePolicyRef),
     ]);
     const sData = sSnap.exists ? (sSnap.data() as Record<string, unknown>) : {};
+    const feePolicy = readBarFeePolicy(feePolicySnap.exists ? feePolicySnap.data() : undefined);
+    const bookedFee = validatedBarsPlan ? calculateBookedBarFee(validatedBarsPlan, feePolicy) : null;
+    if (validatedBarsPlan && req.data?.feePolicyVersion !== undefined &&
+      (typeof req.data.feePolicyVersion !== "number" || !Number.isInteger(req.data.feePolicyVersion) || req.data.feePolicyVersion !== feePolicy.version)) {
+      throw new HttpsError("failed-precondition", "제작공임이 변경되었습니다. 최신 예상 공임을 확인한 뒤 다시 예약해 주세요.");
+    }
     assertBookingOpen(
       availabilitySnap.exists ? availabilitySnap.data() : {},
       normalizedVisitDate,
@@ -256,6 +266,7 @@ export const requestGoldExchangeGroup = onCall<{
             calcVersion: 6,
             rateVersion,
             ...(validatedBarsPlan ? { barsPlan: validatedBarsPlan } : {}),
+            ...(bookedFee ? bookedFee : {}),
           } as FirebaseFirestore.DocumentData
         );
       }
@@ -304,6 +315,7 @@ export const requestGoldExchangeGroup = onCall<{
         createdAt: now,
         updatedAt: now,
         ...(validatedBarsPlan ? { barsPlan: validatedBarsPlan } : {}),
+        ...(bookedFee ? bookedFee : {}),
       } as FirebaseFirestore.DocumentData,
       { merge: true }
     );

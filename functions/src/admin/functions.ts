@@ -2,6 +2,7 @@
 import { getAuth } from "firebase-admin/auth";
 import { FieldValue } from "firebase-admin/firestore";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { validateBarFeeTable, readBarFeePolicy } from "../goldExchange/goldBarFeePolicy.js";
 import {
   db,
   ENFORCE_APP_CHECK,
@@ -557,3 +558,37 @@ export const updateGoldRates = onCall<{
   }
 );
 
+/** Phase 4-B: admin-only, versioned gold-bar making fee updates. */
+export const updateGoldBarFees = onCall<{ fees: Record<string, number>; expectedVersion: number; reason: string }>(
+  { region: "asia-northeast3", enforceAppCheck: ENFORCE_APP_CHECK },
+  async (req) => {
+    await requireCurrentAdmin(req.auth?.uid);
+    const actorUid = req.auth?.uid || "system";
+    const fees = validateBarFeeTable(req.data?.fees);
+    const expectedVersion = req.data?.expectedVersion;
+    const reason = String(req.data?.reason || "").trim();
+    if (!Number.isInteger(expectedVersion) || expectedVersion < 0) {
+      throw new HttpsError("invalid-argument", "현재 제작공임표 버전을 확인해 주세요.");
+    }
+    if (reason.length < 5 || reason.length > 200) {
+      throw new HttpsError("invalid-argument", "변경 사유는 5~200자로 입력해 주세요.");
+    }
+    const configRef = db().doc("appConfig/goldBarFees");
+    const historyRef = db().collection("goldBarFeeHistory").doc();
+    const auditRef = db().collection("adminAuditLogs").doc();
+    const version = await db().runTransaction(async (tx) => {
+      const snap = await tx.get(configRef);
+      const before = snap.exists ? readBarFeePolicy(snap.data()) : readBarFeePolicy(undefined);
+      if (before.version !== expectedVersion) {
+        throw new HttpsError("aborted", "다른 관리자가 공임표를 변경했습니다. 새로고침 후 다시 수정해 주세요.");
+      }
+      const nextVersion = before.version + 1;
+      const updatedAt = FieldValue.serverTimestamp();
+      tx.set(configRef, { fees, version: nextVersion, updatedAt, updatedBy: actorUid, reason });
+      tx.set(historyRef, { before, after: { fees, version: nextVersion }, actorUid, reason, createdAt: updatedAt });
+      tx.set(auditRef, { action: "gold_bar_fee_updated", target: "appConfig/goldBarFees", actorUid, previousVersion: before.version, nextVersion, reason, createdAt: updatedAt });
+      return nextVersion;
+    });
+    return { ok: true, version };
+  }
+);

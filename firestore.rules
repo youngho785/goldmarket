@@ -227,12 +227,17 @@ service cloud.firestore {
 
     match /appConfig/{docId} {
       // 고객 화면에 필요한 공개 설정만 읽을 수 있습니다.
-      allow read: if docId in ['goldRates', 'reservedSlots', 'bookingAvailability'];
+      allow read: if docId in ['goldRates', 'reservedSlots', 'bookingAvailability', 'goldBarFees'];
       // 환산율·예약 슬롯·예약 가능일은 검증·감사 기능이 있는 서버 함수로만 변경합니다.
       allow write: if false;
     }
 
     match /goldRateHistory/{historyId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /goldBarFeeHistory/{historyId} {
       allow read: if isAdmin();
       allow write: if false;
     }

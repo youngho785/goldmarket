@@ -6,6 +6,7 @@ import {
   formatGoldBarFee,
   GOLD_BAR_FEE_DON_TO_GRAMS,
 } from "@/lib/goldBarFee";
+import { useGoldBarFeeConfig } from "@/lib/goldBarFeeSettings";
 
 /* ================================
    기본 상수
@@ -383,6 +384,8 @@ const Muted = styled.span`
    컴포넌트
 ================================== */
 export default function GoldbarFee() {
+  const feeSettings = useGoldBarFeeConfig();
+  const feeConfig = useMemo(() => ({ fees: feeSettings.fees }), [feeSettings.fees]);
   // 가로형 빠른 계산기 상태
   const [unit, setUnit] = useState("don"); // 'don' | 'g'
   const [amount, setAmount] = useState("");
@@ -399,7 +402,7 @@ export default function GoldbarFee() {
     const grams = unit === "g" ? n : n * DON_TO_GRAMS;
 
     // 기본 규칙
-    let fee = getGoldBarFee(don, grams, { calculatorRangeOverride: true });
+    const fee = getGoldBarFee(don, grams, { calculatorRangeOverride: true, feeConfig });
 
 
     return {
@@ -408,13 +411,13 @@ export default function GoldbarFee() {
       fee,
       label: fee === null ? "문의" : formatKRW(fee),
     };
-  }, [unit, amount]);
+  }, [unit, amount, feeConfig]);
 
   // 표 데이터 생성: (1) g 규격, (2) 돈 규격
   const gramRows = useMemo(() => {
     return GRAM_BARS.map((g) => {
       const d = toDon(g);
-      const fee = getGoldBarFee(d, g);
+      const fee = getGoldBarFee(d, g, { feeConfig });
       return {
         label: `${g} g 골드바`,
         grams: round3(g),
@@ -422,12 +425,12 @@ export default function GoldbarFee() {
         fee,
       };
     });
-  }, []);
+  }, [feeConfig]);
 
   const donRows = useMemo(() => {
     return DON_BARS.map((d) => {
       const g = toGrams(d);
-      const fee = getGoldBarFee(d, g);
+      const fee = getGoldBarFee(d, g, { feeConfig });
       return {
         label: `${d}돈 골드바`,
         grams: round3(g),
@@ -435,12 +438,13 @@ export default function GoldbarFee() {
         fee,
       };
     });
-  }, []);
+  }, [feeConfig]);
 
   return (
     <Page>
       <Header>
         <Title>골드바 제작 공임 안내</Title>
+        <p role="status" style={{margin:"6px 0",fontSize:".79rem"}}>{feeSettings.status === "loading" ? "공임 확인 중" : feeSettings.status === "error" ? "공임을 확인하지 못했습니다. 매장에 문의해 주세요." : feeSettings.status === "cached" ? "오프라인 저장 공임 · 예약 전 재확인" : `공임표 버전 ${feeSettings.version || "기본"} · 저장된 최신 공개 기준`}</p>
         <Lead>
           나의 금을 <b>999.9 골드바</b>로 교환할 때 적용되는 제작 공임입니다.
           대표 규격과 예상 공임을 먼저 확인하고, 최종 금액은 매장에서 교환 확정 전에 안내받으세요.
@@ -508,7 +512,7 @@ export default function GoldbarFee() {
                   <td>{r.label}</td>
                   <td>{r.don}</td>
                   <td>{r.grams}</td>
-                  <td>{r.fee ? formatKRW(r.fee) : <Muted>문의</Muted>}</td>
+                  <td>{r.fee != null ? formatKRW(r.fee) : <Muted>문의</Muted>}</td>
                 </tr>
               ))}
               {/* 돈 규격 */}
@@ -517,7 +521,7 @@ export default function GoldbarFee() {
                   <td>{r.label}</td>
                   <td>{r.don}</td>
                   <td>{r.grams}</td>
-                  <td>{r.fee ? formatKRW(r.fee) : <Muted>문의</Muted>}</td>
+                  <td>{r.fee != null ? formatKRW(r.fee) : <Muted>문의</Muted>}</td>
                 </tr>
               ))}
             </tbody>
