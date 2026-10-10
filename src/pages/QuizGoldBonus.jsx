@@ -720,6 +720,8 @@ export default function QuizGoldBonus() {
     return sanitizeAppReturnPath(params.get("next"), "");
   }, [loc.search]);
 
+  const returningToOnboarding = nextPath.startsWith("/welcome");
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [feedback, setFeedback] = useState({});
@@ -1171,7 +1173,7 @@ export default function QuizGoldBonus() {
                     type="button"
                     onClick={() => navigate(nextPath, { replace: true })}
                   >
-                    혜택 계속하기
+                    {returningToOnboarding ? "가입 혜택 화면으로 돌아가기" : "혜택 계속하기"}
                   </SecondaryButton>
                 ) : (
                   <SecondaryButton as={Link} to="/member-gold">
@@ -1205,7 +1207,7 @@ export default function QuizGoldBonus() {
                       navigate(nextPath, { replace: true })
                     }
                   >
-                    혜택 계속하기
+                    {returningToOnboarding ? "가입 혜택 화면으로 돌아가기" : "혜택 계속하기"}
                     <ChevronRight />
                   </PrimaryButton>
                 ) : (

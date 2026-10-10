@@ -47,6 +47,21 @@ const ContextLead = styled.p`
   line-height: 1.6;
   word-break: keep-all;
 `;
+const VerificationSteps = styled.ol`
+  display: grid;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 12px 16px 12px 38px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 13px;
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  text-align: left;
+  font-size: .85rem;
+  line-height: 1.5;
+  li::marker { color: ${({ theme }) => theme.colors.primary}; font-weight: 800; }
+`;
+
 const Message = styled.p`
   margin-top: 16px;
   font-size: 1rem;
@@ -656,6 +671,13 @@ export default function VerifyEmail() {
     <Container>
       <Title>{verificationContext.title}</Title>
       <ContextLead>{verificationContext.lead}</ContextLead>
+      {!processingLink && displayUser && !displayUser.emailVerified && !reloginRequired && (
+        <VerificationSteps aria-label="이메일 인증 진행 순서">
+          <li>가입한 이메일의 인증 링크를 열어 주세요.</li>
+          <li>{isNative ? "인증 후 앱으로 돌아오세요." : "메일에서 인증을 완료한 후 이 화면으로 돌아오세요."}</li>
+          <li>인증 상태가 확인되면 진행하던 화면으로 이동합니다.</li>
+        </VerificationSteps>
+      )}
 
       {quizBonusResult && (
         <Message $color="var(--gm-success)">

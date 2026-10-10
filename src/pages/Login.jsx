@@ -166,6 +166,40 @@ const SmallText = styled.span`
   color: ${({ theme }) => theme.colors.textSecondary};
   margin-top: -8px;
 `;
+const PasswordControl = styled.div`
+  position: relative;
+  width: 100%;
+  ${Input} {
+    width: 100%;
+    padding-right: 55px;
+  }
+`;
+const PasswordVisibilityButton = styled.button`
+  position: absolute;
+  right: 3px;
+  top: 2px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 6px;
+  border: 0;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: .84rem;
+  font-weight: 800;
+  cursor: pointer;
+  &:focus-visible { outline: 2px solid ${({ theme }) => theme.colors.primary}; outline-offset: -3px; }
+`;
+const AuthReturnNotice = styled.p`
+  margin: -2px 0 16px;
+  padding: 10px 12px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 12px;
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: .82rem;
+  line-height: 1.5;
+`;
+
 const LinkText = styled.p`
   font-size: 0.9rem;
   text-align: center;
@@ -203,6 +237,7 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showResend, setShowResend] = useState(false);
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [resendMsg, setResendMsg] = useState("");
   const [mfaChallenge, setMfaChallenge] = useState(null);
   const [mfaCode, setMfaCode] = useState("");
@@ -359,6 +394,14 @@ export default function Login() {
           </FormGroup>
         )}
 
+        {(returningToExchange || returningToMyGold) && !mfaChallenge && (
+          <AuthReturnNotice role="note">
+            {returningToExchange
+              ? "로그인 후 이 기기에 남아 있는 계산·예약 정보를 다시 확인합니다. 임시 정보가 만료된 경우에는 재입력이 필요할 수 있습니다."
+              : "로그인 후 내 금 기록으로 돌아갑니다. 다른 기기에만 저장한 비회원 체험 기록은 자동으로 옮겨지지 않습니다."}
+          </AuthReturnNotice>
+        )}
+
         {/* HTML5 검증 + FormData */}
         {mfaChallenge ? (
           <Form onSubmit={handleMfaSubmit} autoComplete="on">
@@ -397,14 +440,25 @@ export default function Login() {
           </FormGroup>
           <FormGroup>
             <Label htmlFor="loginPassword">비밀번호</Label>
-            <Input
-              id="loginPassword"
-              name="password"
-              type="password"
-              required
-              disabled={loading}
-              autoComplete="current-password"
-            />
+            <PasswordControl>
+              <Input
+                id="loginPassword"
+                name="password"
+                type={passwordVisible ? "text" : "password"}
+                required
+                disabled={loading}
+                autoComplete="current-password"
+              />
+              <PasswordVisibilityButton
+                type="button"
+                aria-label={passwordVisible ? "비밀번호 숨기기" : "비밀번호 보기"}
+                aria-pressed={passwordVisible}
+                disabled={loading}
+                onClick={() => setPasswordVisible((current) => !current)}
+              >
+                {passwordVisible ? "숨기기" : "보기"}
+              </PasswordVisibilityButton>
+            </PasswordControl>
           </FormGroup>
           <Button type="submit" disabled={loading}>
             {loading ? "로그인 중..." : "로그인"}

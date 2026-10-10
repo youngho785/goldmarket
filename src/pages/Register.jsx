@@ -81,6 +81,22 @@ const NoticeBox = styled.div`
     margin-bottom: 3px;
   }
 `;
+const BenefitDetails = styled.details`
+  margin: 19px 0 0;
+  padding: 12px 14px;
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 12px;
+  summary {
+    cursor: pointer;
+    color: ${({ theme }) => theme.colors.text};
+    font-size: .88rem;
+    font-weight: 800;
+    line-height: 1.5;
+  }
+  summary:focus-visible { outline: 2px solid ${({ theme }) => theme.colors.primary}; outline-offset: 3px; }
+`;
+
 const BenefitJourney = styled.section`
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -433,13 +449,6 @@ export default function Register() {
           </NoticeBox>
         )}
 
-        <BenefitJourney aria-label="가입 후 받을 수 있는 회원 혜택">
-          <BenefitStep><small>이메일 인증 완료</small><strong>0.01g</strong></BenefitStep>
-          <BenefitStep><small>선택 알림 설정</small><strong>+0.01g</strong></BenefitStep>
-          <BenefitStep><small>금 퀵퀴즈</small><strong>+0.01g</strong></BenefitStep>
-        </BenefitJourney>
-        <BenefitNote>최대 순금 0.03g · 각 혜택은 조건 충족 시 인증 이메일 기준 1회 지급됩니다. 알림 수신은 선택 사항이며 가입만으로 자동 동의되지 않습니다.</BenefitNote>
-
         <Form onSubmit={handleSubmit} autoComplete="on" aria-busy={loading ? "true" : undefined}>
           {error && <ErrorText role="alert" aria-live="assertive">{error}</ErrorText>}
 
@@ -508,6 +517,15 @@ export default function Register() {
             로그인
           </Link>
         </AlreadyMember>
+        <BenefitDetails>
+          <summary>선택 회원혜택 안내 · 최대 순금 0.03g</summary>
+          <BenefitJourney aria-label="가입 후 받을 수 있는 회원 혜택">
+            <BenefitStep><small>이메일 인증 완료</small><strong>0.01g</strong></BenefitStep>
+            <BenefitStep><small>선택 알림 설정</small><strong>+0.01g</strong></BenefitStep>
+            <BenefitStep><small>금 퀵퀴즈</small><strong>+0.01g</strong></BenefitStep>
+          </BenefitJourney>
+          <BenefitNote>최대 순금 0.03g · 각 혜택은 조건 충족 시 인증 이메일 기준 1회 지급됩니다. 알림 수신은 선택 사항이며 가입만으로 자동 동의되지 않습니다.</BenefitNote>
+        </BenefitDetails>
       </Card>
     </Container>
   );

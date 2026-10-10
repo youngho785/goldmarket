@@ -292,7 +292,7 @@ test("2.4 GOLD TO GOLD는 온라인 예상과 실제 매장 확정을 분리하�
   assert.match(goldExchangeStepsSource, /위 참고 조합까지 모두 제작한다면 예상 잔여/);
   assert.doesNotMatch(goldExchangeStepsSource, /<AIBadge>추가해서 선택<\/AIBadge>/);
   assert.match(goldExchangeStepsSource, /<Title>방문 예약 요청<\/Title>/);
-  assert.match(goldExchangeStepsSource, /온라인 예상 · 매장 확정 전/);
+  assert.match(goldExchangeStepsSource, /온라인 예상입니다\.[\s\S]{0,160}매장에서 고객과 확인하고 동의 후 확정됩니다/);
   assert.match(goldExchangeStepsSource, /현재 상태 · 예약 확인 대기/);
   assert.match(goldExchangeStepsSource, /아직 예약 확정이나 교환 완료 상태가 아닙니다/);
 });

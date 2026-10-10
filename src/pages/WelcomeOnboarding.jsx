@@ -235,6 +235,27 @@ const OutlineButton = styled(ActionButton)`
 `;
 
 
+const RewardCompletion = styled.section`
+  margin-top: 18px;
+  padding: 18px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 32%, ${({ theme }) => theme.colors.border});
+  background: ${({ theme }) => theme.semantic.badgeGoldBg};
+
+  strong { display:block; color:${({ theme }) => theme.colors.primary}; font-size:1.06rem; }
+  p { margin:8px 0 0; line-height:1.65; font-size:.9rem; color:${({ theme }) => theme.colors.textSecondary}; }
+`;
+const RewardCompletionActions = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+
+  ${ActionButton}, ${OutlineButton} { margin-top: 0; }
+
+  @media (max-width: 540px) { grid-template-columns: minmax(0, 1fr); }
+`;
+
 const Message = styled.p`
   margin: 16px 0 0;
   padding: 11px 13px;
@@ -632,6 +653,12 @@ export default function WelcomeOnboarding() {
                 </ActionButton>
               </>
             )}
+            {status.marketingPush.claimed && !status.quiz.claimed && !loading && !error && (
+              <OutlineButton type="button" onClick={handleQuiz}>
+                다음 혜택 · 금 퀵퀴즈 시작하기
+                <ChevronRight />
+              </OutlineButton>
+            )}
           </StepBody>
         </StepCard>
 
@@ -667,6 +694,32 @@ export default function WelcomeOnboarding() {
           </StepBody>
         </StepCard>
       </Steps>
+
+      {!loading && !error && optionalClaimedCount === 2 && (
+        <RewardCompletion role="status" aria-live="polite" aria-label="선택 혜택 완료">
+          <strong>선택 혜택 2개를 모두 완료했습니다!</strong>
+          <p>
+            알림 설정과 퀵퀴즈 혜택의 지급 상태를 서버에서 확인했습니다.
+            현재 MEMBER GOLD 잔액은 순금 {status.balanceG.toFixed(2)}g입니다.
+            이전에 받은 혜택은 다시 지급되지 않습니다.
+          </p>
+          <RewardCompletionActions>
+            <OutlineButton
+              type="button"
+              onClick={() => {
+                clearMemberOnboardingPending();
+                navigate("/member-gold", { replace: true });
+              }}
+            >
+              내 MEMBER GOLD 확인하기
+            </OutlineButton>
+            <ActionButton type="button" onClick={handleFinish}>
+              {finishLabel}
+              <ChevronRight />
+            </ActionButton>
+          </RewardCompletionActions>
+        </RewardCompletion>
+      )}
 
       {message && <Message aria-live="polite">{message}</Message>}
       {error && (
