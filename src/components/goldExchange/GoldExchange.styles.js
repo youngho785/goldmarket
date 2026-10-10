@@ -160,7 +160,7 @@ export const InfoCard = styled.div`
   border-radius: 14px;
   background: linear-gradient(
     135deg,
-    color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 58%, white),
+    color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 58%, ${({ theme }) => theme.colors.surface}),
     ${({ theme }) => theme.colors.surface}
   );
   line-height: 1.5;
@@ -176,7 +176,7 @@ export const Card = styled.div`
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 20px;
   background: ${({ theme }) => theme.colors.surface};
-  box-shadow: 0 8px 24px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 6%, transparent);
+  box-shadow: 0 14px 34px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 8%, transparent);
 
   &::before {
     content: "";

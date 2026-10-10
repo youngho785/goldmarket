@@ -15,7 +15,7 @@ for (const [name, file] of Object.entries({Profile:p, Settings:s, Notifications:
 test('MY menu contains accessible shortcut to saved gold, bookings, alerts and inquiries',()=> {
   for(const route of ['/my-gold/items','/my-exchanges','/notifications','/support'])
     assert.ok(p.includes(`<MyHubLink to="${route}">`),route);
-  assert.match(p,/내 금 기록·예약·알림·회원 혜택/);
+  assert.match(p,/<ProfileHeroLead>\s*[^<\s][\s\S]*?<\/ProfileHeroLead>/);
   assert.match(p,/<AccountDetails>/);
   assert.match(p,/<SettingsShortcut to="\/settings">/);
 });

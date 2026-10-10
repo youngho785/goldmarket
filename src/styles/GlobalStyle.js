@@ -51,10 +51,9 @@ const GlobalStyle = createGlobalStyle`
     overflow-x: hidden;
     font-family: ${({ theme }) => theme.fonts.body};
     background:
-      linear-gradient(rgba(13, 32, 52, .022) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(13, 32, 52, .022) 1px, transparent 1px),
+      radial-gradient(circle at 4% 0%, color-mix(in srgb, ${({ theme }) => theme.colors.gold} 8%, transparent), transparent 28%),
       ${({ theme }) => theme.gradients.page};
-    background-size: 32px 32px, 32px 32px, auto;
+    background-size: auto;
     color: ${({ theme }) => theme.colors.text};
     line-height: 1.7;
     letter-spacing: -0.012em;
@@ -129,7 +128,7 @@ const GlobalStyle = createGlobalStyle`
     min-height: 44px;
     padding: 10px 17px;
     border: 1px solid transparent;
-    border-radius: ${({ theme }) => theme.radii.small};
+    border-radius: ${({ theme }) => theme.radii.default};
     background: ${({ theme }) => theme.gradients.primary};
     color: ${({ theme }) => theme.on.primary};
     font-weight: 780;
@@ -156,7 +155,7 @@ const GlobalStyle = createGlobalStyle`
     min-height: 48px;
     padding: 11px 13px;
     border: 1px solid ${({ theme }) => theme.colors.border};
-    border-radius: ${({ theme }) => theme.radii.small};
+    border-radius: ${({ theme }) => theme.radii.default};
     background: ${({ theme }) => theme.colors.elevated};
     color: ${({ theme }) => theme.colors.text};
     box-shadow: inset 0 1px 1px rgba(13, 32, 52, .025);
@@ -231,7 +230,7 @@ const GlobalStyle = createGlobalStyle`
     html { font-size: 100%; }
     body {
       line-height: 1.62;
-      background-size: 24px 24px, 24px 24px, auto;
+      background-size: auto;
     }
   }
 

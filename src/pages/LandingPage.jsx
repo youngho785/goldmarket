@@ -12,6 +12,7 @@ import {
 import QuickGoldValueCalculator from "@/components/gold/QuickGoldValueCalculator";
 import GoldPriceBoard from "@/components/gold/GoldPriceBoard";
 import VerifiedReviewSection from "@/components/reviews/VerifiedReviewSection";
+import TrustProofBar from "@/components/common/TrustProofBar";
 import goldVerificationImage from "@/assets/goldVerificationImage";
 import { trackProductEventOncePerSession } from "@/analytics/productAnalytics";
 
@@ -21,18 +22,44 @@ const Page = styled.div`
 `;
 
 const Hero = styled.section`
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   display: grid;
   grid-template-columns: minmax(0, .88fr) minmax(380px, 1.12fr);
   gap: clamp(28px, 4.5vw, 58px);
   align-items: center;
   min-height: min(445px, calc(100svh - 132px));
-  padding: clamp(20px, 3vw, 32px) 0 24px;
+  padding: clamp(28px, 4vw, 52px);
+  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 24%, ${({ theme }) => theme.colors.border});
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 13% 7%, color-mix(in srgb, ${({ theme }) => theme.colors.gold} 17%, transparent), transparent 42%),
+    radial-gradient(circle at 97% 94%, color-mix(in srgb, ${({ theme }) => theme.colors.primary} 6%, transparent), transparent 42%),
+    ${({ theme }) => theme.colors.surface};
+  box-shadow: 0 24px 64px color-mix(in srgb, ${({ theme }) => theme.colors.primaryDark} 9%, transparent);
+
+  &::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    width: 320px;
+    height: 320px;
+    left: -168px;
+    top: -195px;
+    border-radius: 50%;
+    border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 24%, transparent);
+    box-shadow: 0 0 0 42px color-mix(in srgb, ${({ theme }) => theme.colors.gold} 4%, transparent),
+                0 0 0 83px color-mix(in srgb, ${({ theme }) => theme.colors.gold} 3%, transparent);
+    pointer-events: none;
+  }
 
   @media (max-width: 860px) {
     grid-template-columns: 1fr;
     min-height: auto;
     gap: 16px;
-    padding: 18px 0 22px;
+    padding: 23px 18px 20px;
+    border-radius: 22px;
   }
 `;
 
@@ -93,7 +120,27 @@ const HeroLead = styled.p`
 
   strong { color: ${({ theme }) => theme.colors.primary}; }
 
-  @media (max-width: 700px) { display: none; }
+  @media (max-width: 700px) {
+    display: block;
+    margin: 6px 0 0;
+    font-size: .82rem;
+    line-height: 1.6;
+  }
+`;
+
+const HeroTrust = styled.div`
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 15px;
+  margin-top: 18px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: .75rem;
+  line-height: 1.5;
+
+  span { display: inline-flex; align-items: center; gap: 6px; }
+  svg { width: 17px; height: 17px; color: ${({ theme }) => theme.colors.secondaryDark}; }
+  @media (max-width: 700px) { margin-top: 9px; gap: 5px 14px; font-size: .72rem; }
 `;
 
 const FlowStrip = styled.section`
@@ -453,6 +500,10 @@ export default function LandingPage() {
             14K·18K·순금과 중량만 입력하면 오늘의 예상 가치를 확인할 수 있습니다.
             <strong> 회원가입 없이 먼저 계산하고, 원하는 금만 MY GOLD에 기록하세요.</strong>
           </HeroLead>
+          <HeroTrust aria-label="안심 이용 안내">
+            <span><ShieldCheck aria-hidden="true" /> 회원가입 없이 시작</span>
+            <span><Scale aria-hidden="true" /> 실측·동의 후 최종 확정</span>
+          </HeroTrust>
         </HeroCopy>
 
         <CalculatorAnchor id="landing-calculator">
@@ -488,6 +539,8 @@ export default function LandingPage() {
           )}
         </CalculatorAnchor>
       </Hero>
+
+      <TrustProofBar />
 
       <FlowStrip aria-label="한국골드마켓 이용 흐름">
         <FlowItem type="button" onClick={startValueCheck} aria-label="오늘 가치 확인 계산기로 이동">

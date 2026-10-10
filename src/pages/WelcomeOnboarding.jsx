@@ -54,7 +54,7 @@ const Hero = styled.section`
       transparent 42%
     ),
     ${({ theme }) => theme.colors.surface};
-  box-shadow: ${({ theme }) => theme.shadows.card};
+  box-shadow: 0 18px 44px color-mix(in srgb, ${({ theme }) => theme.colors.primaryDark} 9%, transparent);
 
   &::before {
     content: "";

@@ -784,7 +784,7 @@ export default function Profile() {
       <ProfileHero>
         <ProfileHeroTitle>MY</ProfileHeroTitle>
         <ProfileHeroLead>
-          내 금 기록·예약·알림·회원 혜택을 한곳에서 확인하세요.
+          내 금부터 예약과 알림까지, 필요한 정보를 한곳에서 편안하게 확인하세요.
         </ProfileHeroLead>
       </ProfileHero>
 

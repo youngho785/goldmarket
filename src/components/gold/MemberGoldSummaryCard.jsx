@@ -13,10 +13,16 @@ const Card = styled(Link)`
   min-height: ${({ $compact }) => ($compact ? "64px" : "72px")};
   padding: ${({ $compact }) => ($compact ? "10px 13px" : "12px 15px")};
   border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 28%, ${({ theme }) => theme.colors.border});
-  border-radius: 16px;
-  background: ${({ theme }) => theme.semantic.badgeGoldBg};
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, ${({ theme }) => theme.colors.gold} 17%, transparent), transparent 55%),
+    ${({ theme }) => theme.semantic.badgeGoldBg};
   color: ${({ theme }) => theme.colors.text};
   text-decoration: none;
+  box-shadow: 0 10px 25px color-mix(in srgb, ${({ theme }) => theme.colors.primaryDark} 7%, transparent);
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  &:hover { transform: translateY(-2px); border-color: ${({ theme }) => theme.colors.secondary}; box-shadow: ${({ theme }) => theme.shadows.card}; }
+  &:focus-visible { outline: 2px solid ${({ theme }) => theme.colors.secondary}; outline-offset: 3px; }
 
   > span:first-child {
     display: grid;

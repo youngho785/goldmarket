@@ -23,6 +23,7 @@ import HomePriorityActions from "@/components/home/HomePriorityActions";
 import HomeOptionalDetails from "@/components/home/HomeOptionalDetails";
 import MyGoldAlertSummary from "@/components/gold/MyGoldAlertSummary";
 import QuickGoldValueCalculator from "@/components/gold/QuickGoldValueCalculator";
+import TrustProofBar from "@/components/common/TrustProofBar";
 import { useAuthContext } from "@/context/AuthContext";
 import { db } from "@/firebase/firebase";
 import useGoldVaultDashboard from "@/hooks/useGoldVaultDashboard";
@@ -398,7 +399,7 @@ export default function AndroidHome() {
         </HomeOptionalDetails>
       )}
 
-
+      <TrustProofBar compact />
     </Page>
   );
 }

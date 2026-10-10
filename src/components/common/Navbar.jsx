@@ -27,9 +27,10 @@ const Header = styled.header`
   z-index: 1400;
   overflow: visible;
   isolation: isolate;
-  background: color-mix(in srgb, ${({ theme }) => theme.colors.background} 94%, transparent);
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-  backdrop-filter: blur(16px);
+  background: color-mix(in srgb, ${({ theme }) => theme.colors.surface} 93%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 15%, ${({ theme }) => theme.colors.border});
+  backdrop-filter: blur(20px);
+  box-shadow: 0 5px 24px color-mix(in srgb, ${({ theme }) => theme.colors.primaryDark} 7%, transparent);
 `;
 
 const Utility = styled.div`
