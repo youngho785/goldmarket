@@ -36,7 +36,7 @@ const Header = styled.header`
   position: sticky;
   top: 0;
   z-index: 980;
-  padding-top: max(28px, env(safe-area-inset-top, 0px));
+  padding-top: 0; /* GlobalStyle body already reserves env(safe-area-inset-top). */
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   background: ${({ theme }) => theme.colors.surface};
   box-shadow: 0 1px 0 ${({ theme }) => theme.colors.border},
@@ -905,7 +905,7 @@ export default function AndroidAppHeader() {
               aria-label="한국골드마켓 홈"
               $myGold={pathname === "/my-gold" || pathname === "/my-gold/items" || pathname === "/my-gold/trend"}
             >
-              G
+              금
             </BrandMark>
           ) : (
             <IconButton type="button" onClick={goBack} aria-label="이전 화면">

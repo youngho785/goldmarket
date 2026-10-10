@@ -1,4 +1,5 @@
 //src/components/gold/GoldPriceBoard.jsx
+// KGM_EXPERIENCE_FIRST_FINAL · visible stale-market disclosure
 import React, { useEffect, useMemo, useState } from "react";
 import styled from "styled-components";
 import {
@@ -109,6 +110,18 @@ const PriceContext = styled.p`
 
   strong { color: ${({ theme }) => theme.colors.primary}; }
   @media (max-width: 520px) { font-size: .68rem; }
+`;
+
+const PriceFreshnessNotice = styled.p`
+  margin: 0;
+  padding: 9px 12px;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
+  background: ${({ theme }) => theme.semantic.alertWarningBg};
+  color: ${({ theme }) => theme.semantic.alertWarningText};
+  font-size: .77rem;
+  line-height: 1.55;
+  text-align: center;
+  word-break: keep-all;
 `;
 
 const TableHead = styled.div`
@@ -605,6 +618,11 @@ export default function GoldPriceBoard({ compact = false }) {
             <span>시세 등록일 <strong>{data.sourceDate ? formatDateKey(data.sourceDate) : "확인 중"}</strong></span>
             {publicationTime(data.updatedAt) && <span>등록 시각 {publicationTime(data.updatedAt)} (KST)</span>}
           </PriceContext>
+          {data.sourceDate && data.sourceDate !== todayKey && (
+            <PriceFreshnessNotice role="status">
+              이 가격은 {formatDateKey(data.sourceDate)} 등록 시세입니다. 오늘 새로 등록된 가격은 아니므로 실제 거래 전 최신 가격을 확인해 주세요.
+            </PriceFreshnessNotice>
+          )}
           <PriceTable>
             <TableHead $compact={compact}>
               <HeadCell $first>종류</HeadCell>

@@ -41,7 +41,7 @@ test("MY GOLD 가치는 실측 금액으로 오인되지 않게 표시하고 회
 test("비회원 계산기는 결과 입력 전 큰 빈 카드와 비활성 저장 버튼을 숨긴다", () => {
   assert.match(calc, /\{canCalculate && \(\s*<Results/);
   assert.match(calc, /\{canCalculate && \(\s*<>[\s\S]*<Action type="button" onClick=\{continueToMyGold\}/);
-  assert.match(calc, /\{\(!compact \|\| entryMode === "unknown"\) && <HelpRow>/);
+  assert.equal((calc.match(/\{\(\(!compact && !webLandingExperience\) \|\| entryMode === "unknown"\) && <HelpRow>/g) || []).length, 2);
   assert.match(calc, /오늘 예상 참고가치/);
   assert.doesNotMatch(calc, /<Action type="button" disabled=\{!canCalculate\}/);
   assert.doesNotMatch(calc, /setWeightValue\("[0-9]/);
@@ -51,6 +51,6 @@ test("홈 개선에는 Firestore 기록·금 계산·예약 서버 로직 변경
   assert.doesNotMatch(home, /setDoc\(|updateDoc\(|addDoc\(/);
   assert.match(home, /<AppMyGoldDashboard/);
   assert.match(home, /<MemberGoldSummaryCard/);
-  assert.match(home, /<HomeOptionalDetails>/);
+  assert.match(home, /<HomeOptionalDetails(?:\s+[^>]*)?>/);
   assert.ok(between("<MemberUtilities", "<PriceCard").includes("<MyGoldAlertSummary"));
 });

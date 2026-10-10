@@ -16,6 +16,7 @@ import TrustProofBar from "@/components/common/TrustProofBar";
 import goldVerificationImage from "@/assets/goldVerificationImage";
 import { trackProductEventOncePerSession } from "@/analytics/productAnalytics";
 
+// KGM_EXPERIENCE_FIRST_FINAL · action-first landing, no extra signup gate
 const Page = styled.div`
   width: 100%;
   color: ${({ theme }) => theme.colors.text};
@@ -57,9 +58,9 @@ const Hero = styled.section`
   @media (max-width: 860px) {
     grid-template-columns: 1fr;
     min-height: auto;
-    gap: 16px;
-    padding: 23px 18px 20px;
-    border-radius: 22px;
+    gap: 11px;
+    padding: 17px 13px 16px;
+    border-radius: 20px;
   }
 `;
 
@@ -122,9 +123,10 @@ const HeroLead = styled.p`
 
   @media (max-width: 700px) {
     display: block;
-    margin: 6px 0 0;
-    font-size: .82rem;
-    line-height: 1.6;
+    margin: 5px 0 0;
+    font-size: .83rem;
+    line-height: 1.5;
+    strong { display: none; } /* Calculator contains the primary action. */
   }
 `;
 
@@ -140,7 +142,7 @@ const HeroTrust = styled.div`
 
   span { display: inline-flex; align-items: center; gap: 6px; }
   svg { width: 17px; height: 17px; color: ${({ theme }) => theme.colors.secondaryDark}; }
-  @media (max-width: 700px) { margin-top: 9px; gap: 5px 14px; font-size: .72rem; }
+  @media (max-width: 700px) { display: none; } /* Detailed process is explained in the trust panel below. */
 `;
 
 const FlowStrip = styled.section`
@@ -154,8 +156,8 @@ const FlowStrip = styled.section`
   background: ${({ theme }) => theme.colors.border};
 
   @media (max-width: 700px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    margin-top: 0;
+    /* The calculator already offers context-specific save/exchange actions. */
+    display: none;
   }
 `;
 
@@ -267,7 +269,7 @@ const JourneyNote = styled.p`
     font-weight: 900;
   }
 
-  @media (max-width: 700px) { margin: 7px 0 0; font-size: .7rem; }
+  @media (max-width: 700px) { display: none; } /* Already disclosed directly above. */
 `;
 
 const Section = styled.section`
@@ -400,6 +402,7 @@ const TrustList = styled.div`
   svg { width: 18px; height: 18px; color: ${({ theme }) => theme.colors.secondaryDark}; }
   strong { display: block; color: ${({ theme }) => theme.colors.primary}; font-size: .8rem; }
   p { margin: 2px 0 0; color: ${({ theme }) => theme.colors.textSecondary}; font-size: .82rem; line-height: 1.45; }
+  @media (max-width: 700px) { display: none; } /* Shown in the home trust disclosure. */
 `;
 
 const StoreMeta = styled.div`
@@ -540,8 +543,6 @@ export default function LandingPage() {
         </CalculatorAnchor>
       </Hero>
 
-      <TrustProofBar />
-
       <FlowStrip aria-label="한국골드마켓 이용 흐름">
         <FlowItem type="button" onClick={startValueCheck} aria-label="오늘 가치 확인 계산기로 이동">
           <span>01</span>
@@ -570,7 +571,7 @@ export default function LandingPage() {
           <SectionHeadCopy>
             <Kicker>오늘 시세</Kicker>
             <SectionTitle id="live-title">오늘 금시세</SectionTitle>
-            <SectionLead>시세는 빠르게 확인하고, 내 금의 가치는 위 계산기와 MY GOLD에서 이어서 봅니다.</SectionLead>
+            <SectionLead>금액과 마지막 시세 등록일을 함께 확인할 수 있습니다.</SectionLead>
           </SectionHeadCopy>
           <TextLink to="/gold-price">전체 시세 보기 <ArrowRight size={15} aria-hidden /></TextLink>
         </SectionHead>
@@ -590,9 +591,8 @@ export default function LandingPage() {
           <Kicker>GOLD TO GOLD · 금의 가치를 이어가다</Kicker>
           <h2 id="exchange-trust-title">쓰지 않는 금의 가치를, 다시 금으로 이어갑니다.</h2>
           <p>
-            끊어진 목걸이, 한쪽만 남은 귀걸이, 오래된 14K·18K와 돌반지도 예상 순금량을 확인해
-            999.9 골드바로 이어갈 수 있습니다. 온라인 계산은 참고용이며,
-            부산 원일귀금속에서 순도·중량과 비용을 직접 확인하고 동의 후 확정합니다.
+            반지·목걸이·돌반지 등 가지고 있는 금으로 만들 수 있는 골드바를 먼저 확인해 보세요.
+            실제 순도·중량과 공임은 매장에서 확인하고 동의 후 확정합니다.
           </p>
           <TrustList>
             <div><Scale aria-hidden /><span><strong>고객 앞에서 현장 실측</strong><p>실물 금의 순도와 중량을 다시 확인합니다.</p></span></div>
@@ -607,6 +607,8 @@ export default function LandingPage() {
           </Actions>
         </ExchangeCopy>
       </ExchangeTrust>
+
+      <TrustProofBar compact />
 
       <CompactSection aria-label="교환 완료 고객 후기">
         <ReviewWrap>

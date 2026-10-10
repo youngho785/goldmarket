@@ -69,5 +69,5 @@ test("웹 상단과 모바일 웹 전체 메뉴는 계산과 스토리를 분리
   assert.match(navbar, /to: "\/gold-to-gold", label: "GOLD TO GOLD 이야기"/);
   assert.match(navbar, /<DrawerLink key=\{to\} to=\{to\}/);
   assert.match(navbar, /max-width: 1180px/);
-  assert.match(nativeHome, /<GoldToGoldStory to="\/gold-to-gold"/);
+  assert.match(nativeHome, /to=\{hasMyGold \? "\/gold-to-gold" : "\/gold-exchange"\}/);
 });

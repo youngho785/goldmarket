@@ -21,6 +21,7 @@ import HomePriorityActions from "@/components/home/HomePriorityActions";
 import HomeOptionalDetails from "@/components/home/HomeOptionalDetails";
 import { db } from "@/firebase/firebase";
 
+// KGM_EXPERIENCE_FIRST_FINAL · member-first MY GOLD summary
 const Page = styled.div`
   display: grid;
   gap: 14px;
@@ -306,7 +307,7 @@ export default function AppHome() {
       {user?.uid && !myGoldDashboard.itemsLoading && !hasMyGold && (
         <FirstGoldStart aria-label="처음 사용하는 MY GOLD 안내">
           <strong>내 금 하나부터 기록해 보세요.</strong>
-          <p>가지고 있는 금의 종류와 중량을 기록하면 오늘의 참고가치와 예상 순금량을 확인할 수 있습니다. 회원 혜택 순금은 별도의 MEMBER GOLD에서 관리됩니다.</p>
+          <p>금 종류와 중량을 기록하면 예상 가치와 변화를 확인할 수 있습니다. 회원 혜택인 MEMBER GOLD는 별도로 관리됩니다.</p>
           <div>
             <Link to="/my-gold/items?add=1">첫 금 기록하기</Link>
             <Link to="/gold-value">먼저 금 가치 계산하기</Link>

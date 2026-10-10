@@ -30,7 +30,7 @@ const Panel = styled.section`
   }
 
   @media (max-width: 900px) { grid-template-columns: 1fr; gap: 14px; }
-  @media (max-width: 560px) { padding: 19px 16px; border-radius: 18px; margin: 16px 0; }
+  @media (max-width: 560px) { padding: 16px 15px; border-radius: 18px; margin: 12px 0; gap: 10px; }
 `;
 
 const Intro = styled.div`
@@ -79,7 +79,7 @@ const Proofs = styled.div`
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 
-  @media (max-width: 620px) { grid-template-columns: 1fr; gap: 8px; }
+  @media (max-width: 620px) { display: none; /* Mobile disclosure below contains the same steps. */ }
 `;
 
 const Proof = styled.div`
@@ -107,13 +107,34 @@ const Proof = styled.div`
   }
 `;
 
+const MobileSteps = styled.details`
+  display: none;
+  border-top: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
+  padding-top: 10px;
+  color: ${({ theme }) => theme.colors.text};
+
+  summary {
+    padding: 4px 0;
+    cursor: pointer;
+    color: ${({ theme }) => theme.colors.primary};
+    font-size: .83rem;
+    font-weight: 850;
+  }
+  summary:focus-visible { outline: 2px solid ${({ theme }) => theme.colors.secondary}; outline-offset: 3px; }
+  ol { display: grid; gap: 8px; padding: 12px 0 0 18px; list-style: decimal; }
+  li { color: ${({ theme }) => theme.colors.textSecondary}; font-size: .78rem; line-height: 1.55; }
+  li strong { color: ${({ theme }) => theme.colors.primary}; }
+
+  @media (max-width: 620px) { display: block; }
+`;
+
 export default function TrustProofBar({ compact = false }) {
   return (
     <Panel $compact={compact} aria-label="한국골드마켓 이용 신뢰 안내">
       <Intro>
         <small><MapPin aria-hidden="true" /> 부산 원일귀금속 직접 운영</small>
         <strong>금은 소중하니까, 과정은 더 투명하게.</strong>
-        {!compact && <p>처음이셔도 괜찮습니다. 예상 금량부터 매장 확인까지 차근차근 안내합니다.</p>}
+        <p>온라인 계산은 참고값입니다. 실제 교환은 매장 실측·비용 안내와 고객 동의 후 확정됩니다.</p>
         <Link to="/stores">매장 위치·이용 안내 <ArrowUpRight aria-hidden="true" /></Link>
       </Intro>
       <Proofs>
@@ -133,6 +154,14 @@ export default function TrustProofBar({ compact = false }) {
           <span>매장에서 실물을 확인하고 고객 동의 후 교환합니다.</span>
         </Proof>
       </Proofs>
+      <MobileSteps>
+        <summary>금교환 절차 자세히 보기</summary>
+        <ol>
+          <li><strong>예상 확인:</strong> 온라인 계산은 참고값이며 실제 순도·중량과 다를 수 있습니다.</li>
+          <li><strong>비용 안내:</strong> 골드바 제작공임과 교환 조건을 사전에 확인합니다.</li>
+          <li><strong>최종 확정:</strong> 매장에서 실측하고 고객이 동의한 경우에만 진행합니다.</li>
+        </ol>
+      </MobileSteps>
     </Panel>
   );
 }

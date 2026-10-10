@@ -21,6 +21,7 @@ export default function useGoldVaultDashboard(uid) {
   const [ratesReady, setRatesReady] = useState(false);
   const [market, setMarket] = useState({});
   const [previousMarket, setPreviousMarket] = useState({});
+  const [marketSourceDate, setMarketSourceDate] = useState("");
   const [marketLoading, setMarketLoading] = useState(true);
   const [publicPriceEnabled, setPublicPriceEnabled] = useState(false);
   const [publicPriceLoading, setPublicPriceLoading] = useState(true);
@@ -74,6 +75,7 @@ export default function useGoldVaultDashboard(uid) {
         (snapshot) => {
           const data = snapshot.exists() ? snapshot.data() || {} : {};
           setMarket(data.market && typeof data.market === "object" ? data.market : {});
+          setMarketSourceDate(typeof data.sourceDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(data.sourceDate) ? data.sourceDate : "");
           setPreviousMarket(
             data.previousMarket && typeof data.previousMarket === "object" ? data.previousMarket : {}
           );
@@ -82,6 +84,7 @@ export default function useGoldVaultDashboard(uid) {
         () => {
           setMarket({});
           setPreviousMarket({});
+          setMarketSourceDate("");
           setMarketLoading(false);
         }
       ),
@@ -145,6 +148,7 @@ export default function useGoldVaultDashboard(uid) {
     ratesReady,
     market,
     previousMarket,
+    marketSourceDate,
     marketLoading,
     publicPriceEnabled,
     publicPriceLoading,

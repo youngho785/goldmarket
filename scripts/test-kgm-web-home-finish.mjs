@@ -11,7 +11,7 @@ const nativeHome = read("src/pages/AndroidHome.jsx");
 test("모바일 공개 웹은 첫 화면에서 계산기를 먼저 발견하게 하고 제목 반복을 피한다", () => {
   assert.match(landing, /<MobileHeadline>내 금,/);
   assert.match(landing, /<DesktopHeadline>잠들어 있던/);
-  assert.match(landing, /gap: 16px;\s*padding: 18px 0 22px/);
+  assert.match(landing, /gap: 11px;\s*padding: 17px 13px 16px/);
   assert.match(landing, /source="landing"[\s\S]*title="내 금 가치 계산하기"/);
   assert.doesNotMatch(landing, /금 종류와 무게를 알고 있다면 바로 참고가치를/);
 });
@@ -44,7 +44,7 @@ test("PC 홈페이지 제목과 계산기 행동을 구분하고 4단계 메뉴�
   assert.match(landing, /잠들어 있던 <em>금의 가치를 발견하세요/);
   assert.match(landing, /<FlowStrip aria-label="한국골드마켓 이용 흐름">/);
   assert.match(landing, /to="\/my-gold#goldbar-goal"/);
-  assert.match(landing, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);[\s\S]*margin-top: 0;/);
+  assert.match(landing, /const FlowStrip = styled\.section[\s\S]*@media \(max-width: 700px\)[\s\S]*display: none;/);
 });
 
 test("브랜드 스토리·실측은 한 섹션, 전용 이야기/예약/매장 링크 보존", () => {
@@ -74,7 +74,7 @@ test("모바일 웹 하단 메뉴 높이는 축소하고 Android 전용 분기�
   assert.match(bottom, /min-height: calc\(72px \+ env\(safe-area-inset-bottom, 0px\)\)/);
   assert.match(bottom, /min-height: 62px/);
   assert.match(bottom, /min-height: 60px/);
-  assert.match(nativeHome, /<GoldToGoldStory to="\/gold-to-gold"/);
+  assert.match(nativeHome, /to=\{hasMyGold \? "\/gold-to-gold" : "\/gold-exchange"\}/);
 });
 
 test("검증된 후기 한 건과 매장 정보의 균형을 맞추며 가짜 후기를 만들지 않는다", () => {

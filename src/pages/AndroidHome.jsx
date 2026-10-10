@@ -12,6 +12,7 @@ import styled from "styled-components";
 import {
   CalendarDays,
   BookOpen,
+  Coins,
   ChevronRight,
   ClipboardList,
 } from "lucide-react";
@@ -31,6 +32,7 @@ import useMyGoldValueTrend from "@/hooks/useMyGoldValueTrend";
 import { formatGoldWeightPair } from "@/lib/goldDisplay";
 import { trackProductEventOncePerSession } from "@/analytics/productAnalytics";
 
+// KGM_EXPERIENCE_FIRST_FINAL · direct guest calculator and gold exchange
 const Page = styled.div`
   display: grid;
   gap: 12px;
@@ -88,6 +90,7 @@ const PriceCard = styled(Link)`
   small { display: block; color: ${({ theme }) => theme.colors.secondaryDark}; font-size: .68rem; font-weight: 950; }
   strong { display: block; margin-top: 3px; color: ${({ theme }) => theme.colors.primary}; font-size: .86rem; }
   b { color: ${({ theme }) => theme.colors.primary}; font-family: ${({ theme }) => theme.fonts.numeric}; font-size: .92rem; }
+  em { display: block; margin-top: 3px; font-style: normal; font-size: .69rem; color: ${({ theme }) => theme.colors.textSecondary}; }
 `;
 
 const GoldToGoldStory = styled(Link)`
@@ -360,19 +363,23 @@ export default function AndroidHome() {
       {!dashboard.publicPriceLoading && dashboard.publicPriceEnabled && purePrice > 0 && (
         <PriceCard to="/gold-price" aria-label="오늘 순금 시세 보기">
           <div>
-            <small>오늘 금시세</small>
-            <strong>오늘 순금 · 내가 팔 때 · 1돈(3.75g)</strong>
+            <small>{dashboard.marketSourceDate === toLocalDateKey() ? "오늘 금시세" : "최근 등록 금시세"}</small>
+            <strong>순금 · 내가 팔 때 · 1돈(3.75g)</strong>
+            <em>시세 등록일 {dashboard.marketSourceDate ? dashboard.marketSourceDate.replaceAll("-", ".") : "확인 필요"}</em>
           </div>
           <b>{formatWon(purePrice)}</b>
         </PriceCard>
       )}
 
-      <GoldToGoldStory to="/gold-to-gold" aria-label="GOLD TO GOLD 금의 가치 이야기 보기">
-        <span><BookOpen aria-hidden /></span>
+      <GoldToGoldStory
+        to={hasMyGold ? "/gold-to-gold" : "/gold-exchange"}
+        aria-label={hasMyGold ? "GOLD TO GOLD 금의 가치 이야기" : "골드바 예상 교환량 직접 계산하기"}
+      >
+        <span>{hasMyGold ? <BookOpen aria-hidden /> : <Coins aria-hidden />}</span>
         <div>
-          <small>GOLD TO GOLD · 가치의 이야기</small>
-          <strong>쓰임이 달라진 금, 다시 가치 있게.</strong>
-          <p>현금 대신 골드바로 이어가는 이야기를 만나보세요.</p>
+          <small>GOLD TO GOLD</small>
+          <strong>{hasMyGold ? "내 금의 다음 가치를 알아보세요" : "골드바로 바꾸면 얼마나 될까요?"}</strong>
+          <p>{hasMyGold ? "골드바 목표와 교환 이야기를 확인하세요." : "회원가입 없이 예상 교환량부터 확인할 수 있어요."}</p>
         </div>
         <ChevronRight aria-hidden />
       </GoldToGoldStory>

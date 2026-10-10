@@ -28,7 +28,7 @@ test("홈의 최우선 행동은 등록한 금이 있을 때만 보이고 회원
 
 test("골드바 목표는 선택적으로 펼치는 정보로 제공한다", () => {
   for (const home of [android, web]) {
-    assert.match(home, /<HomeOptionalDetails>[\s\S]*<AppGoldJourney/);
+    assert.match(home, /<HomeOptionalDetails(?:\s+[^>]*)?>\s*<AppGoldJourney/);
   }
 });
 
@@ -53,9 +53,10 @@ test("앱 회원·비회원은 금교환 및 금 추가 메뉴 위치를 공유�
 test("홈 행동 카드와 목표 펼치기는 키보드로도 접근 가능하다", () => {
   assert.match(actions, /min-height: 76px/);
   assert.match(actions, /:focus-visible/);
-  assert.match(web, /<HomeOptionalDetails>/);
-  assert.match(android, /<HomeOptionalDetails>/);
-  assert.match(disclosure, /<summary>골드바 목표와 교환 가능량 자세히 보기<\/summary>/);
+  assert.match(web, /<HomeOptionalDetails(?:\s+[^>]*)?>/);
+  assert.match(android, /<HomeOptionalDetails(?:\s+[^>]*)?>/);
+  assert.match(disclosure, /summary\s*=\s*"골드바 목표와 교환 가능량 자세히 보기"/);
+  assert.match(disclosure, /<summary>\{summary\}<\/summary>/);
   assert.match(disclosure, /summary:focus-visible/);
   assert.match(disclosure, /\{open && children\}/);
   assert.equal(pkg.scripts["test:ux-home-priority"], "node scripts/test-ux-home-priority.mjs");
