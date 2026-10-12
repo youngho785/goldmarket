@@ -627,7 +627,7 @@ export const welcomeClaimGoldBonus = onCall(
       try {
         await addNotificationForUser(uid, {
           type: "welcome_bonus",
-          title: "웰컴 순금 적립 완료",
+          title: "웰컴 MEMBER GOLD 적립 완료",
           body: `회원가입 웰컴 순금 ${res.creditedG.toFixed(2)}g이 적립되었습니다. 골드바 교환 시 사용할 수 있습니다.`,
           link: "/member-gold",
           meta: { event: WELCOME_BONUS_PROMO_ID, creditedG: res.creditedG },
@@ -735,7 +735,7 @@ export const marketingPushClaimGoldBonus = onCall(
       try {
         await addNotificationForUser(uid, {
           type: "marketing_push_bonus",
-          title: "광고성 정보 수신 설정 순금 적립",
+          title: "MEMBER GOLD 적립 완료",
           body: `광고성 정보 수신 앱푸시 설정 혜택 순금 ${res.creditedG.toFixed(2)}g이 적립되었습니다. 골드바 교환 시 사용할 수 있습니다.`,
           link: "/member-gold",
           meta: {
@@ -1032,7 +1032,7 @@ export const quizClaimGoldBonus = onCall<{
       try {
         await addNotificationForUser(uid, {
           type: "promo_bonus",
-          title: "퀵퀴즈 보너스 지급",
+          title: "퀴즈 참여 혜택 적립 완료",
           body: `축하합니다! ${res.creditedG.toFixed(2)}g 보너스가 적립되었습니다.`,
           link: "/member-gold",
           meta: { event: QUIZ_BONUS_PROMO_ID, creditedG: res.creditedG, score },
@@ -1226,7 +1226,7 @@ export const bonusRequestGoldUsage = onCall<{ groupId: string }>(
       await Promise.allSettled([
         addNotificationForUser(uid, {
           type: "bonus_gold_usage_requested",
-          title: "MEMBER GOLD 사용 신청 완료",
+          title: "MEMBER GOLD 사용 신청 접수",
           body: `${amountG.toFixed(2)}g 사용 신청을 매장에서 확인합니다. 6자리 확인 코드를 준비해 주세요.`,
           link: "/member-gold",
           meta: { groupId, amountG },

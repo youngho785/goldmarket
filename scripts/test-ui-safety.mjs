@@ -596,7 +596,8 @@ test("2.7.1 관리자 교환 완료는 고객 추가 확인 없이 완료 상태
   assert.match(exchangeListSource, /교환 완료 확정/);
   assert.match(customerSource, /고객이 온라인에서 별도로 완료 확인할 필요는 없습니다/);
   assert.match(functionsSource, /exchange-completed-\$\{groupId\}/);
-  assert.match(functionsSource, /GOLD TO GOLD 교환이 완료되었습니다/);
+  assert.match(functionsSource, /title:\s*"GOLD TO GOLD 교환 완료"/);
+  assert.match(functionsSource, /body:\s*"교환이 완료되었습니다\. 감사합니다\."/);
   assert.match(functionsSource, /tx\.set\(completionNotificationRef/);
   assert.match(functionsSource, /targetUid && status !== "completed"/);
 });

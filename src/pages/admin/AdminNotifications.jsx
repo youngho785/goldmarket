@@ -256,9 +256,9 @@ const MY_GOLD_TEMPLATES = [
     label: "적립 순금 확인",
     targetType: "bonusGoldHolders",
     category: "myGold",
-    title: "MY GOLD에 적립된 순금을 확인해 보세요",
-    body: "한국골드마켓에서 적립한 순금과 MY GOLD 기록을 한곳에서 확인해 보세요.",
-    link: "/my-gold",
+    title: "적립된 MEMBER GOLD를 확인해 보세요",
+    body: "한국골드마켓에서 적립된 순금 혜택과 이용 가능 잔액을 확인해 보세요.",
+    link: "/member-gold",
   },
 ];
 
@@ -460,6 +460,7 @@ export default function AdminNotifications() {
         <Intro>
           관리자 알림을 회원의 알림함에 생성하고, 수신 가능한 기기에는 푸시로 전달합니다.
           MY GOLD 방문 유도 캠페인은 광고성 정보 수신동의가 있는 회원만 대상으로 합니다.
+          예약·교환 및 일반 중요 알림 분류에는 광고·혜택 홍보 내용을 넣지 마세요.
         </Intro>
 
         <TemplateBar aria-label="MY GOLD 알림 빠른 문구">

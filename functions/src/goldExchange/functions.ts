@@ -326,8 +326,8 @@ export const requestGoldExchangeGroup = onCall<{
   const notificationResults = await Promise.allSettled([
     addNotificationForUser(uid, {
       type: "exchange_requested",
-      title: "금교환 예약 신청이 접수되었습니다",
-      body: `${normalizedVisitDate} ${normalizedVisitTime} 방문 예약 신청이 접수되었습니다. 관리자 확인 후 예약 확정 알림을 보내드립니다.`,
+      title: "금교환 예약 신청 접수",
+      body: `${normalizedVisitDate} ${normalizedVisitTime} 방문 예약 신청이 접수되었습니다. 확정 후 다시 안내해 드립니다.`,
       link: "/my-exchanges",
       meta: { groupId },
     }),
@@ -497,8 +497,8 @@ export const rescheduleGoldExchangeGroup = onCall<{
 
       tx.create(db().collection("notifications").doc(uid).collection("items").doc(), {
         type: "exchange_reschedule_requested",
-        title: "예약 일정 변경 요청이 접수되었습니다",
-        body: `${visitDate} ${visitTime} 일정으로 변경 요청이 접수되었습니다. 관리자 확인 후 변경된 예약 확정 알림을 보내드립니다.`,
+        title: "금교환 일정 변경 요청 접수",
+        body: `${visitDate} ${visitTime} 일정으로 변경을 요청하셨습니다. 확인 후 안내해 드립니다.`,
         link: "/my-exchanges",
         meta: {
           groupId,
@@ -603,7 +603,7 @@ export const cancelGoldExchangeGroup = onCall<{ groupId: string; reason: string 
 
       tx.create(db().collection("notifications").doc(uid).collection("items").doc(), {
         type: "exchange_canceled_by_customer",
-        title: "금교환 예약이 취소되었습니다",
+        title: "금교환 예약 취소 완료",
         body: `${group.visitDate} ${group.visitTime} 방문 예약이 취소되었습니다.`,
         link: "/my-exchanges",
         meta: { groupId, visitDate: group.visitDate, visitTime: group.visitTime, customerName: group.customerName, reason },
@@ -1027,8 +1027,8 @@ export const setExchangeGroupStatus = onCall<{
         );
         tx.set(completionNotificationRef, {
           type: "exchange_completed",
-          title: "GOLD TO GOLD 교환이 완료되었습니다",
-          body: "최종 교환 결과를 확인하고 MY GOLD 기록도 현재 보유 상태에 맞게 이어보세요.",
+          title: "GOLD TO GOLD 교환 완료",
+          body: "교환이 완료되었습니다. 감사합니다.",
           link: `/my-exchanges?group=${encodeURIComponent(groupId)}&review=1`,
           meta: { groupId, newStatus: "completed" },
           createdAt: now,
@@ -1089,7 +1089,7 @@ export const setExchangeGroupStatus = onCall<{
         const notifications = {
           requested: {
             type: "exchange_requested",
-            title: "금교환 예약 확인 대기 상태입니다",
+            title: "금교환 예약 확인 중",
             body: visitSchedule
               ? `${visitSchedule} 방문 예약을 관리자 확인 중입니다.`
               : "방문 예약을 관리자 확인 중입니다.",
@@ -1098,33 +1098,33 @@ export const setExchangeGroupStatus = onCall<{
             scheduleChangeType === "rescheduled"
               ? {
                   type: "exchange_reschedule_scheduled",
-                  title: "변경된 예약이 확정되었습니다",
+                  title: "금교환 일정 변경 완료",
                   body: visitSchedule
                     ? `${visitSchedule} 원일귀금속 방문 예약으로 변경 확정되었습니다.`
                     : "변경 요청한 원일귀금속 방문 예약이 확정되었습니다.",
                 }
               : {
                   type: "exchange_scheduled",
-                  title: "금교환 예약이 확정되었습니다",
+                  title: "금교환 예약 확정",
                   body: visitSchedule
                     ? `${visitSchedule} 원일귀금속 방문 예약이 확정되었습니다.`
                     : "원일귀금속 방문 예약이 확정되었습니다.",
                 },
           in_progress: {
             type: "exchange_in_progress",
-            title: "금 교환을 확인하고 있습니다",
+            title: "금교환 진행 안내",
             body: "순도·중량과 골드바 교환 내용을 확인하고 있습니다.",
           },
           canceled: {
             type: "exchange_canceled",
-            title: "금교환 예약이 취소되었습니다",
+            title: "금교환 예약 취소 안내",
             body: visitSchedule
               ? `${visitSchedule} 방문 예약이 취소되었습니다.`
               : "방문 예약이 취소되었습니다.",
           },
           rejected: {
             type: "exchange_rejected",
-            title: "금 교환 요청 확인이 필요합니다",
+            title: "금교환 신청 확인 안내",
             body: "교환내역을 확인하거나 원일귀금속으로 문의해 주세요.",
           },
         } as const;

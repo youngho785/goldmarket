@@ -473,7 +473,7 @@ async function evaluateUserGoals(
       if (reached.length > 2) bodyParts.push(`외 ${reached.length - 2}개 목표`);
       tx.set(notificationRef, {
         type: "my_gold_goal_reached",
-        title: reached.length > 1 ? "MY GOLD 목표에 도달했어요" : "MY GOLD 목표 도달",
+        title: "MY GOLD 목표 달성",
         body: `${bodyParts.join(" · ")}에 도달했습니다. 현재 MY GOLD를 확인해 보세요.`,
         link: "/my-gold/alerts",
         meta: {

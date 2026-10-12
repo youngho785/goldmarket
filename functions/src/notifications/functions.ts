@@ -1,4 +1,5 @@
 import { classifyPushBatch, deliveryHash, withPushDelivery } from "./delivery.js";
+import { resolveNotificationPushCopy } from "./pushCopy.js";
 // Push delivery, admin campaigns, reservation reminders, MY GOLD reports, and slot cleanup.
 import { getAuth } from "firebase-admin/auth";
 import { FieldValue } from "firebase-admin/firestore";
@@ -289,7 +290,7 @@ export const onNotificationCreate = onDocumentCreated(
         body?: string;
         type?: string;
         link?: string;
-        meta?: { source?: string; batchId?: string };
+        meta?: { source?: string; batchId?: string; visitTime?: string; changeWon?: number; changePercent?: number | null; historicalValueWon?: number };
       };
 
       const userSnap = await db().doc(`users/${uid}`).get();
@@ -381,8 +382,8 @@ export const onNotificationCreate = onDocumentCreated(
       tokens = tokens.filter(token => !receipts.has(deliveryHash(token)));
       if (!tokens.length) return;
 
-      const title = String(notif.title || "알림");
-      const body = String(notif.body || "");
+      // Device notification text is privacy-safe; the Firestore inbox retains full detail.
+      const { title, body } = resolveNotificationPushCopy(notif);
       const notificationId = String(event.params.docId || "");
       const link = adminCampaignPushLink(
         String(notif.link || "/"),
@@ -1432,8 +1433,8 @@ export const sendExchangeVisitDayBeforeReminders = onSchedule(
         if (!notificationSnapshot.exists) {
           tx.set(notificationRef, {
             type: "exchange_visit_reminder",
-            title: "내일 금교환 예약 안내",
-            body: `내일 ${visitTime} 원일귀금속 방문 예약이 예정되어 있습니다.`,
+            title: "내일 금교환 방문 안내",
+            body: `내일 ${visitTime} 원일귀금속 방문 예약이 있습니다.`,
             link: "/my-exchanges",
             meta: {
               groupId,
@@ -1678,7 +1679,7 @@ export const sendMyGoldWeeklyReports = onSchedule(
 
       await notificationRef.set({
         type: "my_gold_weekly",
-        title: "이번 주 MY GOLD",
+        title: "이번 주 MY GOLD 리포트",
         body: parts.join(" · "),
         link: "/my-gold#my-gold-value-trend",
         meta: {

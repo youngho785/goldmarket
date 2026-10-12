@@ -196,7 +196,7 @@ test("MY GOLD 목표 알림은 회원혜택을 가치에 합산하지 않고 마
   assert.match(myGoldAlertFunctionSource, /currentValueWon: registeredValueWon/);
   assert.match(myGoldAlertGoalsServiceSource, /const preferences = data\?\.notificationPreferences \|\| \{\}[\s\S]*preferences\.allEnabled !== false/);
   assert.doesNotMatch(myGoldAlertGoalsServiceSource, /marketingPush|marketingSubscribed/);
-  assert.match(notificationSharedSource, /type === "my_gold_goal_reached"\) return "other"/);
+  assert.match(notificationSharedSource, /"my_gold_goal_reached"[\s\S]{0,250}\]\.includes\(type\)\) return "other"/);
 });
 
 test("개인정보 공개 문서와 회원가입 동의 버전·수집 시점이 일치한다", () => {
