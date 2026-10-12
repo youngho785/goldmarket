@@ -455,9 +455,9 @@ export default function AppMyGoldDashboard({ user, dashboard, animateValue = fal
             />
             <span>MY GOLD</span>
           </Kicker>
-          <EmptyTitle id="app-my-gold-title">내 금은 오늘 얼마일까요?</EmptyTitle>
+          <EmptyTitle id="app-my-gold-title">내 금, 지금 얼마일까요?</EmptyTitle>
           <EmptyCopy>
-            내가 실제로 가진 금의 종류와 중량을 기록해 오늘 참고가치를 확인합니다. 실물을 맡기는 서비스가 아닙니다.
+            내가 실제로 가진 금의 종류와 중량을 기록해 현재 적용 시세 기준 참고가치를 확인합니다. 실물을 맡기는 서비스가 아닙니다.
           </EmptyCopy>
           <ActionRow>
             <PrimaryAction to="/my-gold?add=1">
@@ -490,7 +490,7 @@ export default function AppMyGoldDashboard({ user, dashboard, animateValue = fal
               delay={90}
               ariaLabel="첫 금 기록 안내 열기"
               title="첫 금빛을 이어보세요."
-              description="금 하나를 기록하면 오늘 가치와 변화가 MY GOLD에 이어집니다."
+              description="금 하나를 기록하면 현재 적용 시세 기준 가치와 변화가 MY GOLD에 이어집니다."
               actionLabel="첫 금 기록하기"
               actionTo="/my-gold?add=1"
             />
@@ -498,7 +498,7 @@ export default function AppMyGoldDashboard({ user, dashboard, animateValue = fal
           </Kicker>
           <EmptyTitle>아직 기록한 금이 없습니다.</EmptyTitle>
           <EmptyCopy>
-            금 하나만 기록하면 오늘 가치와 변화를 바로 확인할 수 있습니다. MY GOLD는 개인 금 기록 공간입니다.
+            금 하나만 기록하면 현재 적용 시세 기준 참고가치와 변화를 확인할 수 있습니다. MY GOLD는 개인 금 기록 공간입니다.
           </EmptyCopy>
           <ActionRow>
             <PrimaryAction to="/my-gold?add=1">
@@ -554,7 +554,7 @@ export default function AppMyGoldDashboard({ user, dashboard, animateValue = fal
           {ratesReady && dashboard.publicPriceEnabled && Number.isFinite(totals.percent) && (
             <Change $direction={totals.direction} $animate={shouldAnimateValue}>
               <ChangeIcon aria-hidden />
-              오늘 {formatSignedWon(totals.amount)} · {formatSignedPercent(totals.percent)}
+              이전 시세 대비 {formatSignedWon(totals.amount)} · {formatSignedPercent(totals.percent)}
             </Change>
           )}
 
@@ -585,15 +585,15 @@ export default function AppMyGoldDashboard({ user, dashboard, animateValue = fal
       <SummaryGoldCompanion
         size={28}
         delay={90}
-        ariaLabel="오늘 MY GOLD 안내 열기"
-        title="오늘의 MY GOLD"
+        ariaLabel="MY GOLD 안내 열기"
+        title="현재 적용 시세 기준 MY GOLD"
         value={ratesReady && dashboard.publicPriceEnabled ? formatWon(totals.current) : undefined}
         description={
           !ratesReady
             ? "서버 환산 기준을 확인하고 있어요."
             : dashboard.publicPriceEnabled
-              ? `오늘 ${formatSignedWon(totals.amount)} · 예상 순금 ${Number(dashboard.summary.pureGoldG || 0).toFixed(2)}g`
-              : "오늘의 MY GOLD 가치를 확인하고 있어요."
+              ? `${Number.isFinite(totals.percent) ? `이전 시세 대비 ${formatSignedWon(totals.amount)} · ` : ""}예상 순금 ${Number(dashboard.summary.pureGoldG || 0).toFixed(2)}g`
+              : "현재 적용 시세 기준 MY GOLD 가치를 확인하고 있어요."
         }
         actionLabel="MY GOLD 자세히 보기"
         actionTo="/my-gold"

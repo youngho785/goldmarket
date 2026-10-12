@@ -777,8 +777,8 @@ export default function MyGoldVault() {
             size={62}
             delay={80}
             hint
-            ariaLabel="오늘 MY GOLD 안내 열기"
-            title={hasVaultContent ? "오늘의 MY GOLD" : "첫 금빛을 이어보세요."}
+            ariaLabel="MY GOLD 안내 열기"
+            title={hasVaultContent ? "현재 적용 시세 기준 MY GOLD" : "첫 금빛을 이어보세요."}
             value={
               vaultLoading
                 ? "가치를 확인하고 있어요"
@@ -794,7 +794,7 @@ export default function MyGoldVault() {
                 : hasVaultContent && !ratesReady
                   ? "기록은 확인되었습니다. 서버 환산 기준을 확인하고 있습니다."
                   : ratesReady && hasVaultContent && publicPriceEnabled
-                    ? `${Number.isFinite(currentChange.percent) ? `어제보다 ${formatSignedWon(currentChange.amount)} · ` : ""}예상 순금 ${Number(activeSummary.pureGoldG || 0).toFixed(2)}g`
+                    ? `${Number.isFinite(currentChange.percent) ? `이전 시세 대비 ${formatSignedWon(currentChange.amount)} · ` : ""}예상 순금 ${Number(activeSummary.pureGoldG || 0).toFixed(2)}g`
                     : "금 하나를 기록하면 오늘 참고가치와 변화가 이 작은 금빛에 이어집니다."
             }
             actionLabel={hasVaultContent ? "내 금 자세히 보기" : "첫 금 기록하기"}
@@ -803,7 +803,7 @@ export default function MyGoldVault() {
           <HeroKicker>
             <Gem size={15} aria-hidden /> {isGuest ? "MY GOLD · 체험" : "MY GOLD"}
           </HeroKicker>
-          <HeroTitle id="my-vault-current-value-title">내 금의 오늘 참고가치</HeroTitle>
+          <HeroTitle id="my-vault-current-value-title">내 금의 예상 참고가치</HeroTitle>
           <HeroAmount $empty={!vaultLoading && !hasVaultContent}>
             {vaultLoading
               ? "불러오는 중"
@@ -817,7 +817,7 @@ export default function MyGoldVault() {
           </HeroAmount>
           {!vaultLoading && ratesReady && hasVaultContent && publicPriceEnabled && (
             <HeroValueNote>
-              내가 가진 금을 직접 기록한 정보를 기준으로 계산한 오늘 참고가치입니다.
+              현재 적용 시세로 계산한 참고가치입니다. 실제 금액은 매장 실측 후 확정됩니다.
             </HeroValueNote>
           )}
           {!vaultLoading && ratesReady && hasVaultContent && publicPriceEnabled && (
@@ -825,8 +825,8 @@ export default function MyGoldVault() {
               <HeroChange $direction={currentChange.direction}>
                 <CurrentChangeIcon aria-hidden />
                 {Number.isFinite(currentChange.percent)
-                  ? `오늘 ${formatSignedWon(currentChange.amount)} · ${formatSignedPercent(currentChange.percent)}`
-                  : "전일 비교 준비 중"}
+                  ? `이전 시세 대비 ${formatSignedWon(currentChange.amount)} · ${formatSignedPercent(currentChange.percent)}`
+                  : "이전 시세 비교 준비 중"}
               </HeroChange>
               {weeklyTrendChange && Number.isFinite(weeklyTrendChange.percent) && (
                 <HeroChange $direction={weeklyTrendChange.direction}>

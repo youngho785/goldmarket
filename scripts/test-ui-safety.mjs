@@ -167,7 +167,7 @@ test("2.3 MY GOLD는 PC 핵심 화면을 2열로 넓히고 기록·가치·예�
 test("2.3.1 MY GOLD는 참고가치 표현과 간결한 안내, 안정적인 가치 그래프를 사용한다", async () => {
   const myGoldItemsSource = await read("src/components/myGoldVault/MyGoldItemsSection.jsx");
   const myGoldTrendSource = await read("src/components/gold/MyGoldValueTrend.jsx");
-  assert.match(myGoldVaultSource, /내 금의 오늘 참고가치/);
+  assert.match(myGoldVaultSource, /내 금의 예상 참고가치/);
   assert.match(myGoldVaultSource, /실물 금을 보관·예치하는 서비스가 아닙니다/);
   assert.match(myGoldVaultSource, /MEMBER GOLD는 별도 회원혜택이며 MY GOLD 참고가치에는 합산하지 않습니다/);
   assert.match(myGoldItemsSource, /오늘 참고가치/);

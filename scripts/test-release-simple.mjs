@@ -150,6 +150,13 @@ async function main() {
 
   const trendTimeline = await step('MY GOLD TREND TIMELINE', () => runNode(['--test', 'scripts/test-my-gold-trend-timeline.mjs']));
   if (!trendTimeline) return finish(1);
+
+  const rateTrustCopy = await step('MY GOLD RATE TRUST COPY', () => runNode(['--test', 'scripts/test-my-gold-rate-trust-copy.mjs']));
+  if (!rateTrustCopy) return finish(1);
+
+  const priceDate = await step('GOLD PRICE DATE LABEL', () => runNode(['--test', 'scripts/test-gold-price-date-presentation.mjs']));
+  if (!priceDate) return finish(1);
+
   const rateReadiness = await step('GOLD RATE READINESS', () => runNode(['scripts/test-gold-exchange-rate-readiness.mjs']));
   if (!rateReadiness) return finish(1);
 

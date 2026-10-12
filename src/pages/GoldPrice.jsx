@@ -14,6 +14,7 @@ import { useAuthContext } from "@/context/AuthContext";
 import MyGoldTicker from "@/components/gold/MyGoldTicker";
 import { isNative } from "@/platform/runtime";
 import useKoreaTodayDate from "@/hooks/useKoreaTodayDate";
+import { getGoldPriceDatePresentation } from "@/lib/goldPriceDatePresentation";
 import NativeGoldPriceOverview from "@/components/goldPrice/NativeGoldPriceOverview";
 import MemberBenefitsDialog from "@/components/common/MemberBenefitsDialog";
 import QuickGoldValueCalculator from "@/components/gold/QuickGoldValueCalculator";
@@ -104,11 +105,6 @@ function formatWon(value) {
   return Number.isFinite(number) && number > 0
     ? Math.round(number).toLocaleString("ko-KR")
     : "-";
-}
-function formatDateKey(value) {
-  const text = String(value || "");
-  if (!/^\d{8}$/.test(text)) return text || "-";
-  return `${text.slice(0, 4)}.${text.slice(4, 6)}.${text.slice(6, 8)}`;
 }
 function validPrice(value) {
   return Number.isFinite(Number(value)) && Number(value) > 0;
@@ -333,14 +329,12 @@ export default function GoldPrice() {
 
   const pureRow = marketRows[0];
   const heroChange = changeInfo(pureRow?.buy, pureRow?.previousBuy);
-  const referenceDate = goldData?.sourceDate
-    ? formatDateKey(goldData.sourceDate)
-    : "확인 중";
   const pagePriceAvailable =
     !configLoading && goldEnabled && !goldLoading && !!goldData;
-  // 조회일과 마지막으로 공개된 시세 등록일은 다를 수 있습니다(주말·휴장일 등).
-  const publishedDateKey = String(goldData?.sourceDate || "").replace(/\D/g, "").slice(0, 8);
-  const isTodayPublished = publishedDateKey.length === 8 && publishedDateKey === todayKey;
+  // 오늘 날짜는 조회일입니다. 시세가 오늘 등록되지 않았다면 별도 안내합니다.
+  const { isTodayPublished, label: priceDateLabel } = getGoldPriceDatePresentation(
+    todayKey, goldData?.sourceDate, pagePriceAvailable
+  );
   const priceHeading = !pagePriceAvailable
     ? "금시세 확인"
     : isTodayPublished ? "오늘의 금시세" : "최근 공개 금시세";
@@ -472,11 +466,7 @@ export default function GoldPrice() {
                         ? "시세 확인 중"
                         : "관리자 공개 후 표시"}
                   </span>
-                  <Source>
-                    {isNative
-                      ? `오늘 날짜 ${formatDateKey(todayKey)}${pagePriceAvailable && !isTodayPublished ? " · 최근 공개 시세" : ""}`
-                      : `조회일 ${formatDateKey(todayKey)} · 시세 등록일 ${referenceDate}${pagePriceAvailable && !isTodayPublished ? " · 최근 공개값" : ""}`}
-                  </Source>
+                  <Source>{priceDateLabel}</Source>
                 </ChangeLine>
               </HeroPriceBlock>
             </HeroCopy>
