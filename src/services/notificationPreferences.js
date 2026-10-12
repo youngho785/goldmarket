@@ -2,6 +2,7 @@
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase/firebase";
 import { claimMarketingPushGoldBonus } from "@/services/quizClient";
+import { getNextMarketingPreferences } from "@/lib/notificationChannelPolicy";
 
 // 기존 필드는 다른 코드/기존 회원 데이터와의 호환을 위해 유지합니다.
 // 실제 광고성 알림 발송의 최종 기준은 users/{uid}.consents.marketing.accepted 입니다.
@@ -132,15 +133,8 @@ export async function saveMarketingNotificationConsent(uid, accepted) {
   const current = normalizePreferences(data.notificationPreferences);
   const nextAccepted = accepted === true;
 
-  const nextPreferences = {
-    ...current,
-    // 예약·교환 안내는 마케팅 선택과 분리합니다.
-    exchange: true,
-    // 새 UI에서는 금시세·주요 소식·이벤트·혜택을 하나의 선택 동의로 관리합니다.
-    allEnabled: nextAccepted,
-    goldNews: nextAccepted,
-    benefits: nextAccepted,
-  };
+  // 마케팅 수신 설정은 MY GOLD 개인 목표 알림 설정을 변경하지 않습니다.
+  const nextPreferences = getNextMarketingPreferences(current, nextAccepted);
 
   const payload = {
     notificationPreferences: nextPreferences,

@@ -3,6 +3,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 
 import { db, functions } from "@/firebase/firebase";
+import { myGoldGoalServiceAllowed } from "@/lib/notificationChannelPolicy";
 
 export const MY_GOLD_ALERT_BAR_OPTIONS = Object.freeze([
   { grams: 1, label: "1g 골드바" },
@@ -54,8 +55,7 @@ export function normalizeMyGoldAlertGoals(raw) {
 function readPushReady(data) {
   // MY GOLD 목표 도달은 사용자가 직접 설정하는 서비스 알림입니다.
   // 마케팅 동의와 별개로, 이 계정에 연결된 알림 기기가 있는지만 확인합니다.
-  const preferences = data?.notificationPreferences || {};
-  return preferences.allEnabled !== false &&
+  return myGoldGoalServiceAllowed(data) &&
     Array.isArray(data?.fcmTokens) && data.fcmTokens.some(
       (token) => typeof token === "string" && token.trim().length >= 20
     );

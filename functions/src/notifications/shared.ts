@@ -8,6 +8,19 @@ export function normalizeNotificationPreferences(raw: unknown): NotificationPref
   return { allEnabled: source.allEnabled !== false, exchange: source.exchange !== false, goldNews: source.goldNews !== false, benefits: source.benefits === true };
 }
 
+// Explicit MY GOLD goal preference is independent of marketing consent.
+// For older accounts without this field, honor legacy allEnabled=false until
+// the user explicitly saves/reconfirms their own personal-goal alerts.
+export function myGoldGoalServiceAllowed(userData: FirebaseFirestore.DocumentData | undefined): boolean {
+  const raw = userData?.notificationPreferences;
+  const prefs = raw && typeof raw === "object" && !Array.isArray(raw)
+    ? raw as Record<string, unknown>
+    : {};
+  if (prefs.myGoldGoalAlertsEnabled === true) return true;
+  if (prefs.myGoldGoalAlertsEnabled === false) return false;
+  return prefs.allEnabled !== false;
+}
+
 export function notificationCategory(typeValue: unknown): "exchange" | "goldNews" | "benefits" | "other" {
   const type = String(typeValue || "").toLowerCase();
   if (type.startsWith("exchange_") || type.startsWith("bonus_gold_usage_")) return "exchange";

@@ -15,7 +15,7 @@ import {
   koreaDateKey,
   roundTo3,
 } from "../core/runtime.js";
-import { normalizeNotificationPreferences } from "./shared.js";
+import { myGoldGoalServiceAllowed } from "./shared.js";
 
 type PriceDirection = "up" | "down";
 
@@ -166,10 +166,9 @@ function hasServicePushTarget(
 function goalPushReady(
   userData: FirebaseFirestore.DocumentData | undefined
 ): boolean {
-  // MY GOLD 목표는 사용자가 직접 설정한 서비스 알림입니다.
-  // 광고성 정보 수신동의와는 분리하되, 사용자가 전체 알림을 껐다면 보내지 않습니다.
-  const preferences = normalizeNotificationPreferences(userData?.notificationPreferences);
-  return preferences.allEnabled !== false && hasServicePushTarget(userData);
+  // 사용자가 명시적으로 저장한 개인 목표 알림은 마케팅 동의와 독립적입니다.
+  // 기존 전체 알림 차단 설정은 명시적인 목표 재확인이 있기 전까지 존중합니다.
+  return myGoldGoalServiceAllowed(userData) && hasServicePushTarget(userData);
 }
 
 function readBonusGoldG(data: FirebaseFirestore.DocumentData | undefined): number {
@@ -516,6 +515,9 @@ export const saveMyGoldAlertGoals = onCall<{
 
     await userRef.set(
       {
+        // 목표 저장/해제는 MY GOLD 개인 알림에 대한 명시적 설정입니다.
+        // merge:true가 기존 예약·마케팅 선호를 보존합니다.
+        notificationPreferences: { myGoldGoalAlertsEnabled: goals.enabled },
         myGoldAlertGoals: goals,
         myGoldAlertGoalsUpdatedAt: FieldValue.serverTimestamp(),
         myGoldAlertRevision: nextRevision,

@@ -194,7 +194,7 @@ test("MY GOLD 요약 UI는 MEMBER GOLD를 현재 가치에 합산하지 않고 �
 test("MY GOLD 목표 알림은 회원혜택을 가치에 합산하지 않고 마케팅 동의와 분리한다", () => {
   assert.match(myGoldAlertsPageSource, /const currentValueWon = Number\(activeSummary\.estimatedValueWon \|\| 0\)/);
   assert.match(myGoldAlertFunctionSource, /currentValueWon: registeredValueWon/);
-  assert.match(myGoldAlertGoalsServiceSource, /const preferences = data\?\.notificationPreferences \|\| \{\}[\s\S]*preferences\.allEnabled !== false/);
+  assert.match(myGoldAlertGoalsServiceSource, /return myGoldGoalServiceAllowed\(data\) &&/);
   assert.doesNotMatch(myGoldAlertGoalsServiceSource, /marketingPush|marketingSubscribed/);
   assert.match(notificationSharedSource, /"my_gold_goal_reached"[\s\S]{0,250}\]\.includes\(type\)\) return "other"/);
 });
