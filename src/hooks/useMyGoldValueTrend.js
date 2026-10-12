@@ -9,6 +9,7 @@ import {
   getGoldPriceAtOrBefore,
   getGoldPriceHistoryRange,
 } from "@/services/goldPriceHistoryService";
+import { prepareMyGoldTrendPoints } from "@/lib/myGoldTrendTimeline";
 
 export const MY_GOLD_TREND_PERIODS = Object.freeze([
   { key: "7d", label: "1주", days: 7 },
@@ -39,10 +40,6 @@ function shiftDateKey(dateKey, days) {
   return `${utc.getUTCFullYear()}-${String(utc.getUTCMonth() + 1).padStart(2, "0")}-${String(utc.getUTCDate()).padStart(2, "0")}`;
 }
 
-function compact(dateKey) {
-  return String(dateKey || "").replace(/-/g, "");
-}
-
 function valueChange(current, previous) {
   const currentValue = Number(current) || 0;
   const previousValue = Number(previous) || 0;
@@ -56,16 +53,17 @@ function valueChange(current, previous) {
 
 export default function useMyGoldValueTrend({
   pureGoldG,
-  currentPricePerDon,
   currentMarket = {},
   enabled,
   items = [],
   rates = null,
   bonusGoldG = 0,
+  bonusOnly = false,
   defaultPeriod = "30d",
 }) {
   const [period, setPeriod] = useState(defaultPeriod);
   const [historyRows, setHistoryRows] = useState([]);
+  const [startReference, setStartReference] = useState(null);
   const [weeklyReference, setWeeklyReference] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -100,6 +98,7 @@ export default function useMyGoldValueTrend({
   useEffect(() => {
     if (!enabled) {
       setHistoryRows([]);
+      setStartReference(null);
       setError("");
       setLoading(false);
       return undefined;
@@ -109,13 +108,21 @@ export default function useMyGoldValueTrend({
     setLoading(true);
     setError("");
 
-    getGoldPriceHistoryRange(startDate, today)
-      .then((rows) => {
-        if (active) setHistoryRows(rows || []);
+    // The effective market price at the *period start* may have been registered earlier.
+    // A sparse price-change history alone cannot determine that starting value.
+    Promise.all([
+      getGoldPriceAtOrBefore(startDate),
+      getGoldPriceHistoryRange(startDate, today),
+    ])
+      .then(([asOf, rows]) => {
+        if (!active) return;
+        setStartReference(asOf || null);
+        setHistoryRows(rows || []);
       })
       .catch((loadError) => {
         console.warn("[MY GOLD] trend price history load failed:", loadError?.message || loadError);
         if (active) {
+          setStartReference(null);
           setHistoryRows([]);
           setError("가치 변화 데이터를 불러오지 못했습니다.");
         }
@@ -130,16 +137,16 @@ export default function useMyGoldValueTrend({
   }, [enabled, startDate, today]);
 
   const valueAtMarket = useCallback((market = {}) => {
-    const registered = Array.isArray(items) && items.length > 0 && rates
-      ? items.reduce((sum, item) => sum + computeVaultMarketValueWon(item, rates, market), 0)
-      : 0;
     const pureBuy = Number(market?.pureGoldBuyPerDon) || 0;
-    const bonusValue = pureBuy > 0
-      ? computeVaultValueWon(Math.max(0, Number(bonusGoldG) || 0), pureBuy)
-      : 0;
-    if (registered > 0 || bonusValue > 0) return registered + bonusValue;
+    if (bonusOnly) {
+      return pureBuy > 0 ? computeVaultValueWon(Math.max(0, Number(bonusGoldG) || 0), pureBuy) : 0;
+    }
+    // MY GOLD tracks only the member's own recorded items. Rewards are separate.
+    if (Array.isArray(items) && items.length > 0 && rates) {
+      return items.reduce((sum, item) => sum + computeVaultMarketValueWon(item, rates, market), 0);
+    }
     return computeVaultValueWon(Number(pureGoldG) || 0, pureBuy);
-  }, [bonusGoldG, items, pureGoldG, rates]);
+  }, [bonusGoldG, bonusOnly, items, pureGoldG, rates]);
 
   const currentValueWon = useMemo(
     () => valueAtMarket(currentMarket),
@@ -147,40 +154,22 @@ export default function useMyGoldValueTrend({
   );
 
   const points = useMemo(() => {
-    if (!enabled || (Number(pureGoldG) <= 0 && (!Array.isArray(items) || items.length === 0))) return [];
-
-    const mapped = historyRows.map((row) => ({
-      date: row.sourceDate,
-      pricePerDon: row.pureGoldBuyPerDon,
-      valueWon: valueAtMarket(row.market || {}),
-    })).filter((row) => row.valueWon > 0);
-
-    const todayCompact = compact(today);
-    if (Number(currentPricePerDon) > 0 && currentValueWon > 0) {
-      const last = mapped[mapped.length - 1];
-      if (!last || last.date !== todayCompact) {
-        mapped.push({
-          date: todayCompact,
-          pricePerDon: Number(currentPricePerDon),
-          valueWon: currentValueWon,
-        });
-      } else {
-        mapped[mapped.length - 1] = {
-          ...last,
-          pricePerDon: Number(currentPricePerDon),
-          valueWon: currentValueWon,
-        };
-      }
-    }
-
-    return mapped;
-  }, [currentPricePerDon, currentValueWon, enabled, historyRows, items, pureGoldG, today, valueAtMarket]);
+    const hasRecordedGold = Number(pureGoldG) > 0 || (Array.isArray(items) && items.length > 0);
+    if (!enabled || (!hasRecordedGold && !(bonusOnly && Number(bonusGoldG) > 0))) return [];
+    return prepareMyGoldTrendPoints({
+      startDate,
+      endDate: today,
+      startReference,
+      historyRows,
+      currentMarket,
+      valueAtMarket,
+    });
+  }, [bonusGoldG, bonusOnly, currentMarket, enabled, historyRows, items, pureGoldG, startDate, startReference, today, valueAtMarket]);
 
   const rangeChange = useMemo(() => {
-    const first = points[0]?.valueWon || 0;
-    const last = points[points.length - 1]?.valueWon || currentValueWon;
-    return valueChange(last, first);
-  }, [currentValueWon, points]);
+    if (!startReference || points.length < 2) return valueChange(0, 0);
+    return valueChange(currentValueWon, points[0].valueWon);
+  }, [currentValueWon, points, startReference]);
 
   const weeklyValueWon = useMemo(
     () => weeklyReference?.market ? valueAtMarket(weeklyReference.market) : 0,
@@ -206,6 +195,7 @@ export default function useMyGoldValueTrend({
     setPeriod,
     selectedPeriod,
     points,
+    startReference,
     currentValueWon,
     rangeChange,
     weeklyChange,

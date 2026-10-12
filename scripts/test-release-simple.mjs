@@ -148,6 +148,8 @@ async function main() {
   const goalIdempotence = await step('MY GOLD GOAL IDEMPOTENCE', () => runNode(['functions/scripts/test-my-gold-goal-idempotence.mjs']));
   if (!goalIdempotence) return finish(1);
 
+  const trendTimeline = await step('MY GOLD TREND TIMELINE', () => runNode(['--test', 'scripts/test-my-gold-trend-timeline.mjs']));
+  if (!trendTimeline) return finish(1);
   const rateReadiness = await step('GOLD RATE READINESS', () => runNode(['scripts/test-gold-exchange-rate-readiness.mjs']));
   if (!rateReadiness) return finish(1);
 

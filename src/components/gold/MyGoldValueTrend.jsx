@@ -6,6 +6,7 @@ import { Minus, TrendingDown, TrendingUp } from "lucide-react";
 
 import useMyGoldValueTrend, { MY_GOLD_TREND_PERIODS } from "@/hooks/useMyGoldValueTrend";
 import { livingGoldPulse } from "@/styles/livingGoldMotion";
+import { buildMyGoldTrendChartGeometry } from "@/lib/myGoldTrendTimeline";
 
 const chartLineIn = keyframes`
   from { opacity: 0; }
@@ -364,41 +365,6 @@ function formatCompactDate(value) {
   return `${Number(text.slice(4, 6))}/${Number(text.slice(6, 8))}`;
 }
 
-function buildChartGeometry(points) {
-  const width = 640;
-  const height = 136;
-  const paddingX = 12;
-  const paddingY = 14;
-  if (!points.length) return { width, height, polyline: "", area: "", min: 0, max: 0, lastPoint: null };
-
-  const values = points.map((point) => Number(point.valueWon) || 0);
-  let min = Math.min(...values);
-  let max = Math.max(...values);
-  if (min === max) {
-    const pad = Math.max(1, min * 0.01);
-    min -= pad;
-    max += pad;
-  }
-  const range = Math.max(1, max - min);
-  const usableWidth = width - paddingX * 2;
-  const usableHeight = height - paddingY * 2;
-
-  const coords = points.map((point, index) => {
-    const x = paddingX + (points.length <= 1 ? usableWidth / 2 : (index / (points.length - 1)) * usableWidth);
-    const ratio = ((Number(point.valueWon) || 0) - min) / range;
-    const y = paddingY + (1 - ratio) * usableHeight;
-    return [x, y];
-  });
-
-  const polyline = coords.map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`).join(" ");
-  const firstX = coords[0]?.[0] || paddingX;
-  const lastX = coords[coords.length - 1]?.[0] || width - paddingX;
-  const baseline = height - paddingY;
-  const area = `${firstX.toFixed(2)},${baseline} ${polyline} ${lastX.toFixed(2)},${baseline}`;
-
-  return { width, height, polyline, area, min, max, lastPoint: coords[coords.length - 1] || null };
-}
-
 function getRangeInsight(current, low, high) {
   const currentValue = Number(current) || 0;
   const lowValue = Number(low) || 0;
@@ -407,9 +373,9 @@ function getRangeInsight(current, low, high) {
   if (spread <= 0) return { position: 50, label: "비교 구간 형성 중" };
   const raw = ((currentValue - lowValue) / spread) * 100;
   const position = Math.max(0, Math.min(100, raw));
-  if (position <= 33) return { position, label: "최근 범위에서 낮은 구간" };
-  if (position >= 67) return { position, label: "최근 범위에서 높은 구간" };
-  return { position, label: "최근 범위에서 중간 구간" };
+  if (position <= 33) return { position, label: "기간 중 하단 구간" };
+  if (position >= 67) return { position, label: "기간 중 상단 구간" };
+  return { position, label: "기간 중 중간 구간" };
 }
 
 export default function MyGoldValueTrend({
@@ -433,8 +399,9 @@ export default function MyGoldValueTrend({
     items,
     rates,
     bonusGoldG,
+    bonusOnly,
   });
-  const geometry = useMemo(() => buildChartGeometry(trend.points), [trend.points]);
+  const geometry = useMemo(() => buildMyGoldTrendChartGeometry(trend.points), [trend.points]);
   const rangeInsight = useMemo(
     () => getRangeInsight(trend.currentValueWon, trend.extrema.low, trend.extrema.high),
     [trend.currentValueWon, trend.extrema.low, trend.extrema.high]
@@ -469,8 +436,8 @@ export default function MyGoldValueTrend({
         </CompactHead>
 
         <ChangeLine $direction={trend.rangeChange.direction}>
-          <strong><DirectionIcon size={16} aria-hidden /> {formatSignedWon(trend.rangeChange.amount)} · {formatSignedPercent(trend.rangeChange.percent)}</strong>
-          <span>{trend.selectedPeriod.label} 첫 공개 시세 대비</span>
+          <strong><DirectionIcon size={16} aria-hidden /> {trend.loading ? "비교 확인 중" : trend.rangeChange.direction === "unknown" ? "비교 정보 없음" : `${formatSignedWon(trend.rangeChange.amount)} · ${formatSignedPercent(trend.rangeChange.percent)}`}</strong>
+          <span>{trend.selectedPeriod.label} 기간 시작일 대비</span>
         </ChangeLine>
 
         <CompactChartWrap>
@@ -523,8 +490,8 @@ export default function MyGoldValueTrend({
       </Head>
 
       <ChangeLine $direction={trend.rangeChange.direction}>
-        <strong><DirectionIcon size={16} aria-hidden /> {formatSignedWon(trend.rangeChange.amount)} · {formatSignedPercent(trend.rangeChange.percent)}</strong>
-        <span>{trend.selectedPeriod.label} 첫 공개 시세 대비</span>
+        <strong><DirectionIcon size={16} aria-hidden /> {trend.loading ? "비교 확인 중" : trend.rangeChange.direction === "unknown" ? "비교 정보 없음" : `${formatSignedWon(trend.rangeChange.amount)} · ${formatSignedPercent(trend.rangeChange.percent)}`}</strong>
+        <span>{trend.selectedPeriod.label} 기간 시작일 대비</span>
       </ChangeLine>
 
       <ChartWrap>
