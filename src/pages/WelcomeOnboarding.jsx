@@ -574,7 +574,7 @@ export default function WelcomeOnboarding() {
         : "첫 금 기록하기";
 
   const finishDescription = nextPath.startsWith("/gold-exchange")
-    ? "가입 전에 계산하거나 선택한 예약 흐름으로 바로 돌아갑니다."
+    ? "가입 전 예약 화면으로 돌아갑니다. 계산·일정은 같은 브라우저에서 최대 2시간 동안 불러올 수 있으며, 만료되면 다시 입력해야 할 수 있습니다."
     : nextPath.startsWith("/my-gold")
       ? "가입 전에 기록하거나 계산한 내 금 흐름을 그대로 이어갑니다."
       : "집에 있는 금 하나를 기록하면 오늘 가치와 이후의 변화를 계속 확인할 수 있습니다.";

@@ -178,6 +178,9 @@ async function main() {
   const memberAuthCopy = await step('MEMBER AUTH ERROR COPY', () => runNode(['--test', 'scripts/test-member-auth-error-copy.mjs']));
   if (!memberAuthCopy) return finish(1);
 
+  const authResume = await step('AUTH RESUME EXPERIENCE', () => runNode(['--test', 'scripts/test-auth-reservation-resume.mjs']));
+  if (!authResume) return finish(1);
+
   const appCheck = await step('APP CHECK POLICY', () => runNpm(['run', 'test:app-check']));
   if (!appCheck) return finish(1);
 

@@ -83,7 +83,7 @@ test("회원가입은 최소 계정 생성과 점진적 프로필 구조를 사�
 
 test("가입 CTA는 사용자의 원래 목적을 말하고 혜택은 보조로 둔다", () => {
   assert.match(registerSource, /내 금 저장하고 시작하기/);
-  assert.match(registerSource, /계산 결과 이어서 예약하기/);
+  assert.match(registerSource, /회원가입 후 예약 이어가기/);
   assert.match(loginSource, /내 금 기록을 이어가세요/);
   assert.match(loginSource, /예약을 이어서 진행하세요/);
   assert.match(loginSource, /내 금의 가치와 기록을 이어서 확인하세요/);
