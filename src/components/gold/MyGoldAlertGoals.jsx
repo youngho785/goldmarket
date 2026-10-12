@@ -352,6 +352,8 @@ export default function MyGoldAlertGoals({
       void trackProductEvent("mygold_alert_saved", { mode: hasAnyGoal ? "enabled" : "disabled" });
       if (result.notified && Array.isArray(result.reached) && result.reached.length) {
         setMessage(`저장 완료 · 현재 이미 ${result.reached.join(" · ")}에 도달했습니다.`);
+      } else if (hasAnyGoal && result.changed === false) {
+        setMessage("설정을 확인했습니다. 이미 안내한 목표는 동일한 설정으로 다시 알리지 않습니다.");
       } else if (hasAnyGoal) {
         setMessage("저장했습니다. 목표에 처음 도달하면 알려드릴게요.");
       } else {

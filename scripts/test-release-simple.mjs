@@ -145,6 +145,9 @@ async function main() {
     async () => runNode(['--test', 'functions/scripts/test-bonus-usage-visit-policy.mjs']));
   if (!memberGoldVisitPolicy) return finish(1);
 
+  const goalIdempotence = await step('MY GOLD GOAL IDEMPOTENCE', () => runNode(['functions/scripts/test-my-gold-goal-idempotence.mjs']));
+  if (!goalIdempotence) return finish(1);
+
   const rateReadiness = await step('GOLD RATE READINESS', () => runNode(['scripts/test-gold-exchange-rate-readiness.mjs']));
   if (!rateReadiness) return finish(1);
 

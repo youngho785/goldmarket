@@ -16,6 +16,7 @@ import {
   roundTo3,
 } from "../core/runtime.js";
 import { myGoldGoalServiceAllowed } from "./shared.js";
+import { planMyGoldGoalSave } from "./myGoldGoalState.js";
 
 type PriceDirection = "up" | "down";
 
@@ -502,45 +503,56 @@ export const saveMyGoldAlertGoals = onCall<{
     const uid = request.auth?.uid;
     if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
 
-    const goals = normalizeGoals(request.data?.goals, true);
-    const userRef = db().doc(`users/${uid}`);
-    const userSnap = await userRef.get();
-    if (!userSnap.exists) {
-      throw new HttpsError("failed-precondition", "회원 정보를 확인하지 못했습니다.");
-    }
-    const currentUserData = userSnap.data() || {};
-    const currentPushReady = goalPushReady(currentUserData);
+const goals = normalizeGoals(request.data?.goals, true);
+const userRef = db().doc(`users/${uid}`);
 
-    const nextRevision = Math.max(0, Math.round(Number(userSnap.get("myGoldAlertRevision")) || 0)) + 1;
+// Compute and save the goal revision atomically: concurrent saves cannot
+// both reset one-time delivery state or overwrite a newer revision.
+const saveState = await db().runTransaction(async (tx) => {
+  const userSnap = await tx.get(userRef);
+  if (!userSnap.exists) {
+    throw new HttpsError("failed-precondition", "회원 정보를 확인하지 못했습니다.");
+  }
+  const data = userSnap.data() || {};
+  const previous = normalizeGoals(data.myGoldAlertGoals);
+  const plan = planMyGoldGoalSave(previous, goals, data.myGoldAlertState, data.myGoldAlertRevision);
+  const rawPreferences = data.notificationPreferences;
+  const preferences = rawPreferences && typeof rawPreferences === "object" && !Array.isArray(rawPreferences)
+    ? rawPreferences as Record<string, unknown>
+    : {};
+  const needsPreferenceUpdate = preferences.myGoldGoalAlertsEnabled !== goals.enabled;
 
-    await userRef.set(
-      {
-        // 목표 저장/해제는 MY GOLD 개인 알림에 대한 명시적 설정입니다.
-        // merge:true가 기존 예약·마케팅 선호를 보존합니다.
-        notificationPreferences: { myGoldGoalAlertsEnabled: goals.enabled },
-        myGoldAlertGoals: goals,
-        myGoldAlertGoalsUpdatedAt: FieldValue.serverTimestamp(),
-        myGoldAlertRevision: nextRevision,
-        // Saving a goal means the member intentionally wants a fresh one-time alert.
-        myGoldAlertState: {
-          valueGoalKey: goalKey("value", goals.valueTargetWon),
-          valueReached: false,
-          priceGoalKey: goalKey(
-            goals.priceDirection === "down" ? "price-down" : "price",
-            goals.priceTargetPerDon
-          ),
-          priceReached: false,
-          barGoalKey: goalKey("bar", goals.targetGoldBarG),
-          barReached: false,
-          lastEvaluatedAt: FieldValue.serverTimestamp(),
-          lastEvaluatedSource: "save-reset",
-        },
+  if (plan.changed) {
+    tx.set(userRef, {
+      notificationPreferences: { myGoldGoalAlertsEnabled: goals.enabled },
+      myGoldAlertGoals: goals,
+      myGoldAlertGoalsUpdatedAt: FieldValue.serverTimestamp(),
+      myGoldAlertRevision: plan.revision,
+      myGoldAlertState: {
+        ...plan.state,
+        lastEvaluatedAt: FieldValue.serverTimestamp(),
+        lastEvaluatedSource: "save-updated",
       },
-      { merge: true }
-    );
+    }, { merge: true });
+  } else if (needsPreferenceUpdate) {
+    // A legacy user may explicitly enable MY GOLD service push without
+    // changing their saved targets. Never re-arm goals for this alone.
+    tx.set(userRef, {
+      notificationPreferences: { myGoldGoalAlertsEnabled: goals.enabled },
+    }, { merge: true });
+  }
+  return {
+    changed: plan.changed,
+    pushReady: goalPushReady({
+      ...data,
+      notificationPreferences: { ...preferences, myGoldGoalAlertsEnabled: goals.enabled },
+    }),
+  };
+});
+const currentPushReady = saveState.pushReady;
 
     if (!goals.enabled) {
-      return { ok: true, goals, notified: false, reached: [], pushReady: currentPushReady };
+      return { ok: true, goals, notified: false, reached: [], pushReady: currentPushReady, changed: saveState.changed };
     }
 
     const [freshUserSnap, publicConfigSnap, currentPriceSnap, rates] = await Promise.all([
@@ -569,7 +581,7 @@ export const saveMyGoldAlertGoals = onCall<{
     );
     const evaluation = await evaluateUserGoals(uid, metrics, "save");
 
-    return { ok: true, goals, ...evaluation, metrics };
+    return { ok: true, goals, ...evaluation, metrics, changed: saveState.changed };
   }
 );
 
