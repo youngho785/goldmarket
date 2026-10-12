@@ -157,6 +157,9 @@ async function main() {
   const priceDate = await step('GOLD PRICE DATE LABEL', () => runNode(['--test', 'scripts/test-gold-price-date-presentation.mjs']));
   if (!priceDate) return finish(1);
 
+  const homeFlowUx = await step('HOME JOURNEY UX', () => runNode(['--test', 'scripts/test-home-journey-consistency.mjs']));
+  if (!homeFlowUx) return finish(1);
+
   const rateReadiness = await step('GOLD RATE READINESS', () => runNode(['scripts/test-gold-exchange-rate-readiness.mjs']));
   if (!rateReadiness) return finish(1);
 

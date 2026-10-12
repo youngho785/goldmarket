@@ -89,25 +89,6 @@ const ReservationCopy = styled.div`
   }
 `;
 
-const WebGoalLink = styled(Link)`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px 18px;
-  min-height: 56px;
-  padding: 12px 16px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 15px;
-  background: ${({ theme }) => theme.semantic.badgeGoldBg};
-  color: ${({ theme }) => theme.colors.primary};
-  text-decoration: none;
-  font-size: .87rem;
-  line-height: 1.4;
-  strong { font-weight: 900; }
-  small { color: ${({ theme }) => theme.colors.textSecondary}; font-size: .79rem; }
-  &:focus-visible { outline: 2px solid ${({ theme }) => theme.colors.secondary}; outline-offset: 3px; }
-`;
 
 const FirstGoldStart = styled.section`
   display: grid;
@@ -296,13 +277,6 @@ export default function AppHome() {
           configLoading={myGoldDashboard.publicPriceLoading}
         />
       </OverviewGrid>
-
-      {hasMyGold && !myGoldDashboard.itemsLoading && myGoldDashboard.ratesReady && (
-        <WebGoalLink to="/my-gold#goldbar-goal">
-          <span><strong>내 골드바 목표 확인</strong> · 예상 순금 {pureGoldG.toFixed(2)}g</span>
-          <small>참고값 · 실측 후 최종 확정 →</small>
-        </WebGoalLink>
-      )}
 
       {user?.uid && !myGoldDashboard.itemsLoading && !hasMyGold && (
         <FirstGoldStart aria-label="처음 사용하는 MY GOLD 안내">

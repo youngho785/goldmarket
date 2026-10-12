@@ -68,7 +68,7 @@ const Action = styled(Link)`
 export default function HomePriorityActions() {
   return (
     <Panel aria-labelledby="home-priority-actions-title">
-      <Heading id="home-priority-actions-title">지금 바로 시작하기</Heading>
+      <Heading id="home-priority-actions-title">내 금으로 할 일</Heading>
       <Links>
         <Action to="/my-gold/items?add=1" $primary>
           <Plus aria-hidden="true" />

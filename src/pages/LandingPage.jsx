@@ -497,10 +497,10 @@ export default function LandingPage() {
           <Kicker>KOREA GOLD MARKET</Kicker>
           <HeroTitle id="landing-title">
             <DesktopHeadline>잠들어 있던 <em>금의 가치를 발견하세요.</em></DesktopHeadline>
-            <MobileHeadline>내 금, <em>오늘 얼마일까요?</em></MobileHeadline>
+            <MobileHeadline>내 금, <em>지금 얼마일까요?</em></MobileHeadline>
           </HeroTitle>
           <HeroLead>
-            14K·18K·순금과 중량만 입력하면 오늘의 예상 가치를 확인할 수 있습니다.
+            14K·18K·순금과 중량을 입력하면 공개 시세 기준 예상 가치를 확인할 수 있습니다.
             <strong> 회원가입 없이 먼저 계산하고, 원하는 금만 MY GOLD에 기록하세요.</strong>
           </HeroLead>
           <HeroTrust aria-label="안심 이용 안내">
@@ -514,7 +514,7 @@ export default function LandingPage() {
             source="landing"
             eyebrow="회원가입 없이 바로 계산"
             title="내 금 가치 계산하기"
-            description="금 종류와 중량을 입력해 오늘 예상 가치와 순금량을 확인하세요."
+            description="금 종류와 중량을 입력해 예상 가치와 순금량을 확인하세요."
             onPreviewChange={setGoldPreview}
           />
           {goldPreview && (
@@ -525,7 +525,7 @@ export default function LandingPage() {
               </strong>
               <PreviewMetrics>
                 <div>
-                  <span>오늘 예상 참고가치</span>
+                  <span>예상 참고가치</span>
                   <b>{Number(goldPreview.estimatedValueWon || 0) > 0
                     ? `${Math.round(goldPreview.estimatedValueWon).toLocaleString("ko-KR")}원`
                     : "시세 확인 후 표시"}</b>
@@ -569,9 +569,9 @@ export default function LandingPage() {
       <CompactSection aria-labelledby="live-title">
         <SectionHead>
           <SectionHeadCopy>
-            <Kicker>오늘 시세</Kicker>
-            <SectionTitle id="live-title">오늘 금시세</SectionTitle>
-            <SectionLead>금액과 마지막 시세 등록일을 함께 확인할 수 있습니다.</SectionLead>
+            <Kicker>공개 시세</Kicker>
+            <SectionTitle id="live-title">금시세</SectionTitle>
+            <SectionLead>현재 공개 중인 금시세를 확인하세요.</SectionLead>
           </SectionHeadCopy>
           <TextLink to="/gold-price">전체 시세 보기 <ArrowRight size={15} aria-hidden /></TextLink>
         </SectionHead>
