@@ -13,7 +13,7 @@ const [steps, page, intro, release] = await Promise.all([
 // Text-focused regression tests: business rules and the reservation callable remain unchanged.
 test('골드바 선택에서 부족한 중량을 순금으로 명확하게 표시한다', () => {
   assert.match(steps, /neededG > 0 \? "추가로 필요한 순금" : "예상 남는 순금"/);
-  assert.match(steps, /neededG > 0 && " 추가로 필요한 금의 비용은 위 제작 공임에 포함되지 않습니다\."/);
+  assert.match(steps, /neededG > 0 && " 추가로 필요한 순금의 비용은 위 제작 공임에 포함되지 않습니다\."/);
 });
 
 test('예약 단계는 부족분 비용·공임과 실측 확정을 구분한다', () => {
@@ -36,7 +36,7 @@ test('예약 요청 버튼 근처에서는 접수와 확정을 한 번만 간결
 
 test('비회원은 계산·방문 시간 선택 후 인증할 수 있다', () => {
   assert.match(page, /예약 요청만 로그인 또는 회원가입 후 완료합니다/);
-  assert.match(steps, /방문 예약 계속하기/);
+  assert.match(steps, /user \? "이메일 인증하고 예약 이어가기" : "로그인·가입하고 예약 이어가기"/);
   assert.match(page, /saveGoldExchangeDraft\(/);
 });
 

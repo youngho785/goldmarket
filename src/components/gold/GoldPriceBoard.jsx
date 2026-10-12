@@ -15,6 +15,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import useKoreaTodayDate from "@/hooks/useKoreaTodayDate";
+import { getGoldPriceDatePresentation } from "@/lib/goldPriceDatePresentation";
 
 const Wrap = styled.section`
   width: ${({ $compact }) => ($compact ? "100%" : "min(1120px, calc(100% - 32px))")};
@@ -110,18 +111,6 @@ const PriceContext = styled.p`
 
   strong { color: ${({ theme }) => theme.colors.primary}; }
   @media (max-width: 520px) { font-size: .68rem; }
-`;
-
-const PriceFreshnessNotice = styled.p`
-  margin: 0;
-  padding: 9px 12px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
-  background: ${({ theme }) => theme.semantic.alertWarningBg};
-  color: ${({ theme }) => theme.semantic.alertWarningText};
-  font-size: .77rem;
-  line-height: 1.55;
-  text-align: center;
-  word-break: keep-all;
 `;
 
 const TableHead = styled.div`
@@ -396,24 +385,6 @@ function formatDateKey(value) {
   return `${text.slice(0, 4)}.${text.slice(4, 6)}.${text.slice(6, 8)}`;
 }
 
-// Registration time comes from the published record, not the current clock.
-function publicationTime(value) {
-  const date = typeof value?.toDate === "function"
-    ? value.toDate()
-    : value instanceof Date
-      ? value
-      : Number.isFinite(value?.seconds)
-        ? new Date(value.seconds * 1000)
-        : null;
-  if (!date || !Number.isFinite(date.getTime())) return "";
-  return new Intl.DateTimeFormat("ko-KR", {
-    timeZone: "Asia/Seoul",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(date);
-}
-
 function compactDate(value) {
   return String(value || "").replace(/-/g, "");
 }
@@ -590,6 +561,10 @@ export default function GoldPriceBoard({ compact = false }) {
     }
   };
 
+  const { isTodayPublished, label: priceDateLabel } = getGoldPriceDatePresentation(
+    todayKey, data?.sourceDate, !!data
+  );
+
   if (configLoading || !enabled) return null;
 
   return (
@@ -597,12 +572,7 @@ export default function GoldPriceBoard({ compact = false }) {
       {!compact && <Head $compact={compact}>
         <HeadTitle>
           <Title>한국골드마켓 금시세</Title>
-          {data && (
-            <SourceDate>
-              기준일 <strong>{formatDateKey(todayKey)}</strong>
-              {data.sourceDate && <> · 시세 등록일 {formatDateKey(data.sourceDate)}</>}
-            </SourceDate>
-          )}
+          {data && <SourceDate>{priceDateLabel}</SourceDate>}
         </HeadTitle>
       </Head>}
 
@@ -614,15 +584,9 @@ export default function GoldPriceBoard({ compact = false }) {
         <>
           <PriceContext>
             <span><strong>1돈(3.75g) 기준</strong></span>
-            <span>기준일 <strong>{formatDateKey(todayKey)}</strong></span>
-            <span>시세 등록일 <strong>{data.sourceDate ? formatDateKey(data.sourceDate) : "확인 중"}</strong></span>
-            {publicationTime(data.updatedAt) && <span>등록 시각 {publicationTime(data.updatedAt)} (KST)</span>}
+            <span>{priceDateLabel}</span>
+            {!isTodayPublished && <span role="status">실제 거래 전 가격 확인</span>}
           </PriceContext>
-          {data.sourceDate && data.sourceDate !== todayKey && (
-            <PriceFreshnessNotice role="status">
-              이 가격은 {formatDateKey(data.sourceDate)} 등록 시세입니다. 오늘 새로 등록된 가격은 아니므로 실제 거래 전 최신 가격을 확인해 주세요.
-            </PriceFreshnessNotice>
-          )}
           <PriceTable>
             <TableHead $compact={compact}>
               <HeadCell $first>종류</HeadCell>

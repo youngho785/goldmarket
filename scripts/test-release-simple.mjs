@@ -163,6 +163,9 @@ async function main() {
   const exchangeClarity = await step('GOLD EXCHANGE RESERVATION UX', () => runNode(['--test', 'scripts/test-gold-exchange-reservation-clarity.mjs']));
   if (!exchangeClarity) return finish(1);
 
+  const screenTrust = await step('GOLD EXCHANGE SCREEN TRUST', () => runNode(['--test', 'scripts/test-gold-exchange-screen-trust.mjs']));
+  if (!screenTrust) return finish(1);
+
   const rateReadiness = await step('GOLD RATE READINESS', () => runNode(['scripts/test-gold-exchange-rate-readiness.mjs']));
   if (!rateReadiness) return finish(1);
 

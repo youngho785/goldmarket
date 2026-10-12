@@ -385,7 +385,7 @@ export function BarStep({
       </ExchangeFeeNote>
       <HelpText style={{ margin: "6px 0 10px", lineHeight: 1.5 }}>
         온라인 예상입니다. 실측 순도·중량, 잔여 금 처리 및 공임은 매장에서 고객과 확인하고 동의 후 확정됩니다.
-        {neededG > 0 && " 추가로 필요한 금의 비용은 위 제작 공임에 포함되지 않습니다."}
+        {neededG > 0 && " 추가로 필요한 순금의 비용은 위 제작 공임에 포함되지 않습니다."}
         선택한 골드바 외 추가 조합의 공임은 별도입니다.
         {" "}<FeeLink href="/goldbar-fee">전체 공임표 보기</FeeLink>
       </HelpText>
@@ -648,7 +648,7 @@ export function BarStep({
               <p style={{ margin: "6px 0 0" }}>
                 <b>{groupMin.label}</b> 1개를 추가하려면 <b>{fmtG(needMore)}g</b> (<b>{fmtD(needMore / DON_TO_GRAMS)}돈</b>)이 더 필요합니다.
               </p>
-              <p style={{ margin: "10px 0 0", fontWeight: 700 }}>잔여 금 처리방법은 교환 확정 시 안내합니다.</p>
+              <p style={{ margin: "10px 0 0", fontWeight: 700 }}>남는 순금의 처리 방법은 방문 시 실측 결과를 확인한 뒤 결정할 수 있습니다.</p>
             </>
           );
         })()}
@@ -1109,16 +1109,11 @@ export function ReserveStep({
           <SectionSeparator />
           <InfoCard role="note">
             <p style={{ margin: 0, fontWeight: 850 }}>
-              선택한 일정은 아직 예약된 것이 아닙니다.
+              {user ? "이메일 인증 후 예약을 이어갈 수 있습니다." : "로그인 또는 가입 후 예약을 이어갈 수 있습니다."}
             </p>
             <p style={{ margin: "8px 0 0" }}>
-              {user
-                ? "이메일 인증을 완료한 뒤 예약에 필요한 성명·전화번호를 확인하고 개인정보 동의를 거치면 예약요청이 완료됩니다."
-                : "로그인 또는 간단 가입과 이메일 인증 후, 예약에 필요한 성명·전화번호를 한 번 입력하면 예약요청이 완료됩니다."}
-            </p>
-            <p style={{ margin: "8px 0 0" }}>
-              인증을 진행하는 동안 이 시간은 선점되지 않습니다. 돌아오면 실시간 예약 상태를
-              다시 확인하고, 이미 예약된 경우 다른 시간을 선택할 수 있습니다.
+              예약자 이름·연락처 확인과 개인정보 동의 후 예약 요청이 접수됩니다.
+              인증 중에도 시간은 선점되지 않으므로 돌아오면 예약 가능 여부를 다시 확인합니다.
             </p>
             {dateKey && visitTime && (
               <p style={{ margin: "10px 0 0", fontWeight: 900 }}>
@@ -1129,7 +1124,7 @@ export function ReserveStep({
 
           <div style={{ display: "grid", gap: 10, marginTop: 14 }}>
             <Button type="button" onClick={onRequireAuth}>
-              방문 예약 계속하기
+              {user ? "이메일 인증하고 예약 이어가기" : "로그인·가입하고 예약 이어가기"}
             </Button>
             <GhostButton
               type="button"

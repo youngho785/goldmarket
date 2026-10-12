@@ -544,9 +544,9 @@ export default function LandingPage() {
       </Hero>
 
       <FlowStrip aria-label="한국골드마켓 이용 흐름">
-        <FlowItem type="button" onClick={startValueCheck} aria-label="오늘 가치 확인 계산기로 이동">
+        <FlowItem type="button" onClick={startValueCheck} aria-label="내 금 예상 가치 확인 계산기로 이동">
           <span>01</span>
-          <div><strong>오늘 가치 확인</strong><p>금 종류와 중량으로 지금 내 금의 참고가치를 바로 확인합니다.</p></div>
+          <div><strong>예상 가치 확인</strong><p>공개 시세 기준 내 금의 예상 참고가치를 확인합니다.</p></div>
         </FlowItem>
         <FlowItem as={Link} to="/my-gold" aria-label="MY GOLD 기록으로 이동">
           <span>02</span>
