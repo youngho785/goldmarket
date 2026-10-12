@@ -175,6 +175,9 @@ async function main() {
   const authStatic = await step('AUTH SAFETY', () => runNode(['scripts/test-auth-core-safety.mjs']));
   if (!authStatic) return finish(1);
 
+  const memberAuthCopy = await step('MEMBER AUTH ERROR COPY', () => runNode(['--test', 'scripts/test-member-auth-error-copy.mjs']));
+  if (!memberAuthCopy) return finish(1);
+
   const appCheck = await step('APP CHECK POLICY', () => runNpm(['run', 'test:app-check']));
   if (!appCheck) return finish(1);
 

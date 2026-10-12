@@ -302,7 +302,7 @@ export default function Login() {
             `관리자 2단계 인증번호를 ${challenge.phoneNumber || "등록된 휴대전화"}로 발송했습니다.`
           );
         } catch (mfaError) {
-          setError(mfaError?.message || "2단계 인증을 시작하지 못했습니다.");
+          setError("2단계 인증을 시작하지 못했습니다. 잠시 후 다시 시도해 주세요.");
         }
         return;
       }
@@ -341,7 +341,7 @@ export default function Login() {
       setError(
         err?.code === "auth/invalid-verification-code"
           ? "인증번호가 올바르지 않습니다."
-          : err?.message || "2단계 인증에 실패했습니다."
+          : "2단계 인증에 실패했습니다. 잠시 후 다시 시도해 주세요."
       );
     } finally {
       setLoading(false);
@@ -359,7 +359,7 @@ export default function Login() {
       setResendMsg(
         err?.code === "auth/too-many-requests"
           ? "이메일 재전송이 너무 많아 잠시 후 시도해 주세요."
-          : `메일 전송에 실패했습니다: ${err?.message || "알 수 없는 오류"}`
+          : "인증 메일을 보내지 못했습니다. 잠시 후 다시 시도해 주세요."
       );
     }
   };

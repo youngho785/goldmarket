@@ -419,7 +419,7 @@ export default function VerifyEmail() {
           setMessage(
             mode === "verifyAndChangeEmail"
               ? "❌ 유효하지 않은 이메일 변경 링크입니다. 이미 사용되었거나 새로 발급된 링크가 있을 수 있습니다."
-              : "❌ 유효하지 않은 인증 링크입니다. 이미 사용되었거나 잘못된 프로젝트일 수 있어요."
+              : "❌ 인증 링크를 확인할 수 없습니다. 이미 사용했거나 만료되었을 수 있습니다. 로그인 후 인증 상태를 확인해 주세요."
           );
         } else if (code === "auth/expired-action-code") {
           setMessage(
@@ -430,11 +430,11 @@ export default function VerifyEmail() {
         } else if (code === "auth/network-request-failed") {
           setMessage("네트워크 연결이 잠시 불안정합니다. 연결이 복구되면 인증 상태를 자동으로 다시 확인합니다.");
         } else if (msg.includes("continue url") || code === "auth/invalid-continue-uri" || code === "auth/argument-error") {
-          setMessage("❌ 인증은 처리되지 않았습니다. 인증 링크의 continueUrl 설정(허용 도메인 포함)을 확인해 주세요.");
+          setMessage("❌ 인증 링크를 처리하지 못했습니다. 로그인 후 인증 메일을 다시 받아주세요.");
         } else if (msg.includes("domain") || msg.includes("authorized")) {
-          setMessage("❌ 인증 처리 실패: Firebase 콘솔의 Authorized domains에 현재 접속 도메인이 등록되어 있는지 확인해 주세요.");
+          setMessage("❌ 이메일 인증을 진행하지 못했습니다. 잠시 후 다시 시도해 주세요.");
         } else {
-          setMessage(`❌ 인증 중 오류 발생: ${err?.message || "알 수 없는 오류"}`);
+          setMessage("❌ 이메일 인증 상태를 확인하지 못했습니다. 로그인 후 다시 확인해 주세요.");
         }
       } finally {
         if (!cancelled) setProcessingLink(false);
@@ -544,7 +544,7 @@ export default function VerifyEmail() {
           // 인터벌을 끊지 않고 다음 주기에 자동 재시도한다.
           setMessage("네트워크 연결을 다시 확인하고 있습니다. 인증 완료 여부를 자동으로 다시 확인합니다…");
         } else {
-          setMessage(`인증 확인 중 오류: ${e?.message || "알 수 없는 오류"}`);
+          setMessage("인증 상태를 확인하지 못했습니다. 인터넷 연결을 확인한 뒤 다시 시도해 주세요.");
           setChecking(false);
           stopped = true;
         }
@@ -589,9 +589,9 @@ export default function VerifyEmail() {
       if (err?.code === "auth/too-many-requests") {
         setMessage("잠시 후 다시 시도해 주세요. 요청이 너무 많습니다.");
       } else if (String(err?.message || "").toLowerCase().includes("domain")) {
-        setMessage("메일 전송 실패: Firebase 콘솔의 Authorized domains에 현재 도메인이 등록되어 있는지 확인해 주세요.");
+        setMessage("메일을 보내지 못했습니다. 잠시 후 다시 시도해 주세요.");
       } else {
-        setMessage(`메일 전송 실패: ${err?.message || "알 수 없는 오류"}`);
+        setMessage("메일을 보내지 못했습니다. 잠시 후 다시 시도해 주세요.");
       }
     } finally {
       setResending(false);
@@ -658,7 +658,7 @@ export default function VerifyEmail() {
           setMessage("잠시 후 다시 시도해 주세요. 요청이 너무 많습니다.");
           break;
         default:
-          setMessage(`❌ 이메일 수정 요청 실패: ${err?.message || "알 수 없는 오류"}`);
+          setMessage("❌ 이메일 변경 요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.");
       }
     } finally {
       setChangingEmail(false);

@@ -226,7 +226,9 @@ function toKoreanError(msg) {
   if (m.includes("invalid-credential")) return "자격 정보가 올바르지 않습니다.";
   if (m.includes("operation-not-allowed")) return "현재 비밀번호 가입이 허용되지 않습니다.";
   if (m.includes("internal-error")) return "내부 오류가 발생했습니다. 다시 시도해 주세요.";
-  return m;
+  // 회원에게 이미 제공 중인 한국어 설명은 유지하고, 원시 오류 코드는 노출하지 않습니다.
+  if (/[가-힣]/.test(m) && !/firebase|auth\/|permission-denied|https?:\/\//i.test(m)) return m;
+  return "회원가입을 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.";
 }
 function validatePassword(pw) {
   return (
