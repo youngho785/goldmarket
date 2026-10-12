@@ -141,6 +141,10 @@ async function main() {
   const goldDisplay = await step('GOLD DISPLAY CONSISTENCY', () => runNpm(['run', 'test:gold-display']));
   if (!goldDisplay) return finish(1);
 
+  const memberGoldVisitPolicy = await step('MEMBER GOLD VISIT POLICY',
+    async () => runNode(['--test', 'functions/scripts/test-bonus-usage-visit-policy.mjs']));
+  if (!memberGoldVisitPolicy) return finish(1);
+
   const rateReadiness = await step('GOLD RATE READINESS', () => runNode(['scripts/test-gold-exchange-rate-readiness.mjs']));
   if (!rateReadiness) return finish(1);
 

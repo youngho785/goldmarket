@@ -9,6 +9,7 @@ import {
   requireCurrentAdmin,
   requireVerifiedUserRecord,
   roundTo3,
+  koreaDateKey,
   buildValidatedBarsPlan,
   addNotificationForUser,
   addNotificationForAdmins,
@@ -35,6 +36,7 @@ import {
   requestCreatedMillis,
   BENEFIT_BALANCE_CARRYOVER_LEDGER_SOURCE,
 } from "./shared.js";
+import { eligibleBonusUsageDate } from "./bonusUsageEligibility.js";
 
 function maskEmailForAdminNotification(value: unknown): string {
   const email = String(value || "").trim().toLowerCase();
@@ -857,7 +859,7 @@ export const memberGoldGetOverview = onCall(
           totalG: Number(data.totalG || 0),
         };
       })
-      .filter((group) => !["completed", "canceled", "rejected"].includes(group.status))
+      .filter((group) => !["completed", "canceled", "rejected"].includes(group.status) && eligibleBonusUsageDate(group.visitDate, koreaDateKey()))
       .sort((a, b) => `${a.visitDate} ${a.visitTime}`.localeCompare(`${b.visitDate} ${b.visitTime}`));
 
     return {
@@ -1117,7 +1119,7 @@ export const bonusGetGoldUsageState = onCall(
           totalG: Number(data.totalG || 0),
         };
       })
-      .filter((group) => !["completed", "canceled", "rejected"].includes(group.status))
+      .filter((group) => !["completed", "canceled", "rejected"].includes(group.status) && eligibleBonusUsageDate(group.visitDate, koreaDateKey()))
       .sort((a, b) => `${a.visitDate} ${a.visitTime}`.localeCompare(`${b.visitDate} ${b.visitTime}`));
 
     return {
@@ -1173,6 +1175,14 @@ export const bonusRequestGoldUsage = onCall<{ groupId: string }>(
           balanceMg: bonusBalanceMilliGrams(userSnap.data()),
           request: publicBonusUsageRequest(existing),
         };
+      }
+
+      // 기존 신청은 위에서 그대로 조회할 수 있습니다. 새로운 신청만 방문일을 검사합니다.
+      if (!eligibleBonusUsageDate(groupSnap.get("visitDate"), koreaDateKey())) {
+        throw new HttpsError(
+          "failed-precondition",
+          "방문 날짜가 지났거나 확인되지 않는 예약에는 새로 신청할 수 없습니다. 매장에 문의해 주세요."
+        );
       }
 
       const balanceMg = bonusBalanceMilliGrams(userSnap.data());
