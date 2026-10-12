@@ -93,7 +93,7 @@ try {
   await createCase('used',{requestStatus:'used',groupStatus:'used',balance:0});
   await createCase('canceled',{requestStatus:'canceled',groupStatus:'canceled'});
   await createCase('bad-date',{visit:{visitDate:'2026-02-30',visitTime:'11:00'}});
-  await createCase('inconsistent',{groupStatus:'canceled'});
+  await createCase('inconsistent',{groupStatus:'canceled',repStatus:'canceled'});
   await sweep();
   await check('expired','expired');
   await check('today','requested');
@@ -105,7 +105,7 @@ try {
   {
     const {requestRef,groupRef,userRef}=fixtures.inconsistent;
     const [r,g,u]=await Promise.all([requestRef.get(),groupRef.get(),userRef.get()]);
-    assert.equal(r.get('status'),'requested');
+    assert.equal(r.get('status'),'canceled', 'safe orphan reconciliation must release request');
     assert.equal(g.get('bonusGoldUsageStatus'),'canceled');
     assert.equal(u.get('bonusGoldMilliGrams'),30);
   }
@@ -115,7 +115,7 @@ try {
   await check('expired','expired');
   assert.equal(await notificationCount(fixtures.expired.uid),1,'Second sweep must not re-notify');
   console.log('PASS: repeated sweep is idempotent; no double notification');
-  console.log('NOTE: stale/inconsistent request records are intentionally NOT auto-cleared here; check terminal reservation reconciliation separately.');
+  console.log('PASS: canceled reservation orphan usage is reconciled, without changing MEMBER GOLD balance.');
   console.log('MEMBER GOLD EXPIRY EMULATOR: PASS');
 } finally {
   await cleanup();
