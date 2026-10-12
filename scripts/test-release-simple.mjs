@@ -181,6 +181,9 @@ async function main() {
   const authResume = await step('AUTH RESUME EXPERIENCE', () => runNode(['--test', 'scripts/test-auth-reservation-resume.mjs']));
   if (!authResume) return finish(1);
 
+  const memberGoldUx = await step('MEMBER GOLD UX INTEGRATION', () => runNode(['--test', 'scripts/test-member-gold-ux-integration.mjs']));
+  if (!memberGoldUx) return finish(1);
+
   const appCheck = await step('APP CHECK POLICY', () => runNpm(['run', 'test:app-check']));
   if (!appCheck) return finish(1);
 

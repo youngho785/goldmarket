@@ -323,6 +323,15 @@ export default function MyGoldAlertGoals({
     [form]
   );
 
+  const alreadyMetPriceTarget = useMemo(() => {
+    const target = Number(form.priceTargetPerDon);
+    const current = Number(currentPricePerDon);
+    if (!form.priceTargetPerDon || loadingMetrics || !publicPriceEnabled ||
+        !Number.isFinite(target) || target <= 0 ||
+        !Number.isFinite(current) || current <= 0) return false;
+    return form.priceDirection === "down" ? current <= target : current >= target;
+  }, [form.priceTargetPerDon, form.priceDirection, currentPricePerDon, loadingMetrics, publicPriceEnabled]);
+
   const save = async () => {
     if (saving || (!uid && !demoMode)) return;
     setSaving(true);
@@ -484,6 +493,10 @@ export default function MyGoldAlertGoals({
           </InputWrap>
         </GoalRow>
       </Fields>
+
+      {alreadyMetPriceTarget && (
+        <Message role="status">현재 순금 1돈 참고시세가 이미 입력한 목표 조건을 충족합니다. 저장 시 목표 도달 여부가 확인되며, 알림 수신은 기기 설정과 서비스 조건에 따라 달라집니다.</Message>
+      )}
 
       {!pushReady && (
         <PushNotice>

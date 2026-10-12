@@ -71,6 +71,7 @@ import useGoldVaultDashboard from "@/hooks/useGoldVaultDashboard";
 import MyGoldValueTrend from "@/components/gold/MyGoldValueTrend";
 import MyGoldAlertSummary from "@/components/gold/MyGoldAlertSummary";
 import MyGoldImportPrompt from "@/components/gold/MyGoldImportPrompt";
+import { findPossibleMyGoldDuplicates } from "@/lib/myGoldImportCollision";
 import AppGoldJourney from "@/components/gold/AppGoldJourney";
 import MyGoldItemsSection from "@/components/myGoldVault/MyGoldItemsSection";
 import { DON_TO_GRAMS, findGoldProduct } from "@/lib/goldRates";
@@ -465,7 +466,7 @@ export default function MyGoldVault() {
     ? getValueChange(vaultValueWon, historicalValueWon)
     : null;
 
-  const confirmCalculatorImport = useCallback(async () => {
+  const confirmCalculatorImport = useCallback(async (allowPossibleDuplicates = false) => {
     if (!user?.uid || importSaving) return;
 
     const draft = importDraft || readGoldVaultImportDraft(importSource);
@@ -489,6 +490,12 @@ export default function MyGoldVault() {
       setImportError(
         `MY GOLD는 최대 ${GOLD_VAULT_MAX_ITEMS}개까지 기록할 수 있습니다. 현재 ${items.length}개가 있어 ${pendingItems.length}개를 모두 추가할 공간이 부족합니다.`
       );
+      return;
+    }
+
+    const matches = findPossibleMyGoldDuplicates(pendingItems, items);
+    if (matches.length && !allowPossibleDuplicates) {
+      setImportError("같은 금 종류·중량으로 기록한 금이 있습니다. 기존 기록과 비교한 뒤 중복 가능성을 확인해 주세요.");
       return;
     }
 
@@ -522,6 +529,7 @@ export default function MyGoldVault() {
     importKind,
     itemsLoading,
     items.length,
+    items,
     navigate,
   ]);
 
@@ -961,6 +969,7 @@ export default function MyGoldVault() {
           draft={importDraft}
           source={importSource}
           currentCount={items.length}
+          existingItems={items}
           maxItems={GOLD_VAULT_MAX_ITEMS}
           loading={itemsLoading}
           saving={importSaving}

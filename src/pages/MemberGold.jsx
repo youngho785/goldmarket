@@ -21,6 +21,7 @@ import {
 import { useAuthContext } from "@/context/AuthContext";
 import { db } from "@/firebase/firebase";
 import useBonusGoldBalance from "@/hooks/useBonusGoldBalance";
+import { eligibleMemberGoldGroups } from "@/lib/memberGoldEligibility";
 import {
   cancelBonusGoldUsage,
   getMemberGoldOverview,
@@ -401,7 +402,13 @@ export default function MemberGold() {
   const availableBalanceG = hasPendingRequest
     ? Number(overview?.spendableG || 0)
     : walletBalanceG;
-  const eligibleGroups = Array.isArray(overview?.eligibleGroups) ? overview.eligibleGroups : [];
+  const eligibleGroups = useMemo(
+    () => eligibleMemberGoldGroups(overview?.eligibleGroups),
+    [overview?.eligibleGroups]
+  );
+  const effectiveSelectedGroupId = eligibleGroups.some((group) => group.groupId === selectedGroupId)
+    ? selectedGroupId
+    : (eligibleGroups[0]?.groupId || "");
 
   const nextAction = useMemo(() => {
     if (!rewards.marketingPush?.claimed) {
@@ -414,12 +421,12 @@ export default function MemberGold() {
   }, [rewards.marketingPush?.claimed, rewards.quiz?.claimed]);
 
   const onRequestUsage = async () => {
-    if (!selectedGroupId || busy) return;
+    if (!effectiveSelectedGroupId || busy) return;
     setBusy(true);
     setError("");
     setActionMessage("");
     try {
-      await requestBonusGoldUsage(selectedGroupId);
+      await requestBonusGoldUsage(effectiveSelectedGroupId);
       await refreshOverview();
       setActionMessage("MEMBER GOLD 사용 신청이 연결되었습니다. 매장 방문 시 6자리 확인 코드를 보여주세요.");
       void trackProductEvent("member_gold_usage_requested", { source: "wallet" });
@@ -458,6 +465,9 @@ export default function MemberGold() {
             <strong>매장 확인 대기 · {Number(request.amountG || 0).toFixed(2)}g</strong>
             {request.visitDate && <span>{request.visitDate} {request.visitTime || ""}</span>}
             <p>매장에서 아래 6자리 코드를 관리자에게 보여주세요.</p>
+            {request.visitDate && eligibleMemberGoldGroups([{groupId: "pending", visitDate: request.visitDate, status: "requested"}]).length === 0 && (
+              <Notice>방문일이 지난 신청입니다. 매장 확인 또는 자동 만료 처리를 기다리고 있습니다. 혜택은 아직 차감되지 않았습니다.</Notice>
+            )}
             <Code aria-label={`매장 확인 코드 ${request.requestCode}`}>{request.requestCode}</Code>
             <SecondaryAction type="button" onClick={onCancelUsage} disabled={busy}>
               {busy ? "처리 중…" : "사용 신청 취소"}
@@ -467,10 +477,10 @@ export default function MemberGold() {
           <Notice>현재 사용할 수 있는 MEMBER GOLD가 없습니다. 회원혜택을 완료하면 순금이 적립됩니다.</Notice>
         ) : eligibleGroups.length > 0 ? (
           <>
-            <Notice>현재 보유 MEMBER GOLD 전액을 선택한 예약에 연결합니다. 실제 차감은 매장에서 6자리 코드를 확인하고 교환을 확정할 때 이루어집니다.</Notice>
+            <Notice>오늘 이후 방문할 예약 중에서 선택하세요. MEMBER GOLD는 신청만으로 차감되지 않으며, 매장 실측·확정 시 사용됩니다.</Notice>
             <Select
               aria-label="MEMBER GOLD를 사용할 금교환 예약"
-              value={selectedGroupId}
+              value={effectiveSelectedGroupId}
               onChange={(event) => setSelectedGroupId(event.target.value)}
             >
               {eligibleGroups.map((group) => (
@@ -479,13 +489,13 @@ export default function MemberGold() {
                 </option>
               ))}
             </Select>
-            <SecondaryAction type="button" onClick={onRequestUsage} disabled={busy || !selectedGroupId}>
+            <SecondaryAction type="button" onClick={onRequestUsage} disabled={busy || !effectiveSelectedGroupId}>
               {busy ? "연결 중…" : `MEMBER GOLD ${availableBalanceG.toFixed(2)}g 사용 신청`}
             </SecondaryAction>
           </>
         ) : (
           <Action to="/gold-exchange" onClick={() => void trackProductEvent("member_gold_exchange_cta_clicked", { source: "wallet" })}>
-            <span>금교환 예약 후 MEMBER GOLD 사용하기</span>
+            <span>사용 가능한 방문 예약이 없습니다 · 금교환 예약하기</span>
             <ChevronRight aria-hidden />
           </Action>
         )}
@@ -502,6 +512,9 @@ export default function MemberGold() {
           {loading && balanceLoading ? "확인 중" : availableBalanceG.toFixed(2)}
           {!(loading && balanceLoading) && <span>g</span>}
         </Balance>
+        {hasPendingRequest && (
+          <Lead>총 적립 잔액 {walletBalanceG.toFixed(2)}g 중 {Number(request.amountG || 0).toFixed(2)}g이 사용 신청 중입니다. 실제 차감은 매장에서 확정됩니다.</Lead>
+        )}
         <Lead>
           MY GOLD는 내가 가진 금의 기록, MEMBER GOLD는 교환에 적용할 수 있는 별도 혜택입니다. 실제 금교환 예약과 현장 확인을 거쳐 사용이 확정됩니다.
         </Lead>
@@ -510,8 +523,11 @@ export default function MemberGold() {
       {loading && <Notice>MEMBER GOLD 상태를 확인하고 있습니다.</Notice>}
       {error && <Notice $error role="alert">{error}</Notice>}
       {actionMessage && <Notice role="status">{actionMessage}</Notice>}
+      {request?.status === "expired" && (
+        <Notice role="status">방문 일정 후 사용 신청 기간이 종료되었습니다. MEMBER GOLD 적립 잔액은 차감되지 않았습니다. 새로운 예약에 다시 신청할 수 있습니다.</Notice>
+      )}
 
-      {hasPendingRequest && usagePanel}
+      {usagePanel}
 
       <Card>
         <CardHead>
@@ -554,8 +570,6 @@ export default function MemberGold() {
           </Action>
         )}
       </Card>
-
-      {!hasPendingRequest && usagePanel}
 
       <Card>
         <CardHead>

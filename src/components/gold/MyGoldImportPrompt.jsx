@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import styled from "styled-components";
 import { ArrowRight, Save, X } from "lucide-react";
 
 import { formatGoldWeightPair } from "@/lib/goldDisplay";
 import { getGoldVaultTypeLabel } from "@/lib/goldVaultCatalog";
+import { findPossibleMyGoldDuplicates } from "@/lib/myGoldImportCollision";
 
 const Card = styled.section`
   padding: 18px;
@@ -148,6 +149,7 @@ export default function MyGoldImportPrompt({
   draft,
   source = "",
   currentCount = 0,
+  existingItems = [],
   maxItems = 30,
   loading = false,
   saving = false,
@@ -157,6 +159,12 @@ export default function MyGoldImportPrompt({
 }) {
   const items = Array.isArray(draft?.items) ? draft.items : [];
   const fromGuestDemo = draft?.source === "guest-my-gold" || source === "guest-my-gold";
+  const [duplicateApproved, setDuplicateApproved] = useState(false);
+  const possibleDuplicates = useMemo(
+    () => findPossibleMyGoldDuplicates(items, existingItems),
+    [items, existingItems]
+  );
+  useEffect(() => { setDuplicateApproved(false); }, [draft]);
 
   if (!items.length) {
     return (
@@ -181,7 +189,7 @@ export default function MyGoldImportPrompt({
 
   const availableSlots = Math.max(0, maxItems - currentCount);
   const hasRoom = items.length <= availableSlots;
-  const disabled = loading || saving || !hasRoom;
+  const disabled = loading || saving || !hasRoom || (possibleDuplicates.length > 0 && !duplicateApproved);
 
   return (
     <Card aria-labelledby="my-gold-import-title">
@@ -216,6 +224,17 @@ export default function MyGoldImportPrompt({
           : "계산 당시의 예상 순금량이나 골드바 결과는 저장하지 않습니다. MY GOLD에는 원래 금 종류와 중량만 저장하고, 현재 시세와 교환 기준으로 가치를 다시 계산합니다. 이름과 메모는 저장 후 자유롭게 수정할 수 있습니다."}
       </Note>
 
+      {possibleDuplicates.length > 0 && (
+        <Error role="status">
+          <strong>중복 가능성을 확인했습니다.</strong> 같은 금 종류와 중량인 기록이 {possibleDuplicates.length}개 있습니다.
+          실제로 서로 다른 금 제품일 수도 있으므로 기존 내 금 기록과 비교해 주세요. 자동으로 삭제하거나 합치지 않습니다.
+          <label style={{display: "block", marginTop: 9, color: "inherit", cursor: "pointer"}}>
+            <input type="checkbox" checked={duplicateApproved} onChange={(event) => setDuplicateApproved(event.target.checked)} />
+            {" "}기존 기록과 비교했고, 추가 저장할 항목임을 확인했습니다.
+          </label>
+        </Error>
+      )}
+
       {!loading && !hasRoom && (
         <Error>
           MY GOLD는 최대 {maxItems}개까지 기록할 수 있습니다. 현재 {currentCount}개가 있어 {items.length}개를 모두 추가할 공간이 부족합니다. 아래 MY GOLD 목록에서 일부 항목을 정리한 뒤 다시 저장해 주세요.
@@ -224,7 +243,7 @@ export default function MyGoldImportPrompt({
       {error && <Error role="alert">{error}</Error>}
 
       <Actions>
-        <PrimaryButton type="button" onClick={onConfirm} disabled={disabled}>
+        <PrimaryButton type="button" onClick={() => onConfirm(duplicateApproved)} disabled={disabled}>
           <Save size={16} aria-hidden />
           {saving
             ? "저장 중..."

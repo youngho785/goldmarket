@@ -52,8 +52,8 @@ export const VaultHero = styled.section`
   min-height: 100%;
   display: grid;
   overflow: hidden;
-  gap: 10px;
-  padding: clamp(16px, 2.8vw, 21px);
+  gap: 8px;
+  padding: clamp(15px, 2.4vw, 19px);
   border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 18%, ${({ theme }) => theme.colors.border});
   border-radius: 20px;
   background:
