@@ -160,6 +160,9 @@ async function main() {
   const homeFlowUx = await step('HOME JOURNEY UX', () => runNode(['--test', 'scripts/test-home-journey-consistency.mjs']));
   if (!homeFlowUx) return finish(1);
 
+  const exchangeClarity = await step('GOLD EXCHANGE RESERVATION UX', () => runNode(['--test', 'scripts/test-gold-exchange-reservation-clarity.mjs']));
+  if (!exchangeClarity) return finish(1);
+
   const rateReadiness = await step('GOLD RATE READINESS', () => runNode(['scripts/test-gold-exchange-rate-readiness.mjs']));
   if (!rateReadiness) return finish(1);
 

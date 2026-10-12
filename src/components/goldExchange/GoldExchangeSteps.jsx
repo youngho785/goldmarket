@@ -372,7 +372,7 @@ export function BarStep({
           <strong>{fmtG(selectedTotalG)}g <em>({fmtD(selectedTotalG / DON_TO_GRAMS)}돈)</em></strong>
         </ExchangeDecisionFact>
         <ExchangeDecisionFact>
-          <span>{neededG > 0 ? "추가로 필요한 금" : "예상 남는 순금"}</span>
+          <span>{neededG > 0 ? "추가로 필요한 순금" : "예상 남는 순금"}</span>
           <strong>
             {fmtG(neededG > 0 ? neededG : remainingG)}g
             {" "}<em>({fmtD((neededG > 0 ? neededG : remainingG) / DON_TO_GRAMS)}돈)</em>
@@ -839,8 +839,8 @@ export function ReserveStep({
                   feeConfig: { fees: feeSettings.fees },
                 }).totalFee)}</b>
             </ReservationFeeLine>
-            <p>부족한 금의 비용과 추가 골드바 제작 공임은 위 공임에 포함되지 않습니다. 온라인 계산은 예상이며 실제 순도·중량·비용은 매장 실측 및 고객 동의 후 확정됩니다.</p>
-            <p>적용 예정 공임표 버전 {feeSettings.version} · 예약 접수 시 서버에서 최신 공임을 다시 검증합니다.</p>
+            <p>추가로 필요한 순금의 비용과 추가 골드바 제작 공임은 위 예상 공임에 포함되지 않습니다. 실제 금량·공임·잔여 금 처리는 매장에서 실물을 확인하고 고객이 동의한 뒤 확정됩니다.</p>
+            <p>제작 공임은 예약 요청 시 최신 기준으로 다시 확인합니다.</p>
           </>
         ) : (
           <>
@@ -887,9 +887,9 @@ export function ReserveStep({
         </Select>
       </FormGroup>
       <ReservationScheduleStatus $selected={!!dateKey && !!visitTime} role="status" aria-live="polite">
-        <span>현재 선택한 방문 일정 · 아직 예약 전</span>
+        <span>선택한 방문 일정</span>
         <strong>{dateKey && visitTime ? `${dateKey} · ${visitTime}` : dateKey ? `${dateKey} · 방문 시간 선택 필요` : "방문 날짜부터 선택해 주세요"}</strong>
-        <small>날짜와 시간을 골라도 예약이 선점되지는 않습니다. 예약 요청 제출 후 관리자 확인을 거쳐 확정됩니다.</small>
+        <small>날짜와 시간을 골라도 예약이 확정되거나 시간이 선점되지는 않습니다. 요청 접수 후 매장이 확인합니다.</small>
       </ReservationScheduleStatus>
       <HelpText>
         일요일과 휴무일은 예약할 수 없으며, <b>예약 마감</b> 또는 <b>이미 예약된 시간</b>은 선택할 수 없습니다.
@@ -1089,9 +1089,8 @@ export function ReserveStep({
         )}
 
         <HelpText style={{ display: "block", margin: "10px 0" }}>
-          이 버튼은 예약 <b>요청</b>입니다. 매장 확인 후 방문 예약이 확정됩니다.
+          아래 버튼은 방문 예약 <b>요청</b>입니다. 접수 후 매장에서 일정을 확인해 확정 여부를 안내합니다.
         </HelpText>
-        <HelpText>선택한 날짜·시간은 아직 확정되지 않았습니다. 아래 버튼은 예약 <b>요청</b>이며, 접수 후 매장 확인 알림을 받습니다.</HelpText>
         <div style={{ display: "grid", gap: 10 }}>
           <Button type="submit" disabled={loading} aria-busy={loading}>
             {loading ? "제출 중..." : "방문 예약 요청"}

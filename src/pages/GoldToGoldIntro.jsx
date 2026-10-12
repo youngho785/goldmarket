@@ -910,7 +910,7 @@ export default function GoldToGoldIntro() {
           </FlowItem>
         </Flow>
         <DarkFooter>
-          <p>아직 교환할지 결정하지 않아도 됩니다. 먼저 내 금의 오늘 가치를 기록해둘 수 있습니다.</p>
+          <p>아직 교환할지 결정하지 않아도 됩니다. MY GOLD에 내 금을 기록하고 공개 시세 기준 참고가치를 확인할 수 있습니다.</p>
           <Link to="/my-gold?add=1">MY GOLD에 먼저 기록하기 <ArrowRight size={14} aria-hidden /></Link>
         </DarkFooter>
       </DarkStory>
