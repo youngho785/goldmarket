@@ -148,6 +148,34 @@ export default function GoldExchange() {
   const [calculated, setCalculated] = useState(
     isRebook ? !isDirectRebook : !!authDraft?.calculated
   );
+
+  // Handle Android Back within the current exchange flow first.
+  useEffect(() => {
+    if (!isAndroid || !isNative) return undefined;
+
+    const handleExchangeBack = (event) => {
+      if (event.defaultPrevented) return;
+
+      if (step === STEP.BARS) {
+        event.preventDefault();
+        setStep(STEP.CALC);
+      } else if (step === STEP.RESERVE) {
+        event.preventDefault();
+        setStep(calculated ? STEP.BARS : STEP.CALC);
+      }
+    };
+
+    window.addEventListener(
+      "kgm:android-gold-exchange-step-back",
+      handleExchangeBack
+    );
+
+    return () => window.removeEventListener(
+      "kgm:android-gold-exchange-step-back",
+      handleExchangeBack
+    );
+  }, [step, calculated]);
+
   const [vaultImportedCount, setVaultImportedCount] = useState(
     entryMode === "vault" && importedFromMyGold
       ? initialVaultProductsRef.current.length

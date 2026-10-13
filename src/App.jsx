@@ -533,6 +533,13 @@ function AndroidBackButtonBridge() {
           if (cancelled) return;
           if (closeAndroidBackOverlay(window)) return;
 
+          const exchangeBack = new Event(
+            "kgm:android-gold-exchange-step-back",
+            { cancelable: true }
+          );
+          window.dispatchEvent(exchangeBack);
+          if (exchangeBack.defaultPrevented) return;
+
           const action = resolveAndroidBackAction(
             locationRef.current?.pathname,
             window.history.state
