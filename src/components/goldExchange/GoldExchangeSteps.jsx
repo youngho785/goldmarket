@@ -183,7 +183,7 @@ export function CalcStep({
 }) {
   return (
     <>
-      <Card>
+      <Card $step="calc">
         <StepCenter><StepMark>스텝 1</StepMark></StepCenter>
         <Title>{fromVault ? "MY GOLD에서 불러온 내 금을 확인하세요" : "내 금 종류와 중량을 입력하세요"}</Title>
         {vaultImportNotice && (
@@ -357,7 +357,9 @@ export function BarStep({
         <div>
           <small>내 금 → 999.9 골드바 예상 · 온라인 안내</small>
           <strong>{selectedBar.label} × {safeQty}개</strong>
-          <p>규격과 수량을 바꾸면 예상 중량·잔여 금과 공임이 함께 바뀝니다.</p>
+          {safeQty > 1 && (
+            <p>선택한 골드바 총중량 {fmtG(selectedTotalG)}g ({fmtD(selectedTotalG / DON_TO_GRAMS)}돈)</p>
+          )}
         </div>
         <MiniGoldBar aria-hidden="true">
           <small>KOREA GOLD MARKET</small>
@@ -367,10 +369,6 @@ export function BarStep({
       </ExchangeOutcome>
 
       <ExchangeDecisionSummary $twoColumn role="group" aria-label="교환 예상 핵심 요약" aria-live="polite">
-        <ExchangeDecisionFact>
-          <span>선택한 골드바 총중량</span>
-          <strong>{fmtG(selectedTotalG)}g <em>({fmtD(selectedTotalG / DON_TO_GRAMS)}돈)</em></strong>
-        </ExchangeDecisionFact>
         <ExchangeDecisionFact>
           <span>{neededG > 0 ? "추가로 필요한 순금" : "예상 남는 순금"}</span>
           <strong>
@@ -384,9 +382,9 @@ export function BarStep({
         <strong>{feeLabel}</strong>
       </ExchangeFeeNote>
       <HelpText style={{ margin: "6px 0 10px", lineHeight: 1.5 }}>
-        온라인 예상입니다. 실측 순도·중량, 잔여 금 처리 및 공임은 매장에서 고객과 확인하고 동의 후 확정됩니다.
-        {neededG > 0 && " 추가로 필요한 순금의 비용은 위 제작 공임에 포함되지 않습니다."}
-        선택한 골드바 외 추가 조합의 공임은 별도입니다.
+        온라인 예상입니다. 실제 순도·중량·공임·남는 금 처리는 매장 실측과 고객 동의 후 확정됩니다.
+        {neededG > 0 && " 부족한 순금의 비용은 제작 공임과 별도입니다."}
+        추가 골드바 제작 공임도 별도입니다.
         {" "}<FeeLink href="/goldbar-fee">전체 공임표 보기</FeeLink>
       </HelpText>
 
@@ -661,9 +659,6 @@ export function BarStep({
       <div style={{ display: "grid", gap: 10 }}>
         <Button type="button" onClick={onGoReserve}>선택한 골드바로 방문 예약 계속</Button>
         <OutlineButton type="button" onClick={onSaveToMyGold}>지금 교환하지 않고 내 금 기록하기</OutlineButton>
-        <HelpText style={{ margin: 0, textAlign: "center" }}>
-          금을 기록하면 다음에 중량을 다시 입력하지 않고 현재 참고가치를 확인할 수 있습니다.
-        </HelpText>
         <GhostButton type="button" onClick={() => setStep(STEP.CALC)}>이전(수정)</GhostButton>
       </div>
     </Card>
@@ -839,8 +834,7 @@ export function ReserveStep({
                   feeConfig: { fees: feeSettings.fees },
                 }).totalFee)}</b>
             </ReservationFeeLine>
-            <p>추가로 필요한 순금의 비용과 추가 골드바 제작 공임은 위 예상 공임에 포함되지 않습니다. 실제 금량·공임·잔여 금 처리는 매장에서 실물을 확인하고 고객이 동의한 뒤 확정됩니다.</p>
-            <p>제작 공임은 예약 요청 시 최신 기준으로 다시 확인합니다.</p>
+            <p>부족한 순금의 비용과 추가 골드바 공임은 별도입니다. 예약 요청 시 공임을 다시 확인하며, 실측과 고객 동의 후 확정됩니다.</p>
           </>
         ) : (
           <>
@@ -886,11 +880,13 @@ export function ReserveStep({
           })}
         </Select>
       </FormGroup>
-      <ReservationScheduleStatus $selected={!!dateKey && !!visitTime} role="status" aria-live="polite">
-        <span>선택한 방문 일정</span>
-        <strong>{dateKey && visitTime ? `${dateKey} · ${visitTime}` : dateKey ? `${dateKey} · 방문 시간 선택 필요` : "방문 날짜부터 선택해 주세요"}</strong>
-        <small>날짜와 시간을 골라도 예약이 확정되거나 시간이 선점되지는 않습니다. 요청 접수 후 매장이 확인합니다.</small>
-      </ReservationScheduleStatus>
+      {dateKey && (
+        <ReservationScheduleStatus $selected={!!visitTime} role="status" aria-live="polite">
+          <span>선택한 방문 일정</span>
+          <strong>{visitTime ? `${dateKey} · ${visitTime}` : `${dateKey} · 시간 선택 필요`}</strong>
+          {visitTime && <small>예약 요청을 접수한 뒤 매장에서 확인합니다. 아직 예약 확정·시간 선점 상태는 아닙니다.</small>}
+        </ReservationScheduleStatus>
+      )}
       <HelpText>
         일요일과 휴무일은 예약할 수 없으며, <b>예약 마감</b> 또는 <b>이미 예약된 시간</b>은 선택할 수 없습니다.
         가능한 다른 날짜와 시간을 선택해 주세요.
@@ -985,9 +981,18 @@ export function ReserveStep({
                 </div>
                 <Link to="/member-gold" className="member-gold-detail">혜택 내역 보기</Link>
               </div>
-              <MemberGoldAmounts role="group" aria-label="MEMBER GOLD 잔액과 사용 가능 혜택">
-                <div><span>회원 혜택 잔액</span><b>{Number(memberGoldBalanceG || 0).toFixed(2)}g</b></div>
-                <div><span>이번 예약 신청 가능</span><b>{memberGoldPending ? "신청 중" : `${Number(memberGoldSpendableG || 0).toFixed(2)}g`}</b></div>
+              <MemberGoldAmounts
+                $single={!memberGoldPending && Math.abs(Number(memberGoldBalanceG || 0) - Number(memberGoldSpendableG || 0)) < 0.0005}
+                role="group" aria-label="MEMBER GOLD 잔액과 사용 가능 혜택"
+              >
+                {!memberGoldPending && Math.abs(Number(memberGoldBalanceG || 0) - Number(memberGoldSpendableG || 0)) < 0.0005 ? (
+                  <div><span>이번 예약에 사용 가능한 회원 혜택</span><b>{Number(memberGoldSpendableG || 0).toFixed(2)}g</b></div>
+                ) : (
+                  <>
+                    <div><span>회원 혜택 잔액</span><b>{Number(memberGoldBalanceG || 0).toFixed(2)}g</b></div>
+                    <div><span>이번 예약 신청 가능</span><b>{memberGoldPending ? "신청 중" : `${Number(memberGoldSpendableG || 0).toFixed(2)}g`}</b></div>
+                  </>
+                )}
               </MemberGoldAmounts>
               {memberGoldPending ? (
                 <MemberGoldStatusNote role="status">

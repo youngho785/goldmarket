@@ -39,14 +39,14 @@ const Header = styled.header`
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   background: ${({ theme }) => theme.colors.surface};
   box-shadow: 0 1px 0 ${({ theme }) => theme.colors.border},
-    0 8px 22px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 6%, transparent);
+    0 4px 14px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 4%, transparent);
 `;
 
 const Bar = styled.div`
   display: grid;
   grid-template-columns: 84px minmax(0, 1fr) 84px;
   align-items: center;
-  min-height: 58px;
+  min-height: 56px;
   padding: 0 10px;
 `;
 

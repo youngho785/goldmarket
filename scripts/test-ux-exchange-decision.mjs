@@ -6,6 +6,7 @@ const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf
 const steps = read("src/components/goldExchange/GoldExchangeSteps.jsx");
 const styles = read("src/components/goldExchange/GoldExchange.styles.js");
 const myGold = read("src/pages/MyGoldVault.jsx");
+const myGoldItems = read("src/components/myGoldVault/MyGoldItemsSection.jsx");
 const pkg = JSON.parse(read("package.json"));
 
 const section = (begin, end) => steps.slice(steps.indexOf(begin), steps.indexOf(end));
@@ -25,8 +26,9 @@ test("골드바 결과의 핵심 세 항목을 규격 선택·상세 표보다 �
   const summaryAt = bar.indexOf('<ExchangeDecisionSummary');
   assert.ok(summaryAt > bar.indexOf('<ExchangeOutcome'));
   assert.ok(summaryAt < bar.indexOf('<details'));
+  assert.match(bar, /safeQty > 1/); // 총중량은 2개 이상 선택했을 때만 강조
   assert.ok(summaryAt < bar.indexOf('<SubTitle>골드바 규격 선택'));
-  for (const copy of ["선택한 골드바 총중량", "추가로 필요한 금", "예상 남는 순금", "예상 제작 공임"]) {
+  for (const copy of ["선택한 골드바 총중량", "추가로 필요한 순금", "예상 남는 순금", "예상 제작 공임"]) {
     assert.ok(bar.includes(copy), `${copy} missing`);
   }
 });
@@ -38,7 +40,7 @@ test("예상 부족·잔여와 공임은 기존 계산식을 재사용하며 음
   assert.match(bar, /Math\.max\(0, totalGrams - selectedTotalG\)/);
   assert.match(bar, /feeEstimate\.totalFee == null/);
   assert.match(bar, /formatGoldBarFee\(feeEstimate\.totalFee\)/);
-  assert.match(bar, /매장에서 고객과 확인하고 동의 후 확정/);
+  assert.match(bar, /매장 실측과 고객 동의 후 확정/);
   assert.doesNotMatch(bar, /updateDoc|addDoc|runTransaction|setDoc/);
 });
 
@@ -50,8 +52,10 @@ test("첫 금교환은 먼저 결과를 확인하고, 기록은 선택적으로 
 });
 
 test("MY GOLD는 한 번 기록의 편리함과 정보 미확인 고객의 현장 확인 경로를 보여준다", () => {
-  assert.match(myGold, /한 번 기록하면 다음에 다시 입력하지 않고/);
-  assert.match(myGold, /to="\/gold-exchange\?mode=visit"/);
+  assert.match(myGold, /<MyGoldItemsSection/);
+  assert.match(myGoldItems, /to="\/gold-exchange\?mode=visit"/);
+  assert.match(myGoldItems, /금 추가/);
+  assert.match(myGoldItems, /canAddMore/);
 });
 
 test("접근성 기본 속성과 신규 회귀 명령을 등록한다", () => {

@@ -17,7 +17,7 @@ export const PageContainer = styled.div`
 export const FlowHeader = styled.header`
   position: relative;
   width: 100%;
-  max-width: 1160px;
+  max-width: 1080px;
   margin-bottom: 8px;
   padding: ${({ $compact }) => ($compact ? "14px 18px" : "clamp(18px, 3vw, 25px)")};
   overflow: hidden;
@@ -154,29 +154,27 @@ export const FlowItem = styled.li`
   }
 `;
 
+/* Secondary information should be a quiet inline note, not a card inside a card. */
 export const InfoCard = styled.div`
-  padding: 13px 14px;
-  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 16%, ${({ theme }) => theme.colors.border});
-  border-radius: 14px;
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 58%, ${({ theme }) => theme.colors.surface}),
-    ${({ theme }) => theme.colors.surface}
-  );
-  line-height: 1.5;
+  padding: 12px 13px;
+  border: 0;
+  border-left: 3px solid ${({ theme }) => theme.colors.gold};
+  border-radius: 0 10px 10px 0;
+  background: color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 35%, ${({ theme }) => theme.colors.surface});
+  line-height: 1.55;
 `;
 
 export const Card = styled.div`
   position: relative;
   width: 100%;
-  max-width: 1160px;
+  max-width: ${({ $step }) => $step === "calc" ? "840px" : "1080px"};
   margin-bottom: 10px;
   padding: clamp(16px, 3vw, 23px);
   overflow: hidden;
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 20px;
   background: ${({ theme }) => theme.colors.surface};
-  box-shadow: 0 14px 34px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 8%, transparent);
+  box-shadow: 0 6px 20px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 5%, transparent);
 
   &::before {
     content: "";
@@ -269,8 +267,8 @@ export const ExchangeOutcome = styled.div`
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 14px;
   align-items: center;
-  margin: 12px 0 16px;
-  padding: 15px;
+  margin: 8px 0 10px;
+  padding: 12px;
   border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 30%, ${({ theme }) => theme.colors.border});
   border-radius: 18px;
   background: linear-gradient(135deg, ${({ theme }) => theme.semantic.badgeGoldBg}, ${({ theme }) => theme.colors.surface});
@@ -310,8 +308,8 @@ export const ExchangeOutcome = styled.div`
 
 /** Step 2: give the user's estimated pure-gold weight visual priority. */
 export const ExchangePureGoldTotal = styled.div`
-  margin: 12px 0 14px;
-  padding: 17px 19px;
+  margin: 6px 0 8px;
+  padding: 11px 14px;
   border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.goldLight} 37%, transparent);
   border-radius: 17px;
   background: ${({ theme }) => theme.gradients.primary};
@@ -350,32 +348,28 @@ export const ExchangePureGoldTotal = styled.div`
     line-height: 1.5;
   }
   @media (max-width: 520px) {
-    padding: 14px 15px;
+    padding: 11px 13px;
   }
 `;
 
 export const ExchangeDecisionSummary = styled.div`
   display: grid;
-  grid-template-columns: ${({ $twoColumn }) => $twoColumn ? "repeat(2, minmax(0, 1fr))" : "repeat(3, minmax(0, 1fr))"};
+  grid-template-columns: 1fr;
   gap: 8px;
   margin: 0 0 10px;
 
   @media (max-width: 620px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
     gap: 7px;
-
-    & > :last-child:nth-child(odd) {
-      grid-column: 1 / -1;
-    }
   }
 `;
 
 export const ExchangeDecisionFact = styled.div`
   min-width: 0;
-  padding: 12px 14px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 13px;
-  background: ${({ theme }) => theme.colors.surface};
+  padding: 9px 12px;
+  border-left: 3px solid ${({ theme }) => theme.colors.gold};
+  border-radius: 0 9px 9px 0;
+  background: ${({ theme }) => theme.colors.surfaceAlt};
 
   span {
     display: block;
@@ -767,9 +761,9 @@ export const DenomTile = styled.button`
 export const PremiumDenomTile = styled(DenomTile)`
   isolation: isolate;
   overflow: hidden;
-  min-height: 191px;
-  border-radius: 17px;
-  padding: 12px 12px 13px;
+  min-height: 158px;
+  border-radius: 15px;
+  padding: 9px 10px 10px;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -791,7 +785,7 @@ export const PremiumDenomTile = styled(DenomTile)`
   &:focus-visible { outline: 3px solid ${({ theme }) => theme.colors.secondary}; outline-offset: 3px; }
   &:disabled { opacity: .45; cursor: not-allowed; }
   > .denom-flags {
-    min-height: 23px;
+    min-height: 21px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -812,10 +806,10 @@ export const PremiumDenomTile = styled(DenomTile)`
     display: flex;
     align-items: center;
     justify-content: center;
-    flex: 1 1 86px;
+    flex: 1 1 62px;
     width: 100%;
-    min-height: 79px;
-    padding: 7px 0;
+    min-height: 60px;
+    padding: 4px 0;
     overflow: hidden;
     pointer-events: none;
   }
@@ -890,12 +884,12 @@ export const PremiumDenomTile = styled(DenomTile)`
   }
   ${AIBadge} { animation: none; font-size: .64rem; }
   @media (max-width: 520px) {
-    min-height: 178px;
+    min-height: 150px;
     padding: 9px;
     gap: 4px;
-    .denom-ingot { height: 64px; }
+    .denom-ingot { height: 56px; }
     .denom-ingot b { font-size: .8rem; }
-    .denom-visual { min-height: 67px; }
+    .denom-visual { min-height: 56px; }
     .denom-name { font-size: 1rem; }
     .denom-weight { font-size: .68rem; }
   }
@@ -928,7 +922,7 @@ export const ExchangeFeeNote = styled.div`
 `;
 
 /* 스텝 마크 */
-export const StepCenter = styled.div` display: flex; justify-content: center; `;
+export const StepCenter = styled.div` display: none; `;
 export const StepMark = styled.div`
   display: inline-block;
   margin: 0 auto 8px;
@@ -963,7 +957,7 @@ export const EstimateBoundary = styled.div`
 
 export const ReservationSummary = styled.div`
   margin: 0 0 16px;
-  padding: 15px 16px;
+  padding: 12px 13px;
   border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 28%, ${({ theme }) => theme.colors.border});
   border-radius: 16px;
   background: linear-gradient(135deg, ${({ theme }) => theme.semantic.badgeGoldBg}, ${({ theme }) => theme.colors.surface});
@@ -1047,13 +1041,13 @@ export const ReservationKeySummary = styled.div`
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
-  margin: 14px 0 11px;
+  margin: 10px 0 8px;
 
   > div {
     min-width: 0;
-    padding: 12px 14px;
+    padding: 8px 10px;
     border: 1px solid ${({ theme }) => theme.colors.border};
-    border-radius: 12px;
+    border-radius: 11px;
     background: ${({ theme }) => theme.colors.surface};
   }
   span {
@@ -1099,10 +1093,10 @@ export const ReservationFeeLine = styled.div`
 
 export const ReservationScheduleStatus = styled.div`
   margin: 4px 0 13px;
-  padding: 13px 15px;
-  border: 1px solid ${({ $selected, theme }) => $selected ? theme.colors.secondary : theme.colors.border};
-  border-radius: 14px;
-  background: ${({ $selected, theme }) => $selected ? theme.semantic.badgeGoldBg : theme.colors.surfaceAlt};
+  padding: ${({ $selected }) => $selected ? "11px 14px" : "7px 0"};
+  border: ${({ $selected, theme }) => $selected ? `1px solid ${theme.colors.secondary}` : "0"};
+  border-radius: 12px;
+  background: ${({ $selected, theme }) => $selected ? theme.semantic.badgeGoldBg : "transparent"};
   span {
     display: block;
     margin-bottom: 3px;
@@ -1240,7 +1234,7 @@ export const MemberGoldPanel = styled.section`
 
 export const MemberGoldAmounts = styled.div`
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: ${({ $single }) => $single ? "minmax(0, 1fr)" : "repeat(2, minmax(0, 1fr))"};
   gap: 8px;
   > div {
     min-width: 0;

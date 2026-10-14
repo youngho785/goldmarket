@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {readFileSync, existsSync} from 'node:fs';
 const source = (file) => readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
 const m = await import('../src/lib/memberGoldEligibility.js');
 const d = await import('../src/lib/myGoldImportCollision.js');
@@ -8,10 +8,9 @@ const member = source('src/pages/MemberGold.jsx');
 const vault = source('src/pages/MyGoldVault.jsx');
 const importPrompt = source('src/components/gold/MyGoldImportPrompt.jsx');
 const alert = source('src/components/gold/MyGoldAlertGoals.jsx');
-const backend = source('functions/src/rewards/bonusUsageExpirySchedule.ts');
+const reconciliation = source('functions/src/rewards/bonusUsageReconciliationSchedule.ts');
 const serverGuard = source('functions/src/rewards/functions.ts');
 const index = source('functions/src/index.ts');
-const expiry = source('functions/src/rewards/bonusUsageExpiry.ts');
 const groups = [
   {groupId: 'old',visitDate:'2026-10-11',status:'requested'},
   {groupId: 'today',visitDate:'2026-10-12',status:'requested'},
@@ -44,19 +43,26 @@ test('MY GOLD alert explains already-met targets before saving', () => {
   assert.match(alert,/alreadyMetPriceTarget/);
   assert.match(alert,/이미 입력한 목표 조건을 충족/);
 });
-test('MEMBER GOLD expired state is visible and preserves balance', () => {
-  assert.match(member,/request\?\.status === "expired"/);
-  assert.doesNotMatch(backend,/bonusGoldMilliGrams:|bonusGoldG:/);
+test('MEMBER GOLD는 자동 만료하지 않으며 보유 잔액을 유지한다', () => {
+  assert.doesNotMatch(member, /request\?\.status === "expired"/);
+  assert.doesNotMatch(reconciliation, /bonusGoldMilliGrams:|bonusGoldG:/);
+  assert.ok(!existsSync(new URL('../functions/src/rewards/bonusUsageExpirySchedule.ts', import.meta.url)));
+  assert.ok(!existsSync(new URL('../functions/src/rewards/bonusUsageExpiry.ts', import.meta.url)));
 });
-test('expiry checker is transaction guarded and registered daily', () => {
-  assert.match(backend,/runTransaction/);
-  assert.match(backend,/schedule: '15 4 \* \* \*'/);
-  assert.match(index,/expireMemberGoldUsageRequests/);
-  assert.match(expiry,/GRACE_PERIOD_MS = 48/);
+test('취소·거절 예약의 고아 신청만 매일 안전하게 정리한다', () => {
+  assert.match(reconciliation, /runTransaction/);
+  assert.match(reconciliation, /schedule: '15 4 \* \* \*'/);
+  assert.match(reconciliation, /\['canceled', 'rejected'\]/);
+  assert.match(reconciliation, /if \(debitLedger\.exists\) return null/);
+  assert.match(reconciliation, /group\.ownerUid/);
+  assert.match(reconciliation, /group\.bonusGoldRequestUid/);
+  assert.match(index, /reconcileCanceledMemberGoldUsageRequests/);
+  assert.doesNotMatch(index, /expireMemberGoldUsageRequests/);
+  assert.doesNotMatch(reconciliation, /bonusUsageShouldExpire|GRACE_PERIOD_MS|status:\s*['"]expired['"]/);
 });
 test('server continues rejecting new past-date applications', () => {
   assert.match(serverGuard,/eligibleBonusUsageDate\(groupSnap.get\("visitDate"\), koreaDateKey\(\)\)/);
 });
 test('no existing gold valuation/fee formulas are modified', () => {
-  assert.doesNotMatch(backend,/set\(userRef/);
+  assert.doesNotMatch(reconciliation,/set\(userRef/);
 });

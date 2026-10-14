@@ -12,7 +12,6 @@ import {
 import QuickGoldValueCalculator from "@/components/gold/QuickGoldValueCalculator";
 import GoldPriceBoard from "@/components/gold/GoldPriceBoard";
 import VerifiedReviewSection from "@/components/reviews/VerifiedReviewSection";
-import TrustProofBar from "@/components/common/TrustProofBar";
 import goldVerificationImage from "@/assets/goldVerificationImage";
 import { trackProductEventOncePerSession } from "@/analytics/productAnalytics";
 
@@ -28,17 +27,17 @@ const Hero = styled.section`
   overflow: hidden;
   display: grid;
   grid-template-columns: minmax(0, .88fr) minmax(380px, 1.12fr);
-  gap: clamp(28px, 4.5vw, 58px);
+  gap: clamp(20px, 3vw, 44px);
   align-items: center;
-  min-height: min(445px, calc(100svh - 132px));
-  padding: clamp(28px, 4vw, 52px);
+  min-height: min(390px, calc(100svh - 144px));
+  padding: clamp(26px, 3.6vw, 44px);
   border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 24%, ${({ theme }) => theme.colors.border});
-  border-radius: 28px;
+  border-radius: 24px;
   background:
     radial-gradient(circle at 13% 7%, color-mix(in srgb, ${({ theme }) => theme.colors.gold} 17%, transparent), transparent 42%),
     radial-gradient(circle at 97% 94%, color-mix(in srgb, ${({ theme }) => theme.colors.primary} 6%, transparent), transparent 42%),
     ${({ theme }) => theme.colors.surface};
-  box-shadow: 0 24px 64px color-mix(in srgb, ${({ theme }) => theme.colors.primaryDark} 9%, transparent);
+  box-shadow: 0 10px 30px color-mix(in srgb, ${({ theme }) => theme.colors.primaryDark} 5%, transparent);
 
   &::before {
     content: "";
@@ -145,131 +144,55 @@ const HeroTrust = styled.div`
   @media (max-width: 700px) { display: none; } /* Detailed process is explained in the trust panel below. */
 `;
 
-const FlowStrip = styled.section`
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1px;
-  overflow: hidden;
-  margin: 8px 0 0;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 18px;
-  background: ${({ theme }) => theme.colors.border};
+const FlowStrip = styled.nav`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 25px;
+  align-items: center;
+  margin: 14px 3px 0;
+  padding: 0 0 18px;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
 
-  @media (max-width: 700px) {
-    /* The calculator already offers context-specific save/exchange actions. */
-    display: none;
-  }
+  @media (max-width: 700px) { display: none; }
 `;
 
 const FlowItem = styled.button`
-  display: grid;
-  grid-template-columns: 38px minmax(0, 1fr);
-  gap: 10px;
+  display: inline-flex;
   align-items: center;
-  width: 100%;
-  min-height: 82px;
-  padding: 13px 15px;
+  gap: 8px;
+  min-height: 38px;
+  padding: 5px 0;
   border: 0;
-  background: ${({ theme }) => theme.colors.surface};
-  color: inherit;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.primary};
   font: inherit;
-  text-align: left;
   text-decoration: none;
+  text-align: left;
   cursor: pointer;
-  transition: background 160ms ease, box-shadow 160ms ease;
-
-  &:hover {
-    background: color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 44%, ${({ theme }) => theme.colors.surface});
-  }
-
-  &:focus-visible {
-    position: relative;
-    z-index: 1;
-    outline: 2px solid ${({ theme }) => theme.colors.secondary};
-    outline-offset: -2px;
-  }
-
-  > span {
-    display: grid;
-    place-items: center;
-    width: 38px;
-    height: 38px;
-    border-radius: 12px;
-    background: ${({ theme }) => theme.semantic.badgeGoldBg};
-    color: ${({ theme }) => theme.colors.secondaryDark};
-    font-size: .82rem;
-    font-weight: 950;
-  }
-
-  strong {
-    display: block;
-    color: ${({ theme }) => theme.colors.primary};
-    font-size: .84rem;
-    font-weight: 900;
-  }
-
-  p {
-    margin: 3px 0 0;
-    color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .82rem;
-    line-height: 1.45;
-    word-break: keep-all;
-  }
-
-  @media (max-width: 700px) {
-    min-height: 59px;
-    padding: 9px 10px;
-    gap: 7px;
-    grid-template-columns: 28px minmax(0, 1fr);
-    > span { width: 28px; height: 30px; border-radius: 9px; font-size: .7rem; }
-    strong { font-size: .77rem; }
-    p { display: none; }
-  }
+  &:focus-visible { outline: 2px solid ${({ theme }) => theme.colors.secondary}; outline-offset: 3px; }
+  > span { display: grid; place-items: center; width: 25px; height: 25px; border-radius: 50%;
+    color: ${({ theme }) => theme.colors.secondaryDark}; background: ${({ theme }) => theme.semantic.badgeGoldBg};
+    font-size: .68rem; font-weight: 900; }
+  strong { font-size: .83rem; font-weight: 850; }
+  p { display: none; }
 `;
 
 const CalculatorAnchor = styled.div`
   scroll-margin-top: 88px;
 `;
 
+/* The calculator above already displays amount and purity. Do not create a second result card. */
 const MyGoldPreview = styled.aside`
-  display: grid;
-  gap: 8px;
   margin-top: 10px;
-  padding: 14px 17px;
-  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 28%, ${({ theme }) => theme.colors.border});
-  border-radius: 15px;
-  background: ${({ theme }) => theme.semantic.badgeGoldBg};
-  color: ${({ theme }) => theme.colors.text};
-
-  > small { color: ${({ theme }) => theme.colors.secondaryDark}; font-size: .71rem; font-weight: 950; }
-  > strong { color: ${({ theme }) => theme.colors.primary}; font-size: .98rem; font-weight: 950; word-break: keep-all; }
-  p { margin: 0; color: ${({ theme }) => theme.colors.textSecondary}; font-size: .73rem; line-height: 1.55; word-break: keep-all; }
-`;
-const PreviewMetrics = styled.div`
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  > div { padding: 9px 10px; border-radius: 10px; background: ${({ theme }) => theme.colors.surface}; min-width: 0; }
-  span { display: block; font-size: .69rem; color: ${({ theme }) => theme.colors.textSecondary}; }
-  b { display: block; margin-top: 3px; font-size: clamp(.85rem, 2.5vw, 1.05rem); font-weight: 950;
-    font-variant-numeric: tabular-nums; overflow-wrap: anywhere; color: ${({ theme }) => theme.colors.primary}; }
-  @media (max-width: 370px) { grid-template-columns: 1fr; }
-`;
-
-const JourneyNote = styled.p`
-  margin: 12px 2px 0;
+  padding: 10px 13px;
+  border-left: 3px solid ${({ theme }) => theme.colors.gold};
+  border-radius: 0 9px 9px 0;
+  background: color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 36%, ${({ theme }) => theme.colors.surface});
   color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: .78rem;
+  font-size: .82rem;
   line-height: 1.55;
-  text-align: center;
   word-break: keep-all;
-
-  strong {
-    color: ${({ theme }) => theme.colors.primary};
-    font-weight: 900;
-  }
-
-  @media (max-width: 700px) { display: none; } /* Already disclosed directly above. */
+  strong { color: ${({ theme }) => theme.colors.primary}; }
 `;
 
 const Section = styled.section`
@@ -341,14 +264,14 @@ const ExchangeTrust = styled.section`
 `;
 
 const VerificationImage = styled.div`
-  min-height: 340px;
+  min-height: 285px;
   background: ${({ theme }) => theme.colors.surfaceAlt};
 
   img {
     display: block;
     width: 100%;
     height: 100%;
-    min-height: 340px;
+    min-height: 285px;
     object-fit: cover;
   }
 
@@ -362,7 +285,7 @@ const VerificationImage = styled.div`
 const ExchangeCopy = styled.div`
   display: grid;
   align-content: center;
-  padding: clamp(26px, 4vw, 42px);
+  padding: clamp(22px, 2.8vw, 34px);
 
   h2 {
     margin: 8px 0 0;
@@ -389,12 +312,12 @@ const ExchangeCopy = styled.div`
 
 const TrustList = styled.div`
   display: grid;
-  gap: 10px;
-  margin-top: 18px;
+  gap: 8px;
+  margin-top: 13px;
 
   > div {
     display: grid;
-    grid-template-columns: 28px minmax(0, 1fr);
+    grid-template-columns: 22px minmax(0, 1fr);
     gap: 8px;
     align-items: start;
   }
@@ -439,38 +362,10 @@ const GoldButton = styled(Link)`
 `;
 
 const ReviewWrap = styled.div`
-  display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(270px, .65fr);
-  gap: 18px;
-  align-items: stretch;
+  display: block;
   width: 100%;
 
   @media (max-width: 820px) { grid-template-columns: 1fr; }
-`;
-
-const ReviewStore = styled.aside`
-  display: grid;
-  align-content: center;
-  gap: 9px;
-  padding: 20px 24px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 15px;
-  background: ${({ theme }) => theme.colors.surface};
-
-  strong { color: ${({ theme }) => theme.colors.primary}; font-size: .97rem; }
-  p { color: ${({ theme }) => theme.colors.textSecondary}; font-size: .8rem; line-height: 1.55; }
-  a {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    color: ${({ theme }) => theme.colors.primary};
-    font-size: .8rem;
-    font-weight: 900;
-    text-decoration: none;
-  }
-
-  /* On small screens the full store process is already explained above. */
-  @media (max-width: 820px) { display: none; }
 `;
 
 export default function LandingPage() {
@@ -518,26 +413,10 @@ export default function LandingPage() {
             onPreviewChange={setGoldPreview}
           />
           {goldPreview && (
-            <MyGoldPreview aria-label="MY GOLD 저장 전 미리보기">
-              <small>MY GOLD · 저장 전 미리보기</small>
-              <strong>
-                방금 입력한 {goldPreview.label} · {Number(goldPreview.weightG || 0).toLocaleString("ko-KR", { maximumFractionDigits: 3 })}g
-              </strong>
-              <PreviewMetrics>
-                <div>
-                  <span>예상 참고가치</span>
-                  <b>{Number(goldPreview.estimatedValueWon || 0) > 0
-                    ? `${Math.round(goldPreview.estimatedValueWon).toLocaleString("ko-KR")}원`
-                    : "시세 확인 후 표시"}</b>
-                </div>
-                <div>
-                  <span>예상 순금량</span>
-                  <b>{Number(goldPreview.pureGoldG || 0) > 0
-                    ? `${Number(goldPreview.pureGoldG).toFixed(2)}g`
-                    : "환산 기준 확인 중"}</b>
-                </div>
-              </PreviewMetrics>
-              <p>아직 저장되지 않았습니다. 위 계산기의 ‘내 금 기록하기’를 누르면 MY GOLD 체험으로 이어집니다. 가입 전 기록은 현재 기기에만 임시 보관됩니다.</p>
+            <MyGoldPreview aria-live="polite" aria-label="계산 결과 저장 안내">
+              <strong>아직 저장되지 않았습니다.</strong>{' '}
+              위 계산기의 ‘내 금 기록하기’를 누르면 MY GOLD 체험으로 이어집니다.
+              가입 전 기록은 현재 기기에만 임시 보관됩니다.
             </MyGoldPreview>
           )}
         </CalculatorAnchor>
@@ -562,9 +441,6 @@ export default function LandingPage() {
         </FlowItem>
       </FlowStrip>
 
-      <JourneyNote>
-        <strong>회원가입 없이 먼저 계산</strong> · 실제 교환은 매장 실측·고객 동의 후 확정됩니다.
-      </JourneyNote>
 
       <CompactSection aria-labelledby="live-title">
         <SectionHead>
@@ -608,17 +484,10 @@ export default function LandingPage() {
         </ExchangeCopy>
       </ExchangeTrust>
 
-      <TrustProofBar compact />
 
       <CompactSection aria-label="교환 완료 고객 후기">
         <ReviewWrap>
           <VerifiedReviewSection compact showInquiryAction={false} />
-          <ReviewStore>
-            <Kicker>부산 매장 직접 운영</Kicker>
-            <strong>실물은 매장에서 직접 확인합니다.</strong>
-            <p>부산 골드테마길 원일귀금속에서 고객과 함께 순도·중량·비용을 확인하고 동의 후 교환을 진행합니다.</p>
-            <Link to="/stores">매장 위치와 이용 안내 <ArrowRight size={15} aria-hidden /></Link>
-          </ReviewStore>
         </ReviewWrap>
       </CompactSection>
     </Page>

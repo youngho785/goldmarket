@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { Plus } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import {
   AddGoldButton,
@@ -60,6 +60,7 @@ export default function MyGoldItemsSection({
   maxExchangeProducts,
   onError,
   onAdd,
+  canAddMore,
   onEdit,
   onRemove,
   onResetGuest,
@@ -160,7 +161,7 @@ export default function MyGoldItemsSection({
     <VaultSection aria-labelledby="my-vault-items-title">
       <SectionHead>
         <div>
-          <h2 id="my-vault-items-title">기록 목록</h2>
+          <h2 id="my-vault-items-title">내가 기록한 금</h2>
           <p>
             {isGuest
               ? "예시 금을 수정하거나 내 금을 새로 기록해 보세요. 변경한 내용이 MY GOLD 요약과 가치 변화에 바로 반영됩니다."
@@ -168,10 +169,16 @@ export default function MyGoldItemsSection({
                 ? `현재 ${sortedItems.length}개 · 기록 중량 ${Number(activeSummary.totalWeightG || 0).toFixed(2)}g · 예상 순금 ${Number(activeSummary.pureGoldG || 0).toFixed(2)}g`
                 : `현재 ${sortedItems.length}개 · 기록 중량 ${Number(activeSummary.totalWeightG || 0).toFixed(2)}g · 예상 순금 환산 기준 확인 중`}
           </p>
+          <p><Link to="/gold-exchange?mode=visit">종류·무게를 모르겠다면 매장 실측 예약 →</Link></p>
         </div>
 
         <SectionActions>
           {sortedItems.length > 0 && !selectionMode && (
+            <AddGoldButton type="button" onClick={onAdd} disabled={!canAddMore}>
+              <Plus size={15} aria-hidden /> 금 추가
+            </AddGoldButton>
+          )}
+          {sortedItems.length > 1 && !selectionMode && (
             <>
               <AddGoldButton
                 type="button"

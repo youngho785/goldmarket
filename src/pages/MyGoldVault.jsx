@@ -26,7 +26,6 @@ import {
   ViewTabs,
   ViewTab,
   ViewPanel,
-  ViewIntro,
   SummaryOverviewGrid,
   SummarySideStack,
   SummaryHead,
@@ -528,7 +527,6 @@ export default function MyGoldVault() {
     importSource,
     importKind,
     itemsLoading,
-    items.length,
     items,
     navigate,
   ]);
@@ -837,6 +835,10 @@ export default function MyGoldVault() {
                   : "이전 시세 비교 준비 중"}
               </HeroChange>
               {weeklyTrendChange && Number.isFinite(weeklyTrendChange.percent) && (
+                !Number.isFinite(currentChange.percent) ||
+                Math.round(Number(weeklyTrendChange.amount || 0)) !== Math.round(Number(currentChange.amount || 0)) ||
+                Math.round(Number(weeklyTrendChange.percent) * 100) !== Math.round(Number(currentChange.percent) * 100)
+              ) && (
                 <HeroChange $direction={weeklyTrendChange.direction}>
                   {weeklyTrendChange.direction === "up" ? (
                     <TrendingUp aria-hidden />
@@ -1017,17 +1019,6 @@ export default function MyGoldVault() {
 
       {isItemsView && (
         <ViewPanel key="items">
-          <ViewIntro>
-            <div>
-              <h1>{isGuest ? "체험 중인 금 관리" : "내가 기록한 금"}</h1>
-              <p>금을 한 번 기록하면 다음에 다시 입력하지 않고 오늘 참고가치를 확인할 수 있습니다.</p>
-              <p><Link to="/gold-exchange?mode=visit">금 종류나 무게를 모르시나요? 매장에서 확인하기 →</Link></p>
-            </div>
-            <AddGoldButton type="button" onClick={openAddForm} disabled={!canAddMore}>
-              <Plus size={15} aria-hidden /> 금 추가
-            </AddGoldButton>
-          </ViewIntro>
-
           <MyGoldItemsSection
             isGuest={isGuest}
             sortedItems={sortedItems}
@@ -1042,6 +1033,7 @@ export default function MyGoldVault() {
             maxExchangeProducts={GOLD_EXCHANGE_MAX_PRODUCTS}
             onError={setError}
             onAdd={openAddForm}
+            canAddMore={canAddMore}
             onEdit={startEdit}
             onRemove={remove}
             onResetGuest={resetGuestDemo}

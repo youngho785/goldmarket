@@ -42,18 +42,19 @@ export const Page = styled.div`
   display: grid;
   gap: 14px;
   width: 100%;
-  max-width: 1160px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 8px 0 28px;
 `;
 
 export const VaultHero = styled.section`
   position: relative;
-  min-height: 100%;
+  min-height: 0;
   display: grid;
+  align-content: start;
   overflow: hidden;
-  gap: 8px;
-  padding: clamp(15px, 2.4vw, 19px);
+  gap: 13px;
+  padding: clamp(20px, 2.6vw, 28px);
   border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 18%, ${({ theme }) => theme.colors.border});
   border-radius: 20px;
   background:
@@ -153,8 +154,8 @@ export const HeroValueNote = styled.p`
   z-index: 1;
   margin: -3px 0 0;
   color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: 0.7rem;
-  font-weight: 750;
+  font-size: .8rem;
+  font-weight: 650;
   line-height: 1.4;
   word-break: keep-all;
 `;
@@ -179,8 +180,8 @@ export const HeroChange = styled.span`
         ? theme.colors.info
         : theme.colors.textSecondary};
   font-family: ${({ theme }) => theme.fonts.numeric};
-  font-size: 0.73rem;
-  font-weight: 900;
+  font-size: .82rem;
+  font-weight: 850;
 
   svg { width: 14px; height: 14px; }
 `;
@@ -207,7 +208,7 @@ export const HeroStat = styled.div`
     display: block;
     overflow: hidden;
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: clamp(0.62rem, 1.8vw, 0.68rem);
+    font-size: clamp(.72rem, 1.8vw, .78rem);
     font-weight: 800;
     line-height: 1.2;
     text-overflow: ellipsis;
@@ -219,7 +220,7 @@ export const HeroStat = styled.div`
     margin-top: 3px;
     color: ${({ theme }) => theme.colors.primary};
     font-family: ${({ theme }) => theme.fonts.numeric};
-    font-size: clamp(0.82rem, 2.4vw, 0.96rem);
+    font-size: clamp(.93rem, 2.4vw, 1.08rem);
     font-weight: 950;
     line-height: 1.15;
     white-space: nowrap;
@@ -379,8 +380,8 @@ export const GuestModeNote = styled.p`
 
 export const VaultSection = styled.section`
   display: grid;
-  gap: 11px;
-  padding: clamp(14px, 2.6vw, 18px);
+  gap: 10px;
+  padding: clamp(12px, 2vw, 16px);
   border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 10%, ${({ theme }) => theme.colors.border});
   border-radius: 18px;
   background: ${({ theme }) => theme.colors.surface};
@@ -431,9 +432,9 @@ export const ViewTab = styled(Link)`
 
 export const SummaryOverviewGrid = styled.div`
   display: grid;
-  grid-template-columns: minmax(0, 1.65fr) minmax(300px, 0.75fr);
+  grid-template-columns: minmax(0, 1.12fr) minmax(340px, .88fr);
   gap: 14px;
-  align-items: stretch;
+  align-items: start;
 
   @media (max-width: 900px) {
     grid-template-columns: 1fr;
@@ -442,7 +443,7 @@ export const SummaryOverviewGrid = styled.div`
 
 export const SummarySideStack = styled.div`
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto auto;
   gap: 14px;
   min-width: 0;
 `;
@@ -1460,8 +1461,8 @@ export const ItemList = styled.div`
 export const ItemCard = styled.article`
   display: grid;
   grid-template-columns: ${({ $selecting }) => ($selecting ? "auto minmax(0, 1fr)" : "minmax(0, 1fr) auto")};
-  gap: 10px;
-  padding: 11px 12px;
+  gap: 8px;
+  padding: 12px 13px;
   border-bottom: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
   background: ${({ theme, $selected }) =>
     $selected
@@ -1489,7 +1490,8 @@ export const ItemCard = styled.article`
 
   @media (max-width: 460px) {
     grid-template-columns: ${({ $selecting }) => ($selecting ? "auto minmax(0, 1fr)" : "1fr")};
-    padding-inline: 9px;
+    padding: 11px 10px;
+    row-gap: 6px;
   }
 `;
 
@@ -1592,19 +1594,17 @@ export const ItemMain = styled.div`
 export const ItemMetrics = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 9px;
+  gap: 6px 14px;
+  margin-top: 7px;
 
   span {
     display: inline-flex;
     align-items: baseline;
     gap: 4px;
-    min-height: 26px;
-    padding: 4px 7px;
-    border-radius: 999px;
-    background: ${({ theme }) => theme.colors.surface};
+    padding: 2px 0;
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: 0.61rem;
+    font-size: 0.71rem;
+    line-height: 1.4;
   }
 
   strong {
@@ -1657,7 +1657,7 @@ export const ItemActions = styled.div`
     align-items: center;
     justify-content: center;
     min-width: 48px;
-    height: 34px;
+    min-height: 44px;
     padding: 0 10px;
     border: 1px solid ${({ theme }) => theme.colors.borderStrong};
     border-radius: 10px;
@@ -1681,7 +1681,8 @@ export const ItemActions = styled.div`
   }
 
   @media (max-width: 460px) {
-    justify-content: flex-end;
+    justify-content: flex-start;
+    button { flex: 1 1 0; padding: 0 6px; }
   }
 `;
 
@@ -1769,9 +1770,9 @@ export const Notice = styled.p`
 export const GuestSaveCard = styled.section`
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 14px 18px;
+  gap: 10px 14px;
   align-items: center;
-  padding: clamp(16px, 2.6vw, 20px);
+  padding: clamp(14px, 2vw, 17px);
   border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 28%, ${({ theme }) => theme.colors.border});
   border-radius: 18px;
   background:
@@ -1816,8 +1817,8 @@ export const GuestSaveCopy = styled.div`
     max-width: 580px;
     margin: 0;
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: 0.66rem;
-    line-height: 1.58;
+    font-size: .8rem;
+    line-height: 1.55;
     word-break: keep-all;
   }
 `;
@@ -1833,8 +1834,8 @@ export const GuestSaveAction = styled.button`
   border-radius: 12px;
   background: ${({ theme }) => theme.colors.primary};
   color: ${({ theme }) => theme.on.primary};
-  font-size: 0.68rem;
-  font-weight: 950;
+  font-size: .82rem;
+  font-weight: 850;
   white-space: nowrap;
   cursor: pointer;
 

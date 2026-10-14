@@ -15,7 +15,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/firebase/firebase";
 import useKoreaTodayDate from "@/hooks/useKoreaTodayDate";
-import { getGoldPriceDatePresentation } from "@/lib/goldPriceDatePresentation";
+import { getGoldPriceDatePresentation, getGoldPricePreviousDayMarket } from "@/lib/goldPriceDatePresentation";
 
 const Wrap = styled.section`
   width: ${({ $compact }) => ($compact ? "100%" : "min(1120px, calc(100% - 32px))")};
@@ -408,7 +408,7 @@ function changeInfo(current, previous) {
 
 function changeText(change, prefix = false) {
   if (!change) return "전일 비교 없음";
-  if (change.diff === 0) return prefix ? "전일 대비 보합" : "－ 보합";
+  if (change.diff === 0) return prefix ? "전일 대비 보합 (0.00%)" : "－ 보합 (0.00%)";
 
   const arrow = change.diff > 0 ? "▲" : "▼";
   const text = `${arrow} ${Math.abs(change.diff).toLocaleString(
@@ -473,7 +473,7 @@ export default function GoldPriceBoard({ compact = false }) {
 
   const rows = useMemo(() => {
     const market = data?.market || {};
-    const previous = data?.previousMarket || {};
+    const previous = getGoldPricePreviousDayMarket(todayKey, data?.sourceDate, market, data?.previousMarket) || {};
 
     return [
       {
@@ -504,7 +504,7 @@ export default function GoldPriceBoard({ compact = false }) {
         previousBuy: previous.gold14kBuyPerDon,
       },
     ];
-  }, [data]);
+  }, [data, todayKey]);
 
   const searchHistory = async () => {
     setHistory(null);
@@ -561,7 +561,7 @@ export default function GoldPriceBoard({ compact = false }) {
     }
   };
 
-  const { isTodayPublished, label: priceDateLabel } = getGoldPriceDatePresentation(
+  const { label: priceDateLabel } = getGoldPriceDatePresentation(
     todayKey, data?.sourceDate, !!data
   );
 
@@ -585,7 +585,6 @@ export default function GoldPriceBoard({ compact = false }) {
           <PriceContext>
             <span><strong>1돈(3.75g) 기준</strong></span>
             <span>{priceDateLabel}</span>
-            {!isTodayPublished && <span role="status">실제 거래 전 가격 확인</span>}
           </PriceContext>
           <PriceTable>
             <TableHead $compact={compact}>

@@ -54,3 +54,11 @@ test("홈 개선에는 Firestore 기록·금 계산·예약 서버 로직 변경
   assert.match(home, /<HomeOptionalDetails(?:\s+[^>]*)?>/);
   assert.ok(between("<MemberUtilities", "<PriceCard").includes("<MyGoldAlertSummary"));
 });
+
+// Integrated premium redesign: shared app navigation and booking-first hierarchy.
+test("프리미엄 앱은 다가오는 예약을 먼저 안내하고 하단 탐색 영역을 안정적으로 유지한다", () => {
+  assert.ok(home.indexOf("{upcomingReservation && (") < home.indexOf("<AppMyGoldDashboard"));
+  assert.match(nav, /min-height: calc\(68px \+ env\(safe-area-inset-bottom, 0px\)\)/);
+  assert.match(nav, /width: 46px;\s*height: 46px/);
+  assert.match(nav, /env\(safe-area-inset-bottom, 0px\)/);
+});

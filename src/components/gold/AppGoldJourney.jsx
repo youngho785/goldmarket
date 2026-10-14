@@ -7,8 +7,8 @@ import { GOLD_BAR_DENOMS, getGoldBarReadiness } from "@/utils/goldBarReadiness";
 
 const Card = styled.section`
   display: grid;
-  gap: 13px;
-  padding: 15px;
+  gap: 11px;
+  padding: 17px;
   border: 1px solid
     color-mix(in srgb, ${({ theme }) => theme.colors.gold} 30%, ${({ theme }) => theme.colors.border});
   border-radius: 19px;
@@ -73,15 +73,14 @@ const StatusPill = styled.span`
 `;
 
 const ExchangeNow = styled(Link)`
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
+  display: inline-flex;
+  justify-content: space-between;
+  gap: 12px;
   align-items: center;
-  min-height: 66px;
-  padding: 11px 12px;
-  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 28%, ${({ theme }) => theme.colors.border});
-  border-radius: 15px;
-  background: ${({ theme }) => theme.colors.surface};
+  min-height: 40px;
+  padding: 7px 1px;
+  border-top: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
+  background: transparent;
   color: inherit;
   text-decoration: none;
 
@@ -101,12 +100,7 @@ const ExchangeNow = styled(Link)`
     word-break: keep-all;
   }
 
-  p {
-    margin: 3px 0 0;
-    color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .68rem;
-    line-height: 1.35;
-  }
+  p { display: none; }
 
   > svg {
     width: 17px;
@@ -338,9 +332,7 @@ export default function AppGoldJourney({ pureGoldG = 0, vaultProducts = [], onEx
           aria-label={`${readiness.label} 골드바 교환 예상 보기`}
         >
           <div>
-            <small>GOLD TO GOLD · 기록 기준 예상</small>
-            <strong>{readiness.label} 예상 교환량 보기</strong>
-            <p>MY GOLD 기록으로 온라인 예상값을 확인하고, 실제 교환은 매장 실측 후 확정합니다.</p>
+            <strong>GOLD TO GOLD 예상 교환 계산하기</strong>
           </div>
           <ChevronRight aria-hidden />
         </ExchangeNow>
@@ -379,12 +371,9 @@ export default function AppGoldJourney({ pureGoldG = 0, vaultProducts = [], onEx
 
       <Footer>
         <span>온라인은 예상값입니다. 실제 순도·중량과 교환량은 부산 매장 실측 후 확정됩니다.</span>
-        <Link
-          to="/gold-exchange?mode=vault&auto=1"
-          state={{ source: "my-gold", vaultProducts }}
-        >
-          {readiness?.available ? "다른 규격 보기" : "예상 교환량 보기"}
-        </Link>
+        {!readiness?.available && (
+          <Link to="/gold-exchange?mode=vault&auto=1" state={{ source: "my-gold", vaultProducts }}>예상 교환량 보기</Link>
+        )}
       </Footer>
     </Card>
   );

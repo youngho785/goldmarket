@@ -301,7 +301,7 @@ export default function Login() {
           setError(
             `관리자 2단계 인증번호를 ${challenge.phoneNumber || "등록된 휴대전화"}로 발송했습니다.`
           );
-        } catch (mfaError) {
+        } catch {
           setError("2단계 인증을 시작하지 못했습니다. 잠시 후 다시 시도해 주세요.");
         }
         return;

@@ -34,13 +34,13 @@ const PRIORITY_PRODUCT_IDS = [
 const Card = styled.section`
   overflow: hidden;
   border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 22%, ${({ theme }) => theme.colors.border});
-  border-radius: 22px;
+  border-radius: 18px;
   background: ${({ theme }) => theme.colors.surface};
-  box-shadow: 0 14px 34px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 7%, transparent);
+  box-shadow: 0 8px 25px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 6%, transparent);
 `;
 
 const Head = styled.div`
-  padding: ${({ $compact, $nativeFirst, $webLanding }) => $nativeFirst ? "13px 15px 12px" : $webLanding ? "15px 20px 13px" : $compact ? "16px 17px 12px" : "20px 21px 15px"};
+  padding: ${({ $compact, $nativeFirst, $webLanding }) => $nativeFirst ? "13px 15px 12px" : $webLanding ? "14px 18px 12px" : $compact ? "15px 16px 12px" : "19px 20px 14px"};
   background: linear-gradient(138deg, ${({ theme }) => theme.colors.primaryDark}, ${({ theme }) => theme.colors.primary});
   color: ${({ theme }) => theme.on.primary};
 

@@ -44,7 +44,7 @@ test("PC 홈페이지 제목과 계산기 행동을 구분하고 4단계 메뉴�
   assert.match(landing, /잠들어 있던 <em>금의 가치를 발견하세요/);
   assert.match(landing, /<FlowStrip aria-label="한국골드마켓 이용 흐름">/);
   assert.match(landing, /to="\/my-gold#goldbar-goal"/);
-  assert.match(landing, /const FlowStrip = styled\.section[\s\S]*@media \(max-width: 700px\)[\s\S]*display: none;/);
+  assert.match(landing, /const FlowStrip = styled\.nav[\s\S]*@media \(max-width: 700px\)[\s\S]*display: none;/);
 });
 
 test("브랜드 스토리·실측은 한 섹션, 전용 이야기/예약/매장 링크 보존", () => {
@@ -61,27 +61,27 @@ test("브랜드 스토리·실측은 한 섹션, 전용 이야기/예약/매장 
 
 test("금시세의 오늘 기준일과 마지막 시세 등록일은 별도 항목으로 표시", () => {
   assert.match(price, /const todayKey = useKoreaTodayDate\(\)/);
-  assert.match(price, /기준일 <strong>\{formatDateKey\(todayKey\)\}<\/strong>/);
-  assert.match(price, /시세 등록일 <strong>\{data\.sourceDate \? formatDateKey\(data\.sourceDate\) : "확인 중"\}<\/strong>/);
-  assert.match(price, /publicationTime\(data\.updatedAt\)/);
-  assert.match(price, /timeZone: "Asia\/Seoul"/);
+  assert.match(price, /getGoldPriceDatePresentation\(\s*todayKey, data\?\.sourceDate, !!data/);
+  assert.match(price, /<SourceDate>\{priceDateLabel\}<\/SourceDate>/);
+  assert.match(price, /<span>\{priceDateLabel\}<\/span>/);
+  assert.match(price, /마지막 저장 기준일/);
   assert.match(price, /1돈\(3\.75g\) 기준/);
-  assert.match(price, /등록 시각/);
+  assert.match(price, /과거 시세 조회/);
 });
 
 test("모바일 웹 하단 메뉴 높이는 축소하고 Android 전용 분기는 보호", () => {
   assert.match(bottom, /\$android\s*\? css`/);
-  assert.match(bottom, /min-height: calc\(72px \+ env\(safe-area-inset-bottom, 0px\)\)/);
+  assert.match(bottom, /min-height: calc\(68px \+ env\(safe-area-inset-bottom, 0px\)\)/);
   assert.match(bottom, /min-height: 62px/);
-  assert.match(bottom, /min-height: 60px/);
+  assert.match(bottom, /min-height: 57px/);
   assert.match(nativeHome, /<GoldToGoldStory\s+to="\/gold-to-gold"/);
   assert.match(nativeHome, /<QuickGoldValueCalculator/);
 });
 
 test("검증된 후기 한 건과 매장 정보의 균형을 맞추며 가짜 후기를 만들지 않는다", () => {
   assert.match(landing, /<VerifiedReviewSection compact showInquiryAction=\{false\} \/>/);
-  assert.match(landing, /<ReviewStore>/);
-  assert.match(landing, /부산 골드테마길 원일귀금속/);
-  assert.match(landing, /@media \(max-width: 820px\) \{ display: none; \}/);
+  assert.doesNotMatch(landing, /<ReviewStore>/);
+  assert.match(landing, /부산광역시 부산진구 골드테마길 21/);
+  assert.match(landing, /<ExchangeTrust aria-labelledby=/);
   assert.doesNotMatch(landing, /가상 고객|가상 후기|샘플 후기/);
 });

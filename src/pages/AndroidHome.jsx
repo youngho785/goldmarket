@@ -27,6 +27,8 @@ import QuickGoldValueCalculator from "@/components/gold/QuickGoldValueCalculator
 import { useAuthContext } from "@/context/AuthContext";
 import { db } from "@/firebase/firebase";
 import useGoldVaultDashboard from "@/hooks/useGoldVaultDashboard";
+import useKoreaTodayDate from "@/hooks/useKoreaTodayDate";
+import { getGoldPriceDatePresentation } from "@/lib/goldPriceDatePresentation";
 import useMyGoldValueTrend from "@/hooks/useMyGoldValueTrend";
 import { formatGoldWeightPair } from "@/lib/goldDisplay";
 import { trackProductEventOncePerSession } from "@/analytics/productAnalytics";
@@ -34,10 +36,10 @@ import { trackProductEventOncePerSession } from "@/analytics/productAnalytics";
 // KGM_EXPERIENCE_FIRST_FINAL · direct guest calculator and gold exchange
 const Page = styled.div`
   display: grid;
-  gap: 12px;
+  gap: 11px;
   width: min(760px, 100%);
   margin: 0 auto;
-  padding: 8px 0 24px;
+  padding: 6px 0 calc(28px + env(safe-area-inset-bottom, 0px));
 `;
 
 const ReservationCard = styled(Link)`
@@ -45,10 +47,10 @@ const ReservationCard = styled(Link)`
   grid-template-columns: 40px minmax(0, 1fr) auto;
   gap: 10px;
   align-items: center;
-  min-height: 68px;
-  padding: 11px 13px;
+  min-height: 62px;
+  padding: 11px 14px;
   border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 24%, ${({ theme }) => theme.colors.border});
-  border-radius: 17px;
+  border-radius: 15px;
   background: ${({ theme }) => theme.semantic.badgeGoldBg};
   color: ${({ theme }) => theme.colors.text};
   text-decoration: none;
@@ -69,9 +71,9 @@ const ReservationCard = styled(Link)`
 
 const ReservationCopy = styled.div`
   min-width: 0;
-  small { display: block; color: ${({ theme }) => theme.colors.secondaryDark}; font-size: .72rem; font-weight: 950; }
-  strong { display: block; margin-top: 3px; color: ${({ theme }) => theme.colors.primary}; font-size: .86rem; }
-  p { margin: 3px 0 0; color: ${({ theme }) => theme.colors.textSecondary}; font-size: .72rem; }
+  small { display: block; color: ${({ theme }) => theme.colors.secondaryDark}; font-size: .78rem; font-weight: 900; }
+  strong { display: block; margin-top: 3px; color: ${({ theme }) => theme.colors.primary}; font-size: .88rem; }
+  p { margin: 3px 0 0; color: ${({ theme }) => theme.colors.textSecondary}; font-size: .78rem; }
 `;
 
 const PriceCard = styled(Link)`
@@ -81,14 +83,14 @@ const PriceCard = styled(Link)`
   align-items: center;
   padding: 13px 15px;
   border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 16px;
+  border-radius: 15px;
   background: ${({ theme }) => theme.colors.surface};
   color: inherit;
   text-decoration: none;
 
-  small { display: block; color: ${({ theme }) => theme.colors.secondaryDark}; font-size: .68rem; font-weight: 950; }
-  strong { display: block; margin-top: 3px; color: ${({ theme }) => theme.colors.primary}; font-size: .86rem; }
-  b { color: ${({ theme }) => theme.colors.primary}; font-family: ${({ theme }) => theme.fonts.numeric}; font-size: .92rem; }
+  small { display: block; color: ${({ theme }) => theme.colors.secondaryDark}; font-size: .76rem; font-weight: 900; }
+  strong { display: block; margin-top: 3px; color: ${({ theme }) => theme.colors.primary}; font-size: .88rem; }
+  b { color: ${({ theme }) => theme.colors.primary}; font-family: ${({ theme }) => theme.fonts.numeric}; font-size: 1rem; white-space: nowrap; }
 `;
 
 const GoldToGoldStory = styled(Link)`
@@ -96,10 +98,10 @@ const GoldToGoldStory = styled(Link)`
   grid-template-columns: 36px minmax(0, 1fr) auto;
   gap: 10px;
   align-items: center;
-  min-height: 76px;
-  padding: 12px 14px;
+  min-height: 62px;
+  padding: 11px 14px;
   border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 30%, ${({ theme }) => theme.colors.border});
-  border-radius: 16px;
+  border-radius: 15px;
   background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.primary};
   text-decoration: none;
@@ -107,9 +109,9 @@ const GoldToGoldStory = styled(Link)`
   > span:first-child { display: grid; place-items: center; width: 36px; height: 36px;
     border-radius: 12px; background: ${({ theme }) => theme.semantic.badgeGoldBg}; }
   svg { width: 18px; height: 18px; }
-  small { display: block; color: ${({ theme }) => theme.colors.secondaryDark}; font-size: .67rem; font-weight: 900; }
-  strong { display: block; margin-top: 3px; font-size: .84rem; line-height: 1.45; }
-  p { margin: 3px 0 0; font-size: .73rem; color: ${({ theme }) => theme.colors.textSecondary}; }
+  small { display: block; color: ${({ theme }) => theme.colors.secondaryDark}; font-size: .76rem; font-weight: 900; }
+  strong { display: block; margin-top: 3px; font-size: .87rem; line-height: 1.45; }
+  p { margin: 3px 0 0; font-size: .8rem; color: ${({ theme }) => theme.colors.textSecondary}; }
 `;
 
 const MemberUtilities = styled.section`
@@ -128,7 +130,7 @@ const QuickAction = styled(Link)`
   display: flex;
   align-items: center;
   gap: 9px;
-  min-height: 70px;
+  min-height: 62px;
   padding: 11px 12px;
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 14px;
@@ -158,14 +160,13 @@ const FirstGoldOptions = styled.section`
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 7px 14px;
-  padding: 11px 13px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 13px;
-  background: ${({ theme }) => theme.colors.surface};
+  /* A supporting route list, not another full-sized card beneath the calculator. */
+  margin-top: -6px;
+  padding: 6px 5px 8px;
   color: ${({ theme }) => theme.colors.textSecondary};
 
-  p { margin: 0; font-size: .75rem; line-height: 1.5; word-break: keep-all; }
-  a { color: ${({ theme }) => theme.colors.primary}; font-size: .78rem; font-weight: 900;
+  p { margin: 0; font-size: .8rem; line-height: 1.5; word-break: keep-all; }
+  a { color: ${({ theme }) => theme.colors.primary}; font-size: .81rem; font-weight: 900;
     text-underline-offset: 3px; text-decoration: underline; }
 `;
 
@@ -199,6 +200,7 @@ const formatReservationSchedule = (visitDate, visitTime) => {
 
 export default function AndroidHome() {
   const { memberUser: user } = useAuthContext() || {};
+  const todayKey = useKoreaTodayDate();
   const dashboard = useGoldVaultDashboard(user?.uid);
   const [upcomingReservation, setUpcomingReservation] = useState(null);
 
@@ -286,6 +288,18 @@ export default function AndroidHome() {
   const purePrice = Number(dashboard.market.pureGoldBuyPerDon || 0);
   return (
     <Page>
+      {upcomingReservation && (
+        <ReservationCard to="/my-exchanges" aria-label="다가오는 방문 예약 확인">
+          <span><CalendarDays aria-hidden /></span>
+          <ReservationCopy>
+            <small>다가오는 방문 일정</small>
+            <strong>{formatReservationSchedule(upcomingReservation.visitDate, upcomingReservation.visitTime)}</strong>
+            <p>방문 예약 내용을 확인하세요.</p>
+          </ReservationCopy>
+          <ChevronRight aria-hidden />
+        </ReservationCard>
+      )}
+
       {user?.uid && (dashboard.itemsLoading || hasMyGold) && (
         <AppMyGoldDashboard
           user={user}
@@ -301,17 +315,6 @@ export default function AndroidHome() {
         />
       )}
 
-      {upcomingReservation && (
-        <ReservationCard to="/my-exchanges" aria-label="다가오는 방문 예약 확인">
-          <span><CalendarDays aria-hidden /></span>
-          <ReservationCopy>
-            <small>다가오는 방문 일정</small>
-            <strong>{formatReservationSchedule(upcomingReservation.visitDate, upcomingReservation.visitTime)}</strong>
-            <p>방문 예약 내용을 확인하세요.</p>
-          </ReservationCopy>
-          <ChevronRight aria-hidden />
-        </ReservationCard>
-      )}
 
       {hasMyGold && <HomePriorityActions />}
 
@@ -361,27 +364,25 @@ export default function AndroidHome() {
       {!dashboard.publicPriceLoading && dashboard.publicPriceEnabled && purePrice > 0 && (
         <PriceCard to="/gold-price" aria-label="순금 시세 자세히 보기">
           <div>
-            <small>공개 금시세</small>
+            <small>{getGoldPriceDatePresentation(todayKey, dashboard.marketSourceDate, true).label}</small>
             <strong>순금 · 내가 팔 때 · 1돈(3.75g)</strong>
           </div>
           <b>{formatWon(purePrice)}</b>
         </PriceCard>
       )}
 
-      {!hasMyGold && (
-        <GoldToGoldStory
-          to="/gold-to-gold"
-          aria-label="GOLD TO GOLD 소개 페이지 보기"
-        >
-          <span><BookOpen aria-hidden /></span>
-          <div>
-            <small>GOLD TO GOLD</small>
-            <strong>내 금의 다음 가치를 알아보세요</strong>
-            <p>보유한 금의 가치를 골드바로 이어가는 이야기를 확인하세요.</p>
-          </div>
-          <ChevronRight aria-hidden />
-        </GoldToGoldStory>
-      )}
+      {!hasMyGold && <GoldToGoldStory
+        to="/gold-to-gold"
+        aria-label="GOLD TO GOLD 소개 페이지 보기"
+      >
+        <span><BookOpen aria-hidden /></span>
+        <div>
+          <small>GOLD TO GOLD</small>
+          <strong>내 금의 다음 가치를 알아보세요</strong>
+          <p>보유한 금의 가치를 골드바로 이어가는 이야기를 확인하세요.</p>
+        </div>
+        <ChevronRight aria-hidden />
+      </GoldToGoldStory>}
 
       {hasMyGold && dashboard.ratesReady && (
         <HomeOptionalDetails summary={`기록한 금의 예상 순금 ${formatGoldWeightPair(Number(dashboard.summary.pureGoldG || 0))} · 골드바 목표 보기`}>

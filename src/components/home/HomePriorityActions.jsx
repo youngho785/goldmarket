@@ -7,18 +7,16 @@ import { ArrowRight, Gem, Plus } from "lucide-react";
 // 계산·교환·예약의 데이터 처리 방식은 여기에서 변경하지 않습니다.
 const Panel = styled.section`
   display: grid;
-  gap: 9px;
-  padding: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 17px;
-  background: ${({ theme }) => theme.colors.surface};
+  gap: 10px;
+  /* Actions are already cards. A surrounding bordered card creates unnecessary nesting. */
+  padding: 2px 0 0;
 `;
 
 const Heading = styled.h2`
   margin: 0;
   color: ${({ theme }) => theme.colors.text};
-  font-size: 1rem;
-  line-height: 1.4;
+  font-size: .92rem;
+  line-height: 1.45;
   font-weight: 900;
 `;
 
@@ -37,8 +35,8 @@ const Action = styled(Link)`
   align-items: center;
   gap: 11px;
   min-width: 0;
-  min-height: 76px;
-  padding: 10px 11px;
+  min-height: 70px;
+  padding: 11px 12px;
   border: 1px solid ${({ $primary, theme }) => $primary ? theme.colors.primary : theme.colors.border};
   border-radius: 13px;
   background: ${({ $primary, theme }) => $primary ? theme.colors.primary : theme.semantic.badgeGoldBg};
@@ -58,9 +56,9 @@ const Action = styled(Link)`
 
   @media (max-width: 560px) {
     gap: 7px;
-    min-height: 72px;
+    min-height: 64px;
     > svg:last-child { display: none; }
-    strong { font-size: .85rem; }
+    strong { font-size: .87rem; }
     small { display: none; }
   }
 `;

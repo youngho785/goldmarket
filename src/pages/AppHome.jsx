@@ -11,8 +11,6 @@ import {
 
 import AppGoldPriceSummary from "@/components/gold/AppGoldPriceSummary";
 import AppMyGoldDashboard from "@/components/gold/AppMyGoldDashboard";
-import VerifiedReviewSection from "@/components/reviews/VerifiedReviewSection";
-import TrustProofBar from "@/components/common/TrustProofBar";
 import { useAuthContext } from "@/context/AuthContext";
 import useGoldVaultDashboard from "@/hooks/useGoldVaultDashboard";
 import AppGoldJourney from "@/components/gold/AppGoldJourney";
@@ -317,8 +315,6 @@ export default function AppHome() {
         </QuickLink>
       </QuickGrid>
 
-      <VerifiedReviewSection compact showInquiryAction={false} />
-      <TrustProofBar compact />
     </Page>
   );
 }

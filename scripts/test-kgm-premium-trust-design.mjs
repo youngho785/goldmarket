@@ -4,12 +4,16 @@ import { readFile } from 'node:fs/promises';
 
 const read = async path => readFile(new URL('../' + path, import.meta.url), 'utf8');
 
-test('Premium Trust: 동일한 신뢰 안내를 비회원 웹과 회원 웹·Android 홈에 제공', async () => {
+test('Premium Trust: 홈의 신뢰 정보는 반복 카드 없이 노출하고 실측 근거를 유지', async () => {
   const [landing, web, android, proof] = await Promise.all([
     read('src/pages/LandingPage.jsx'), read('src/pages/AppHome.jsx'),
     read('src/pages/AndroidHome.jsx'), read('src/components/common/TrustProofBar.jsx'),
   ]);
-  for (const source of [landing, web]) assert.match(source, /<TrustProofBar(?: compact)?\s*\/>/);
+  assert.match(landing, /실측·동의 후 최종 확정/);
+  assert.match(landing, /고객 앞에서 현장 실측/);
+  assert.doesNotMatch(landing, /<TrustProofBar(?: compact)?\s*\/>/);
+  assert.match(web, /AppMyGoldDashboard/);
+  assert.match(android, /GoldToGoldStory/);
   assert.match(proof, /부산 원일귀금속 직접 운영/);
   assert.match(proof, /과정은 더 투명하게/);
   assert.match(proof, /실측·동의 후 확정/);

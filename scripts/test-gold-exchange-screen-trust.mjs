@@ -14,12 +14,12 @@ test("홈 시세표는 이미 검증된 웹·앱 날짜 표현을 사용한다",
   assert.match(board, /todayKey, data\?\.sourceDate, !!data/);
   assert.match(board, /<span>\{priceDateLabel\}<\/span>/);
   assert.equal(getGoldPriceDatePresentation("20261012", "20261008", true).label,
-    "오늘 날짜 2026.10.12 · 최근 공개 시세");
+    "오늘 날짜 2026.10.12");
 });
 
 test("오늘 등록된 시세는 최근 공개 안내를 붙이지 않는다", () => {
   assert.equal(getGoldPriceDatePresentation("20261012", "20261012", true).label, "오늘 날짜 2026.10.12");
-  assert.match(board, /!isTodayPublished && <span role="status">실제 거래 전 가격 확인<\/span>/);
+  assert.doesNotMatch(board, /!isTodayPublished && <span role="status">실제 거래 전 가격 확인<\/span>/);
 });
 
 test("홈 시세표에서 등록일·등록시각 및 긴 경고 박스를 제거한다", () => {

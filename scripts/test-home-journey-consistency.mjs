@@ -19,8 +19,9 @@ test("웹 홈은 중복 골드바 목표 카드를 없애고 핵심 CTA와 상�
   assert.match(pc, /<AppMyGoldDashboard/);
 });
 
-test("앱 홈은 기록이 있을 때 중복 소개 카드를 숨기고 다음 골드바 목표를 유지한다", () => {
-  assert.match(app, /\{!hasMyGold && \(\s*<GoldToGoldStory/);
+test("안드로이드 홈에서 GOLD TO GOLD 소개를 모든 회원에게 표시", () => {
+  assert.match(app, /<GoldToGoldStory/);
+  assert.doesNotMatch(app, /\{!hasMyGold && \(\s*<GoldToGoldStory/);
   assert.match(app, /<AppGoldJourney/);
   assert.match(app, /<HomePriorityActions \/>/);
   assert.match(app, /<QuickGoldValueCalculator[\s\S]*source="app-home"/);
@@ -28,7 +29,7 @@ test("앱 홈은 기록이 있을 때 중복 소개 카드를 숨기고 다음 �
 
 test("앱 홈 시세는 불필요한 시세 등록일을 표시하지 않으며 금시세 페이지로 이동한다", () => {
   assert.match(app, /<PriceCard to="\/gold-price" aria-label="순금 시세 자세히 보기">/);
-  assert.match(app, /<small>공개 금시세<\/small>/);
+  assert.match(app, /getGoldPriceDatePresentation\(todayKey, dashboard\.marketSourceDate, true\)/);
   assert.doesNotMatch(app, /시세 등록일|최근 등록 금시세/);
   assert.match(app, /dashboard\.publicPriceEnabled && purePrice > 0/);
 });

@@ -157,7 +157,7 @@ export default function MyGoldImportPrompt({
   onConfirm,
   onCancel,
 }) {
-  const items = Array.isArray(draft?.items) ? draft.items : [];
+  const items = useMemo(() => (Array.isArray(draft?.items) ? draft.items : []), [draft?.items]);
   const fromGuestDemo = draft?.source === "guest-my-gold" || source === "guest-my-gold";
   const [duplicateApproved, setDuplicateApproved] = useState(false);
   const possibleDuplicates = useMemo(

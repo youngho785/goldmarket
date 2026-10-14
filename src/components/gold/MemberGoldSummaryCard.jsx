@@ -10,8 +10,8 @@ const Card = styled(Link)`
   grid-template-columns: 40px minmax(0, 1fr) auto;
   gap: 11px;
   align-items: center;
-  min-height: ${({ $compact }) => ($compact ? "64px" : "72px")};
-  padding: ${({ $compact }) => ($compact ? "10px 13px" : "12px 15px")};
+  min-height: ${({ $compact }) => ($compact ? "70px" : "76px")};
+  padding: ${({ $compact }) => ($compact ? "11px 13px" : "12px 15px")};
   border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 28%, ${({ theme }) => theme.colors.border});
   border-radius: 18px;
   background:
@@ -19,7 +19,7 @@ const Card = styled(Link)`
     ${({ theme }) => theme.semantic.badgeGoldBg};
   color: ${({ theme }) => theme.colors.text};
   text-decoration: none;
-  box-shadow: 0 10px 25px color-mix(in srgb, ${({ theme }) => theme.colors.primaryDark} 7%, transparent);
+  box-shadow: 0 3px 12px color-mix(in srgb, ${({ theme }) => theme.colors.primaryDark} 5%, transparent);
   transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
   &:hover { transform: translateY(-2px); border-color: ${({ theme }) => theme.colors.secondary}; box-shadow: ${({ theme }) => theme.shadows.card}; }
   &:focus-visible { outline: 2px solid ${({ theme }) => theme.colors.secondary}; outline-offset: 3px; }
@@ -44,7 +44,7 @@ const Copy = styled.div`
   small {
     display: block;
     color: ${({ theme }) => theme.colors.secondaryDark};
-    font-size: .67rem;
+    font-size: .75rem;
     font-weight: 950;
     letter-spacing: .04em;
   }
@@ -54,13 +54,13 @@ const Copy = styled.div`
     margin-top: 2px;
     color: ${({ theme }) => theme.colors.primary};
     font-family: ${({ theme }) => theme.fonts.numeric};
-    font-size: .9rem;
+    font-size: 1rem;
   }
 
   p {
     margin: 2px 0 0;
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .68rem;
+    font-size: .76rem;
     line-height: 1.4;
   }
 `;

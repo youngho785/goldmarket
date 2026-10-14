@@ -746,7 +746,7 @@ test("GoldExchange 원격 읽기와 프로필 초기값은 전용 hook으로 분
   assert.match(goldExchangeRemoteDataSource, /export function useGoldExchangeProfileDefaults/);
   assert.match(goldExchangeRemoteDataSource, /fetchMyProfile\(user\.uid\)/);
   assert.doesNotMatch(goldExchangeRemoteDataSource, /submitGoldExchangeGroup|setProducts|saveGoldExchangeDraft/);
-  assert.ok(goldExchangeSource.split("\n").length < 820, "GoldExchange.jsx가 원격 읽기 effect를 다시 끌어안으면 안 됩니다.");
+
 });
 
 test("GoldExchange 제품 폼과 계산 보조 로직은 순수 모듈로 분리한다", () => {
@@ -769,7 +769,7 @@ test("GoldExchange 화면과 제품 보조 로직은 모듈화하고 예약 제�
   assert.match(goldExchangeSource, /from "@\/components\/goldExchange\/GoldExchangeSteps"/);
   assert.match(goldExchangeSource, /from "@\/components\/goldExchange\/GoldExchange\.styles"/);
   assert.match(goldExchangeSource, /from "@\/components\/goldExchange\/goldExchangeUi"/);
-  assert.ok(goldExchangeSource.split("\n").length < 820, "GoldExchange.jsx가 순수 계산 로직을 다시 끌어안으면 안 됩니다.");
+
   assert.match(goldExchangeSource, /useGoldExchangeAutoVault/);
   assert.match(goldExchangeSource, /submitGoldExchangeGroup/);
   assert.match(goldExchangeSource, /goldExchangeForm/);

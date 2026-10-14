@@ -14,7 +14,7 @@ import { useAuthContext } from "@/context/AuthContext";
 import MyGoldTicker from "@/components/gold/MyGoldTicker";
 import { isNative } from "@/platform/runtime";
 import useKoreaTodayDate from "@/hooks/useKoreaTodayDate";
-import { getGoldPriceDatePresentation } from "@/lib/goldPriceDatePresentation";
+import { getGoldPriceDatePresentation, getGoldPricePreviousDayMarket } from "@/lib/goldPriceDatePresentation";
 import NativeGoldPriceOverview from "@/components/goldPrice/NativeGoldPriceOverview";
 import MemberBenefitsDialog from "@/components/common/MemberBenefitsDialog";
 import QuickGoldValueCalculator from "@/components/gold/QuickGoldValueCalculator";
@@ -121,7 +121,7 @@ function changeInfo(current, previous) {
 }
 function changeText(change) {
   if (!change) return "전일 비교 없음";
-  if (change.diff === 0) return "－ 보합";
+  if (change.diff === 0) return "－ 보합 (0.00%)";
   const arrow = change.diff > 0 ? "▲" : "▼";
   return `${arrow} ${Math.abs(change.diff).toLocaleString("ko-KR")}원 · ${Math.abs(
     change.percent
@@ -129,7 +129,7 @@ function changeText(change) {
 }
 function compactChangeText(change) {
   if (!change) return "-";
-  if (change.diff === 0) return "보합";
+  if (change.diff === 0) return "보합 0.00%";
   const arrow = change.diff > 0 ? "▲" : "▼";
   return `${arrow}${Math.abs(change.percent).toFixed(2)}%`;
 }
@@ -285,7 +285,7 @@ export default function GoldPrice() {
 
   const marketRows = useMemo(() => {
     const market = goldData?.market || {};
-    const previous = goldData?.previousMarket || {};
+    const previous = getGoldPricePreviousDayMarket(todayKey, goldData?.sourceDate, market, goldData?.previousMarket) || {};
 
     return [
       {
@@ -325,19 +325,17 @@ export default function GoldPrice() {
         previousBuy: previous.gold14kBuyPerDon,
       },
     ];
-  }, [goldData]);
+  }, [goldData, todayKey]);
 
   const pureRow = marketRows[0];
   const heroChange = changeInfo(pureRow?.buy, pureRow?.previousBuy);
   const pagePriceAvailable =
     !configLoading && goldEnabled && !goldLoading && !!goldData;
   // 오늘 날짜는 조회일입니다. 시세가 오늘 등록되지 않았다면 별도 안내합니다.
-  const { isTodayPublished, label: priceDateLabel } = getGoldPriceDatePresentation(
+  const { label: priceDateLabel } = getGoldPriceDatePresentation(
     todayKey, goldData?.sourceDate, pagePriceAvailable
   );
-  const priceHeading = !pagePriceAvailable
-    ? "금시세 확인"
-    : isTodayPublished ? "오늘의 금시세" : "최근 공개 금시세";
+  const priceHeading = pagePriceAvailable ? "오늘의 금시세" : "금시세 확인";
 
   const enableGoldPricePush = async () => {
     if (!isMember) {

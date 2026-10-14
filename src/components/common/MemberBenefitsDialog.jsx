@@ -64,6 +64,7 @@ export default function MemberBenefitsDialog({ open, onClose, triggerRef, regist
   useEffect(() => {
     if (!open) return undefined;
     const previousOverflow = document.body.style.overflow;
+    const triggerElement = triggerRef?.current;
     document.body.style.overflow = "hidden";
     closeRef.current?.focus();
     const onKeyDown = (event) => {
@@ -87,7 +88,7 @@ export default function MemberBenefitsDialog({ open, onClose, triggerRef, regist
     return () => {
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = previousOverflow;
-      triggerRef?.current?.focus?.();
+      triggerElement?.focus?.();
     };
   }, [open, onClose, triggerRef]);
 

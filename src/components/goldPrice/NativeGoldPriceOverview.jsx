@@ -16,11 +16,11 @@ import {
 const CompactMarket = styled.div`
   margin-top: 6px;
   overflow: hidden;
-  border: 1px solid rgba(15, 24, 32, .13);
-  border-radius: 14px;
+  border: 1px solid rgba(15, 24, 32, .12);
+  border-radius: 15px;
   background: #fff;
 
-  .context { padding: 9px 11px; color: #5d626c; font-size: .76rem; font-weight: 750; }
+  .context { padding: 10px 12px; color: #5d626c; font-size: .79rem; font-weight: 750; }
   table { width: 100%; border-spacing: 0; table-layout: fixed; border-collapse: collapse; }
   col.label { width: 20%; }
   col.price { width: 26.666%; }
@@ -140,6 +140,7 @@ export default function NativeGoldPriceOverview({
     if (!benefitOpen) return undefined;
     const beforeOverflow = document.body.style.overflow;
     const beforeHideBottomNav = document.body.dataset.hideBottomNav;
+    const benefitTriggerElement = benefitTriggerRef.current;
     document.body.style.overflow = "hidden";
     document.body.dataset.hideBottomNav = "1";
     benefitCloseRef.current?.focus();
@@ -172,14 +173,14 @@ export default function NativeGoldPriceOverview({
       document.body.style.overflow = beforeOverflow;
       if (beforeHideBottomNav === undefined) delete document.body.dataset.hideBottomNav;
       else document.body.dataset.hideBottomNav = beforeHideBottomNav;
-      benefitTriggerRef.current?.focus();
+      benefitTriggerElement?.focus();
     };
   }, [benefitOpen]);
 
   return (
     <>
       <CompactMarket aria-label="금 종류별 1돈 시세 비교표">
-        <div className="context">24K · 18K · 14K 한눈에 · 1돈(3.75g) 기준 · 단위 원</div>
+        <div className="context">1돈(3.75g) 기준 · 단위 원</div>
         <table>
           <colgroup><col className="label" /><col className="price" /><col className="price" /><col className="price" /></colgroup>
           <thead>

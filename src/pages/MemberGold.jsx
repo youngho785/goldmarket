@@ -34,22 +34,22 @@ import {
 
 const Page = styled.main`
   display: grid;
-  gap: 14px;
+  gap: 12px;
   width: min(760px, 100%);
   margin: 0 auto;
-  padding: 8px 0 32px;
+  padding: 6px 0 calc(28px + env(safe-area-inset-bottom, 0px));
 `;
 
 const Hero = styled.section`
   position: relative;
   overflow: hidden;
-  padding: clamp(22px, 5vw, 34px);
+  padding: clamp(18px, 4vw, 26px);
   border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 34%, ${({ theme }) => theme.colors.border});
-  border-radius: 22px;
+  border-radius: 18px;
   background:
     radial-gradient(circle at 92% 0%, color-mix(in srgb, ${({ theme }) => theme.colors.gold} 18%, transparent), transparent 38%),
     ${({ theme }) => theme.colors.surface};
-  box-shadow: ${({ theme }) => theme.shadows.card};
+  box-shadow: 0 6px 24px color-mix(in srgb, ${({ theme }) => theme.colors.primaryDark} 5%, transparent);
 `;
 
 const Eyebrow = styled.p`
@@ -68,7 +68,7 @@ const HeroTitle = styled.h1`
 `;
 
 const BalanceLabel = styled.p`
-  margin: 22px 0 0;
+  margin: 15px 0 0;
   color: ${({ theme }) => theme.colors.textSecondary};
   font-size: .82rem;
   font-weight: 800;
@@ -78,7 +78,7 @@ const Balance = styled.div`
   margin-top: 2px;
   color: ${({ theme }) => theme.colors.primary};
   font-family: ${({ theme }) => theme.fonts.numeric};
-  font-size: clamp(2.35rem, 9vw, 4rem);
+  font-size: clamp(2.15rem, 8.5vw, 3.35rem);
   font-weight: 950;
   letter-spacing: -.045em;
 
@@ -97,11 +97,11 @@ const Lead = styled.p`
 `;
 
 const Card = styled.section`
-  padding: 18px;
+  padding: clamp(13px, 3vw, 17px);
   border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 18px;
+  border-radius: 16px;
   background: ${({ theme }) => theme.colors.surface};
-  box-shadow: ${({ theme }) => theme.shadows.xs};
+  box-shadow: none;
 `;
 
 const CardHead = styled.div`
@@ -125,7 +125,7 @@ const CardHead = styled.div`
 
 const RewardGrid = styled.div`
   display: grid;
-  gap: 9px;
+  gap: 0;
 `;
 
 const RewardRow = styled.div`
@@ -133,10 +133,12 @@ const RewardRow = styled.div`
   grid-template-columns: 34px minmax(0, 1fr) auto;
   gap: 10px;
   align-items: center;
-  padding: 11px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 13px;
-  background: ${({ $done, theme }) => $done ? theme.semantic.alertSuccessBg : theme.colors.surface};
+  padding: 12px 4px;
+  border: 0;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
+  border-radius: 0;
+  background: transparent;
+  &:last-child { border-bottom: 0; }
 
   > span:first-child {
     display: grid;
@@ -160,12 +162,12 @@ const RewardRow = styled.div`
     display: block;
     margin-top: 3px;
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .72rem;
+    font-size: .78rem;
   }
 
   b {
     color: ${({ theme }) => theme.colors.primary};
-    font-size: .76rem;
+    font-size: .84rem;
     white-space: nowrap;
   }
 `;
@@ -263,7 +265,7 @@ const Notice = styled.p`
   border-radius: 12px;
   background: ${({ $error, theme }) => $error ? theme.semantic.alertErrorBg : theme.semantic.badgeGoldBg};
   color: ${({ $error, theme }) => $error ? theme.semantic.alertErrorText : theme.colors.textSecondary};
-  font-size: .8rem;
+  font-size: .82rem;
   line-height: 1.55;
 `;
 
@@ -457,7 +459,6 @@ export default function MemberGold() {
       <Card>
         <CardHead>
           <h2>GOLD TO GOLD 사용</h2>
-          <b>{walletBalanceG > 0 ? `${walletBalanceG.toFixed(2)}g 잔액` : "사용 가능 잔액 없음"}</b>
         </CardHead>
 
         {hasPendingRequest ? (
@@ -466,7 +467,7 @@ export default function MemberGold() {
             {request.visitDate && <span>{request.visitDate} {request.visitTime || ""}</span>}
             <p>매장에서 아래 6자리 코드를 관리자에게 보여주세요.</p>
             {request.visitDate && eligibleMemberGoldGroups([{groupId: "pending", visitDate: request.visitDate, status: "requested"}]).length === 0 && (
-              <Notice>방문일이 지난 신청입니다. 매장 확인 또는 자동 만료 처리를 기다리고 있습니다. 혜택은 아직 차감되지 않았습니다.</Notice>
+              <Notice>방문일이 지난 신청입니다. 매장 관리자의 확인 또는 처리를 기다리고 있습니다. 혜택은 아직 차감되지 않았습니다.</Notice>
             )}
             <Code aria-label={`매장 확인 코드 ${request.requestCode}`}>{request.requestCode}</Code>
             <SecondaryAction type="button" onClick={onCancelUsage} disabled={busy}>
@@ -523,9 +524,6 @@ export default function MemberGold() {
       {loading && <Notice>MEMBER GOLD 상태를 확인하고 있습니다.</Notice>}
       {error && <Notice $error role="alert">{error}</Notice>}
       {actionMessage && <Notice role="status">{actionMessage}</Notice>}
-      {request?.status === "expired" && (
-        <Notice role="status">방문 일정 후 사용 신청 기간이 종료되었습니다. MEMBER GOLD 적립 잔액은 차감되지 않았습니다. 새로운 예약에 다시 신청할 수 있습니다.</Notice>
-      )}
 
       {usagePanel}
 

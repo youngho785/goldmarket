@@ -31,8 +31,8 @@ const Nav = styled.nav.attrs({
           bottom: 0;
           left: 0;
           display: grid;
-          min-height: calc(72px + env(safe-area-inset-bottom, 0px));
-          padding: 6px 8px env(safe-area-inset-bottom, 0px);
+          min-height: calc(68px + env(safe-area-inset-bottom, 0px));
+          padding: 4px 8px env(safe-area-inset-bottom, 0px);
           border-top: 1px solid ${theme.colors.border};
           background: color-mix(
             in srgb,
@@ -93,8 +93,8 @@ const Item = styled(NavLink)`
   min-width: 0;
   min-height: 52px;
   padding: 4px 2px;
-  color: ${({ theme }) => theme.colors.textLight};
-  font-size: 0.76rem;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: .71rem;
   font-weight: 800;
   text-align: center;
   text-decoration: none;
@@ -102,7 +102,7 @@ const Item = styled(NavLink)`
   ${({ $android, $center, theme }) =>
     $android
       ? css`
-          min-height: 60px;
+          min-height: 57px;
           padding-top: ${$center ? "0" : "6px"};
 
           &.active {
@@ -118,23 +118,23 @@ const Item = styled(NavLink)`
 
           ${$center &&
           css`
-            transform: translateY(-14px);
+            transform: translateY(-8px);
             color: ${theme.colors.textSecondary};
             font-weight: 900;
 
             ${IconShell} {
-              width: 52px;
-              height: 52px;
+              width: 46px;
+              height: 46px;
               margin-bottom: 1px;
-              border: 4px solid ${theme.colors.surface};
+              border: 3px solid ${theme.colors.surface};
               border-radius: 50%;
               background: ${theme.semantic.badgeGoldBg};
               color: ${theme.colors.primary};
               box-shadow: ${theme.shadows.card};
 
               svg {
-                width: 24px;
-                height: 24px;
+                width: 22px;
+                height: 22px;
                 stroke-width: 2;
               }
             }
