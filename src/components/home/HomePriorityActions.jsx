@@ -13,11 +13,7 @@ const Panel = styled.section`
 `;
 
 const Heading = styled.h2`
-  margin: 0;
-  color: ${({ theme }) => theme.colors.text};
-  font-size: .92rem;
-  line-height: 1.45;
-  font-weight: 900;
+margin:0; color:var(--gm-text-secondary); font-size:12px; line-height:1.5; font-weight:500;
 `;
 
 const Links = styled.div`
@@ -52,7 +48,7 @@ const Action = styled(Link)`
   > svg:last-child { width: 17px; height: 17px; flex: 0 0 auto; margin-left: auto; }
   span { flex: 1; min-width: 0; }
   strong { display: block; font-size: .94rem; font-weight: 900; line-height: 1.35; word-break: keep-all; }
-  small { display: block; margin-top: 4px; font-size: .8rem; line-height: 1.45; word-break: keep-all; opacity: .9; }
+  small { display: block; margin-top: 4px; color: inherit; font-size: .8rem; line-height: 1.45; word-break: keep-all; opacity: .85; }
 
   @media (max-width: 560px) {
     gap: 7px;

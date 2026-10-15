@@ -36,10 +36,12 @@ test("홈 금시세 비교 안내는 전일 대비 문구를 유지한다", () =
 });
 
 test("홈 이용 순서의 예상 가치 표현이 금시세 갱신일을 암시하지 않는다", () => {
-  assert.match(landing, /<strong>예상 가치 확인<\/strong>/);
-  assert.match(landing, /공개 시세 기준 내 금의 예상 참고가치를 확인합니다/);
+  // The new editorial home uses a numbered story rather than legacy flow cards.
+  assert.match(landing, /<SmallSteps>[\s\S]*금의 종류와 중량을 선택하세요/);
+  assert.match(landing, /공개 시세 기준 예상 참고가치를 확인합니다/);
   assert.match(landing, /<GoldPriceBoard compact \/>/);
-  assert.match(landing, /<strong>MY GOLD 기록<\/strong>/);
+  assert.match(landing, /원하는 금만 MY GOLD에 기록하세요/);
+  assert.doesNotMatch(landing, /시세 등록일/);
 });
 
 test("남는 순금은 사용자에게 반환·현금화 등의 정책을 임의로 약속하지 않는다", () => {

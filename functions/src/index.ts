@@ -89,3 +89,5 @@ export {
 } from "./hallmark/functions.js";
 export { recoverGoldExchangeBonus } from "./rewards/recovery.js";
 export { reconcileCanceledMemberGoldUsageRequests } from "./rewards/bonusUsageReconciliationSchedule.js";
+
+export { previewGoldPriceCorrection, saveGoldPriceCorrection, carryForwardDailyGoldPrice, saveDailyGoldPrice } from "./goldPrice/dailyHistory.js";

@@ -1,90 +1,25 @@
 import styled, { keyframes, css } from "styled-components";
 
 export const PageContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 100%;
-  padding: 14px 0 30px;
-  background: transparent;
-  min-height: calc(100svh - 180px);
-
-  @media (max-width: 640px) {
-    padding: 7px 0 20px;
-  }
+display:flex; flex-direction:column; align-items:center; width:100%; padding:16px 0 32px; background:transparent; min-height:calc(100svh - 180px);
 `;
 
 export const FlowHeader = styled.header`
-  position: relative;
-  width: 100%;
-  max-width: 1080px;
-  margin-bottom: 8px;
-  padding: ${({ $compact }) => ($compact ? "14px 18px" : "clamp(18px, 3vw, 25px)")};
-  overflow: hidden;
-  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.primary} 78%, transparent);
-  border-radius: ${({ $compact }) => ($compact ? "16px" : "20px")};
-  background:
-    radial-gradient(circle at 93% 8%, color-mix(in srgb, ${({ theme }) => theme.colors.gold} 16%, transparent) 0, transparent 30%),
-    ${({ theme }) => theme.gradients.primary};
-  box-shadow: 0 10px 26px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 11%, transparent);
-
-  &::after {
-    content: "G";
-    position: absolute;
-    right: -10px;
-    bottom: -46px;
-    color: color-mix(in srgb, ${({ theme }) => theme.colors.goldLight} 7%, transparent);
-    font-family: ${({ theme }) => theme.fonts.heading};
-    font-size: ${({ $compact }) => ($compact ? "7rem" : "8rem")};
-    font-weight: 900;
-    line-height: 1;
-    pointer-events: none;
-  }
-
-  @media (max-width: 640px) {
-    padding: ${({ $compact }) => ($compact ? "11px 12px" : "15px 14px 13px")};
-    border-radius: 18px;
-  }
+position:relative; width:100%; max-width:1080px; margin-bottom:26px; padding:12px 0 0; overflow:hidden;
+      border:0; border-radius:0; background:transparent; box-shadow:none;
 `;
 
 export const PageEyebrow = styled.p`
-  position: relative;
-  z-index: 1;
-  margin: 0 0 7px;
-  color: ${({ theme }) => theme.colors.goldLight};
-  font-family: ${({ theme }) => theme.fonts.numeric};
-  font-size: .63rem;
-  font-weight: 950;
-  letter-spacing: .15em;
+position:relative; z-index:1; margin:0 0 16px; color:var(--gm-text-secondary); font-size:10px; font-weight:600; letter-spacing:.16em;
 `;
 
 export const PageTitle = styled.h1`
-  position: relative;
-  z-index: 1;
-  margin: 0;
-  color: ${({ theme }) => theme.on.primary};
-  font-size: ${({ $compact }) => ($compact ? "clamp(1.25rem, 2.5vw, 1.6rem)" : "clamp(1.55rem, 3.5vw, 2.2rem)")};
-  line-height: 1.12;
-  letter-spacing: -.045em;
-  word-break: keep-all;
+position:relative; z-index:1; margin:0; color:var(--gm-primary); font-family:inherit; font-size:clamp(28px,3.5vw,44px); font-weight:500; line-height:1.3; letter-spacing:-.055em;
 `;
 
 export const PageLead = styled.p`
-  position: relative;
-  z-index: 1;
-  max-width: 700px;
-  margin: 7px 0 0;
-  color: color-mix(in srgb, ${({ theme }) => theme.on.primary} 72%, transparent);
-  font-size: .76rem;
-  line-height: 1.55;
-  word-break: keep-all;
-  display: ${({ $compact }) => ($compact ? "none" : "block")};
-
-  @media (max-width: 640px) {
-    margin-top: 5px;
-    font-size: .7rem;
-    line-height: 1.48;
-  }
+position:relative; z-index:1; max-width:700px; margin:14px 0 22px; color:var(--gm-text-secondary); font-size:13px; line-height:1.8;
+      @media(max-width:640px) { font-size:12px; }
 `;
 
 export const RebookNotice = styled.div`
@@ -93,57 +28,43 @@ export const RebookNotice = styled.div`
   max-width: 760px;
   margin: 13px 0 0;
   padding: 11px 12px;
-  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.goldLight} 22%, transparent);
+  border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 12px;
-  background: color-mix(in srgb, ${({ theme }) => theme.on.primary} 7%, transparent);
-  color: color-mix(in srgb, ${({ theme }) => theme.on.primary} 72%, transparent);
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+  color: ${({ theme }) => theme.colors.textSecondary};
   font-size: .78rem;
   line-height: 1.5;
 
   strong {
-    color: ${({ theme }) => theme.colors.goldLight};
+    color: ${({ theme }) => theme.colors.primary};
   }
 `;
 
 export const FlowTrack = styled.ol`
-  position: relative;
-  z-index: 1;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
-  margin: 10px 0 0;
-  padding: 5px;
-  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.on.primary} 12%, transparent);
-  border-radius: 14px;
-  background: color-mix(in srgb, ${({ theme }) => theme.on.primary} 5%, transparent);
-  list-style: none;
-
-  @media (max-width: 620px) {
-    gap: 4px;
-    margin-top: 9px;
-  }
+position:relative; z-index:1; display:grid; grid-template-columns:repeat(4,1fr); gap:4px; margin:26px 0 0; padding:0;
+      border-bottom:1px solid var(--gm-border); background:transparent; list-style:none;
 `;
 
 export const FlowItem = styled.li`
   min-width: 0;
-  padding: 7px 6px;
+  padding: 16px 6px;
   border: 0;
-  border-radius: 10px;
+  border-radius: 0;
   background: ${({ $active, $done, theme }) =>
     $active
-      ? theme.colors.goldLight
+      ? theme.colors.primaryLight
       : $done
-        ? `color-mix(in srgb, ${theme.colors.goldLight} 19%, transparent)`
+        ? `color-mix(in srgb, ${theme.colors.primaryLight} 19%, transparent)`
         : "transparent"};
   color: ${({ $active, $done, theme }) =>
     $active
       ? theme.colors.primary
       : $done
-        ? theme.colors.goldLight
-        : `color-mix(in srgb, ${theme.on.primary} 58%, transparent)`};
+        ? theme.colors.primary
+        : theme.colors.textSecondary};
   font-family: ${({ theme }) => theme.fonts.numeric};
-  font-size: .63rem;
-  font-weight: 900;
+  font-size: .75rem;
+  font-weight: 600;
   text-align: center;
   white-space: nowrap;
 
@@ -165,33 +86,9 @@ export const InfoCard = styled.div`
 `;
 
 export const Card = styled.div`
-  position: relative;
-  width: 100%;
-  max-width: ${({ $step }) => $step === "calc" ? "840px" : "1080px"};
-  margin-bottom: 10px;
-  padding: clamp(16px, 3vw, 23px);
-  overflow: hidden;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 20px;
-  background: ${({ theme }) => theme.colors.surface};
-  box-shadow: 0 6px 20px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 5%, transparent);
-
-  &::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 18px;
-    width: 54px;
-    height: 3px;
-    border-radius: 0 0 999px 999px;
-    background: ${({ theme }) => theme.colors.secondary};
-    pointer-events: none;
-  }
-
-  @media (max-width: 640px) {
-    padding: 14px 13px;
-    border-radius: 18px;
-  }
+position:relative; width:100%; max-width:1080px; margin-bottom:20px; padding:clamp(22px,4vw,40px); overflow:hidden;
+      border:1px solid var(--gm-border); border-radius:8px; background:var(--gm-surface); box-shadow:none;
+      @media(max-width:640px) { padding:22px 18px; }
 `;
 
 export const StartChoiceGrid = styled.div`
@@ -944,10 +841,10 @@ export const EstimateBoundary = styled.div`
   z-index: 1;
   margin-top: 9px;
   padding: 8px 10px;
-  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.goldLight} 18%, transparent);
-  border-radius: 11px;
-  background: color-mix(in srgb, ${({ theme }) => theme.on.primary} 6%, transparent);
-  color: color-mix(in srgb, ${({ theme }) => theme.on.primary} 78%, transparent);
+  border: 0;
+  border-radius: 3px;
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+  color: ${({ theme }) => theme.colors.textSecondary};
   font-size: .78rem;
   font-weight: 750;
   line-height: 1.45;

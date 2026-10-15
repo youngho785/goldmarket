@@ -135,6 +135,9 @@ async function main() {
   if (!operationsEmulator) return finish(1);
 
 
+  const dailyHistory = await step('DAILY GOLD PRICE HISTORY', () => runNode(['--test', 'scripts/test-daily-gold-price.mjs']));
+  if (!dailyHistory) return finish(1);
+
   const goldCalc = await step('GOLD CALCULATION', () => runNode(['scripts/test-gold-bar-fee.mjs']));
   if (!goldCalc) return finish(1);
 

@@ -32,22 +32,11 @@ import { hapticTap } from "@/platform/androidUx";
 import { ANDROID_BACK_OVERLAY_EVENT, resolveAndroidBackAction } from "@/platform/androidBackRoute";
 
 const Header = styled.header`
-  position: sticky;
-  top: 0;
-  z-index: 980;
-  padding-top: 0; /* GlobalStyle body already reserves env(safe-area-inset-top). */
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-  background: ${({ theme }) => theme.colors.surface};
-  box-shadow: 0 1px 0 ${({ theme }) => theme.colors.border},
-    0 4px 14px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 4%, transparent);
+position:sticky; top:0; z-index:980; padding-top:0; border-bottom:1px solid var(--gm-border); background:var(--gm-background);
 `;
 
 const Bar = styled.div`
-  display: grid;
-  grid-template-columns: 84px minmax(0, 1fr) 84px;
-  align-items: center;
-  min-height: 56px;
-  padding: 0 10px;
+display:grid; grid-template-columns:84px minmax(0,1fr) 84px; align-items:center; min-height:64px; padding:0 12px;
 `;
 
 const IconButton = styled.button`
@@ -136,8 +125,8 @@ const BrandMark = styled(Link)`
   height: 34px;
   margin-left: 4px;
   border: 1px solid ${({ theme }) => theme.colors.secondary};
-  border-radius: 50%;
-  background: ${({ theme }) => theme.semantic.badgeGoldBg};
+  border-radius: 2px;
+  background: transparent;
   color: ${({ theme }) => theme.colors.primary};
   font-family: ${({ theme }) => theme.fonts.heading};
   font-size: 0.92rem;

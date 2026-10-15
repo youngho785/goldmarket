@@ -4,34 +4,12 @@ import styled from "styled-components";
 import { ArrowDownRight, ArrowUpRight, ChevronRight, Minus } from "lucide-react";
 
 const Card = styled(Link)`
-  display: block;
-  height: 100%;
-  overflow: hidden;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 20px;
-  background: ${({ theme }) => theme.colors.surface};
-  color: inherit;
-  text-decoration: none;
-  box-shadow: 0 10px 24px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 5%, transparent);
-  transition: transform .15s ease, border-color .15s ease;
-
-  &:hover {
-    border-color: color-mix(in srgb, ${({ theme }) => theme.colors.gold} 32%, ${({ theme }) => theme.colors.border});
-  }
-
-  &:active { transform: translateY(1px); }
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.gold};
-    outline-offset: 2px;
-  }
+display:block; height:100%; overflow:hidden; border:1px solid var(--gm-border); border-radius:10px; background:var(--gm-surface);
+    color:var(--gm-text); text-decoration:none; box-shadow:none; &:hover { border-color:var(--gm-border-strong); }
 `;
 
 const Inner = styled.div`
-  display: grid;
-  align-content: start;
-  height: 100%;
-  padding: 18px 18px 16px;
+display:grid; align-content:start; height:100%; padding:28px; @media(max-width:560px) { padding:22px; }
 `;
 
 const Head = styled.div`
@@ -44,22 +22,8 @@ const Head = styled.div`
 `;
 
 const TitleWrap = styled.div`
-  small {
-    display: block;
-    color: ${({ theme }) => theme.colors.secondaryDark};
-    font-size: .62rem;
-    font-weight: 950;
-    letter-spacing: .11em;
-  }
-
-  h2 {
-    margin: 4px 0 0;
-    color: ${({ theme }) => theme.colors.primary};
-    font-family: ${({ theme }) => theme.fonts.body};
-    font-size: 1rem;
-    font-weight: 850;
-    letter-spacing: -.025em;
-  }
+small { display:block; color:var(--gm-text-secondary); font-size:10px; font-weight:500; letter-spacing:.14em; }
+    h2 { margin:8px 0 0; color:var(--gm-primary); font-family:inherit; font-size:20px; font-weight:550; letter-spacing:-.04em; }
 `;
 
 const More = styled.span`
@@ -80,14 +44,7 @@ const PriceList = styled.div`
 `;
 
 const PriceRow = styled.div`
-  display: grid;
-  grid-template-columns: 48px minmax(0, 1fr) auto;
-  gap: 10px;
-  align-items: center;
-  min-height: 55px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
-
-  &:last-child { border-bottom: 0; }
+display:grid; grid-template-columns:48px minmax(0,1fr) auto; gap:10px; align-items:center; min-height:58px; border-bottom:1px solid var(--gm-border); &:last-child { border-bottom:0; }
 `;
 
 const Kind = styled.strong`
@@ -97,14 +54,7 @@ const Kind = styled.strong`
 `;
 
 const Price = styled.strong`
-  color: ${({ theme }) => theme.colors.primary};
-  font-family: "Segoe UI", "Malgun Gothic", Arial, sans-serif;
-  font-variant-numeric: tabular-nums lining-nums;
-  font-feature-settings: "tnum" 1, "lnum" 1;
-  font-size: .95rem;
-  font-weight: 800;
-  letter-spacing: -.025em;
-  white-space: nowrap;
+color:var(--gm-primary); font-family:inherit; font-variant-numeric:tabular-nums; font-size:19px; font-weight:550; letter-spacing:-.04em; white-space:nowrap;
 `;
 
 const Change = styled.span`

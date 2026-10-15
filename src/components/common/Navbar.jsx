@@ -2,7 +2,6 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import styled from "styled-components";
-import { livingGoldPulse } from "@/styles/livingGoldMotion";
 import { Menu, X } from "lucide-react";
 import {
   collection,
@@ -23,69 +22,26 @@ import MemberBenefitsDialog from "./MemberBenefitsDialog";
 import usePendingGoldExchangeCount from "@/hooks/usePendingGoldExchangeCount";
 
 const Header = styled.header`
-  position: sticky;
-  top: 0;
-  z-index: 1400;
-  overflow: visible;
-  isolation: isolate;
-  background: color-mix(in srgb, ${({ theme }) => theme.colors.surface} 93%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 15%, ${({ theme }) => theme.colors.border});
-  backdrop-filter: blur(20px);
-  box-shadow: 0 5px 24px color-mix(in srgb, ${({ theme }) => theme.colors.primaryDark} 7%, transparent);
+position: sticky; top: 0; z-index: 1400; overflow: visible; isolation: isolate;
+      background: color-mix(in srgb, var(--gm-background) 96%, transparent); border-bottom: 1px solid var(--gm-border); backdrop-filter: blur(18px);
 `;
 
 const Utility = styled.div`
-  background: ${({ theme }) => theme.colors.primary};
-  color: ${({ theme }) => theme.colors.goldLight};
+background: var(--gm-primary); color: #e2e6d9;
 `;
 
 const UtilityInner = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 20px;
-  max-width: 1440px;
-  min-height: 34px;
-  margin: 0 auto;
-  padding: 6px clamp(16px, 4vw, 64px);
-  font-size: .72rem;
-  letter-spacing: .025em;
-
-  span { display: inline-flex; align-items: center; gap: 8px; }
-  span:first-child::before {
-    content: "";
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: ${({ theme }) => theme.colors.secondary};
-    box-shadow: 0 0 0 3px color-mix(in srgb, ${({ theme }) => theme.colors.gold} 20%, transparent);
-  }
-
-  @media (max-width: 680px) {
-    min-height: 28px;
-    padding: 4px 14px;
-    justify-content: center;
-    font-size: .67rem;
-    span:last-child { display: none; }
-  }
+display: flex; align-items: center; justify-content: space-between; gap: 20px; max-width: 1408px;
+      min-height: 30px; margin: auto; padding: 5px clamp(20px, 4.2vw, 72px); font-size: 10px; letter-spacing: .035em;
+      span { display: inline-flex; gap: 8px; align-items: center; }
+      span:first-child::before { content: ''; width: 4px; height: 4px; background: #bfa474; border-radius: 50%; }
+      @media(max-width:680px) { justify-content: center; min-height: 26px; font-size: 9px; span:last-child { display: none; } }
 `;
 
 const Nav = styled.nav`
-  display: grid;
-  grid-template-columns: minmax(240px, 1fr) auto minmax(240px, 1fr);
-  align-items: center;
-  gap: 26px;
-  max-width: 1440px;
-  min-height: 80px;
-  margin: 0 auto;
-  padding: 10px clamp(16px, 4vw, 64px);
-
-  @media (max-width: 1180px) {
-    grid-template-columns: 1fr auto;
-    min-height: 62px;
-    gap: 12px;
-    padding: 6px 14px;
-  }
+display: grid; grid-template-columns: minmax(210px,1fr) auto minmax(150px,.65fr); align-items: center;
+      gap: 28px; max-width: 1408px; min-height: 85px; margin: auto; padding: 10px clamp(20px, 4.2vw, 72px);
+      @media(max-width:1180px) { grid-template-columns: 1fr auto; min-height: 66px; gap: 12px; padding: 8px 20px; }
 `;
 
 const Brand = styled(NavLink)`
@@ -99,93 +55,27 @@ const Brand = styled(NavLink)`
 `;
 
 const BrandSeal = styled.span`
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  flex: 0 0 auto;
-  border: 1px solid ${({ theme }) => theme.colors.secondary};
-  border-radius: 50%;
-  color: ${({ theme }) => theme.colors.secondaryDark};
-  font-family: ${({ theme }) => theme.fonts.heading};
-  font-size: 1.08rem;
-  box-shadow: inset 0 0 0 4px ${({ theme }) => theme.colors.background},
-    inset 0 0 0 5px ${({ theme }) => theme.colors.secondary}55;
-
-  &::after {
-    content: "";
-    position: absolute;
-    inset: -5px;
-    border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 26%, transparent);
-    border-radius: 50%;
-    opacity: 0.28;
-    pointer-events: none;
-    animation: ${livingGoldPulse} 6.2s ease-in-out 1.4s infinite;
-  }
-
-  @media (max-width: 1180px) {
-    width: 38px;
-    height: 38px;
-    font-size: .98rem;
-  }
+display: grid; place-items: center; width: 34px; height: 38px; border: 1px solid var(--gm-gold);
+      border-radius: 1px; color: var(--gm-gold); font-family: Georgia, serif; font-size: 19px; flex-shrink: 0;
+      transform: skewY(-7deg); box-shadow: 4px 3px 0 -1px var(--gm-background), 4px 3px 0 0 var(--gm-gold);
 `;
 
 const BrandCopy = styled.span`
-  display: grid;
-  gap: 1px;
-
-  strong {
-    font-family: ${({ theme }) => theme.fonts.heading};
-    font-size: clamp(1.2rem, 2vw, 1.48rem);
-    font-weight: 700;
-    letter-spacing: -.045em;
-    line-height: 1.1;
-  }
-  small {
-    color: ${({ theme }) => theme.colors.textLight};
-    font-family: ${({ theme }) => theme.fonts.numeric};
-    font-size: 0.62rem;
-    letter-spacing: .13em;
-  }
-
-  @media (max-width: 520px) {
-    gap: 0;
-    strong { font-size: 1.08rem; }
-    small { display: none; }
-  }
+display: grid; gap: 5px; strong { font-size: 19px; font-weight: 650; line-height: 1.15; letter-spacing: -.05em; }
+      small { color: var(--gm-text-secondary); font-size: 8px; font-weight: 500; letter-spacing: .13em; }
+      @media(max-width:520px) { strong { font-size: 17px; } small { font-size: 7px; } }
 `;
 
 const DesktopLinks = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: clamp(15px, 2vw, 30px);
-
-  @media (max-width: 1180px) { display: none; }
+display: flex; align-items: center; justify-content: center; gap: clamp(15px,1.8vw,25px);
+      @media(max-width:1180px) { display:none; }
 `;
 
 const MenuLink = styled(NavLink)`
-  position: relative;
-  padding: 27px 0 25px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: .88rem;
-  font-weight: 780;
-  white-space: nowrap;
-
-  &::after {
-    content: "";
-    position: absolute;
-    right: 0;
-    bottom: 10px;
-    left: 0;
-    height: 2px;
-    background: ${({ theme }) => theme.colors.secondary};
-    transform: scaleX(0);
-    transition: transform ${({ theme }) => theme.transitions.base};
-  }
-  &:hover, &.active { color: ${({ theme }) => theme.colors.primary}; }
-  &:hover::after, &.active::after { transform: scaleX(1); }
+position:relative; display: inline-flex; align-items: center; gap: 5px; min-height:44px; padding: 20px 0;
+      color: var(--gm-text-secondary); font-size: 12px; font-weight: 550; white-space:nowrap;
+      &::after { content:''; position:absolute; height:1px; bottom:12px; left:0; right:0; background:var(--gm-gold); transform:scaleX(0); transition:transform .2s; }
+      &:hover, &.active { color:var(--gm-primary); } &:hover::after, &.active::after { transform:scaleX(1); }
 `;
 
 const Account = styled.div`
@@ -214,17 +104,8 @@ const TextButton = styled.button`
 `;
 
 const AccountLink = styled.button`
-  display: inline-flex;
-  align-items: center;
-  min-height: 40px;
-  padding: 8px 13px;
-  border: 1px solid ${({ theme }) => theme.colors.borderStrong};
-  color: ${({ theme }) => theme.colors.primary};
-  font-size: .82rem;
-  font-weight: 800;
-  font-family: inherit;
-  background: ${({ theme }) => theme.colors.surface};
-  cursor: pointer;
+display:inline-flex; align-items:center; min-height:40px; padding:9px 15px; border:1px solid var(--gm-primary);
+      background:var(--gm-primary); color:white; font-size:11px; font-weight:600; border-radius:3px; box-shadow:none; cursor:pointer;
 `;
 
 const AccountMenuWrap = styled.div`
@@ -722,7 +603,7 @@ export default function Navbar() {
           {!user ? (
             <>
               <MenuLink to="/login" end>로그인</MenuLink>
-              <AccountLink ref={benefitDesktopTriggerRef} type="button" onClick={() => openBenefitGuide("desktop")} aria-haspopup="dialog" aria-expanded={benefitOpen}>🎁 회원혜택</AccountLink>
+              <AccountLink ref={benefitDesktopTriggerRef} type="button" onClick={() => openBenefitGuide("desktop")} aria-haspopup="dialog" aria-expanded={benefitOpen}>회원혜택 알아보기</AccountLink>
             </>
           ) : !isMember ? (
             <>

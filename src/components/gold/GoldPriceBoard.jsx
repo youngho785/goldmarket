@@ -18,31 +18,15 @@ import useKoreaTodayDate from "@/hooks/useKoreaTodayDate";
 import { getGoldPriceDatePresentation, getGoldPricePreviousDayMarket } from "@/lib/goldPriceDatePresentation";
 
 const Wrap = styled.section`
-  width: ${({ $compact }) => ($compact ? "100%" : "min(1120px, calc(100% - 32px))")};
-  margin: 0 auto 0;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 0;
-  overflow: hidden;
-  background: ${({ theme }) => theme.colors.surface};
-
-  @media (max-width: 680px) {
-    width: ${({ $compact }) => ($compact ? "100%" : "calc(100% - 20px)")};
-    margin: 0 auto;
-  }
+width:100%; margin:0 auto; border:1px solid var(--gm-border); border-radius:4px; overflow:hidden; background:var(--gm-surface);
 `;
 
 const Head = styled.div`
-  padding: ${({ $compact }) => ($compact ? "12px 16px 10px" : "17px 24px 15px")};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-  text-align: center;
-
-  @media (max-width: 680px) {
-    padding: 14px 14px 12px;
-  }
+padding:20px 24px; border-bottom:1px solid var(--gm-border); text-align:left;
 `;
 
 const HeadTitle = styled.div`
-  text-align: center;
+display:flex; align-items:center; justify-content:space-between; gap:15px; flex-wrap:wrap; text-align:left;
 `;
 
 const Kicker = styled.p`
@@ -61,16 +45,7 @@ const Kicker = styled.p`
 `;
 
 const Title = styled.h2`
-  margin: 0;
-  color: ${({ theme }) => theme.colors.primary};
-  font-size: clamp(1.28rem, 2.3vw, 1.72rem);
-  font-weight: 700;
-  line-height: 1.22;
-  letter-spacing: -0.02em;
-
-  @media (max-width: 520px) {
-    font-size: 1.2rem;
-  }
+margin:0; color:var(--gm-primary); font-size:20px; font-weight:550; line-height:1.4; letter-spacing:-.04em;
 `;
 
 const SourceDate = styled.p`
@@ -114,44 +89,17 @@ const PriceContext = styled.p`
 `;
 
 const TableHead = styled.div`
-  display: grid;
-  grid-template-columns: 86px minmax(0, 1fr) minmax(0, 1fr);
-  min-height: ${({ $compact }) => ($compact ? "34px" : "44px")};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-  background: ${({ theme }) => theme.colors.surfaceAlt};
-
-  @media (max-width: 520px) {
-    grid-template-columns: 52px minmax(0, 1fr) minmax(0, 1fr);
-    min-height: 43px;
-  }
+display:grid; grid-template-columns:100px minmax(0,1fr) minmax(0,1fr); min-height:48px; border-bottom:1px solid var(--gm-border); background:var(--gm-surface-alt);
+    @media(max-width:520px) { grid-template-columns:60px minmax(0,1fr) minmax(0,1fr); }
 `;
 
 const TableRow = styled.div`
-  display: grid;
-  grid-template-columns: 86px minmax(0, 1fr) minmax(0, 1fr);
-  min-height: ${({ $compact }) => ($compact ? "46px" : "62px")};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-
-  @media (max-width: 520px) {
-    grid-template-columns: 52px minmax(0, 1fr) minmax(0, 1fr);
-    min-height: 56px;
-  }
+display:grid; grid-template-columns:100px minmax(0,1fr) minmax(0,1fr); min-height:76px; border-bottom:1px solid var(--gm-border);
+    &:last-child { border-bottom:0; } @media(max-width:520px) { grid-template-columns:60px minmax(0,1fr) minmax(0,1fr); min-height:68px; }
 `;
 
 const Cell = styled.div`
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 6px 6px;
-  border-left: ${({ $first, theme }) =>
-    $first ? "0" : `1px solid ${theme.colors.border}`};
-  text-align: center;
-
-  @media (max-width: 520px) {
-    padding: 6px 3px;
-  }
+display:flex; min-width:0; flex-direction:column; align-items:center; justify-content:center; padding:10px 5px; text-align:center;
 `;
 
 const HeadCell = styled(Cell)`
@@ -197,23 +145,8 @@ const Kind = styled.strong`
 `;
 
 const Value = styled.strong`
-  color: ${({ theme }) => theme.colors.primary};
-  font-family: "Segoe UI", "Malgun Gothic", Arial, sans-serif;
-  font-variant-numeric: tabular-nums lining-nums;
-  font-feature-settings: "tnum" 1, "lnum" 1;
-  font-size: ${({ $compact }) =>
-    $compact ? "clamp(0.95rem, 1.8vw, 1.1rem)" : "clamp(1rem, 2vw, 1.2rem)"};
-  font-weight: 900;
-  line-height: 1.15;
-  white-space: nowrap;
-
-  @media (max-width: 520px) {
-    font-size: ${({ $compact }) => ($compact ? "0.78rem" : "0.88rem")};
-  }
-
-  @media (max-width: 370px) {
-    font-size: ${({ $compact }) => ($compact ? "0.72rem" : "0.84rem")};
-  }
+color:var(--gm-primary); font-family:inherit; font-variant-numeric:tabular-nums; font-size:clamp(15px,2vw,23px); font-weight:600;
+    line-height:1.3; letter-spacing:-.04em; white-space:nowrap; @media(max-width:520px) { font-size:15px; }
 `;
 
 const Change = styled.small`

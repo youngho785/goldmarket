@@ -16,13 +16,7 @@ const OPERATOR = {
 };
 
 const FooterWrap = styled.footer`
-  margin-top: ${({ $joinLanding }) => ($joinLanding ? "-20px" : "auto")};
-  background: ${({ theme }) => theme.colors.primary};
-  color: ${({ theme }) => theme.colors.goldLight};
-
-  @media (max-width: 768px) {
-    margin-top: ${({ $joinLanding }) => ($joinLanding ? "0" : "auto")};
-  }
+margin-top:auto; background:var(--gm-primary-dark); color:#dddccf;
 `;
 
 const Top = styled.div`
@@ -70,18 +64,8 @@ const SealRow = styled.div`
 `;
 
 const Seal = styled.span`
-  display: grid;
-  place-items: center;
-  width: 50px;
-  height: 50px;
-  flex: 0 0 auto;
-  border: 1px solid ${({ theme }) => theme.colors.secondary};
-  border-radius: 50%;
-  color: ${({ theme }) => theme.colors.goldLight};
-  font-family: ${({ theme }) => theme.fonts.heading};
-  box-shadow:
-    inset 0 0 0 4px ${({ theme }) => theme.colors.primary},
-    inset 0 0 0 5px ${({ theme }) => theme.colors.secondary}77;
+display:grid; place-items:center; width:42px; height:46px; flex-shrink:0; border:1px solid #a78e5c; border-radius:1px;
+      color:#d7c49a; font-family:Georgia,serif; font-size:20px; transform:skewY(-7deg);
 `;
 
 const Operator = styled.span`

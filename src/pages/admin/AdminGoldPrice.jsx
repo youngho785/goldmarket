@@ -6,20 +6,20 @@ import {
   doc,
   getDoc,
   getDocs,
-  limit,
   onSnapshot,
   orderBy,
   query,
   serverTimestamp,
   setDoc,
   where,
-  writeBatch,
 } from "firebase/firestore";
 import {
   auth,
   db,
   callRefreshGoldPriceNow,
 } from "@/firebase/firebase";
+import { getFunctions, httpsCallable } from "firebase/functions";
+import { buildGoldPriceHistoryCsv } from "@/lib/goldPriceHistoryCsv";
 import { sendAdminNotification } from "@/services/adminNotificationClient";
 
 const PRICE_FIELDS = [
@@ -446,6 +446,11 @@ export default function AdminGoldPrice() {
   const [sendPriceNotification, setSendPriceNotification] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [correctionReason, setCorrectionReason] = useState("");
+  const [correctionPreview, setCorrectionPreview] = useState(null);
+  const [exportStart, setExportStart] = useState(inputDate(todayKey().slice(0, 4) + "0101"));
+  const [exportEnd, setExportEnd] = useState(inputDate(todayKey()));
+  const [selectedYear, setSelectedYear] = useState(todayKey().slice(0, 4));
 
   useEffect(() => onSnapshot(
     doc(db, "goldPricePublic", "config"),
@@ -474,6 +479,7 @@ export default function AdminGoldPrice() {
        *
        * 과거 날짜를 직접 선택해 불러오는 동작은 아래 loadDate()가 담당합니다.
        */
+      setCorrectionPreview(null);
       setSourceDate(inputDate(todayKey()));
       setMarket(Object.fromEntries(
         PRICE_FIELDS.map(([key]) => [key, validPrice(value.market?.[key]) ? String(value.market[key]) : ""])
@@ -526,6 +532,8 @@ export default function AdminGoldPrice() {
     const dateKey = compactDate(sourceDate);
     if (!/^\d{8}$/.test(dateKey)) throw new Error("기준일을 올바르게 선택해 주세요.");
 
+    if (dateKey !== todayKey()) throw new Error("과거 날짜는 아래 과거 금시세 연쇄 보정 기능을 이용하세요.");
+
     const normalizedMarket = Object.fromEntries(
       PRICE_FIELDS.map(([key, label]) => {
         const value = numberValue(market[key]);
@@ -534,64 +542,8 @@ export default function AdminGoldPrice() {
       })
     );
 
-    let previousMarket = null;
-    let previousSourceDate = null;
-
-    if (current?.sourceDate === dateKey) {
-      previousMarket = current.previousMarket || null;
-      previousSourceDate = current.previousSourceDate || null;
-    } else {
-      const previousQuery = query(
-        collection(db, "goldPriceHistory"),
-        where("sourceDate", "<", dateKey),
-        orderBy("sourceDate", "desc"),
-        limit(1)
-      );
-      const previousSnapshot = await getDocs(previousQuery);
-      const previousDoc = previousSnapshot.docs[0]?.data();
-      previousMarket = previousDoc?.market || null;
-      previousSourceDate = previousDoc?.sourceDate || null;
-    }
-
-    const hasPreviousFields = Object.fromEntries(
-      PRICE_FIELDS.map(([key]) => [key, validPrice(previousMarket?.[key])])
-    );
-    const changes = Object.fromEntries(
-      PRICE_FIELDS.map(([key]) => [
-        key,
-        hasPreviousFields[key]
-          ? normalizedMarket[key] - Number(previousMarket[key])
-          : 0,
-      ])
-    );
-
-    const payload = {
-      source: "ADMIN_MANUAL",
-      sourceLabel: "한국골드마켓 관리자 직접 입력",
-      sourceDate: dateKey,
-      market: normalizedMarket,
-      previousMarket,
-      previousSourceDate,
-      hasPrevious: Object.values(hasPreviousFields).some(Boolean),
-      hasPreviousFields,
-      changes,
-      status: "published",
-      publishedAt: serverTimestamp(),
-      publishedBy: uid,
-      updatedAt: serverTimestamp(),
-      updatedBy: uid,
-    };
-
-    const batch = writeBatch(db);
-    batch.set(doc(db, "goldPrices", "current"), payload, { merge: false });
-    batch.set(doc(db, "goldPriceHistory", dateKey), payload, { merge: false });
-    batch.set(doc(db, "goldPricePublic", "config"), {
-      enabled,
-      display14kSellPrice,
-      updatedAt: serverTimestamp(),
-      updatedBy: uid,
-    }, { merge: true });
-    await batch.commit();
+    const save = httpsCallable(getFunctions(undefined, "asia-northeast3"), "saveDailyGoldPrice");
+    await save({ date: dateKey, market: normalizedMarket, enabled, display14kSellPrice });
 
     if (!sendPriceNotification) {
       return { message: "금시세를 저장하고 공개했습니다." };
@@ -620,6 +572,57 @@ export default function AdminGoldPrice() {
     }
   };
 
+  const correctionMarket = () => Object.fromEntries(PRICE_FIELDS.map(([key,label]) => {
+    const value = numberValue(market[key]);
+    if(value<=0) throw new Error(`${label}를 입력해 주세요.`);
+    return [key,value];
+  }));
+  const previewCorrection = async () => {
+    const fn=httpsCallable(getFunctions(undefined,"asia-northeast3"),"previewGoldPriceCorrection");
+    setCorrectionPreview(null);
+    const result=await fn({date:compactDate(sourceDate),market:correctionMarket()});
+    setCorrectionPreview(result.data);
+    return {message:`${result.data.rows.length}일의 수정 예정 기록을 확인해 주세요.`};
+  };
+  const applyCorrection = async () => {
+    if(!correctionPreview?.expected) throw new Error("먼저 수정 미리보기를 실행하세요.");
+    if(!window.confirm(`${correctionPreview.rows.length}일의 과거 기록을 수정하시겠습니까?`)) return {message:"취소했습니다."};
+    const fn=httpsCallable(getFunctions(undefined,"asia-northeast3"),"saveGoldPriceCorrection");
+    const result=await fn({date:compactDate(sourceDate),market:correctionMarket(),reason:correctionReason,expected:correctionPreview.expected});
+    setCorrectionPreview(null);
+    return {message:`${result.data.count}일의 기록을 보정했습니다.${result.data.updatedCurrent ? " 현재 공개 시세의 가격 또는 전일 대비 기준도 반영했습니다." : ""} 확정 거래 내역은 변경하지 않았습니다.`};
+  };
+
+  const downloadHistory = async () => {
+    const start = compactDate(exportStart);
+    const end = compactDate(exportEnd);
+    // Validate before issuing a Firestore query; missing days remain explicit in the file.
+    buildGoldPriceHistoryCsv(start, end, []);
+    if (end > todayKey()) throw new Error("미래 날짜는 내려받을 수 없습니다.");
+    const snapshot = await getDocs(query(collection(db, "goldPriceHistory"),
+      where("sourceDate", ">=", start), where("sourceDate", "<=", end), orderBy("sourceDate")));
+    const result = buildGoldPriceHistoryCsv(start, end, snapshot.docs.map(item => item.data()));
+    const url = URL.createObjectURL(new Blob([result.csv], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `한국골드마켓_일별금시세_${start}_${end}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    return { message: `${result.count}일의 금시세를 내려받았습니다.${result.missing ? ` 기록 없는 날짜 ${result.missing}일은 빈 가격으로 표시했습니다.` : ""}` };
+  };
+
+  const selectExportYear = () => {
+    if (!/^\d{4}$/.test(selectedYear) || Number(selectedYear) < 2000 || selectedYear > todayKey().slice(0, 4)) {
+      setError("2000년부터 올해 사이의 연도를 입력하세요.");
+      return;
+    }
+    setError("");
+    setExportStart(`${selectedYear}-01-01`);
+    setExportEnd(selectedYear === todayKey().slice(0, 4) ? inputDate(todayKey()) : `${selectedYear}-12-31`);
+  };
+
   const saveDisplaySettings = async () => {
     const uid = auth.currentUser?.uid;
     if (!uid) throw new Error("로그인이 필요합니다.");
@@ -632,6 +635,7 @@ export default function AdminGoldPrice() {
   };
 
   const loadDate = async () => {
+    setCorrectionPreview(null);
     const key = compactDate(sourceDate);
     const snap = await getDoc(doc(db, "goldPriceHistory", key));
     if (!snap.exists()) throw new Error("선택한 날짜에 저장된 시세가 없습니다.");
@@ -660,7 +664,7 @@ export default function AdminGoldPrice() {
           <FormGrid>
             <Field>
               기준일
-              <input type="date" value={sourceDate} onChange={(e) => setSourceDate(e.target.value)} />
+              <input type="date" value={sourceDate} onChange={(e) => {setSourceDate(e.target.value);setCorrectionPreview(null);}} />
             </Field>
             <Field>
               14K 살 때 표시 방식
@@ -681,10 +685,10 @@ export default function AdminGoldPrice() {
                   inputMode="numeric"
                   value={market[key]}
                   placeholder="예: 848000"
-                  onChange={(e) => setMarket((prev) => ({
+                  onChange={(e) => {setCorrectionPreview(null);setMarket((prev) => ({
                     ...prev,
                     [key]: e.target.value.replace(/[^0-9]/g, ""),
-                  }))}
+                  }));}}
                 />
               </Field>
             ))}
@@ -723,6 +727,28 @@ export default function AdminGoldPrice() {
             <Button disabled={busy} onClick={() => run(saveDisplaySettings, "표시 설정을 저장했습니다.")}>표시 설정만 저장</Button>
             <Button disabled={busy} onClick={() => run(loadDate, "선택한 날짜의 시세를 불러왔습니다.")}>선택 날짜 불러오기</Button>
           </Actions>
+          <Card style={{marginTop:18}}>
+            <CardTitle>과거 금시세 연쇄 보정</CardTitle>
+            <Hint>선택 날짜는 직접 정정하고, 이후는 다음 직접 등록일 전날까지 함께 보정합니다. 이후 직접 등록한 가격은 유지하며 전일 대비 기준만 다시 계산합니다. 다음 직접 등록일이 없으면 오늘의 공개 시세도 반영합니다. 과거 보정은 알림을 보내지 않습니다.</Hint>
+            <Field>수정 사유 (5~200자)
+              <input value={correctionReason} maxLength={200} onChange={e=>setCorrectionReason(e.target.value)} placeholder="예: 10월 3일 실제 변동 확인" />
+            </Field>
+            <Actions>
+              <Button disabled={busy} onClick={()=>run(previewCorrection,"미리보기를 확인하세요.")}>보정 미리보기</Button>
+              <Button $primary disabled={busy||!correctionPreview} onClick={()=>run(applyCorrection,"기록을 수정했습니다.")}>확인 후 보정 저장</Button>
+            </Actions>
+            {correctionPreview && <div style={{maxHeight:260,overflow:"auto",marginTop:12}}>
+              <strong>변경 예정 {correctionPreview.rows.length}일 / 다음 직접 등록일: {correctionPreview.stopDate ? dateText(correctionPreview.stopDate) : "없음"}</strong>
+              {correctionPreview.rows.map(row=><div key={row.date} style={{padding:"6px 0",borderBottom:"1px solid #ddd"}}>
+                {dateText(row.date)} · {row.kind==="manual"?"직접 등록":"자동 유지"} · {PRICE_FIELDS.some(([key]) => Number(row.before?.[key]) !== Number(row.after?.[key])) ? "가격 변경" : "동일 가격"}
+                <details>
+                  <summary>6종 가격 변경 보기</summary>
+                  {PRICE_FIELDS.map(([key, label]) => <div key={key}>{label}: {money(row.before?.[key])} → {money(row.after?.[key])}</div>)}
+                </details>
+              </div>)}
+              <Hint>{correctionPreview.updatesCurrent ? "현재 공개 시세의 가격 또는 전일 대비 기준도 반영됩니다." : "현재 공개 시세의 가격은 유지됩니다."}</Hint>
+            </div>}
+          </Card>
           {message && <Message>{message}</Message>}
           {error && <Message $error>{error}</Message>}
         </Card>
@@ -821,6 +847,20 @@ export default function AdminGoldPrice() {
           </Card>
         </div>
       </Grid>
+      <Card style={{ marginTop: 18 }}>
+        <CardTitle>일별 금시세 보관 · CSV 다운로드</CardTitle>
+        <Hint>변동이 없는 날도 날짜별 시세로 저장됩니다. 한국 시간 매일 00:05에 오늘 기록과 최근 366일의 누락 날짜를 채웁니다. 하루에 여러 번 저장하면 마지막 가격이 그날의 최종 시세입니다.</Hint>
+        <FormGrid style={{ marginTop: 14 }}>
+          <Field>시작일<input type="date" value={exportStart} max={inputDate(todayKey())} onChange={e => setExportStart(e.target.value)} /></Field>
+          <Field>종료일<input type="date" value={exportEnd} max={inputDate(todayKey())} onChange={e => setExportEnd(e.target.value)} /></Field>
+          <Field>연도<input type="number" min="2000" max={todayKey().slice(0, 4)} value={selectedYear} onChange={e => setSelectedYear(e.target.value)} /></Field>
+        </FormGrid>
+        <Actions>
+          <Button disabled={busy} onClick={selectExportYear}>선택 연도 전체 기간</Button>
+          <Button $primary disabled={busy} onClick={() => run(downloadHistory, "금시세를 내려받았습니다.")}>기간별 CSV 다운로드</Button>
+        </Actions>
+        <Hint>최대 366일씩 엑셀에서 열 수 있는 CSV로 보관할 수 있습니다. 기록이 없는 날짜는 빈 가격과 ‘기록 없음’으로 표시합니다. 자동 유지 가격은 실제 시장 변동을 확인한 가격이 아니므로 놓친 변동은 과거 보정으로 정정하세요.</Hint>
+      </Card>
 
     </Page>
   );

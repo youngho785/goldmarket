@@ -2,18 +2,12 @@ import { Link } from "react-router-dom";
 import styled, { keyframes } from "styled-components";
 
 import LivingGoldCompanion from "@/components/common/LivingGoldCompanion";
-import { livingGoldSweep } from "@/styles/livingGoldMotion";
 
 const viewEnter = keyframes`
   from { opacity: 0; transform: translateY(7px); }
   to { opacity: 1; transform: translateY(0); }
 `;
 
-const heroValueReveal = keyframes`
-  0% { opacity: 0; transform: translateY(8px) scale(0.985); filter: blur(2px); }
-  70% { opacity: 1; transform: translateY(0) scale(1.008); filter: blur(0); }
-  100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-`;
 
 const goalFill = keyframes`
   from { transform: scaleX(0); }
@@ -39,52 +33,14 @@ const seedArrive = keyframes`
 `;
 
 export const Page = styled.div`
-  display: grid;
-  gap: 14px;
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 8px 0 28px;
+display:grid; gap:24px; width:100%; max-width:1200px; margin:0 auto; padding:16px 0 32px;
 `;
 
 export const VaultHero = styled.section`
-  position: relative;
-  min-height: 0;
-  display: grid;
-  align-content: start;
-  overflow: hidden;
-  gap: 13px;
-  padding: clamp(20px, 2.6vw, 28px);
-  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 18%, ${({ theme }) => theme.colors.border});
-  border-radius: 20px;
-  background:
-    linear-gradient(
-      140deg,
-      color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 20%, white),
-      ${({ theme }) => theme.colors.surface} 72%
-    );
-  color: ${({ theme }) => theme.colors.text};
-  box-shadow: 0 8px 24px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 5%, transparent);
-  animation: ${viewEnter} 420ms cubic-bezier(.2,.8,.2,1) both;
-
-  &::after {
-    content: "";
-    position: absolute;
-    z-index: 0;
-    top: -30%;
-    bottom: -30%;
-    left: -20%;
-    width: 16%;
-    background: linear-gradient(90deg, transparent, color-mix(in srgb, ${({ theme }) => theme.colors.goldLight} 58%, transparent), transparent);
-    pointer-events: none;
-    animation: ${livingGoldSweep} 1650ms cubic-bezier(.2,.8,.2,1) 420ms both;
-  }
-
-  @media (max-width: 520px) {
-    gap: 9px;
-    padding: 15px 14px 16px;
-    border-radius: 18px;
-  }
+position:relative; display:grid; align-content:start; overflow:hidden; gap:18px; padding:clamp(24px,4vw,46px);
+      border:1px solid var(--gm-border); border-radius:10px; background:var(--gm-surface); color:var(--gm-text); box-shadow:none;
+      &::before { content:''; position:absolute; left:0; top:30px; bottom:30px; width:3px; background:var(--gm-gold); }
+      @media(max-width:520px) { padding:26px 22px; gap:15px; }
 `;
 
 
@@ -104,49 +60,17 @@ export const HeroGoldMark = styled(LivingGoldCompanion)`
 `;
 
 export const HeroKicker = styled.div`
-  position: relative;
-  z-index: 1;
-  display: inline-flex;
-  width: fit-content;
-  align-items: center;
-  gap: 6px;
-  color: ${({ theme }) => theme.colors.secondaryDark};
-  font-size: 0.68rem;
-  font-weight: 950;
-  letter-spacing: 0.08em;
-
-  svg {
-    width: 14px;
-    height: 14px;
-    color: ${({ theme }) => theme.colors.gold};
-  }
+position:relative; z-index:1; display:inline-flex; align-items:center; gap:8px; color:var(--gm-text-secondary); font-size:11px; font-weight:500; letter-spacing:.13em;
+      svg { width:14px; height:14px; color:var(--gm-gold); }
 `;
 
 export const HeroTitle = styled.h1`
-  position: relative;
-  z-index: 1;
-  margin: 0;
-  color: ${({ theme }) => theme.colors.primary};
-  font-family: ${({ theme }) => theme.fonts.heading};
-  font-size: clamp(1.02rem, 3vw, 1.32rem);
-  font-weight: 600;
-  line-height: 1.22;
-  letter-spacing: -0.03em;
+position:relative; z-index:1; margin:0; color:var(--gm-primary); font-family:inherit; font-size:19px; font-weight:500; line-height:1.5; letter-spacing:-.04em;
 `;
 
 export const HeroAmount = styled.strong`
-  position: relative;
-  z-index: 1;
-  display: block;
-  margin-top: -1px;
-  color: ${({ theme }) => theme.colors.primary};
-  font-family: ${({ theme }) => theme.fonts.numeric};
-  font-size: ${({ $empty }) => $empty ? "clamp(1.2rem, 4vw, 1.65rem)" : "clamp(2.15rem, 6.5vw, 3.35rem)"};
-  font-weight: 950;
-  line-height: 1;
-  letter-spacing: -0.05em;
-  overflow-wrap: anywhere;
-  animation: ${heroValueReveal} 620ms cubic-bezier(.2,.8,.2,1) 70ms both;
+position:relative; z-index:1; display:block; color:var(--gm-primary); font-family:inherit; font-variant-numeric:tabular-nums;
+      font-size:clamp(30px,6vw,60px); font-weight:500; line-height:1.15; letter-spacing:-.055em; overflow-wrap:anywhere;
 `;
 
 export const HeroValueNote = styled.p`
@@ -325,11 +249,11 @@ export const HeroAddAction = styled.button`
   min-height: 44px;
   padding: 9px 12px;
   border: 1px solid ${({ theme }) => theme.colors.primary};
-  border-radius: 12px;
+  border-radius: 4px;
   background: ${({ theme }) => theme.colors.primary};
   color: ${({ theme }) => theme.on.primary};
   font-size: 0.73rem;
-  font-weight: 950;
+  font-weight: 600;
   cursor: pointer;
   grid-column: 1 / -1;
 
@@ -353,11 +277,11 @@ export const HeroExchangeAction = styled(Link)`
   min-height: 44px;
   padding: 9px 11px;
   border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 30%, ${({ theme }) => theme.colors.border});
-  border-radius: 12px;
+  border-radius: 4px;
   background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.primary};
   font-size: 0.7rem;
-  font-weight: 900;
+  font-weight: 600;
   text-decoration: none;
 
   svg {
@@ -389,34 +313,29 @@ export const VaultSection = styled.section`
 `;
 
 export const ViewTabs = styled.nav`
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 4px;
-  padding: 4px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 14px;
-  background: ${({ theme }) => theme.colors.surfaceAlt};
+display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:0; padding:0; border:0; border-bottom:1px solid var(--gm-border); border-radius:0; background:transparent;
 `;
 
 export const ViewTab = styled(Link)`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 38px;
+  min-height: 48px;
   padding: 7px 8px;
-  border-radius: 10px;
-  background: ${({ $active, theme }) => $active ? theme.colors.primary : "transparent"};
+  border-radius: 0;
+  border-bottom: 2px solid ${({ $active, theme }) => $active ? theme.colors.primary : "transparent"};
+  background: transparent;
   text-decoration: none;
-  font-size: 0.69rem;
-  font-weight: 950;
+  font-size: 13px;
+  font-weight: 600;
   transition: background ${({ theme }) => theme.transitions.base}, color ${({ theme }) => theme.transitions.base}, transform ${({ theme }) => theme.transitions.fast};
 
   && {
-    color: ${({ $active, theme }) => $active ? theme.colors.buttonText : theme.colors.textSecondary};
+    color: ${({ $active, theme }) => $active ? theme.colors.primary : theme.colors.textSecondary};
   }
 
   &:hover {
-    color: ${({ $active, theme }) => $active ? theme.colors.buttonText : theme.colors.primary};
+    color: ${({ theme }) => theme.colors.primary};
   }
 
   &:active {

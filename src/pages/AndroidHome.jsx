@@ -24,6 +24,7 @@ import HomeOptionalDetails from "@/components/home/HomeOptionalDetails";
 import MyGoldAlertSummary from "@/components/gold/MyGoldAlertSummary";
 import QuickGoldValueCalculator from "@/components/gold/QuickGoldValueCalculator";
 
+import HomeWelcome from "@/components/home/HomeWelcome";
 import { useAuthContext } from "@/context/AuthContext";
 import { db } from "@/firebase/firebase";
 import useGoldVaultDashboard from "@/hooks/useGoldVaultDashboard";
@@ -35,11 +36,7 @@ import { trackProductEventOncePerSession } from "@/analytics/productAnalytics";
 
 // KGM_EXPERIENCE_FIRST_FINAL · direct guest calculator and gold exchange
 const Page = styled.div`
-  display: grid;
-  gap: 11px;
-  width: min(760px, 100%);
-  margin: 0 auto;
-  padding: 6px 0 calc(28px + env(safe-area-inset-bottom, 0px));
+display:grid; gap:20px; width:min(760px,100%); margin:0 auto; padding:12px 0 calc(28px + env(safe-area-inset-bottom,0px));
 `;
 
 const ReservationCard = styled(Link)`
@@ -288,6 +285,7 @@ export default function AndroidHome() {
   const purePrice = Number(dashboard.market.pureGoldBuyPerDon || 0);
   return (
     <Page>
+      <HomeWelcome name={user?.displayName} guest={!user?.uid} compact />
       {upcomingReservation && (
         <ReservationCard to="/my-exchanges" aria-label="다가오는 방문 예약 확인">
           <span><CalendarDays aria-hidden /></span>

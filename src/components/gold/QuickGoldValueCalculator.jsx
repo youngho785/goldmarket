@@ -32,65 +32,19 @@ const PRIORITY_PRODUCT_IDS = [
 ];
 
 const Card = styled.section`
-  overflow: hidden;
-  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 22%, ${({ theme }) => theme.colors.border});
-  border-radius: 18px;
-  background: ${({ theme }) => theme.colors.surface};
-  box-shadow: 0 8px 25px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 6%, transparent);
+overflow:hidden; border:1px solid var(--gm-border); border-radius:8px; background:var(--gm-surface); box-shadow:0 5px 30px rgba(35,45,25,.025);
 `;
 
 const Head = styled.div`
-  padding: ${({ $compact, $nativeFirst, $webLanding }) => $nativeFirst ? "13px 15px 12px" : $webLanding ? "14px 18px 12px" : $compact ? "15px 16px 12px" : "19px 20px 14px"};
-  background: linear-gradient(138deg, ${({ theme }) => theme.colors.primaryDark}, ${({ theme }) => theme.colors.primary});
-  color: ${({ theme }) => theme.on.primary};
-
-  small {
-    display: block;
-    color: ${({ theme }) => theme.colors.goldLight};
-    font-size: .8rem;
-    font-weight: 950;
-    letter-spacing: .12em;
-  }
-
-  h2 {
-    margin: ${({ $nativeFirst }) => $nativeFirst ? "4px 0 0" : "6px 0 0"};
-    color: ${({ theme }) => theme.on.primary};
-    font-family: ${({ theme }) => theme.fonts.body};
-    font-size: ${({ $compact, $nativeFirst }) => $nativeFirst ? "1.1rem" : $compact ? "1.2rem" : "clamp(1.26rem, 2.4vw, 1.62rem)"};
-    font-weight: 850;
-    line-height: 1.18;
-    letter-spacing: -.035em;
-  }
-
-  p {
-    margin: 7px 0 0;
-    max-width: 620px;
-    color: color-mix(in srgb, ${({ theme }) => theme.on.primary} 70%, transparent);
-    font-size: .88rem;
-    line-height: 1.5;
-    word-break: keep-all;
-  }
-
-  @media (max-width: 700px) {
-    ${({ $webLanding }) => $webLanding && `
-      padding: 12px 16px 11px;
-      small { font-size: .7rem; }
-      h2 { margin-top: 2px; font-size: 1.15rem; }
-      p { display: none; }
-    `}
-  }
+padding:26px 28px 22px; border-bottom:1px solid var(--gm-border); background:var(--gm-surface); color:var(--gm-text);
+    small { display:block; font-size:10px; font-weight:600; letter-spacing:.12em; color:var(--gm-text-secondary); }
+    h2 { margin:8px 0 0; font-family:inherit; font-size:23px; font-weight:600; line-height:1.4; color:var(--gm-primary); }
+    p { margin:8px 0 0; font-size:12px; line-height:1.7; color:var(--gm-text-secondary); }
+    @media(max-width:600px) { padding:22px 20px 18px; h2 { font-size:20px; } }
 `;
 
 const Body = styled.div`
-  padding: ${({ $compact, $nativeFirst, $webLanding }) => $nativeFirst ? "12px 14px 12px" : $webLanding ? "14px 18px 16px" : $compact ? "14px 15px 15px" : "18px 20px 20px"};
-
-  @media (max-width: 700px) {
-    ${({ $webLanding }) => $webLanding && `padding: 12px 16px 13px;`}
-  }
-
-  ${({ $nativeFirst }) => $nativeFirst && `
-    .quick-calc-fields { gap: 11px; }
-  `}
+padding:24px 28px 26px; @media(max-width:600px) { padding:20px; }
 `;
 
 const IntroHelp = styled.button`

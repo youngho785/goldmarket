@@ -35,6 +35,7 @@
     "test:gold-display": "node scripts/test-gold-display-consistency.mjs",
     "test:push-safety": "node scripts/test-local-push-safety.mjs",
     "test:release": "node scripts/test-release-simple.mjs",
+    "test:design-audit": "node --test scripts/test-kgm-20261015-design-audit.mjs",
     "test:auth-safety": "node scripts/test-auth-core-safety.mjs",
     "test:smoke:setup": "npm --prefix tests/smoke run setup",
     "test:smoke": "node scripts/run-smoke.mjs",

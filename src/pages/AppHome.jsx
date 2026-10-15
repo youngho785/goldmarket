@@ -17,28 +17,17 @@ import AppGoldJourney from "@/components/gold/AppGoldJourney";
 import MemberGoldSummaryCard from "@/components/gold/MemberGoldSummaryCard";
 import HomePriorityActions from "@/components/home/HomePriorityActions";
 import HomeOptionalDetails from "@/components/home/HomeOptionalDetails";
+import HomeWelcome from "@/components/home/HomeWelcome";
 import { db } from "@/firebase/firebase";
 
 // KGM_EXPERIENCE_FIRST_FINAL · member-first MY GOLD summary
 const Page = styled.div`
-  display: grid;
-  gap: 14px;
-  width: min(1160px, 100%);
-  margin: 0 auto;
-  padding: 8px 0 18px;
+display:grid; gap:24px; width:min(1200px,100%); margin:0 auto; padding:16px 0 30px;
 `;
 
 const OverviewGrid = styled.section`
-  display: grid;
-  grid-template-columns: minmax(0, 1.75fr) minmax(290px, .75fr);
-  gap: 14px;
-  align-items: stretch;
-
-  > * { min-width: 0; }
-
-  @media (max-width: 900px) {
-    grid-template-columns: 1fr;
-  }
+display:grid; grid-template-columns:minmax(0,1.6fr) minmax(300px,1fr); gap:24px; align-items:stretch;
+      > * { min-width:0; } @media(max-width:900px) { grid-template-columns:1fr; gap:18px; }
 `;
 
 const ReservationCard = styled(Link)`
@@ -253,6 +242,7 @@ export default function AppHome() {
 
   return (
     <Page>
+      <HomeWelcome name={user?.displayName} />
       {upcomingReservation && (
         <ReservationCard to="/my-exchanges" aria-label="다가오는 방문 예약 확인">
           <span><CalendarDays aria-hidden /></span>

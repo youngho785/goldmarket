@@ -6,18 +6,7 @@ import { Check, ChevronRight, Sparkles } from "lucide-react";
 import { GOLD_BAR_DENOMS, getGoldBarReadiness } from "@/utils/goldBarReadiness";
 
 const Card = styled.section`
-  display: grid;
-  gap: 11px;
-  padding: 17px;
-  border: 1px solid
-    color-mix(in srgb, ${({ theme }) => theme.colors.gold} 30%, ${({ theme }) => theme.colors.border});
-  border-radius: 19px;
-  background: linear-gradient(
-    145deg,
-    color-mix(in srgb, ${({ theme }) => theme.semantic.badgeGoldBg} 72%, ${({ theme }) => theme.colors.surface}),
-    ${({ theme }) => theme.colors.surface}
-  );
-  box-shadow: none;
+display:grid; gap:18px; padding:24px; border:1px solid var(--gm-border); border-radius:8px; background:var(--gm-surface); box-shadow:none; @media(max-width:600px){padding:22px 18px;}
 `;
 
 const Head = styled.div`

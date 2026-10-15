@@ -6,13 +6,7 @@ import { ArrowRight, MessageCircleQuestion, ShieldCheck } from "lucide-react";
 import GoldExchangeReviewList from "@/components/reviews/GoldExchangeReviewList";
 
 const Section = styled.section`
-  display: grid;
-  gap: ${({ $compact }) => ($compact ? "7px" : "18px")};
-  padding: ${({ $compact }) => ($compact ? "10px" : "clamp(22px, 3.4vw, 34px)")};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ $compact }) => ($compact ? "15px" : "22px")};
-  background: ${({ theme }) => theme.colors.surface};
-  box-shadow: 0 8px 22px color-mix(in srgb, ${({ theme }) => theme.colors.primary} 5%, transparent);
+display:grid; gap:24px; padding:28px 0; border:0; border-top:1px solid var(--gm-border); border-bottom:1px solid var(--gm-border); background:transparent; box-shadow:none;
 `;
 
 const Head = styled.div`
@@ -38,32 +32,9 @@ const Head = styled.div`
 `;
 
 const Copy = styled.div`
-  small {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    color: ${({ theme }) => theme.colors.secondaryDark};
-    font-size: .64rem;
-    font-weight: 950;
-    letter-spacing: .09em;
-  }
-
-  h2 {
-    margin: 4px 0 0;
-    color: ${({ theme }) => theme.colors.primary};
-    font-family: ${({ theme }) => theme.fonts.heading};
-    font-size: ${({ $compact }) => ($compact ? "0.84rem" : "clamp(1.35rem, 2.4vw, 1.9rem)")};
-    line-height: 1.25;
-    letter-spacing: -.03em;
-  }
-
-  p {
-    margin: 5px 0 0;
-    color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: ${({ $compact }) => ($compact ? ".61rem" : ".86rem")};
-    line-height: 1.55;
-    word-break: keep-all;
-  }
+small { display:inline-flex; align-items:center; gap:7px; color:var(--gm-text-secondary); font-size:10px; font-weight:500; letter-spacing:.12em; }
+    h2 { margin:12px 0 0; color:var(--gm-primary); font-family:inherit; font-size:clamp(24px,3vw,34px); font-weight:500; line-height:1.4; letter-spacing:-.05em; }
+    p { margin:10px 0 0; color:var(--gm-text-secondary); font-size:12px; line-height:1.8; }
 `;
 
 const Actions = styled.div`

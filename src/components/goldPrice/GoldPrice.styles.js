@@ -1,90 +1,29 @@
 import styled from "styled-components";
 import LivingGoldCompanion from "@/components/common/LivingGoldCompanion";
 import { Link } from "react-router-dom";
-import { livingGoldGlint, livingGoldReveal } from "@/styles/livingGoldMotion";
 
 export const Page = styled.div`
-  --gold: #c8922f;
-  --gold-bright: #e4b758;
-  --gold-soft: #f6ead3;
-  --ink: #0c1116;
-  --ink-soft: #171d23;
-  --cream: #faf8f4;
-  --line: rgba(12, 17, 22, 0.1);
-
-  width: 100%;
-  padding: 0 0 clamp(30px, 5vw, 52px);
-
-  @media (max-width: 760px) {
-    padding-bottom: 10px;
-  }
-
-  color: ${({ theme }) => theme.colors.text};
-  background:
-    radial-gradient(circle at 85% 4%, rgba(228, 183, 88, 0.12), transparent 28rem),
-    linear-gradient(180deg, #ffffff 0%, var(--cream) 72%, #ffffff 100%);
+--gold:#a88b53; --gold-bright:#dcc695; --gold-soft:#eee7d6; --ink:#252922; --ink-soft:#30362b; --cream:#f7f7f2; --line:#dee1d7;
+      width:100%; padding:12px 0 40px; color:var(--gm-text); background:transparent;
 `;
 
 export const Shell = styled.div`
-  width: min(1080px, calc(100% - 32px));
-  margin: 0 auto;
-
-  @media (max-width: 680px) {
-    width: calc(100% - 20px);
-  }
+width:100%; max-width:1200px; margin:0 auto;
 `;
 
 export const Hero = styled.section`
-  padding: clamp(12px, 2.2vw, 20px) 0 8px;
+padding:0 0 20px;
 `;
 
 export const HeroCard = styled.div`
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(260px, 0.92fr);
-  min-height: 204px;
-  overflow: hidden;
-  border: 1px solid rgba(213, 164, 67, 0.28);
-  border-radius: 22px;
-  background:
-    radial-gradient(circle at 82% 18%, rgba(212, 159, 53, 0.15), transparent 24rem),
-    linear-gradient(135deg, #080b0e 0%, #10161b 55%, #07090b 100%);
-  box-shadow: 0 18px 42px rgba(7, 10, 13, 0.13);
-
-  &::after {
-    content: "";
-    position: absolute;
-    inset: auto -80px -120px auto;
-    width: 330px;
-    height: 330px;
-    border: 1px solid rgba(226, 178, 78, 0.12);
-    border-radius: 50%;
-    box-shadow:
-      0 0 0 42px rgba(226, 178, 78, 0.025),
-      0 0 0 86px rgba(226, 178, 78, 0.018);
-    pointer-events: none;
-  }
-
-  @media (max-width: 760px) {
-    display: block;
-    min-height: ${({ $native }) => ($native ? "0" : "190px")};
-    border-radius: ${({ $native }) => ($native ? "16px" : "20px")};
-  }
+position:relative; display:grid; grid-template-columns:1.15fr .85fr; min-height:340px; overflow:hidden; border:1px solid #343c2d;
+      border-radius:8px; background:#252b23; box-shadow:none;
+      @media(max-width:760px) { display:block; min-height:270px; }
 `;
 
 export const HeroCopy = styled.div`
-  position: relative;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: clamp(18px, 2.6vw, 26px);
-
-  @media (max-width: 760px) {
-    min-height: ${({ $native }) => ($native ? "0" : "190px")};
-    justify-content: flex-start;
-    padding: ${({ $native }) => ($native ? "16px 74px 15px 15px" : "15px 82px 14px 14px")};
-  }
+position:relative; z-index:2; display:flex; flex-direction:column; justify-content:center; padding:clamp(26px,4vw,48px);
+      @media(max-width:760px) { min-height:270px; padding:28px 24px; }
 `;
 
 export const Eyebrow = styled.div`
@@ -102,34 +41,12 @@ export const Eyebrow = styled.div`
 `;
 
 export const HeroTitle = styled.h1`
-  margin: 0;
-  color: #fff;
-  font-size: clamp(1.6rem, 3.05vw, 2.3rem);
-  font-weight: 900;
-  line-height: 1.03;
-  letter-spacing: -0.055em;
-  word-break: keep-all;
-
-  @media (max-width: 760px) {
-    font-size: 1.42rem;
-    line-height: 1.04;
-  }
+margin:0; color:#f2f0e6; font-family:inherit; font-size:clamp(28px,3vw,40px); font-weight:500; line-height:1.3; letter-spacing:-.055em;
 `;
 
 export const HeroLead = styled.p`
-  margin: 7px 0 0;
-  max-width: 520px;
-  color: rgba(255, 255, 255, 0.68);
-  font-size: clamp(0.8rem, 1.35vw, 0.92rem);
-  line-height: 1.55;
-  word-break: keep-all;
-
-  @media (max-width: 760px) {
-    margin-top: 5px;
-    max-width: 100%;
-    font-size: 0.66rem;
-    line-height: 1.45;
-  }
+margin:12px 0 0; color:#bfc5b6; font-size:13px; line-height:1.8; max-width:440px;
+      @media(max-width:760px) { font-size:12px; max-width:270px; }
 `;
 
 export const HeroPriceBlock = styled.div`
@@ -160,17 +77,7 @@ export const HeroPrice = styled.div`
 `;
 
 export const HeroPriceValue = styled.strong`
-  color: #f2c45f;
-  font-family: ${({ theme }) => theme.fonts.numeric};
-  font-size: clamp(2.15rem, 5.1vw, 3.7rem);
-  font-weight: 900;
-  line-height: 0.95;
-  letter-spacing: -0.055em;
-
-  @media (max-width: 760px) {
-    font-size: clamp(1.95rem, 9.6vw, 2.55rem);
-  }
-  animation: ${livingGoldReveal} 620ms cubic-bezier(.2,.8,.2,1) 120ms both;
+color:#e6d7b0; font-family:inherit; font-size:clamp(38px,5.5vw,62px); font-weight:500; font-variant-numeric:tabular-nums; line-height:1.15; letter-spacing:-.055em;
 `;
 
 export const Won = styled.span`
@@ -240,100 +147,18 @@ export const Source = styled.span`
 `;
 
 export const GoldVisual = styled.div`
-  position: relative;
-  z-index: 1;
-  pointer-events: none;
-  display: grid;
-  place-items: center;
-  min-height: 204px;
-  padding: 18px;
-  background:
-    linear-gradient(115deg, transparent 0 42%, rgba(255,255,255,.025) 42% 43%, transparent 43%),
-    radial-gradient(circle at 50% 70%, rgba(236, 184, 73, 0.15), transparent 45%);
-
-  @media (max-width: 760px) {
-    position: absolute;
-    right: ${({ $native }) => $native ? "7px" : "5px"};
-    bottom: ${({ $native }) => $native ? "10px" : "9px"};
-    width: ${({ $native }) => $native ? "65px" : "82px"};
-    height: ${({ $native }) => $native ? "85px" : "108px"};
-    min-height: 0;
-    padding: 0;
-    background: radial-gradient(circle at 50% 70%, rgba(236, 184, 73, 0.1), transparent 62%);
-  }
+position:relative; z-index:1; min-height:100%; background:url('/images/kgm-editorial-gold.webp') center / cover;
+      &::after { content:''; position:absolute; inset:0; background:linear-gradient(90deg,#252b23,transparent 40%); }
+      @media(max-width:760px) { display:none; }
 `;
 
 
 export const PriceGoldMark = styled(LivingGoldCompanion)`
-  position: absolute;
-  z-index: 6;
-  top: 18px;
-  right: clamp(112px, 19%, 184px);
-  opacity: 0.96;
-  pointer-events: auto;
-  touch-action: manipulation;
-
-  @media (max-width: 760px) {
-    top: 7px;
-    right: 10px;
-    opacity: 1;
-  }
+display:none;
 `;
 
 export const GoldBar = styled.div`
-  position: relative;
-  z-index: 1;
-  overflow: hidden;
-  width: clamp(122px, 17vw, 162px);
-  aspect-ratio: 0.67;
-  border: 1px solid #ffd978;
-  border-radius: 22px;
-  transform: rotate(7deg);
-  background:
-    linear-gradient(116deg, rgba(255,255,255,.58) 0 6%, transparent 11% 58%, rgba(255,255,255,.24) 68%, transparent 78%),
-    linear-gradient(145deg, #f7da83 0%, #d79b2f 28%, #f4c965 55%, #b87213 100%);
-  box-shadow:
-    inset 0 0 0 5px rgba(116, 65, 5, 0.18),
-    inset 0 0 0 7px rgba(255, 245, 189, 0.55),
-    20px 28px 42px rgba(0, 0, 0, 0.42),
-    0 0 50px rgba(222, 167, 54, 0.13);
-
-  &::before {
-    content: "";
-    position: absolute;
-    z-index: 2;
-    top: -30%;
-    bottom: -30%;
-    left: -42%;
-    width: 22%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,.78), transparent);
-    filter: blur(1px);
-    animation: ${livingGoldGlint} 4.8s ease-in-out 900ms infinite;
-    pointer-events: none;
-  }
-
-  &::after {
-    content: "";
-    position: absolute;
-    left: 14%;
-    right: 14%;
-    bottom: -22px;
-    height: 18px;
-    border-radius: 50%;
-    background: rgba(220, 163, 55, 0.23);
-    filter: blur(9px);
-  }
-
-  @media (max-width: 760px) {
-    width: 52px;
-    border-radius: 11px;
-    transform: rotate(9deg);
-    box-shadow:
-      inset 0 0 0 2px rgba(116, 65, 5, 0.18),
-      inset 0 0 0 4px rgba(255, 245, 189, 0.55),
-      8px 12px 20px rgba(0, 0, 0, 0.36),
-      0 0 24px rgba(222, 167, 54, 0.1);
-  }
+display:none;
 `;
 
 export const BarInner = styled.div`
@@ -409,12 +234,7 @@ export const WebActionStrip = styled.nav`
 `;
 
 export const Section = styled.section`
-  scroll-margin-top: 130px;
-  padding: clamp(19px, 3vw, 29px) 0 0;
-
-  @media (max-width: 760px) {
-    padding-top: 18px;
-  }
+padding-top:24px;
 `;
 
 export const SectionHead = styled.div`
@@ -497,16 +317,7 @@ export const PriceGrid = styled.div`
 `;
 
 export const PriceCard = styled.article`
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 20px;
-  background: #fff;
-  box-shadow: 0 12px 32px rgba(14, 18, 22, 0.055);
-
-  @media (max-width: 760px) {
-    border-radius: 13px;
-    box-shadow: 0 7px 18px rgba(14, 18, 22, 0.045);
-  }
+overflow:hidden; border:1px solid var(--gm-border); border-radius:6px; background:var(--gm-surface); box-shadow:none;
 `;
 
 export const MetalHead = styled.div`
@@ -534,23 +345,8 @@ export const MetalHead = styled.div`
 `;
 
 export const MetalBadge = styled.div`
-  display: grid;
-  flex: 0 0 auto;
-  place-items: center;
-  width: 50px;
-  height: 50px;
-  border: 1px solid ${({ $dark }) => ($dark ? "#d7a53c" : "rgba(25,25,25,.35)")};
-  clip-path: polygon(25% 7%, 75% 7%, 96% 50%, 75% 93%, 25% 93%, 4% 50%);
-  color: ${({ $dark }) => ($dark ? "#efc45e" : "#4d3423")};
-  font-family: Georgia, serif;
-  font-size: 1.05rem;
-  font-weight: 800;
-
-  @media (max-width: 760px) {
-    width: 25px;
-    height: 25px;
-    font-size: 0.62rem;
-  }
+display:grid; place-items:center; width:46px; height:46px; border:1px solid var(--gm-border); border-radius:3px;
+      background:var(--gm-surface-alt); color:var(--gm-primary); font-size:15px; font-weight:500;
 `;
 
 export const MetalName = styled.strong`

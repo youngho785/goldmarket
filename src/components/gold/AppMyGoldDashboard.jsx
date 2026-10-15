@@ -4,7 +4,6 @@ import styled from "styled-components";
 
 import LivingGoldMark from "@/components/common/LivingGoldMark";
 import LivingGoldCompanion from "@/components/common/LivingGoldCompanion";
-import { livingGoldSweep } from "@/styles/livingGoldMotion";
 import {
   ChevronRight,
   Gem,
@@ -16,33 +15,7 @@ import {
 
 
 const Card = styled.section`
-  position: relative;
-  overflow: hidden;
-  border: 1px solid
-    color-mix(in srgb, ${({ theme }) => theme.colors.gold} 24%, ${({ theme }) => theme.colors.primary});
-  border-radius: 20px;
-  background: linear-gradient(
-    138deg,
-    ${({ theme }) => theme.colors.primaryDark} 0%,
-    ${({ theme }) => theme.colors.primary} 62%,
-    #0b0d10 100%
-  );
-  color: ${({ theme }) => theme.on.primary};
-  box-shadow: 0 10px 24px
-    color-mix(in srgb, ${({ theme }) => theme.colors.primary} 12%, transparent);
-
-  &::after {
-    content: "";
-    position: absolute;
-    z-index: 0;
-    top: -30%;
-    bottom: -30%;
-    left: -26%;
-    width: 22%;
-    background: linear-gradient(90deg, transparent, color-mix(in srgb, ${({ theme }) => theme.colors.goldLight} 34%, transparent), transparent);
-    pointer-events: none;
-    animation: ${livingGoldSweep} 1500ms cubic-bezier(.2,.8,.2,1) 260ms both;
-  }
+position:relative; overflow:hidden; border:1px solid #404537; border-radius:10px; background:#252b23; color:#f4f3eb; box-shadow:none;
 `;
 
 const SummaryShell = styled.div`
@@ -57,26 +30,9 @@ const SummaryShell = styled.div`
 `;
 
 const SummaryCard = styled(Card)`
-  display: block;
-  height: 100%;
-  color: ${({ theme }) => theme.on.primary};
-  text-decoration: none;
-  cursor: pointer;
-  border-radius: 20px;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-
-  &:active {
-    transform: translateY(1px);
-  }
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.goldLight};
-    outline-offset: 2px;
-  }
-
-  @media (max-width: 900px) {
-    height: auto;
-  }
+display:block; height:100%; color:#f4f3eb; text-decoration:none; cursor:pointer; border-radius:10px; transition:border-color .2s;
+      &:hover { color:#f4f3eb; border-color:#a78e5c; } &:focus-visible { outline:2px solid var(--gm-gold); outline-offset:4px; }
+      @media(max-width:900px) { height:auto; }
 `;
 
 const Inner = styled.div`
@@ -86,16 +42,8 @@ const Inner = styled.div`
 `;
 
 const SummaryInner = styled(Inner)`
-  display: flex;
-  min-height: 205px;
-  height: 100%;
-  flex-direction: column;
-  padding: 18px;
-
-  @media (max-width: 560px) {
-    min-height: 166px;
-    padding: 14px 16px 13px;
-  }
+position:relative; display:flex; min-height:282px; height:100%; flex-direction:column; padding:30px;
+      @media(max-width:560px) { min-height:250px; padding:24px 22px; }
 `;
 
 const Topline = styled.div`
@@ -127,38 +75,20 @@ const Kicker = styled.div`
 `;
 
 const SummaryKicker = styled(Kicker)`
-  min-height: 28px;
-  padding-left: 34px;
+min-height:28px; padding-left:34px; color:#d9d8c8; font-size:11px; font-weight:600; letter-spacing:.15em;
 `;
 
 const SummaryGoldCompanion = styled(LivingGoldCompanion)`
-  position: absolute;
-  z-index: 4;
-  top: 9px;
-  left: 10px;
+position:absolute; z-index:4; top:29px; left:25px; @media(max-width:560px) { top:23px; left:18px; }
 `;
 
 const Value = styled.strong`
-  display: block;
-  margin-top: 8px;
-  color: ${({ theme }) => theme.colors.goldLight};
-  font-family: "Segoe UI", "Malgun Gothic", Arial, sans-serif;
-  font-variant-numeric: tabular-nums lining-nums;
-  font-feature-settings: "tnum" 1, "lnum" 1;
-  font-size: clamp(2rem, 6vw, 2.7rem);
-  font-weight: 800;
-  line-height: 1;
-  letter-spacing: -0.055em;
-  white-space: nowrap;
+display:block; margin-top:24px; color:#f2eedf; font-family:inherit; font-variant-numeric:tabular-nums; font-size:clamp(29px,5.5vw,48px);
+      font-weight:500; line-height:1.15; letter-spacing:-.055em; overflow-wrap:anywhere;
 `;
 
 const ReferenceLabel = styled.span`
-  display: block;
-  margin-top: 7px;
-  color: color-mix(in srgb, ${({ theme }) => theme.on.primary} 76%, transparent);
-  font-size: .73rem;
-  font-weight: 750;
-  line-height: 1.4;
+display:block; margin-top:10px; color:#bcc2b4; font-size:11px; font-weight:400; line-height:1.7;
 `;
 
 const Change = styled.div`
@@ -205,32 +135,10 @@ const Change = styled.div`
 `;
 
 const SummaryMeta = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: auto;
-  padding-top: 12px;
-  border-top: 1px solid color-mix(in srgb, ${({ theme }) => theme.on.primary} 11%, transparent);
-  color: color-mix(in srgb, ${({ theme }) => theme.on.primary} 70%, transparent);
-  font-size: 0.76rem;
-  font-weight: 800;
-
-  strong {
-    margin-left: 4px;
-    color: ${({ theme }) => theme.on.primary};
-    font-family: "Segoe UI", "Malgun Gothic", Arial, sans-serif;
-    font-variant-numeric: tabular-nums lining-nums;
-    font-feature-settings: "tnum" 1, "lnum" 1;
-    font-size: 0.78rem;
-    font-weight: 900;
-  }
-
-  span:last-child {
-    color: color-mix(in srgb, ${({ theme }) => theme.colors.gold} 62%, white);
-    font-weight: 950;
-    white-space: nowrap;
-  }
+display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:auto; padding-top:20px;
+      border-top:1px solid #49503f; color:#b9c0ae; font-size:11px; font-weight:400;
+      strong { margin-left:5px; color:#edeedf; font-size:12px; font-weight:600; font-variant-numeric:tabular-nums; }
+      span:last-child { color:#d7c49a; white-space:nowrap; }
 `;
 
 const ActionRow = styled.div`

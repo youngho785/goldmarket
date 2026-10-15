@@ -6,12 +6,12 @@ export const Container = styled.div.withConfig({
   shouldForwardProp: (prop) => prop !== "noBottomPadding"
 })`
   width: 100%;
-  max-width: 1440px;
+  max-width: 1408px;
   margin: 0 auto;
-  padding: 20px clamp(16px, 4vw, 64px);
+  padding: 20px clamp(20px, 4.2vw, 72px);
 
   @media (min-width: 767px) {
-    padding-top: 32px;
+    padding-top: 24px;
     padding-bottom: 40px;
   }
 

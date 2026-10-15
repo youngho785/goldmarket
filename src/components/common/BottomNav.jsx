@@ -63,6 +63,7 @@ const Nav = styled.nav.attrs({
             display: grid;
           }
         `}
+  border-radius: 0; box-shadow: none; border-left: 0; border-right: 0;
 `;
 
 const IconShell = styled.span`

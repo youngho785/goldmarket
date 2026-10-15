@@ -115,8 +115,12 @@ test("MY GOLD는 저장한 금으로 GOLD TO GOLD 결과 단계까지 자동 연
   assert.match(appGoldJourneySource, /MY GOLD → 골드바/);
   assert.match(androidHomeSource, /weeklyTrend=\{myGoldReady \? \{/);
   assert.doesNotMatch(androidHomeSource, /최근 7일 가치 변화|app-weekly-title/);
-  assert.match(appMyGoldDashboardSource, /<span>최근 7일<\/span>/);
-  assert.match(appMyGoldDashboardSource, /to="\/my-gold\/trend"/);
+  assert.match(appMyGoldDashboardSource, /hasWeeklyComparison = ratesReady && weeklyTrend\?\.hasReference/);
+  assert.match(appMyGoldDashboardSource, /label: "최근 7일"/);
+  assert.match(appMyGoldDashboardSource, /label: "이전 시세 대비"/);
+  assert.match(appMyGoldDashboardSource, /displayedComparison\.label/);
+  assert.match(appMyGoldDashboardSource, /to="\/my-gold"/);
+  assert.match(myGoldSource, /to="\/my-gold\/trend"/);
   assert.match(exchangeSource, /useGoldExchangeAutoVault/);
   assert.match(autoVaultSource, /validateExchangeProductsForCalculation/);
   assert.match(autoVaultSource, /applyExchangeFinalWeights/);
@@ -157,12 +161,16 @@ test("예약 연락처는 이미 알면 확인만 하고 첫 입력 후 다음 �
   assert.match(userServiceSource, /export async function saveReservationContact/);
 });
 
-test("Android 앱 홈은 MY GOLD를 최우선으로 보여주고 예약은 그 다음에 안내한다", () => {
+test("Android 앱 홈은 예정된 예약을 먼저 알리고 MY GOLD와 다음 행동을 빠르게 제공한다", () => {
   const dashboardIndex = androidHomeSource.indexOf("<AppMyGoldDashboard");
   const reservationIndex = androidHomeSource.indexOf('<ReservationCard');
-  assert.ok(dashboardIndex >= 0 && reservationIndex > dashboardIndex);
+  const nextActionIndex = androidHomeSource.indexOf('<HomePriorityActions');
+  assert.ok(reservationIndex >= 0 && dashboardIndex > reservationIndex && nextActionIndex > dashboardIndex);
+  assert.match(androidHomeSource, /\{upcomingReservation && \(/);
+  assert.match(androidHomeSource, /to="\/my-exchanges" aria-label="다가오는 방문 예약 확인"/);
   assert.match(androidHomeSource, /다가오는 방문 일정/);
   assert.match(androidHomeSource, /방문 예약 내용을 확인하세요/);
+  assert.match(androidHomeSource, /\{user\?\.uid && \(dashboard\.itemsLoading \|\| hasMyGold\) && \(/);
 });
 
 test("게스트 MY GOLD는 가짜 기본 금과 회원혜택 없이 실제 입력부터 시작한다", () => {

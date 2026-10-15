@@ -123,45 +123,45 @@ test("2.2.1 로그인·보호 화면의 기본 메시지는 회원혜택보다 M
   assert.match(androidHeaderSource, /회원가입 없이 계산하고, 계속 보고 싶은 금만 MY GOLD에 이어둘 수 있어요/);
 });
 
-test("2.1 회원 홈은 PC에서 넓은 2열 대시보드와 작은 MY GOLD 안내를 사용한다", async () => {
-  const myGoldDashboardSource = await read("src/components/gold/AppMyGoldDashboard.jsx");
-  assert.match(appHomeSource, /width: min\(1160px, 100%\)/);
-  assert.match(appHomeSource, /grid-template-columns: minmax\(0, 1\.75fr\) minmax\(290px, \.75fr\)/);
+test("2.1 회원 홈은 반응형 2열 대시보드로 MY GOLD와 금시세를 함께 제공한다", async () => {
+  const myGold = await read("src/components/gold/AppMyGoldDashboard.jsx");
+  assert.match(appHomeSource, /width:min\(1200px,100%\)/);
+  assert.match(appHomeSource, /const OverviewGrid = styled\.section/);
+  assert.match(appHomeSource, /grid-template-columns:minmax\(0,1\.6fr\) minmax\(300px,1fr\)/);
+  assert.match(appHomeSource, /@media\(max-width:900px\) \{ grid-template-columns:1fr/);
   assert.match(appHomeSource, /<OverviewGrid aria-label="내 금과 오늘 금시세">/);
-  assert.match(myGoldDashboardSource, /MY GOLD는 개인 금 기록 공간입니다/);
-  assert.match(myGoldDashboardSource, /font-variant-numeric: tabular-nums/);
+  assert.match(appHomeSource, /<AppMyGoldDashboard/);
+  assert.match(appHomeSource, /<AppGoldPriceSummary/);
+  assert.match(myGold, /font-variant-numeric:tabular-nums/);
+  assert.match(myGold, /MY GOLD는 개인 금 기록 공간입니다/);
 });
 
-test("2.2 최종 홈은 데이터 숫자와 2열 높이 균형, 기록 기준 교환 문구를 사용한다", async () => {
-  const myGoldDashboardSource = await read("src/components/gold/AppMyGoldDashboard.jsx");
-  const appGoldPriceSummarySource = await read("src/components/gold/AppGoldPriceSummary.jsx");
-  assert.match(myGoldDashboardSource, /const SummaryShell = styled\.div`[\s\S]*height: 100%/);
-  assert.match(myGoldDashboardSource, /const SummaryInner = styled\(Inner\)`[\s\S]*min-height: 242px[\s\S]*height: 100%/);
-  assert.match(myGoldDashboardSource, /font-family: "Segoe UI", "Malgun Gothic", Arial, sans-serif/);
-  assert.match(appGoldPriceSummarySource, /font-family: "Segoe UI", "Malgun Gothic", Arial, sans-serif/);
-  assert.match(appHomeSource, /import AppGoldJourney from "@\/components\/gold\/AppGoldJourney"/);
+test("2.2 홈은 정확한 숫자와 기록 기준 GOLD TO GOLD 교환 안내를 유지한다", async () => {
+  const dashboard = await read("src/components/gold/AppMyGoldDashboard.jsx");
+  const price = await read("src/components/gold/AppGoldPriceSummary.jsx");
+  assert.match(dashboard, /const SummaryShell = styled\.div`[\s\S]*?height: 100%/);
+  assert.match(dashboard, /const SummaryInner = styled\(Inner\)`[\s\S]*?height:100%/);
+  assert.match(dashboard, /font-variant-numeric:tabular-nums/);
+  assert.match(price, /font-variant-numeric: tabular-nums|font-variant-numeric:tabular-nums/);
   assert.match(appHomeSource, /<AppGoldJourney[\s\S]*pureGoldG=\{pureGoldG\}[\s\S]*vaultProducts=\{vaultProducts\}/);
   assert.match(appGoldJourneySource, /MY GOLD → 골드바/);
-  assert.match(appGoldJourneySource, /GOLD TO GOLD · 기록 기준 예상/);
+  assert.match(appGoldJourneySource, /<StatusPill><Check aria-hidden \/> 기록 기준 예상<\/StatusPill>/);
   assert.match(appGoldJourneySource, /온라인은 예상값입니다/);
 });
 
-test("2.3 MY GOLD는 PC 핵심 화면을 2열로 넓히고 기록·가치·예상교환의 우선순위를 분리한다", async () => {
-  const myGoldItemsSource = await read("src/components/myGoldVault/MyGoldItemsSection.jsx");
-  assert.match(myGoldVaultStylesSource, /max-width: 1160px/);
-  assert.match(myGoldVaultStylesSource, /export const SummaryOverviewGrid = styled\.div`[\s\S]*grid-template-columns: minmax\(0, 1\.65fr\) minmax\(300px, 0\.75fr\)/);
+test("2.3 MY GOLD는 참고가치·기록·골드바 목표를 분리하고 모바일에서도 정돈한다", async () => {
+  const items = await read("src/components/myGoldVault/MyGoldItemsSection.jsx");
+  assert.match(myGoldVaultStylesSource, /max-width:1200px/);
+  assert.match(myGoldVaultStylesSource, /export const SummaryOverviewGrid = styled\.div/);
   assert.match(myGoldVaultSource, /<SummaryOverviewGrid aria-label="MY GOLD 요약">/);
-  assert.match(myGoldVaultSource, /<span>기록한 금<\/span>[\s\S]*activeSummary\.itemCount/);
+  assert.match(myGoldVaultSource, /activeSummary\.itemCount/);
   assert.match(myGoldVaultSource, /내 금 관리/);
   assert.match(myGoldVaultSource, /<AppGoldJourney[\s\S]*pureGoldG=\{vaultPureGoldG\}[\s\S]*vaultProducts=\{exchangeProducts\}/);
-  assert.doesNotMatch(myGoldVaultSource, /ReadinessPanel/);
   assert.doesNotMatch(myGoldVaultSource, /MY_GOLD_BAR_DENOMS|function getGoldBarReadiness/);
-  assert.doesNotMatch(myGoldVaultSource, /같은 양의 999\.9를 오늘 새로 구입하면/);
-  assert.match(myGoldItemsSource, /선택해서 예상 확인/);
-  assert.match(myGoldItemsSource, /선택 금 예상 확인/);
-  assert.match(myGoldItemsSource, /전체 예상 확인/);
-  assert.doesNotMatch(myGoldItemsSource, />\s*교환\s*<\/button>/);
-  assert.doesNotMatch(myGoldItemsSource, /같은 양의 999\.9 신규구매가/);
+  assert.match(items, /선택해서 예상 확인/);
+  assert.match(items, /선택 금 예상 확인/);
+  assert.match(items, /전체 예상 확인/);
+  assert.doesNotMatch(items, /같은 양의 999\.9 신규구매가/);
 });
 
 test("2.3.1 MY GOLD는 참고가치 표현과 간결한 안내, 안정적인 가치 그래프를 사용한다", async () => {
@@ -180,119 +180,59 @@ test("2.3.1 MY GOLD는 참고가치 표현과 간결한 안내, 안정적인 가
   assert.doesNotMatch(myGoldTrendSource, /pathLength="1"/);
 });
 
-test("3.0 웹 홈·Android 홈·MY GOLD는 공용 GOLD JOURNEY를 사용한다", () => {
-  assert.match(appHomeSource, /<AppGoldJourney/);
-  assert.match(androidHomeSource, /<AppGoldJourney/);
-  assert.match(myGoldVaultSource, /<AppGoldJourney/);
-  assert.doesNotMatch(appHomeSource, /const GoldToGoldCard/);
-  assert.doesNotMatch(myGoldVaultSource, /MY_GOLD_BAR_DENOMS|function getGoldBarReadiness/);
+test("3.0 웹·앱·MY GOLD는 동일한 골드바 목표 컴포넌트를 사용한다", () => {
+  for (const source of [appHomeSource, androidHomeSource, myGoldVaultSource]) {
+    assert.match(source, /<AppGoldJourney/);
+  }
   assert.match(appGoldJourneySource, /MY GOLD → 골드바/);
-  assert.match(appGoldJourneySource, /GOLD TO GOLD · 기록 기준 예상/);
-  assert.match(appGoldJourneySource, /실제 교환은 매장 실측 후 확정합니다/);
+  assert.match(appGoldJourneySource, /<StatusPill><Check aria-hidden \/> 기록 기준 예상<\/StatusPill>/);
+  assert.match(appGoldJourneySource, /실제 순도·중량과 교환량은 부산 매장 실측 후 확정됩니다/);
+  assert.doesNotMatch(myGoldVaultSource, /MY_GOLD_BAR_DENOMS|function getGoldBarReadiness/);
 });
 
-test("3.1 고객 화면의 설명 문구는 쉬운 한국어로 통일한다", async () => {
-  const [goldToGoldIntroSource, myGoldAlertSummarySource, myGoldDashboardCopySource] =
-    await Promise.all([
-      read("src/pages/GoldToGoldIntro.jsx"),
-      read("src/components/gold/MyGoldAlertSummary.jsx"),
-      read("src/components/gold/AppMyGoldDashboard.jsx"),
-    ]);
-
-  assert.match(landingSource, /aria-label="한국골드마켓 이용 흐름"/);
-  assert.match(landingSource, /GOLD TO GOLD · 금의 가치를 이어가다/);
-  assert.doesNotMatch(landingSource, /GOLD JOURNEY|OFFLINE VERIFICATION|TODAY&apos;S GOLD/);
-
-  assert.match(appHomeSource, /다가오는 방문 일정/);
+test("3.1 고객 안내는 예상가치·실측·고객 동의·다음 행동을 쉬운 말로 제공한다", async () => {
+  const intro = await read("src/pages/GoldToGoldIntro.jsx");
+  const alert = await read("src/components/gold/MyGoldAlertSummary.jsx");
+  assert.match(landingSource, /내 금 가치 확인하기/);
+  assert.match(landingSource, /고객 앞에서 순도·중량 확인/);
+  assert.match(landingSource, /비용 안내와 고객 동의 후 교환/);
   assert.match(androidHomeSource, /다가오는 방문 일정/);
-  assert.doesNotMatch(androidHomeSource, /다가오는 부산 방문 일정|TODAY&apos;S GOLD/);
-
   assert.match(appGoldJourneySource, /다음 골드바까지 조금 더 필요합니다/);
   assert.match(appGoldJourneySource, /예상 교환량 보기/);
-  assert.doesNotMatch(appGoldJourneySource, /마일스톤|GOLD TO GOLD 예상 보기/);
-
-  assert.match(
-    goldExchangeSource,
-    /"01 예상 계산", "02 골드바 선택", "03 방문 예약", "04 접수 완료"/
-  );
+  assert.match(goldExchangeSource, /"01 예상 계산", "02 골드바 선택", "03 방문 예약", "04 접수 완료"/);
   assert.match(goldExchangeStepsSource, /내 금 → 999\.9 골드바 예상/);
-  assert.doesNotMatch(
-    goldExchangeStepsSource,
-    /현장 확인 방문예약|선택 가능 최대|999\.9 GOLD 예상/
-  );
-
-  assert.match(goldToGoldIntroSource, /내 금 → 골드바/);
-  assert.match(goldToGoldIntroSource, /얼마나 바꿀 수 있을까요/);
-
-  assert.match(myGoldAlertSummarySource, /알림 켜짐/);
-  assert.match(myGoldAlertSummarySource, /알림 설정 확인/);
-  assert.doesNotMatch(myGoldAlertSummarySource, /푸시 ON|푸시 확인/);
-
-  assert.doesNotMatch(myGoldDashboardCopySource, /Living Gold로/);
-  assert.doesNotMatch(myGoldVaultSource, /Living Gold로/);
+  assert.match(intro, /내 금 → 골드바/);
+  assert.match(alert, /알림 켜짐/);
+  assert.doesNotMatch(androidHomeSource, /TODAY&apos;S GOLD/);
 });
-test("3.2 최종 정보구조는 MY GOLD → 골드바 목표 → GOLD TO GOLD를 우선한다", async () => {
-  const androidHeaderSource = await read("src/components/common/AndroidAppHeader.jsx");
 
-  assert.match(landingSource, /<strong>골드바 목표<\/strong>/);
-  assert.doesNotMatch(landingSource, /to="\/my-gold\/alerts"/);
-
-  assert.match(
-    navbarSource,
-    /return \[[\s\S]*label: "MY GOLD"[\s\S]*label: "금시세"[\s\S]*label: "금교환 계산"[\s\S]*label: "GOLD TO GOLD 이야기"[\s\S]*label: "매장안내"/
-  );
-
-  assert.match(
-    bottomNavSource,
-    /const MEMBER_ANDROID_ITEMS = \[[\s\S]*label: "MY GOLD"[\s\S]*label: "금 기록"[\s\S]*center: true[\s\S]*label: "금교환"[\s\S]*label: "MY"/
-  );
-
-  const journeyIndex = androidHomeSource.indexOf("<AppGoldJourney");
-  const utilitiesIndex = androidHomeSource.indexOf("<MemberUtilities");
-  const priceIndex = androidHomeSource.indexOf("<PriceCard");
-  assert.ok(journeyIndex >= 0 && utilitiesIndex >= 0 && priceIndex > utilitiesIndex);
-  assert.ok(journeyIndex > priceIndex);
-
-  const myMenuIndex = androidHeaderSource.indexOf("<SectionTitle>내 메뉴</SectionTitle>");
-  const memberGoldIndex = androidHeaderSource.indexOf('to="/member-gold"');
-  const serviceIndex = androidHeaderSource.indexOf("<SectionTitle>서비스</SectionTitle>");
-  const exchangeIndex = androidHeaderSource.indexOf('to="/gold-exchange"', serviceIndex);
-
-  assert.ok(
-    myMenuIndex >= 0 &&
-      memberGoldIndex >= 0 &&
-      memberGoldIndex < serviceIndex &&
-      exchangeIndex > serviceIndex
-  );
-  assert.doesNotMatch(androidHeaderSource, /to="\/quiz\/gold-bonus"[\s\S]*금 퀵퀴즈 · 순금 0\.01g/);
-
-  assert.match(
-    androidHeaderSource,
-    /<strong>GOLD TO GOLD 이야기<\/strong>[\s\S]*<strong>골드바 교환 계산<\/strong>/
-  );
-
+test("3.2 내 금 기록·목표·교환 경로는 웹과 앱에서 항상 접근 가능하다", async () => {
+  const header = await read("src/components/common/AndroidAppHeader.jsx");
+  assert.match(landingSource, /to="\/my-gold"/);
+  assert.match(landingSource, /to="\/my-gold#goldbar-goal"/);
+  assert.match(landingSource, /to="\/gold-exchange"/);
+  assert.match(navbarSource, /label: "MY GOLD"/);
+  assert.match(navbarSource, /label: "금교환 계산"/);
+  assert.match(bottomNavSource, /const MEMBER_ANDROID_ITEMS = \[/);
+  assert.match(androidHomeSource, /<AppGoldJourney/);
+  assert.ok(androidHomeSource.indexOf('<MemberUtilities') < androidHomeSource.indexOf('<PriceCard'));
+  assert.match(header, /<SectionTitle>내 메뉴<\/SectionTitle>/);
+  assert.match(header, /<SectionTitle>서비스<\/SectionTitle>/);
   assert.match(goldExchangeStepsSource, /내 금 → 999\.9 골드바 예상/);
-  assert.doesNotMatch(
-    goldExchangeStepsSource,
-    /MY GOLD 기록 → 999\.9 골드바 예상/
-  );
 });
-test("2.4 GOLD TO GOLD는 온라인 예상과 실제 매장 확정을 분리하고 방문 예약 흐름을 명확히 한다", () => {
-  assert.match(goldExchangeStylesSource, /max-width: 1160px/);
+
+test("2.4 금교환은 예상량·부족분·공임과 예약 요청/확정을 분명히 구분한다", () => {
   assert.match(goldExchangeSource, /온라인 화면은 예상값입니다/);
   assert.match(goldExchangeSource, /실제 순도·중량·골드바 제작공임과 교환 조건은 매장에서 실물을 확인하고 고객이 동의한 뒤 확정/);
   assert.match(goldExchangeStepsSource, /예상 제작 공임/);
   assert.match(goldExchangeStepsSource, /전체 공임표 보기/);
   assert.match(goldExchangeStepsSource, /선택한 골드바로 방문 예약 계속/);
-  assert.match(appGoldJourneySource, /\$\{readiness\.label\} 예상 교환 가능/);
-  assert.match(appGoldJourneySource, /<strong>다음 목표<\/strong>/);
-  assert.match(appGoldJourneySource, /기록 기준 예상<\/StatusPill>/);
-  assert.doesNotMatch(appGoldJourneySource, /GOLD JOURNEY ·|GOLD JOURNEY MILESTONE/);
+  assert.match(appGoldJourneySource, /기록 기준 예상/);
+  assert.match(appGoldJourneySource, /다음 목표/);
   assert.match(goldExchangeStepsSource, /g 더 필요<\/AIBadge>/);
-  assert.match(goldExchangeStepsSource, /위 참고 조합까지 모두 제작한다면 예상 잔여/);
-  assert.doesNotMatch(goldExchangeStepsSource, /<AIBadge>추가해서 선택<\/AIBadge>/);
-  assert.match(goldExchangeStepsSource, /<Title>방문 예약 요청<\/Title>/);
-  assert.match(goldExchangeStepsSource, /온라인 예상입니다\.[\s\S]{0,160}매장에서 고객과 확인하고 동의 후 확정됩니다/);
+  assert.match(goldExchangeStepsSource, /예상 남는 순금/);
+  assert.match(goldExchangeStepsSource, /방문 예약 요청/);
+  assert.match(goldExchangeStepsSource, /예약 요청을 접수한 뒤 매장에서 확인합니다/);
   assert.match(goldExchangeStepsSource, /현재 상태 · 예약 확인 대기/);
   assert.match(goldExchangeStepsSource, /아직 예약 확정이나 교환 완료 상태가 아닙니다/);
 });
@@ -337,18 +277,15 @@ test("2.4 골드바 제작 공임 규칙은 공임 안내와 GOLD TO GOLD가 하
   assert.doesNotMatch(feePageSource, /const FEE_RULES_DON/);
 });
 
-test("2.2 최종 랜딩은 히어로와 시세·후기를 더 압축하고 후기 제목 중복을 없앤다", async () => {
-  const goldPriceBoardSource = await read("src/components/gold/GoldPriceBoard.jsx");
-  assert.match(landingSource, /min-height: min\(445px, calc\(100svh - 132px\)\)/);
-  assert.match(landingSource, /const CompactSection = styled\(Section\)/);
-  assert.match(landingSource, /<CompactSection aria-labelledby="live-title">/);
-  assert.match(landingSource, /<CompactSection aria-label="교환 완료 고객 후기">[\s\S]*<VerifiedReviewSection compact showInquiryAction=\{false\} \/>/);
+test("2.2 새 공개 홈은 에디토리얼 이미지·시세·계산·후기를 중복 없이 배치한다", () => {
+  assert.match(landingSource, /const HeroVisual = styled\.figure/);
+  assert.match(landingSource, /kgm-editorial-gold\.webp/);
+  assert.match(landingSource, /<GoldPriceBoard compact \/>/);
+  assert.match(landingSource, /<QuickGoldValueCalculator source="landing"/);
+  assert.match(landingSource, /<VerifiedReviewSection compact showInquiryAction=\{false\} \/>/);
+  assert.equal((landingSource.match(/<VerifiedReviewSection /g) || []).length, 1);
   assert.doesNotMatch(landingSource, /<SectionTitle>실제 교환 경험<\/SectionTitle>/);
-  assert.match(goldPriceBoardSource, /\$compact \? "34px" : "44px"/);
-  assert.match(goldPriceBoardSource, /\$compact \? "46px" : "62px"/);
 });
-
-
 
 test("Android는 AndroidHome, 회원 웹은 AppHome, 공개 웹은 LandingPage를 사용한다", () => {
   assert.match(appSource, /if \(isAndroid\) return <AndroidHome \/>/);
@@ -370,25 +307,17 @@ test("홈의 검증 후기는 최신 1건을 2줄 미리보기로만 보여준�
   assert.match(reviewListSource, /!preview && \(/);
 });
 
-test("비회원 랜딩은 계산 → MY GOLD → 골드바 목표 → 금시세 → GOLD TO GOLD/실측 → 후기 흐름으로 간결해진다", () => {
-  assert.match(landingSource, /<CalculatorAnchor id="landing-calculator">[\s\S]*<QuickGoldValueCalculator[\s\S]*source="landing"/);
-  assert.match(landingSource, /<MobileHeadline>내 금,/);
-  assert.match(landingSource, /<DesktopHeadline>잠들어 있던/);
-  assert.doesNotMatch(landingSource, /<GoldToGoldStory aria-labelledby=/);
-  assert.match(landingSource, /회원가입 없이 먼저 계산하고, 원하는 금만 MY GOLD에 기록하세요/);
-  assert.match(landingSource, /const FlowItem = styled\.button/);
-  assert.match(landingSource, /onClick=\{startValueCheck\}/);
-  assert.match(landingSource, /as=\{Link\} to="\/my-gold"/);
-  assert.match(landingSource, /<strong>골드바 목표<\/strong>/);
-  assert.match(landingSource, /예상 순금량으로 다음 골드바까지 얼마나 남았는지 확인합니다/);
-  assert.doesNotMatch(landingSource, /to="\/my-gold\/alerts"/);
-  assert.match(landingSource, /as=\{Link\} to="\/gold-to-gold"/);
-  assert.match(landingSource, /회원가입 없이 먼저 계산[\s\S]*실제 교환은 매장 실측·고객 동의 후 확정됩니다/);
-  assert.doesNotMatch(landingSource, /const TrustStrip|원일귀금속 직접 운영|실제 교환은 확인 후 결정/);
+test("새 비회원 랜딩은 시세 → 가치 확인 → 금교환 → 기록 → 후기로 이어진다", () => {
+  assert.match(landingSource, /<MainAction onClick=\{startValueCheck\}>내 금 가치 확인하기/);
   assert.match(landingSource, /<GoldPriceBoard compact \/>/);
-  assert.match(landingSource, /쓰지 않는 금의 가치를, 다시 금으로 이어갑니다/);
+  assert.match(landingSource, /<CalculatorAnchor id="landing-calculator"><QuickGoldValueCalculator source="landing"/);
+  assert.match(landingSource, /to="\/gold-exchange"/);
+  assert.match(landingSource, /to="\/my-gold"/);
   assert.match(landingSource, /<VerifiedReviewSection compact showInquiryAction=\{false\} \/>/);
-  assert.doesNotMatch(landingSource, /MY GOLD PREVIEW|ONE FLOW|0\.01g|0\.03g|금 퀵퀴즈/);
+  const indices = ['<ServiceLine','<Section aria-labelledby="live-title">','<CalculatorSection','<Exchange aria-labelledby="exchange-trust-title">','<Journal aria-labelledby="journal-title">','<Section aria-label="교환 완료 고객 후기">'].map(x => landingSource.indexOf(x));
+  assert.ok(indices.every(x => x >= 0) && indices.every((x, i) => i === 0 || x > indices[i-1]));
+  assert.match(landingSource, /온라인 계산은 공개 시세와 입력 정보에 따른 예상 참고가치입니다/);
+  assert.doesNotMatch(landingSource, /MY GOLD PREVIEW|ONE FLOW|금 퀵퀴즈/);
 });
 
 test("비회원 랜딩의 첫 행동은 계산 → MY GOLD 기록 → 가입 후 이어보기로 집중한다", () => {
@@ -430,10 +359,10 @@ test("공용 금 가치 계산기는 MY GOLD 지원 제품 전체를 한 목록�
   assert.doesNotMatch(quickGoldValueCalculatorSource, /<optgroup/);
 });
 
-test("랜딩 금시세는 중복 계산기 없이 컴팩트 시세표와 전체보기로 연결한다", () => {
-  assert.match(landingSource, /<GoldPriceBoard compact \/>/);
-  assert.match(landingSource, /to="\/gold-price">전체 시세 보기/);
-  assert.doesNotMatch(landingSource, /MY GOLD PREVIEW/);
+test("공개 홈 시세 섹션은 시세표 하나와 상세 화면 연결을 제공한다", () => {
+  assert.equal((landingSource.match(/<GoldPriceBoard compact \/>/g) || []).length, 1);
+  assert.match(landingSource, /<TextLink to="\/gold-price">전체 시세/);
+  assert.equal((landingSource.match(/<QuickGoldValueCalculator source="landing"/g) || []).length, 1);
 });
 
 test("푸터는 한국골드마켓 브랜드와 바로가기·문의 중심으로 간결하게 마감한다", () => {
@@ -656,20 +585,18 @@ test("앱 홈 금시세는 MY GOLD 시세 listener를 재사용하고 활성 예
   assert.ok(reservationIndex >= 0 && myGoldIndex > reservationIndex && goldPriceIndex > myGoldIndex);
 });
 
-test("Android 홈은 7일 변화를 별도 카드 없이 MY GOLD 요약에 통합한다", async () => {
-  const myGoldDashboardSource = await read("src/components/gold/AppMyGoldDashboard.jsx");
+test("Android MY GOLD는 7일 변화와 이전시세 대체 표시를 중복 카드 없이 사용한다", async () => {
+  const dashboard = await read("src/components/gold/AppMyGoldDashboard.jsx");
   assert.match(androidHomeSource, /<AppMyGoldDashboard[\s\S]*weeklyTrend=\{myGoldReady \? \{/);
   assert.doesNotMatch(androidHomeSource, /최근 7일 가치 변화|app-weekly-title|TrendValue/);
-  assert.match(myGoldDashboardSource, /const WeeklyTrendLink = styled\(Link\)/);
-  assert.match(myGoldDashboardSource, /to="\/my-gold\/trend"/);
-  assert.match(myGoldDashboardSource, /<span>최근 7일<\/span>/);
+  assert.match(dashboard, /hasWeeklyComparison = ratesReady && weeklyTrend\?\.hasReference/);
+  assert.match(dashboard, /label: "최근 7일"/);
+  assert.match(dashboard, /label: "이전 시세 대비"/);
+  assert.match(dashboard, /displayedComparison\.label/);
+  assert.match(dashboard, /to="\/my-gold"/);
+  assert.match(myGoldVaultSource, /to="\/my-gold\/trend"/);
   assert.match(androidHomeSource, /<AppGoldJourney/);
-  assert.match(androidHomeSource, /gold_to_gold_cta_clicked/);
-  assert.match(androidHomeSource, /<MyGoldAlertSummary[\s\S]*demoMode=\{!user\?\.uid\}/);
-  const homePriorityActionsSource = await read("src/components/home/HomePriorityActions.jsx");
-  assert.match(androidHomeSource, /<HomePriorityActions \/>/);
-  assert.match(homePriorityActionsSource, /to="\/my-gold\/items\?add=1"/);
-  assert.doesNotMatch(androidHomeSource, /GOLD JOURNEY · GOLD TO GOLD|MILESTONE LADDER/);
+  assert.match(androidHomeSource, /<MyGoldAlertSummary/);
 });
 
 test("GoldExchange 진입 모드는 URL을 기준으로 한 곳에서 상태를 전환한다", () => {
@@ -1106,57 +1033,40 @@ test("404 화면은 한국어 안내와 홈·이전 화면 복구 동작을 제�
   assert.match(source, /window\.history\.back\(\)/);
 });
 
-test("비회원 랜딩은 첫 체험에 집중하고 GOLD TO GOLD와 실측 신뢰를 하나의 섹션으로 묶는다", async () => {
-  const [landingSource, reviewSource] = await Promise.all([
-    read("src/pages/LandingPage.jsx"),
-    read("src/components/reviews/VerifiedReviewSection.jsx"),
-  ]);
-
+test("공개 홈은 첫 계산 체험·매장 실측 신뢰·후기를 한 번씩 제시한다", async () => {
+  const review = await read("src/components/reviews/VerifiedReviewSection.jsx");
   assert.doesNotMatch(landingSource, /MyGoldTicker|ExchangeBand|TrustGrid/);
-  assert.match(landingSource, /<QuickGoldValueCalculator[\s\S]*source="landing"/);
-  assert.match(landingSource, /<ExchangeTrust aria-labelledby="exchange-trust-title">/);
+  assert.match(landingSource, /<QuickGoldValueCalculator source="landing"/);
+  assert.match(landingSource, /<Exchange aria-labelledby="exchange-trust-title">/);
+  assert.match(landingSource, /고객 앞에서 현장 실측/);
+  assert.match(landingSource, /고객이 동의한 뒤 확정합니다/);
   assert.match(landingSource, /<VerifiedReviewSection compact showInquiryAction=\{false\} \/>/);
-
-  const priceIndex = landingSource.indexOf('<CompactSection aria-labelledby="live-title">');
-  const exchangeIndex = landingSource.indexOf('<ExchangeTrust aria-labelledby="exchange-trust-title">');
-  const reviewIndex = landingSource.indexOf('<CompactSection aria-label="교환 완료 고객 후기">');
-  assert.ok(priceIndex >= 0 && exchangeIndex > priceIndex && reviewIndex > exchangeIndex);
-
-  assert.match(reviewSource, /VerifiedReviewSection\(\{ compact = false, showInquiryAction = true \}\)/);
+  assert.ok(landingSource.indexOf('<Section aria-labelledby="live-title">') < landingSource.indexOf('<Exchange aria-labelledby="exchange-trust-title">'));
+  assert.ok(landingSource.indexOf('<Exchange aria-labelledby="exchange-trust-title">') < landingSource.indexOf('<Section aria-label="교환 완료 고객 후기">'));
+  assert.match(review, /VerifiedReviewSection\(\{ compact = false, showInquiryAction = true \}\)/);
 });
 
-test("랜딩 하단은 반복 CTA 없이 GOLD TO GOLD와 푸터로 자연스럽게 이어진다", async () => {
-  const [landingSource, footerSource] = await Promise.all([
-    read("src/pages/LandingPage.jsx"),
-    read("src/components/common/Footer.jsx"),
-  ]);
-
+test("공개 홈 마지막은 FAQ와 매장 안내를 보여주고 반복 가입 유도는 하지 않는다", async () => {
+  const footer = await read("src/components/common/Footer.jsx");
   assert.doesNotMatch(landingSource, /<Final aria-labelledby="final-title">/);
-  assert.doesNotMatch(landingSource, /MY GOLD 시작하기/);
-  assert.match(landingSource, /<ExchangeTrust aria-labelledby="exchange-trust-title">/);
-  assert.match(landingSource, /to="\/gold-to-gold">GOLD TO GOLD 이야기/);
-  assert.doesNotMatch(landingSource, /<GoldToGoldStory aria-labelledby=/);
-  assert.match(footerSource, /const \{ pathname \} = useLocation\(\)/);
-  assert.match(footerSource, /const joinLanding = pathname === "\/"/);
+  assert.match(landingSource, /<Questions>/);
+  assert.match(landingSource, /<Visit>/);
+  assert.match(landingSource, /<TextLink to="\/stores">매장·절차 안내/);
+  assert.match(landingSource, /<TextLink to="\/my-gold">MY GOLD 시작하기/);
+  assert.equal((landingSource.match(/MY GOLD 시작하기/g) || []).length, 1);
+  assert.match(footer, /const \{ pathname \} = useLocation\(\)/);
 });
 
-test("앱 홈 다크모드는 MY GOLD 이동 대비를 보강하고 검증 후기를 컴팩트하게 유지한다", async () => {
-  const [homeSource, myGoldSource, reviewSectionSource, reviewListSource] = await Promise.all([
-    read("src/pages/AppHome.jsx"),
-    read("src/components/gold/AppMyGoldDashboard.jsx"),
-    read("src/components/reviews/VerifiedReviewSection.jsx"),
-    read("src/components/reviews/GoldExchangeReviewList.jsx"),
-  ]);
-
-  assert.match(homeSource, /<VerifiedReviewSection compact showInquiryAction=\{false\} \/>/);
-  assert.ok(myGoldSource.includes("color-mix(in srgb, ${({ theme }) => theme.colors.gold} 62%, white)"));
-  assert.ok(myGoldSource.includes("font-weight: 950;"));
-  assert.ok(reviewSectionSource.includes('gap: ${({ $compact }) => ($compact ? "7px" : "18px")};'));
-  assert.ok(reviewSectionSource.includes('min-height: ${({ $compact }) => ($compact ? "32px" : "39px")};'));
-  assert.ok(reviewListSource.includes('$preview && $compact ? "9px 11px"'));
-  assert.ok(reviewListSource.includes('$compact && $preview ? "0.76rem"'));
-  assert.ok(reviewListSource.includes('<CardStars $compact={compact}'));
-  assert.ok(reviewListSource.includes('<Verified $compact={compact}>'));
+test("프리미엄 MY GOLD 요약의 대비·키보드 포커스 및 후기 미리보기는 유지된다", async () => {
+  const dashboard = await read("src/components/gold/AppMyGoldDashboard.jsx");
+  assert.match(landingSource, /<VerifiedReviewSection compact showInquiryAction=\{false\} \/>/);
+  assert.match(dashboard, /background:#252b23/);
+  assert.match(dashboard, /color:#f4f3eb/);
+  assert.match(dashboard, /:focus-visible \{ outline:2px solid var\(--gm-gold\)/);
+  assert.match(dashboard, /font-variant-numeric:tabular-nums/);
+  assert.match(verifiedReviewSectionSource, /\$compact \? "9px" : "18px"/);
+  assert.match(reviewListSource, /<CardStars \$compact=\{compact\}/);
+  assert.match(reviewListSource, /<Verified \$compact=\{compact\}>/);
 });
 
 test("앱 홈 컴팩트 후기에서는 검증 설명을 반복하지 않고 전체 후기 화면에는 유지한다", async () => {

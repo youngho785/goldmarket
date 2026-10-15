@@ -43,6 +43,7 @@ const GlobalStyle = createGlobalStyle`
     color-scheme: light;
     background: ${({ theme }) => theme.colors.background};
   }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
   html[data-theme='dark'] { color-scheme: dark; }
 
   body {
@@ -50,13 +51,12 @@ const GlobalStyle = createGlobalStyle`
     min-height: 100%;
     overflow-x: hidden;
     font-family: ${({ theme }) => theme.fonts.body};
-    background:
-      radial-gradient(circle at 4% 0%, color-mix(in srgb, ${({ theme }) => theme.colors.gold} 8%, transparent), transparent 28%),
-      ${({ theme }) => theme.gradients.page};
+    background: ${({ theme }) => theme.colors.background};
     background-size: auto;
     color: ${({ theme }) => theme.colors.text};
     line-height: 1.7;
-    letter-spacing: -0.012em;
+    letter-spacing: -0.025em;
+    font-variant-numeric: tabular-nums;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
