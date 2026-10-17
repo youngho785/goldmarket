@@ -54,13 +54,22 @@ function runNpm(args, options = {}) {
 }
 
 function runFirebase(args, options = {}) {
+  if (process.platform === 'win32') {
+    const quote = (value) => `'${String(value).replace(/'/g, "''")}'`;
+    const command = [
+      '& npx.cmd --yes firebase-tools@15.30.2',
+      ...args.map(quote),
+      '; exit $LASTEXITCODE'
+    ].join(' ');
+
+    return run('powershell.exe',
+      ['-NoProfile', '-NonInteractive', '-Command', command],
+      options);
+  }
+
   return runNpm([
-    'exec',
-    '--yes',
-    '--package=firebase-tools@15.30.2',
-    '--',
-    'firebase',
-    ...args,
+    'exec', '--yes', '--package=firebase-tools@15.30.2',
+    '--', 'firebase', ...args
   ], options);
 }
 
