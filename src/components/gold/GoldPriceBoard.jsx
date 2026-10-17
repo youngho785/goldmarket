@@ -145,8 +145,8 @@ const Kind = styled.strong`
 `;
 
 const Value = styled.strong`
-color:var(--gm-primary); font-family:inherit; font-variant-numeric:tabular-nums; font-size:clamp(15px,2vw,23px); font-weight:600;
-    line-height:1.3; letter-spacing:-.04em; white-space:nowrap; @media(max-width:520px) { font-size:15px; }
+color:var(--gm-primary); font-family:inherit; font-variant-numeric:tabular-nums; font-size:clamp(16px,1.8vw,24px); font-weight:750;
+    line-height:1.3; letter-spacing:-.035em; white-space:nowrap; @media(max-width:520px) { font-size:15px; }
 `;
 
 const Change = styled.small`
@@ -159,7 +159,7 @@ const Change = styled.small`
         ? theme.colors.info
         : theme.colors.textSecondary} !important;
   font-size: 0.62rem;
-  font-weight: 800;
+  font-weight: 650;
   line-height: 1.25;
   white-space: nowrap;
 

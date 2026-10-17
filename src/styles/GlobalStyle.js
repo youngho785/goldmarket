@@ -55,7 +55,7 @@ const GlobalStyle = createGlobalStyle`
     background-size: auto;
     color: ${({ theme }) => theme.colors.text};
     line-height: 1.7;
-    letter-spacing: -0.025em;
+    letter-spacing: -0.024em;
     font-variant-numeric: tabular-nums;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -103,12 +103,12 @@ const GlobalStyle = createGlobalStyle`
     text-wrap: balance;
     word-break: keep-all;
   }
-  h1 { font-size: ${({ theme }) => theme.typography.h1}; font-weight: 700; }
-  h2 { font-size: ${({ theme }) => theme.typography.h2}; font-weight: 700; }
-  h3 { font-size: ${({ theme }) => theme.typography.h3}; font-weight: 700; }
+  h1 { font-size: ${({ theme }) => theme.typography.h1}; font-weight: 680; }
+  h2 { font-size: ${({ theme }) => theme.typography.h2}; font-weight: 680; }
+  h3 { font-size: ${({ theme }) => theme.typography.h3}; font-weight: 680; }
 
   p { margin: 0 0 ${({ theme }) => theme.spacing(2)}; }
-  strong, b { font-weight: 780; }
+  strong, b { font-weight: 750; }
   small { color: ${({ theme }) => theme.colors.textSecondary}; }
 
   a {
@@ -131,9 +131,9 @@ const GlobalStyle = createGlobalStyle`
     border-radius: ${({ theme }) => theme.radii.default};
     background: ${({ theme }) => theme.gradients.primary};
     color: ${({ theme }) => theme.on.primary};
-    font-weight: 780;
+    font-weight: 750;
     cursor: pointer;
-    box-shadow: ${({ theme }) => theme.shadows.xs};
+    box-shadow: none;
     transition:
       transform ${({ theme }) => theme.transitions.fast},
       box-shadow ${({ theme }) => theme.transitions.base},
@@ -158,7 +158,7 @@ const GlobalStyle = createGlobalStyle`
     border-radius: ${({ theme }) => theme.radii.default};
     background: ${({ theme }) => theme.colors.elevated};
     color: ${({ theme }) => theme.colors.text};
-    box-shadow: inset 0 1px 1px rgba(13, 32, 52, .025);
+    box-shadow: inset 0 1px 1px rgba(25, 58, 40, .025);
     transition:
       border-color ${({ theme }) => theme.transitions.fast},
       box-shadow ${({ theme }) => theme.transitions.fast},
@@ -184,7 +184,7 @@ const GlobalStyle = createGlobalStyle`
   th {
     background: ${({ theme }) => theme.colors.surfaceAlt};
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-weight: 780;
+    font-weight: 750;
   }
   th, td { padding: 12px 14px; border-bottom: 1px solid ${({ theme }) => theme.colors.dividerSubtle}; }
   hr { border: 0; border-top: 1px solid ${({ theme }) => theme.colors.dividerSubtle}; }

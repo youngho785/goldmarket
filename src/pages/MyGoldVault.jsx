@@ -698,7 +698,7 @@ export default function MyGoldVault() {
     );
     try {
       saveGoldVaultGuestDraft(guestRawItems);
-      navigate("/login?next=%2Fmy-gold%3Fimport%3Dguest", {
+      navigate("/register?next=%2Fmy-gold%3Fimport%3Dguest", {
         state: {
           from: "/my-gold?import=guest",
           intent: "save-guest-my-gold",
@@ -798,7 +798,7 @@ export default function MyGoldVault() {
               vaultLoading
                 ? "MY GOLD 기록을 불러오고 있습니다."
                 : hasVaultContent && !ratesReady
-                  ? "기록은 확인되었습니다. 서버 환산 기준을 확인하고 있습니다."
+                  ? "기록을 불러왔어요. 계산에 필요한 정보를 확인하고 있어요."
                   : ratesReady && hasVaultContent && publicPriceEnabled
                     ? `${Number.isFinite(currentChange.percent) ? `이전 시세 대비 ${formatSignedWon(currentChange.amount)} · ` : ""}예상 순금 ${Number(activeSummary.pureGoldG || 0).toFixed(2)}g`
                     : "금 하나를 기록하면 오늘 참고가치와 변화가 이 작은 금빛에 이어집니다."
@@ -809,7 +809,7 @@ export default function MyGoldVault() {
           <HeroKicker>
             <Gem size={15} aria-hidden /> {isGuest ? "MY GOLD · 체험" : "MY GOLD"}
           </HeroKicker>
-          <HeroTitle id="my-vault-current-value-title">내 금의 예상 참고가치</HeroTitle>
+          <HeroTitle id="my-vault-current-value-title">내 금의 예상 가치</HeroTitle>
           <HeroAmount $empty={!vaultLoading && !hasVaultContent}>
             {vaultLoading
               ? "불러오는 중"
@@ -823,7 +823,7 @@ export default function MyGoldVault() {
           </HeroAmount>
           {!vaultLoading && ratesReady && hasVaultContent && publicPriceEnabled && (
             <HeroValueNote>
-              현재 적용 시세로 계산한 참고가치입니다. 실제 금액은 매장 실측 후 확정됩니다.
+              현재 시세로 계산한 예상 금액이에요.
             </HeroValueNote>
           )}
           {!vaultLoading && ratesReady && hasVaultContent && publicPriceEnabled && (
@@ -896,7 +896,7 @@ export default function MyGoldVault() {
           </HeroActions>
           {isGuest && (
             <GuestModeNote>
-              로그인 없이 MY GOLD를 체험할 수 있습니다. 실제 계정 저장과 푸시 알림은 로그인 후 연결됩니다.
+              가입 전 기록은 현재 기기에만 보관됩니다. 회원가입 또는 로그인 후 계정에 이어 저장할 수 있어요.
             </GuestModeNote>
           )}
           </VaultHero>
@@ -988,7 +988,7 @@ export default function MyGoldVault() {
             <GuestSaveCard aria-label="MY GOLD 가입 안내">
               <GuestSaveCopy>
                 <h2>오늘 확인한 내 금, 그대로 이어두세요.</h2>
-                <p>가입하면 지금 만든 MY GOLD 기록을 계속 확인하고, 내 금의 가치 변화를 이어볼 수 있습니다. 알림을 켜면 매주 MY GOLD의 변화도 받아볼 수 있습니다.</p>
+                <p>지금 만든 금 기록을 계정에 이어 저장하면, 다음에도 같은 기록과 가치 변화를 확인할 수 있어요. 필요할 때 알림도 설정할 수 있습니다.</p>
               </GuestSaveCopy>
               <GuestSaveAction type="button" onClick={saveGuestVaultToAccount}>
                 <Save aria-hidden /> 가입하고 이어두기 <ArrowRight aria-hidden />
@@ -1043,7 +1043,7 @@ export default function MyGoldVault() {
             <GuestSaveCard aria-label="MY GOLD 가입 안내">
               <GuestSaveCopy>
                 <h2>기록한 금, 그대로 이어두세요.</h2>
-                <p>가입하면 지금 만든 MY GOLD 기록을 계속 확인하고, 내 금의 가치 변화를 이어볼 수 있습니다. 알림을 켜면 매주 MY GOLD의 변화도 받아볼 수 있습니다.</p>
+                <p>지금 만든 금 기록을 계정에 이어 저장하면, 다음에도 같은 기록과 가치 변화를 확인할 수 있어요. 필요할 때 알림도 설정할 수 있습니다.</p>
               </GuestSaveCopy>
               <GuestSaveAction type="button" onClick={saveGuestVaultToAccount}>
                 <Save aria-hidden /> 가입하고 이어두기 <ArrowRight aria-hidden />
@@ -1123,12 +1123,10 @@ export default function MyGoldVault() {
         </ViewPanel>
       )}
 
-      <Notice>
-        {isGuest ? (
-          <>체험 중 입력한 금 기록은 <strong>가입 전까지 이 기기에만 임시 보관됩니다.</strong> MY GOLD는 <strong>실물 금을 보관·예치하는 서비스가 아닙니다.</strong> 기록한 금의 참고가치와 예상 순금량을 확인하는 개인 기록 공간이며, 실제 교환량은 매장 실측 후 확정됩니다.</>
-        ) : (
-          <>MY GOLD는 <strong>실물 금을 보관·예치하는 서비스가 아닙니다.</strong> 기록한 금의 참고가치와 예상 순금량을 확인하는 개인 기록 공간이며, 실제 교환량은 매장 실측 후 확정됩니다. <strong>MEMBER GOLD는 별도 회원혜택이며 MY GOLD 참고가치에는 합산하지 않습니다.</strong></>
-        )}
+      <Notice as="details">
+        <summary>금 기록·계산 안내</summary>
+        <p>MY GOLD는 내가 가지고 있는 금의 개인 기록입니다. 실물 금을 보관·예치하는 서비스가 아닙니다. 실제 금액은 매장 실측 후 확정됩니다.</p>
+        <p>{isGuest ? "가입 전 기록은 이 기기에만 임시 저장돼요." : "MEMBER GOLD는 별도 회원혜택이며 MY GOLD 예상 가치에 합산하지 않아요."}</p>
       </Notice>
 
       {formOpen && (

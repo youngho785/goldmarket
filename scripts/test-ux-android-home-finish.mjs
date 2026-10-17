@@ -41,8 +41,11 @@ test("MY GOLD 가치는 실측 금액으로 오인되지 않게 표시하고 회
 test("비회원 계산기는 결과 입력 전 큰 빈 카드와 비활성 저장 버튼을 숨긴다", () => {
   assert.match(calc, /\{canCalculate && \(\s*<Results/);
   assert.match(calc, /\{canCalculate && \(\s*<>[\s\S]*<Action type="button" onClick=\{continueToMyGold\}/);
-  assert.equal((calc.match(/\{\(\(!compact && !webLandingExperience\) \|\| entryMode === "unknown"\) && <HelpRow>/g) || []).length, 2);
-  assert.match(calc, /오늘 예상 참고가치/);
+  assert.equal((calc.match(/<CompactHelpToggle/g) || []).length, 1);
+  assert.ok(calc.indexOf("<CompactHelpToggle") > calc.indexOf("</Fields>"));
+  assert.equal((calc.match(/<UnknownGuide id=\{guideId\}/g) || []).length, 1);
+  assert.doesNotMatch(calc, /<HelpRow|stampHelpOpen|weightHelpOpen/);
+  assert.match(calc, /지금 예상 가치/);
   assert.doesNotMatch(calc, /<Action type="button" disabled=\{!canCalculate\}/);
   assert.doesNotMatch(calc, /setWeightValue\("[0-9]/);
 });

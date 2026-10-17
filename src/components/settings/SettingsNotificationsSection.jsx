@@ -860,16 +860,16 @@ export default function SettingsNotificationsSection({ user }) {
 
           if (token) {
             setNotificationPrefsMessage(
-              `${currentDeviceName}에서 광고성 정보 수신 앱푸시를 받도록 설정했습니다.`
+              `${currentDeviceName}에서 금시세·혜택 소식을 받을 수 있어요.`
             );
           } else {
             setNotificationPrefsError(
-              "광고성 정보 수신은 동의했지만 이 기기의 푸시 등록을 완료하지 못했습니다. 잠시 후 다시 시도해 주세요."
+              "소식 받기 동의는 저장했어요. 기기 연결은 잠시 후 다시 시도해 주세요."
             );
           }
         } else {
           setNotificationPrefsMessage(
-            "광고성 정보 수신(앱푸시)을 켰습니다."
+            "소식 받기 동의를 저장했어요. 이 기기에서 받으려면 알림도 허용해 주세요."
           );
         }
       } catch (error) {
@@ -943,7 +943,7 @@ export default function SettingsNotificationsSection({ user }) {
 
             if (!token) {
               setNotificationPrefsError(
-                "알림 권한은 허용됐지만 앱 푸시 등록을 완료하지 못했습니다."
+                "알림은 허용됐어요. 기기 연결을 다시 시도해 주세요."
               );
 
               return;
@@ -1098,7 +1098,7 @@ export default function SettingsNotificationsSection({ user }) {
             await refreshPushDiagnostics();
           } else {
             setNotificationPrefsError(
-              "알림 권한은 허용됐지만 푸시 등록을 완료하지 못했습니다."
+              "알림은 허용됐어요. 기기 연결을 다시 시도해 주세요."
             );
           }
         } else if (
@@ -1192,7 +1192,7 @@ export default function SettingsNotificationsSection({ user }) {
           );
 
           setNotificationPrefsMessage(
-            "광고성 정보 수신 앱푸시를 한국골드마켓 앱에서 받도록 변경했습니다."
+            "금시세·혜택 소식을 이 앱에서 받도록 바꿨어요."
           );
 
           await refreshPushDiagnostics();
@@ -1261,13 +1261,13 @@ export default function SettingsNotificationsSection({ user }) {
 
         if (!token) {
           setNotificationPrefsError(
-            "이 브라우저를 광고성 정보 수신 브라우저로 등록하지 못했습니다."
+            "이 브라우저에 소식을 연결하지 못했어요. 잠시 후 다시 시도해 주세요."
           );
           return;
         }
 
         setNotificationPrefsMessage(
-          `광고성 정보 수신 브라우저를 ${currentBrowserName}(으)로 변경했습니다.`
+          `금시세·혜택 소식을 ${currentBrowserName}에서 받도록 바꿨어요.`
         );
 
         await refreshPushDiagnostics();
@@ -1322,7 +1322,7 @@ export default function SettingsNotificationsSection({ user }) {
             );
 
             throw new Error(
-              "한국골드마켓 앱 알림이 차단되어 있습니다."
+              "이 앱의 알림이 꺼져 있어요."
             );
           }
 
@@ -1356,7 +1356,7 @@ export default function SettingsNotificationsSection({ user }) {
 
           if (!token) {
             throw new Error(
-              "현재 앱의 푸시 토큰을 등록하지 못했습니다. 네트워크 상태를 확인해 주세요."
+              "알림을 연결하지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요."
             );
           }
 
@@ -1440,7 +1440,7 @@ export default function SettingsNotificationsSection({ user }) {
 
         if (!token) {
           throw new Error(
-            "현재 기기의 푸시 토큰을 등록하지 못했습니다. 네트워크 상태를 확인해 주세요."
+            "알림을 연결하지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요."
           );
         }
 
@@ -1542,17 +1542,10 @@ export default function SettingsNotificationsSection({ user }) {
       </SectionTitle>
 
       <SectionDescription>
-        예약·교환 서비스 알림과 금시세·혜택 소식 수신을 따로 관리합니다.
-        기기 알림 권한과 광고성 정보 수신동의는 서로 다릅니다.
+        예약 소식과 금시세·혜택 소식을 여기서 관리할 수 있어요.
       </SectionDescription>
 
-      <Notice aria-label="알림 상태 한눈에 보기">
-        <strong>알림 상태 한눈에 보기</strong>
-        <span>이 기기 알림 권한: {notificationPermissionLabel(notificationPermission)}</span>
-        <span>금시세·혜택 소식: {notificationPrefsLoading ? "확인 중" : notificationPrefs.marketingNotificationsEnabled ? "선택 동의함" : "받지 않음"}</span>
-        <span>소식 수신 기기: {notificationPrefsLoading ? "확인 중" : notificationPrefs.marketingFcmToken ? (notificationPrefs.marketingFcmBrowser || "등록된 기기") : "지정 필요"}</span>
-        <span>알림 권한·설정·기기 등록이 완료되어도 실제 수신은 기기 환경에 따라 달라질 수 있습니다.</span>
-      </Notice>
+
 
       <Rows
         aria-busy={
@@ -1563,39 +1556,37 @@ export default function SettingsNotificationsSection({ user }) {
         <Row>
           <RowText>
             <strong>
-              예약·교환 진행 안내
+              예약·교환 소식
             </strong>
 
             <small>
-              예약 접수, 승인, 일정 변경,
-              진행 및 교환 완료 등 서비스
-              이용에 필요한 안내입니다.
+              예약부터 교환 완료까지, 진행 상황을 알려드려요.
             </small>
           </RowText>
 
           <Status $tone="ok">
-            자동 안내
+            기본 안내
           </Status>
         </Row>
 
-        <Row>
+        <Row $stackOnMobile>
           <RowText>
             <strong>
-              광고성 정보 수신(앱푸시)
+              금시세·혜택 소식
             </strong>
 
             <small>
-              금시세·주요 소식, 수신 조건에 따른 MY GOLD 주간 리포트와 이벤트·혜택을 안내합니다.
+              금시세와 회원혜택 소식을 받아보세요. 언제든 끌 수 있어요.
             </small>
 
             <em>
-              선택 동의 · 별도 혜택 지급 조건 충족 시 순금 0.01g 적립 가능
+              광고성 정보 수신 동의 (선택) · 조건 충족 시 순금 0.01g 혜택
             </em>
           </RowText>
 
           <Switch
             role="group"
-            aria-label="광고성 정보 수신 앱푸시 설정"
+            aria-label="금시세·혜택 소식 받기 · 광고성 정보 수신 동의 (선택)"
           >
             <SwitchOption
               type="button"
@@ -1619,7 +1610,7 @@ export default function SettingsNotificationsSection({ user }) {
                 true
               }
             >
-              ON
+              받기
             </SwitchOption>
 
             <SwitchOption
@@ -1644,7 +1635,7 @@ export default function SettingsNotificationsSection({ user }) {
                 true
               }
             >
-              OFF
+              받지 않기
             </SwitchOption>
           </Switch>
         </Row>
@@ -1656,19 +1647,18 @@ export default function SettingsNotificationsSection({ user }) {
           true && (
           <Notice aria-live="polite">
             <strong>
-              광고성 정보 수신 앱푸시를 받을 기기
+              소식을 받을 기기
             </strong>
 
             {notificationPrefs
               .marketingFcmToken ? (
               <span>
-                현재{" "}
                 <b>
                   {notificationPrefs
                     .marketingFcmBrowser ||
                     "선택한 기기"}
                 </b>
-                가 소식 수신 기기로 등록되어 있습니다.
+                에서 소식을 받도록 설정했어요.
               </span>
             ) : (
               <span>
@@ -1677,13 +1667,7 @@ export default function SettingsNotificationsSection({ user }) {
               </span>
             )}
 
-            {isCurrentMarketingDevice ? (
-              <span>
-                지금 사용 중인{" "}
-                {currentDeviceName}이
-                소식 수신 기기로 선택되어 있습니다.
-              </span>
-            ) : (
+            {isCurrentMarketingDevice ? null : (
               <Actions>
                 <Button
                   type="button"
@@ -1705,13 +1689,11 @@ export default function SettingsNotificationsSection({ user }) {
         "default" && (
         <Notice aria-live="polite">
           <strong>
-            휴대폰 알림 허용이 필요합니다.
+            예약 소식을 알림으로 받아볼까요?
           </strong>
 
           <span>
-            알림을 허용하면 예약·교환
-            진행 안내를 휴대폰 상단에서
-            확인할 수 있습니다.
+            이 기기에서 예약과 교환 소식을 확인할 수 있어요.
           </span>
 
           <Actions>
@@ -1735,8 +1717,8 @@ export default function SettingsNotificationsSection({ user }) {
         <Notice aria-live="polite">
           <strong>
             {isAndroid
-              ? "한국골드마켓 앱 알림이 차단되어 있습니다."
-              : "현재 브라우저에서 알림이 차단되어 있습니다."}
+              ? "이 앱의 알림이 꺼져 있어요."
+              : "이 브라우저의 알림이 꺼져 있어요."}
           </strong>
 
           <span>
@@ -1795,18 +1777,16 @@ export default function SettingsNotificationsSection({ user }) {
         "unsupported" && (
         <Notice aria-live="polite">
           <strong>
-            이 브라우저에서는 휴대폰
-            알림을 사용할 수 없습니다.
+            현재 환경에서는 알림을 지원하지 않아요.
           </strong>
 
           <span>
-            웹 알림을 지원하는
-            브라우저에서 다시 열어 주세요.
+            다른 기기나 브라우저에서 이용해 주세요.
           </span>
         </Notice>
       )}
 
-      <NotificationSummary aria-live="polite">
+      {notificationPermission === "granted" && <NotificationSummary aria-live="polite">
         <div>
           <strong>
             현재 알림 상태
@@ -1820,7 +1800,7 @@ export default function SettingsNotificationsSection({ user }) {
                 : notificationPermission ===
                     "denied"
                   ? isAndroid
-                    ? "한국골드마켓 앱 알림이 차단되어 있습니다."
+                    ? "이 앱의 알림이 꺼져 있어요."
                     : "브라우저에서 알림이 차단되어 있습니다."
                   : notificationPermission ===
                       "default"
@@ -1840,8 +1820,14 @@ export default function SettingsNotificationsSection({ user }) {
             ? "정상"
             : "확인 필요"}
         </Status>
-      </NotificationSummary>
+      </NotificationSummary>}
 
+
+
+      <TroubleshootDetails>
+        <summary>
+          알림이 오지 않을 때
+        </summary>
       <Actions
         style={{
           marginTop: 12,
@@ -1863,15 +1849,10 @@ export default function SettingsNotificationsSection({ user }) {
           />
 
           {pushTestSending
-            ? "시험 알림 보내는 중…"
-            : "시험 알림 보내기"}
+            ? "알림 보내는 중…"
+            : "알림 받아보기"}
         </OutlineButton>
       </Actions>
-
-      <TroubleshootDetails>
-        <summary>
-          알림이 오지 않나요? 문제 해결
-        </summary>
 
         <StatusGrid aria-label="현재 기기 알림 상태">
           <StatusItem>
@@ -1984,7 +1965,7 @@ export default function SettingsNotificationsSection({ user }) {
 
         <AdvancedDetails>
           <summary>
-            기술 정보 보기
+            고객지원용 정보 보기
           </summary>
 
           <AdvancedGrid>

@@ -5,8 +5,11 @@ display:flex; flex-direction:column; align-items:center; width:100%; padding:16p
 `;
 
 export const FlowHeader = styled.header`
-position:relative; width:100%; max-width:1080px; margin-bottom:26px; padding:12px 0 0; overflow:hidden;
-      border:0; border-radius:0; background:transparent; box-shadow:none;
+position:relative; width:100%; max-width:1080px; margin-bottom:26px; padding:25px 28px 20px; overflow:hidden;
+  border:1px solid color-mix(in srgb,var(--gm-gold) 25%,var(--gm-border));border-top:5px solid var(--gm-gold);border-radius:18px;
+  background:linear-gradient(125deg,color-mix(in srgb,var(--gm-gold-light) 65%,var(--gm-surface)) 0%,var(--gm-surface) 73%);
+  box-shadow:0 10px 30px rgba(73,51,23,.045);
+  @media(max-width:640px){padding:21px 18px 14px;}
 `;
 
 export const PageEyebrow = styled.p`
@@ -87,7 +90,7 @@ export const InfoCard = styled.div`
 
 export const Card = styled.div`
 position:relative; width:100%; max-width:1080px; margin-bottom:20px; padding:clamp(22px,4vw,40px); overflow:hidden;
-      border:1px solid var(--gm-border); border-radius:8px; background:var(--gm-surface); box-shadow:none;
+      border:1px solid var(--gm-border); border-radius:20px; background:var(--gm-surface); box-shadow:0 8px 22px rgba(27,53,43,.035);
       @media(max-width:640px) { padding:22px 18px; }
 `;
 
@@ -167,7 +170,7 @@ export const ExchangeOutcome = styled.div`
   margin: 8px 0 10px;
   padding: 12px;
   border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 30%, ${({ theme }) => theme.colors.border});
-  border-radius: 18px;
+  border-radius: 20px;
   background: linear-gradient(135deg, ${({ theme }) => theme.semantic.badgeGoldBg}, ${({ theme }) => theme.colors.surface});
 
   small {
@@ -205,10 +208,10 @@ export const ExchangeOutcome = styled.div`
 
 /** Step 2: give the user's estimated pure-gold weight visual priority. */
 export const ExchangePureGoldTotal = styled.div`
-  margin: 6px 0 8px;
-  padding: 11px 14px;
+  margin: 8px 0 15px;
+  padding: 21px 22px;
   border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.goldLight} 37%, transparent);
-  border-radius: 17px;
+  border-radius: 20px;
   background: ${({ theme }) => theme.gradients.primary};
   color: ${({ theme }) => theme.on.primary};
 
@@ -227,7 +230,7 @@ export const ExchangePureGoldTotal = styled.div`
     font-variant-numeric: tabular-nums;
   }
   .pure-gold-amount strong {
-    font-size: clamp(1.9rem, 6vw, 2.55rem);
+    font-size: clamp(2.15rem, 6.8vw, 3rem);
     line-height: 1.12;
     font-weight: 950;
     letter-spacing: -.035em;
@@ -300,13 +303,13 @@ export const MiniGoldBar = styled.div`
   min-width: 124px;
   padding: 12px 16px;
   border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.secondaryDark} 44%, transparent);
-  border-radius: 9px;
+  border-radius: 8px;
   background:
-    linear-gradient(115deg, rgba(255,255,255,.65), transparent 33%, rgba(255,245,194,.37) 57%, transparent 74%),
-    linear-gradient(145deg, #c59838, #ffe7a1 35%, #ddaa48 74%, #ac7724);
+    linear-gradient(112deg, rgba(255,255,255,.4), transparent 32%, rgba(255,245,207,.33) 63%, transparent 78%),
+    linear-gradient(145deg, #B8914F, #E7D09A 40%, #B99550 84%, #906A33);
   color: #432c0b;
   text-align: center;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.8), inset -3px -5px 8px rgba(118,78,21,.24), 0 5px 0 #a97524, 0 10px 22px rgba(126,88,23,.2);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.8), inset -3px -5px 8px rgba(118,78,21,.24), 0 4px 0 #a97524, 0 8px 16px rgba(126,88,23,.16);
 
   small { color: rgba(23,18,10,.68); font-size: 0.62rem; letter-spacing: .11em; }
   b { display: block; margin-top: 3px; font-size: .9rem; }
@@ -658,9 +661,9 @@ export const DenomTile = styled.button`
 export const PremiumDenomTile = styled(DenomTile)`
   isolation: isolate;
   overflow: hidden;
-  min-height: 158px;
-  border-radius: 15px;
-  padding: 9px 10px 10px;
+  min-height: 166px;
+  border-radius: 18px;
+  padding: 11px 12px 13px;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -673,8 +676,8 @@ export const PremiumDenomTile = styled(DenomTile)`
     ? theme.colors.secondaryDark
     : $recommended ? theme.colors.secondary : theme.colors.border};
   box-shadow: ${({ $active }) => $active
-    ? "0 7px 19px rgba(133, 95, 30, .14), inset 0 1px 0 rgba(255,255,255,.88)"
-    : "0 2px 9px rgba(27,25,22,.035)"};
+    ? "0 12px 24px rgba(133,95,30,.16), inset 0 1px 0 rgba(255,255,255,.6)"
+    : "0 2px 9px rgba(27,25,22,.025)"};
   transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
 
   &::after { display: none; }
@@ -734,7 +737,7 @@ export const PremiumDenomTile = styled(DenomTile)`
     transform: perspective(420px) rotateX(10deg);
     background:
       linear-gradient(120deg, rgba(255,255,255,.76) 0%, transparent 27%, rgba(255,251,219,.6) 45%, transparent 59%),
-      linear-gradient(143deg, #c29330 0%, #f7d888 18%, #ffe7a3 42%, #c18e29 78%, #9c6b19 100%);
+      linear-gradient(143deg, #B28B46 0%, #E2C887 18%, #F2DDA9 42%, #C29B54 78%, #9B773F 100%);
     border: 1px solid rgba(139,97,27,.75);
     box-shadow:
       inset 0 2px 2px rgba(255,255,255,.74),

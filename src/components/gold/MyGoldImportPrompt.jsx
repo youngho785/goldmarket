@@ -68,6 +68,28 @@ const Row = styled.div`
   }
 `;
 
+const MoreItems = styled.details`
+  margin-top: 10px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 11px;
+  background: ${({ theme }) => theme.colors.surface};
+  padding: 0 11px 11px;
+
+  summary {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    color: ${({ theme }) => theme.colors.link};
+    font-size: .9rem;
+    font-weight: 850;
+    cursor: pointer;
+  }
+  summary:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.primary};
+    outline-offset: 2px;
+  }
+`;
+
 const Note = styled.p`
   margin: 12px 0 0;
   color: ${({ theme }) => theme.colors.textSecondary};
@@ -210,13 +232,26 @@ export default function MyGoldImportPrompt({
       </Head>
 
       <List>
-        {items.map((item, index) => (
+        {items.slice(0, 3).map((item, index) => (
           <Row key={`${item.goldType}-${index}`}>
             <strong>{item.label || getGoldVaultTypeLabel(item.goldType)}</strong>
             <span>{formatWeight(item.weightG)}</span>
           </Row>
         ))}
       </List>
+      {items.length > 3 && (
+        <MoreItems>
+          <summary>나머지 {items.length - 3}개 기록 모두 보기</summary>
+          <List>
+            {items.slice(3).map((item, index) => (
+              <Row key={`${item.goldType}-${index + 3}`}>
+                <strong>{item.label || getGoldVaultTypeLabel(item.goldType)}</strong>
+                <span>{formatWeight(item.weightG)}</span>
+              </Row>
+            ))}
+          </List>
+        </MoreItems>
+      )}
 
       <Note>
         {fromGuestDemo

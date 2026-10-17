@@ -465,7 +465,7 @@ export default function MemberGold() {
           <UsageBox aria-live="polite">
             <strong>매장 확인 대기 · {Number(request.amountG || 0).toFixed(2)}g</strong>
             {request.visitDate && <span>{request.visitDate} {request.visitTime || ""}</span>}
-            <p>매장에서 아래 6자리 코드를 관리자에게 보여주세요.</p>
+            <p>방문할 때 아래 6자리 코드를 보여주세요.</p>
             {request.visitDate && eligibleMemberGoldGroups([{groupId: "pending", visitDate: request.visitDate, status: "requested"}]).length === 0 && (
               <Notice>방문일이 지난 신청입니다. 매장 관리자의 확인 또는 처리를 기다리고 있습니다. 혜택은 아직 차감되지 않았습니다.</Notice>
             )}
@@ -475,10 +475,10 @@ export default function MemberGold() {
             </SecondaryAction>
           </UsageBox>
         ) : availableBalanceG <= 0 ? (
-          <Notice>현재 사용할 수 있는 MEMBER GOLD가 없습니다. 회원혜택을 완료하면 순금이 적립됩니다.</Notice>
+          <Notice>참여할 수 있는 회원혜택을 아래에서 살펴보세요.</Notice>
         ) : eligibleGroups.length > 0 ? (
           <>
-            <Notice>오늘 이후 방문할 예약 중에서 선택하세요. MEMBER GOLD는 신청만으로 차감되지 않으며, 매장 실측·확정 시 사용됩니다.</Notice>
+            <Notice>혜택을 사용할 방문 예약을 골라주세요. 지금은 신청만 하고, 매장에서 교환을 확정할 때 차감해요.</Notice>
             <Select
               aria-label="MEMBER GOLD를 사용할 금교환 예약"
               value={effectiveSelectedGroupId}
@@ -517,7 +517,7 @@ export default function MemberGold() {
           <Lead>총 적립 잔액 {walletBalanceG.toFixed(2)}g 중 {Number(request.amountG || 0).toFixed(2)}g이 사용 신청 중입니다. 실제 차감은 매장에서 확정됩니다.</Lead>
         )}
         <Lead>
-          MY GOLD는 내가 가진 금의 기록, MEMBER GOLD는 교환에 적용할 수 있는 별도 혜택입니다. 실제 금교환 예약과 현장 확인을 거쳐 사용이 확정됩니다.
+          모아둔 혜택을 금교환에 사용해 보세요. 내 금 기록인 MY GOLD와는 별도로 관리해요.
         </Lead>
       </Hero>
 

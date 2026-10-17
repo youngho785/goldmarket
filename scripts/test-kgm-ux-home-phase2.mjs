@@ -10,10 +10,10 @@ const calculator = read('src/components/gold/QuickGoldValueCalculator.jsx');
 
 test('홈 계산기의 미리보기는 기존 데이터 계산 함수를 재사용', () => {
   assert.match(web, /onPreviewChange=\{setGoldPreview\}/);
-  assert.match(web, /MY GOLD · 저장 전 미리보기/);
-  assert.match(web, /아직 저장되지 않았습니다/);
+  assert.match(web, /\{goldPreview && <SaveNote aria-live="polite">/);
+  assert.match(web, /가입 전에는 이 기기에만 저장돼요/);
   assert.match(calculator, /onPreviewChange\(\{/);
-  assert.match(calculator, /saveGuestMyGoldItems\(\[item\]\)/);
+  assert.match(calculator, /appendGuestMyGoldItem\(item\)/);
 });
 
 test('운영 홈 정밀저울 이미지는 실제 포함된 자산 사용', () => {
@@ -21,10 +21,13 @@ test('운영 홈 정밀저울 이미지는 실제 포함된 자산 사용', () =
   assert.doesNotMatch(web, /gold-verification\.jpg/);
 });
 
-test('웹 신규회원은 기록 또는 먼저 계산 선택 가능', () => {
-  assert.match(home, /!myGoldDashboard\.itemsLoading && !hasMyGold/);
-  assert.match(home, /첫 금 기록하기/);
-  assert.match(home, /to="\/gold-value"/);
+test('웹 신규회원은 중복 카드 없이 MY GOLD 안에서 기록 또는 계산 선택', () => {
+  const dashboard = read('src/components/gold/AppMyGoldDashboard.jsx');
+  assert.doesNotMatch(home, /<FirstGoldStart/);
+  assert.match(home, /<AppMyGoldDashboard/);
+  assert.match(dashboard, /첫 금 기록/);
+  assert.match(dashboard, /먼저 금 가치 계산하기/);
+  assert.match(dashboard, /to="\/gold-value"/);
   assert.match(home, /\{hasMyGold && <HomePriorityActions \/>\}/);
 });
 

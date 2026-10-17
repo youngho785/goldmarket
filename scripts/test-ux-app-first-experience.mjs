@@ -67,6 +67,8 @@ test("첫 계산 결과는 기록과 교환으로 이어지되 기존 교환 입
 
 test("기존 웹 계산기 및 금교환 서버 로직은 수정하지 않는다", () => {
   assert.match(calc, /MY GOLD에 기록하기/);
-  assert.match(calc, /MY GOLD는 금 실물을 맡기는 보관 서비스가 아닙니다/);
+  const landing = read("src/pages/LandingPage.jsx");
+  assert.match(landing, /MY GOLD는 본인이 실제로 가지고 있는 금을 기록하는 개인 기록 기능입니다/);
+  assert.match(landing, /실물 금의 보관·예치·수탁 서비스가 아닙니다/);
   assert.equal(pkg.scripts["test:ux-app-first-experience"], "node scripts/test-ux-app-first-experience.mjs");
 });

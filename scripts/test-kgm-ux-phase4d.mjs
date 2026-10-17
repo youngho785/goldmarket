@@ -26,7 +26,8 @@ test('4-D: 예약 혜택 선택은 선택 사항이며 즉시 차감되지 않�
   assert.match(steps,/checked=\{useMemberGold\}/);
   assert.match(steps,/onChange=\{\(e\) => setUseMemberGold\(e\.target\.checked\)\}/);
   assert.match(steps,/선택하지 않아도 방문 예약은 가능합니다/);
-  assert.match(steps,/선택해도 지금 바로 차감되지 않습니다/);
+  assert.match(steps,/지금은 사용 신청만 해요/);
+  assert.match(steps,/아직 차감되지 않았습니다/);
   assert.match(steps,/aria-describedby="member-gold-usage-details"/);
   assert.match(steps,/id="member-gold-usage-details"/);
 });
@@ -67,7 +68,7 @@ test('4-D: 골드바/공임/예약 계층은 4-A~4-C 그대로 유지된다',()=
   assert.match(steps,/<PremiumDenomTile/);
   assert.match(steps,/<ReservationKeySummary aria-label="예약 전 중량 요약">/);
   assert.match(steps,/<ReservationFeeLine role="group"/);
-  assert.match(steps,/<ReservationScheduleStatus \$selected=\{!!dateKey && !!visitTime\}/);
+  assert.match(steps,/<ReservationScheduleStatus \$selected=\{!!visitTime\}/);
   assert.match(steps,/<ReservationNextSteps aria-label="금교환 이후 진행 절차">/);
   assert.match(steps,/<GoldExchangeTracker status=\{status\}/);
   if(exchange.includes("submitGoldExchangeGroup")) assert.match(exchange,/submitGoldExchangeGroup\(payload\)/);

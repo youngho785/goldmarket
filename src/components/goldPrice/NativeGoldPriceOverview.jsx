@@ -220,7 +220,7 @@ export default function NativeGoldPriceOverview({
       </AppPriceLinks>
       <AppPriceDisclaimer>
         실제 거래 금액은 매장 확인과 거래 시점에 따라 달라질 수 있습니다.
-        {isMember && <Link to="/settings">금시세 알림 설정</Link>}
+        {isMember && <Link to="/settings">금시세 소식 받기</Link>}
       </AppPriceDisclaimer>
       <DiscoveryCard aria-label="MEMBER GOLD 회원 혜택">
         <small>MEMBER GOLD · 회원 참여 혜택</small>
@@ -231,7 +231,7 @@ export default function NativeGoldPriceOverview({
             {isMember ? "내 혜택 확인" : "퀵퀴즈 참여"}<ArrowRight size={15} aria-hidden="true" />
           </Link>
           {isMember ? (
-            <Link className="secondary" to="/settings">금시세 알림 참여</Link>
+            <Link className="secondary" to="/settings">금시세 소식 받기</Link>
           ) : (
             <button
               ref={benefitTriggerRef}
@@ -241,7 +241,7 @@ export default function NativeGoldPriceOverview({
               aria-haspopup="dialog"
               aria-expanded={benefitOpen}
             >
-              가입 후 알림 혜택
+              회원혜택 알아보기
             </button>
           )}
         </div>
@@ -260,7 +260,7 @@ export default function NativeGoldPriceOverview({
             <div className="sheet-top">
               <div>
                 <div className="sheet-kicker">MY GOLD · 알림 혜택</div>
-                <h2 id="my-gold-benefits-title">내 금의 변화, 놓치지 마세요.</h2>
+                <h2 id="my-gold-benefits-title">내 금과 함께, 혜택도 모아보세요.</h2>
               </div>
               <button
                 type="button"
@@ -271,14 +271,12 @@ export default function NativeGoldPriceOverview({
               ><X size={22} aria-hidden="true" /></button>
             </div>
             <p className="sheet-lead" id="my-gold-benefits-lead">
-              MY GOLD에 금을 기록하면, 가치 변화를 확인하고 원하는 목표에 도달했을 때 알림을 받을 수 있어요.
+              금은 내 기록으로 남기고, 원하는 소식은 골라 받아보세요.
             </p>
             <ul className="sheet-services">
-              <li><strong>주요 금시세 변동 알림</strong><span>새 금시세가 공개될 때, 주요 시세 변동 소식을 받아볼 수 있어요.</span></li>
-              <li><strong>매주 내 금 소식</strong><span>지난주보다 내 금의 예상 가치가 얼마나 달라졌는지 알려드려요.</span></li>
-              <li><strong>원하는 금 가격 알림</strong><span>순금 1돈 가격이 설정한 상승·하락 가격에 도달하면 알려드려요.</span></li>
-              <li><strong>내 금 가치 알림</strong><span>기록한 금의 예상 가치가 설정 금액에 도달하면 알려드려요.</span></li>
-              <li><strong>골드바 교환 목표 알림</strong><span>원하는 골드바로 교환 가능한 예상 금량에 도달하면 알려드려요.</span></li>
+          <li><strong>금시세·혜택 소식</strong><span>선택 동의한 소식과 제공 조건에 맞는 주간 리포트를 받아보세요.</span></li>
+          <li><strong>내 금 목표 알림</strong><span>원하는 가격·가치·골드바 목표를 정해두세요.</span></li>
+          <li><strong>내 금 기록</strong><span>반지 하나부터 기록하고 가치 변화를 살펴보세요.</span></li>
             </ul>
             <div className="sheet-reward">
               <strong>회원가입하고 최대 순금 0.03g 혜택도 확인해 보세요.</strong>
@@ -288,12 +286,12 @@ export default function NativeGoldPriceOverview({
                 <li>금 퀵퀴즈 완료 · 0.01g</li>
               </ul>
             </div>
-            <p className="sheet-note">
+            <details className="sheet-note"><summary>혜택·소식 안내</summary><p>
               각 순금 혜택은 조건 충족 시 제공되며 MEMBER GOLD로 별도 관리됩니다.
               금시세 변동 소식은 시세 공개 시 관리자가 알림 발송을 선택한 경우에 전송됩니다.
               목표 가격 알림은 정기 점검 방식으로 실시간 알림이 아닙니다.
               알림 수신은 선택 사항이며 가입만으로 자동 동의되지 않습니다.
-            </p>
+            </p></details>
             <div className="sheet-actions">
               <Link
                 to={registerPath}

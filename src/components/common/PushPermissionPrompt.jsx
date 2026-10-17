@@ -104,13 +104,13 @@ export default function PushPermissionPrompt({
 
   const description =
     context === "exchange-complete"
-      ? "예약 접수·승인과 교환 완료 소식을 알려드려요."
-      : "중요한 소식과 진행 상황을 알려드려요.";
+      ? "예약이 확정되거나 교환이 끝나면 알려드려요."
+      : "예약과 교환 소식을 이 기기에서 받아보세요.";
 
   return (
     <div
       role="group"
-      aria-label="한국골드마켓 알림 받기"
+      aria-label="예약 소식 받아보기"
       style={{
         margin: variant === "inline" ? "18px 0 4px" : 0,
         padding: "16px",
@@ -123,7 +123,7 @@ export default function PushPermissionPrompt({
     >
       <div style={{ display: "grid", gap: 5 }}>
         <strong style={{ fontSize: 16, color: "var(--gm-primary)" }}>
-          한국골드마켓 알림 받기
+          예약 소식 받아보기
         </strong>
         <span
           style={{

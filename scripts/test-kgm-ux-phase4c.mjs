@@ -19,25 +19,26 @@ test('4-C 예약 요약: 받을 골드바·순금량·남는/부족한 금을 �
 test('4-C 예약 공임: 4-B 공유 공임표를 계속 사용하고 금액은 보조 정보로 배치', () => {
   assert.match(steps, /const feeSettings = useGoldBarFeeConfig\(\)/);
   assert.match(steps, /getGoldBarFeeEstimate\(\{[\s\S]*feeConfig: \{ fees: feeSettings\.fees \}/);
-  assert.match(steps, /예약 접수 시 서버에서 최신 공임을 다시 검증합니다/);
+  assert.match(exchange, /제작공임표를 확인 중입니다/);
+  assert.match(exchange, /feePolicyVersion: feeSettings\.version/);
   assert.match(styles, /export const ReservationFeeLine = styled\.div/);
   assert.match(exchange, /feePolicyVersion: feeSettings\.version/);
 });
 
 test('4-C 날짜/시간: 기존 가용 슬롯, 휴무일, 중복 예약 제약을 유지', () => {
-  assert.match(steps, /<ReservationScheduleStatus \$selected=\{!!dateKey && !!visitTime\}/);
-  assert.match(steps, /아직 예약 전/);
+  assert.match(steps, /<ReservationScheduleStatus \$selected=\{!!visitTime\}/);
+  assert.match(steps, /선택한 방문 일정/);
   assert.match(steps, /taken\.has\(t\)/);
   assert.match(steps, /availability\.blockedSlots\.has\(t\)/);
   assert.match(steps, /date\.getDay\(\) !== 0/);
-  assert.match(steps, /선택한 날짜·시간은 아직 확정되지 않았습니다/);
+  assert.match(steps, /아직 예약이 확정되거나 시간이 확보된 것은 아니에요/);
 });
 
 test('4-C 접수완료: 실시간 상태별 정확한 명칭과 다음 단계 제공', () => {
   for (const status of ['scheduled','in_progress','completed','canceled','rejected']) {
     assert.ok(steps.includes(`status === "${status}"`));
   }
-  assert.match(steps, /현재 상태 · 예약 확인 대기/);
+  assert.match(steps, /매장 확인 중/);
   assert.match(steps, /방문 예약 요청이 접수되었습니다/);
   assert.match(steps, /<ReservationNextSteps aria-label="금교환 이후 진행 절차">/);
   assert.match(steps, /고객 동의 후 교환/);
@@ -62,6 +63,6 @@ test('4-C 비즈니스 규칙 보호: 공임·순금 환산·예약 제출 API�
   if (exchange.includes('buildGoldBarPlan')) assert.match(exchange, /buildGoldBarPlan\(/);
   assert.match(steps, /memberGoldPending/);
   assert.match(steps, /privacyAccepted/);
-  assert.match(steps, /선택해도 지금(?: 바로)? 차감되지 않(?:으며|습니다)/);
+  assert.match(steps, /아직 차감되지 않았습니다/);
   assert.match(styles, /export const ReservationNextSteps = styled\.ol/);
 });

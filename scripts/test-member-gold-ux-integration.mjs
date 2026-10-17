@@ -41,7 +41,7 @@ test('MY GOLD import checks duplicates at the save boundary', () => {
 });
 test('MY GOLD alert explains already-met targets before saving', () => {
   assert.match(alert,/alreadyMetPriceTarget/);
-  assert.match(alert,/이미 입력한 목표 조건을 충족/);
+  assert.match(alert,/현재 시세가 이미 목표 가격에 닿았어요/);
 });
 test('MEMBER GOLD는 자동 만료하지 않으며 보유 잔액을 유지한다', () => {
   assert.doesNotMatch(member, /request\?\.status === "expired"/);

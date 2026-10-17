@@ -92,9 +92,40 @@ export async function applyGoldPriceCorrection(uid: string, data: PriceRow) {
 
 export async function publishDailyGoldPrice(uid: string, data: PriceRow, now = new Date()) {
   const today = koreaDay(now);
-  if (data.date !== today) throw new HttpsError('invalid-argument', '오늘 시세만 공개할 수 있습니다. 과거 날짜는 연쇄 보정을 이용하세요.');
+  const date = String(data.date || '');
+  if (!validDate(date) || date > today) throw new HttpsError('invalid-argument', '오늘 또는 과거의 올바른 날짜를 선택하세요.');
   const price = inputPrice(data.market);
   if (typeof data.enabled !== 'boolean' || typeof data.display14kSellPrice !== 'boolean') throw new HttpsError('invalid-argument', '표시 설정을 확인하세요.');
+  if (date < today) {
+    const auditRef = db().collection('goldPriceCorrectionAudit').doc();
+    return db().runTransaction(async transaction => {
+      const p = await planGoldPriceCorrection(date, price, transaction);
+      const effective = new Map(p.existing);
+      for (const row of p.rows) effective.set(row.sourceDate, row);
+      if (p.boundary) effective.set(p.stopDate!, p.boundary);
+      const missing = missingDailyRows(date, today, effective, p.prior);
+      const stamp = { updatedAt: FieldValue.serverTimestamp(), updatedBy: uid };
+      for (const row of [...p.rows, ...missing, ...(p.boundary ? [p.boundary] : [])]) {
+        transaction.set(db().doc('goldPriceHistory/' + row.sourceDate), {
+          ...row, ...stamp,
+          ...(row.sourceDate === date ? { publishedAt: FieldValue.serverTimestamp(), publishedBy: uid } : {}),
+        });
+      }
+      if (p.liveHistoryMissing && p.stopDate && p.current.data()?.sourceDate !== p.stopDate) {
+        transaction.set(db().doc('goldPriceHistory/' + p.current.data()!.sourceDate), p.current.data()!);
+      }
+      const final = missing.find(row => row.sourceDate === today) || effective.get(today);
+      if (final) transaction.set(db().doc('goldPrices/current'), { ...final, ...stamp });
+      transaction.set(db().doc('goldPricePublic/config'), {
+        enabled: data.enabled, display14kSellPrice: data.display14kSellPrice, ...stamp,
+      }, { merge: true });
+      transaction.set(auditRef, {
+        date, reason: '기준일 시세 저장', actorUid: uid, createdAt: FieldValue.serverTimestamp(), stopDate: p.stopDate,
+        changes: p.rows.map(row => ({ date: row.sourceDate, before: p.existing.get(row.sourceDate)?.market || null, after: row.market, kind: row.entryType })),
+      });
+      return { ok: true, count: p.rows.length, updatedCurrent: !p.stopDate };
+    });
+  }
   return db().runTransaction(async transaction => {
     const start = shiftDay(today, -365);
     const p = await readRange(start, today, transaction);

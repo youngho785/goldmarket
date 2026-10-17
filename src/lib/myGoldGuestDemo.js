@@ -97,15 +97,17 @@ function readStore() {
 }
 
 function writeStore(patch) {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined") return false;
   try {
     const current = readStore() || { version: VERSION };
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({ ...current, ...patch, version: VERSION, updatedAt: Date.now() })
     );
+    return true;
   } catch (error) {
     console.warn("[MY GOLD guest demo] local save failed:", error?.message || error);
+    return false;
   }
 }
 
@@ -121,10 +123,35 @@ export function readGuestMyGoldItems() {
   return [];
 }
 
+// Editing/removing from MY GOLD passes the *complete* collection to this function.
+// Quick calculator additions must use appendGuestMyGoldItem instead, so existing
+// customer records cannot be overwritten by a new calculation.
 export function saveGuestMyGoldItems(items) {
+  if (Array.isArray(items) && items.length > MAX_ITEMS) {
+    throw new Error(`MY GOLD 체험에는 최대 ${MAX_ITEMS}개까지 기록할 수 있습니다.`);
+  }
   const sanitized = sanitizeItems(items);
-  writeStore({ items: sanitized });
+  if (!writeStore({ items: sanitized })) {
+    throw new Error("MY GOLD 체험 기록을 저장하지 못했습니다. 브라우저 저장공간 설정을 확인해 주세요.");
+  }
   return sanitized;
+}
+
+export function appendGuestMyGoldItem(values) {
+  // Reject invalid input instead of reporting a successful but empty save.
+  const normalized = validateGoldVaultValues(values);
+  const previous = readSavedGuestMyGoldItems();
+  if (previous.length >= MAX_ITEMS) {
+    throw new Error(`MY GOLD 체험에는 최대 ${MAX_ITEMS}개까지 기록할 수 있습니다.`);
+  }
+  const newItem = { ...normalized, id: makeGuestId() };
+  const saved = saveGuestMyGoldItems([newItem, ...previous]);
+  // Browsers with blocked storage must never navigate as if a record was saved.
+  const persisted = readSavedGuestMyGoldItems();
+  if (persisted.length !== saved.length || persisted[0]?.id !== newItem.id) {
+    throw new Error("저장이 확인되지 않았습니다. 브라우저 저장공간을 확인한 뒤 다시 시도해 주세요.");
+  }
+  return persisted;
 }
 
 export function resetGuestMyGoldItems() {

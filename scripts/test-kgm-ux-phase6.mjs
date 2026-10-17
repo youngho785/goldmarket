@@ -39,7 +39,9 @@ test('Notification filters are independent buttons, and direct entry exits to a 
   assert.match(n,/markNotificationAsRead\(item\.id, uid\)/);
 });
 test('Exchange summary distinguishes request from confirmation, keeping original states/actions',()=>{
-  assert.match(x,/예약 요청은 곧 예약 확정이 아닙니다/);
+  assert.match(x,/requested: '예약 확인 대기'/);
+  assert.match(x,/scheduled: '예약 확정'/);
+  assert.match(x,/const EXCHANGE_PROGRESS_STEPS = \[/);
   assert.match(x,/이 교환건 문의하기/);
   assert.match(x,/<StatusFlow aria-label="교환 진행 단계">/);
   assert.match(x,/예약 취소/);

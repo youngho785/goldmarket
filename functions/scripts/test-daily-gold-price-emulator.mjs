@@ -23,6 +23,21 @@ const correct = async (key, amount) => {
 };
 try {
   await clear();
+  const saveAt = (date, amount) => publishDailyGoldPrice('test-admin', { date, market: price(amount), enabled: true, display14kSellPrice: false });
+  await saveAt(d(-44), 100);
+  await saveAt(d(-40), 120);
+  for (let n = -44; n < -40; n++) assert.equal((await get(history(d(n)))).market.pureGoldBuyPerDon, 100);
+  for (let n = -40; n <= 0; n++) assert.equal((await get(history(d(n)))).market.pureGoldBuyPerDon, 120);
+  await saveAt(d(-44), 90);
+  assert.equal((await get(history(d(-41)))).market.pureGoldBuyPerDon, 90);
+  assert.equal((await get(history(d(-40)))).previousMarket.pureGoldBuyPerDon, 90);
+  assert.equal((await get(live)).market.pureGoldBuyPerDon, 120);
+  await saveAt(d(-40), 130);
+  assert.equal((await get(live)).market.pureGoldBuyPerDon, 130);
+  await assert.rejects(saveAt(d(1), 140), e => e.code === 'invalid-argument');
+  console.log('PASS: single save historical dates, daily propagation, protected later change, same-date edit, future rejection');
+
+  await clear();
   const first = seed(d(-4), 100);
   await history(d(-4)).set(first);
   await live.set(first);

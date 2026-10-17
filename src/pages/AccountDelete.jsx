@@ -222,7 +222,7 @@ export default function AccountDelete() {
           <ul>
             <li>Firebase Authentication 회원 계정</li>
             <li>이름, 닉네임, 이메일, 휴대전화번호 등 회원 프로필 정보</li>
-            <li>FCM 푸시 토큰 및 계정에 연결된 기기·알림 정보</li>
+            <li>계정에 연결된 기기·알림 정보</li>
             <li>프로필 이미지 등 계정에 연결된 파일</li>
             <li>
               예약·교환 기록의 계정 식별정보

@@ -3,7 +3,7 @@ import LivingGoldCompanion from "@/components/common/LivingGoldCompanion";
 import { Link } from "react-router-dom";
 
 export const Page = styled.div`
---gold:#a88b53; --gold-bright:#dcc695; --gold-soft:#eee7d6; --ink:#252922; --ink-soft:#30362b; --cream:#f7f7f2; --line:#dee1d7;
+--gold:#AC8950; --gold-bright:#dcc695; --gold-soft:#F2EBDD; --ink:#29443C; --ink-soft:#355849; --cream:#FAF9F6; --line:#DFE6DF;
       width:100%; padding:12px 0 40px; color:var(--gm-text); background:transparent;
 `;
 
@@ -16,8 +16,10 @@ padding:0 0 20px;
 `;
 
 export const HeroCard = styled.div`
-position:relative; display:grid; grid-template-columns:1.15fr .85fr; min-height:340px; overflow:hidden; border:1px solid #343c2d;
-      border-radius:8px; background:#252b23; box-shadow:none;
+position:relative; display:grid; grid-template-columns:1.15fr .85fr; min-height:340px; overflow:hidden;
+  border:1px solid #DCCCAA; border-radius:22px;
+  background:linear-gradient(130deg,#F5EDDB 0%,#E8D7B5 68%,#D9C6A0 100%);
+  box-shadow:0 16px 40px rgba(98,80,49,.1);
       @media(max-width:760px) { display:block; min-height:270px; }
 `;
 
@@ -28,8 +30,8 @@ position:relative; z-index:2; display:flex; flex-direction:column; justify-conte
 
 export const Eyebrow = styled.div`
   margin-bottom: 7px;
-  color: var(--gold-bright);
-  font-size: 0.66rem;
+  color: #755322;
+  font-size: 0.7rem;
   font-weight: 900;
   letter-spacing: 0.16em;
 
@@ -41,11 +43,11 @@ export const Eyebrow = styled.div`
 `;
 
 export const HeroTitle = styled.h1`
-margin:0; color:#f2f0e6; font-family:inherit; font-size:clamp(28px,3vw,40px); font-weight:500; line-height:1.3; letter-spacing:-.055em;
+margin:0; color:#29443C; font-family:inherit; font-size:clamp(28px,3vw,40px); font-weight:500; line-height:1.3; letter-spacing:-.055em;
 `;
 
 export const HeroLead = styled.p`
-margin:12px 0 0; color:#bfc5b6; font-size:13px; line-height:1.8; max-width:440px;
+margin:12px 0 0; color:#46574C; font-size:13px; line-height:1.8; max-width:440px;
       @media(max-width:760px) { font-size:12px; max-width:270px; }
 `;
 
@@ -58,7 +60,7 @@ export const HeroPriceBlock = styled.div`
 `;
 
 export const PriceLabel = styled.div`
-  color: rgba(255, 255, 255, 0.72);
+  color: #506253;
   font-size: 0.75rem;
   font-weight: 800;
 
@@ -77,11 +79,11 @@ export const HeroPrice = styled.div`
 `;
 
 export const HeroPriceValue = styled.strong`
-color:#e6d7b0; font-family:inherit; font-size:clamp(38px,5.5vw,62px); font-weight:500; font-variant-numeric:tabular-nums; line-height:1.15; letter-spacing:-.055em;
+color:#213C32; font-family:inherit; font-size:clamp(38px,5.5vw,62px); font-weight:500; font-variant-numeric:tabular-nums; line-height:1.15; letter-spacing:-.055em;
 `;
 
 export const Won = styled.span`
-  color: #f2c45f;
+  color: #805C25;
   font-size: clamp(1.3rem, 3vw, 2rem);
   font-weight: 900;
 
@@ -98,10 +100,10 @@ export const ChangeLine = styled.div`
   margin-top: 9px;
   color: ${({ $direction }) =>
     $direction === "up"
-      ? "#ff6969"
+      ? "#AF343F"
       : $direction === "down"
-        ? "#68b7ff"
-        : "rgba(255,255,255,.68)"};
+        ? "#2C6185"
+        : "#4D5E52"};
   font-family: ${({ theme }) => theme.fonts.numeric};
   font-size: 0.86rem;
   font-weight: 850;
@@ -117,7 +119,7 @@ export const ChangeLine = styled.div`
 `;
 
 export const Source = styled.span`
-  color: rgba(255, 255, 255, 0.48);
+  color: #5B685D;
   font-size: 0.72rem;
   font-weight: 700;
 
@@ -126,10 +128,10 @@ export const Source = styled.span`
     align-items: center;
     margin-left: 2px;
     padding: 2px 6px;
-    border: 1px solid rgba(242, 196, 95, 0.28);
+    border: 1px solid rgba(122, 87, 39, 0.28);
     border-radius: 999px;
-    background: rgba(242, 196, 95, 0.1);
-    color: #f2c45f;
+    background: rgba(255, 249, 234, .64);
+    color: #694B20;
     font-size: 0.68rem;
     font-weight: 950;
     line-height: 1.2;
@@ -148,7 +150,8 @@ export const Source = styled.span`
 
 export const GoldVisual = styled.div`
 position:relative; z-index:1; min-height:100%; background:url('/images/kgm-editorial-gold.webp') center / cover;
-      &::after { content:''; position:absolute; inset:0; background:linear-gradient(90deg,#252b23,transparent 40%); }
+  mask-image:linear-gradient(90deg,transparent 0%,#000 22%);-webkit-mask-image:linear-gradient(90deg,transparent 0%,#000 22%);
+  &::after {content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(232,215,181,.15),rgba(44,33,17,.12));}
       @media(max-width:760px) { display:none; }
 `;
 

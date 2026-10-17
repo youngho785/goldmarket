@@ -16,7 +16,7 @@ const gateway = read('functions/src/index.ts');
 const homeActions = read('src/components/home/HomePriorityActions.jsx');
 
 test('웹 홈: 계산, 금시세, 교환으로 진입하는 경로가 모두 있다', () => {
-  assert.match(landing, /내 금 가치 확인하기/);
+  assert.match(landing, /내 금 가치 계산하기/);
   assert.match(landing, /id="landing-calculator"/);
   assert.match(landing, /<QuickGoldValueCalculator/);
   assert.match(landing, /<GoldPriceBoard compact \/>/);
@@ -27,13 +27,14 @@ test('웹 홈: 계산, 금시세, 교환으로 진입하는 경로가 모두 있
 test('웹 홈: 순금 실측·동의와 MY GOLD의 성격을 명시한다', () => {
   assert.match(landing, /고객 앞에서 순도·중량 확인/);
   assert.match(landing, /비용 안내와 고객 동의 후 교환/);
-  assert.match(landing, /보관하거나 예치받는 서비스가 아닙니다/);
+  assert.match(landing, /실물 금의 보관·예치·수탁 서비스가 아닙니다/);
   assert.match(landing, /오늘, 금의 기준/);
 });
 
-test('웹 홈: 실제로 참조하는 에디토리얼 이미지가 포함되어 있다', () => {
-  assert.match(landing, /\/images\/kgm-editorial-gold\.webp/);
-  assert.ok(existsSync(new URL('../public/images/kgm-editorial-gold.webp', import.meta.url)));
+test('웹 홈: 광고형 히어로 이미지 없이 첫 화면에 계산기를 노출한다', () => {
+  assert.match(landing, /<CalculatorSection aria-label=/);
+  assert.doesNotMatch(landing, /<HeroVisual>/);
+  assert.ok(existsSync(new URL('../public/images/kgm-editorial-gold.webp', import.meta.url))); // still used by GoldPrice styles
 });
 
 test('앱 홈: 비회원 계산과 회원 MY GOLD 우선 진입', () => {
@@ -56,14 +57,14 @@ test('금시세: 사용자 조회 날짜 표시, 공개 시세와 정산 금액 
 test('금교환: 부족 순금량·제작 공임·실측 확정 안내가 있다', () => {
   assert.match(exchange, /추가로 필요한 순금/);
   assert.match(exchange, /예상 제작 공임/);
-  assert.match(exchange, /부족한 순금의 비용과 추가 골드바 공임은 별도입니다/);
-  assert.match(exchange, /실측과 고객 동의 후 확정/);
+  assert.match(exchange, /부족한 금의 비용과 추가 골드바 공임은 별도예요/);
+  assert.match(exchange, /매장에서 확인하고 동의한 뒤 확정/);
   assert.match(exchange, /방문 예약 요청/);
 });
 
 test('예약: 선택만으로 시간 선점 또는 최종 확정하지 않는다', () => {
-  assert.match(exchange, /아직 예약 확정·시간 선점 상태는 아닙니다/);
-  assert.match(exchange, /예약 확인 대기/);
+  assert.match(exchange, /아직 예약이 확정되거나 시간이 확보된 것은 아니에요/);
+  assert.match(exchange, /매장 확인 중/);
   assert.match(exchange, /인증 중에도 시간은 선점되지 않으므로/);
 });
 

@@ -15,7 +15,12 @@ import {
 
 
 const Card = styled.section`
-position:relative; overflow:hidden; border:1px solid #404537; border-radius:10px; background:#252b23; color:#f4f3eb; box-shadow:none;
+position:relative; overflow:hidden; border:1px solid #355849; border-radius:24px;
+  background: radial-gradient(circle at 95% -10%, rgba(216,183,108,.23) 0, transparent 40%),
+    radial-gradient(circle at 5% 115%, rgba(110,165,133,.21) 0, transparent 48%),
+    linear-gradient(144deg,#2C5041 0%,#162D26 100%);
+  color:#f4f3eb; box-shadow:0 18px 42px rgba(21,47,36,.15);
+  &::after {content:"";position:absolute;width:240px;height:240px;right:-105px;top:-105px;border:1px solid rgba(227,199,141,.29);border-radius:50%;box-shadow:0 0 0 28px rgba(227,199,141,.05),0 0 0 57px rgba(227,199,141,.03);pointer-events:none;}
 `;
 
 const SummaryShell = styled.div`
@@ -30,8 +35,8 @@ const SummaryShell = styled.div`
 `;
 
 const SummaryCard = styled(Card)`
-display:block; height:100%; color:#f4f3eb; text-decoration:none; cursor:pointer; border-radius:10px; transition:border-color .2s;
-      &:hover { color:#f4f3eb; border-color:#a78e5c; } &:focus-visible { outline:2px solid var(--gm-gold); outline-offset:4px; }
+display:block; height:100%; color:#f4f3eb; text-decoration:none; cursor:pointer; border-radius:24px; transition:border-color .2s,transform .2s;
+      &:hover { color:#f4f3eb; border-color:#c8a868; transform:translateY(-2px); } &:focus-visible { outline:2px solid var(--gm-gold); outline-offset:4px; }
       @media(max-width:900px) { height:auto; }
 `;
 
@@ -42,7 +47,7 @@ const Inner = styled.div`
 `;
 
 const SummaryInner = styled(Inner)`
-position:relative; display:flex; min-height:282px; height:100%; flex-direction:column; padding:30px;
+position:relative; display:flex; min-height:286px; height:100%; flex-direction:column; padding:32px;
       @media(max-width:560px) { min-height:250px; padding:24px 22px; }
 `;
 
@@ -75,7 +80,7 @@ const Kicker = styled.div`
 `;
 
 const SummaryKicker = styled(Kicker)`
-min-height:28px; padding-left:34px; color:#d9d8c8; font-size:11px; font-weight:600; letter-spacing:.15em;
+min-height:28px; padding-left:34px; color:#d9d8c8; font-size:12px; font-weight:600; letter-spacing:.15em;
 `;
 
 const SummaryGoldCompanion = styled(LivingGoldCompanion)`
@@ -83,12 +88,12 @@ position:absolute; z-index:4; top:29px; left:25px; @media(max-width:560px) { top
 `;
 
 const Value = styled.strong`
-display:block; margin-top:24px; color:#f2eedf; font-family:inherit; font-variant-numeric:tabular-nums; font-size:clamp(29px,5.5vw,48px);
-      font-weight:500; line-height:1.15; letter-spacing:-.055em; overflow-wrap:anywhere;
+display:block; margin-top:24px; color:#f2eedf; font-family:inherit; font-variant-numeric:tabular-nums; font-size:clamp(31px,5.5vw,48px);
+      font-weight:600; line-height:1.15; letter-spacing:-.055em; overflow-wrap:anywhere;
 `;
 
 const ReferenceLabel = styled.span`
-display:block; margin-top:10px; color:#bcc2b4; font-size:11px; font-weight:400; line-height:1.7;
+display:block; margin-top:10px; color:#d4d8cc; font-size:13px; font-weight:400; line-height:1.7;
 `;
 
 const Change = styled.div`
@@ -136,8 +141,8 @@ const Change = styled.div`
 
 const SummaryMeta = styled.div`
 display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:auto; padding-top:20px;
-      border-top:1px solid #49503f; color:#b9c0ae; font-size:11px; font-weight:400;
-      strong { margin-left:5px; color:#edeedf; font-size:12px; font-weight:600; font-variant-numeric:tabular-nums; }
+      border-top:1px solid rgba(228,225,201,.3); color:#d4d8cc; font-size:13px; font-weight:400;
+      strong { margin-left:5px; color:#edeedf; font-size:13px; font-weight:600; font-variant-numeric:tabular-nums; }
       span:last-child { color:#d7c49a; white-space:nowrap; }
 `;
 
@@ -191,9 +196,26 @@ const EmptyTitle = styled.h1`
 const EmptyCopy = styled.p`
   margin: 6px 0 0;
   color: color-mix(in srgb, ${({ theme }) => theme.on.primary} 68%, transparent);
-  font-size: 0.7rem;
+  font-size: 0.86rem;
   line-height: 1.45;
   word-break: keep-all;
+`;
+
+const SecondaryEmptyAction = styled(Link)`
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 44px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  color: #ece7d9;
+  font-size: 0.86rem;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+
+  &:focus-visible { outline: 2px solid #e9c77b; outline-offset: 3px; }
 `;
 
 function useAnimatedMyGoldValue(targetValue, previousValue, enabled) {
@@ -316,7 +338,7 @@ export default function AppMyGoldDashboard({ user, dashboard, animateValue = fal
           </Kicker>
           <EmptyTitle id="app-my-gold-title">내 금, 지금 얼마일까요?</EmptyTitle>
           <EmptyCopy>
-            내가 실제로 가진 금의 종류와 중량을 기록해 현재 적용 시세 기준 참고가치를 확인합니다. 실물을 맡기는 서비스가 아닙니다.
+            가지고 있는 금 하나부터 기록해 보세요. 지금의 가치와 변화를 살펴볼 수 있어요.
           </EmptyCopy>
           <ActionRow>
             <PrimaryAction to="/my-gold?add=1">
@@ -355,14 +377,17 @@ export default function AppMyGoldDashboard({ user, dashboard, animateValue = fal
             />
             <span>MY GOLD</span>
           </Kicker>
-          <EmptyTitle>아직 기록한 금이 없습니다.</EmptyTitle>
+          <EmptyTitle>첫 금을 기록해 볼까요?</EmptyTitle>
           <EmptyCopy>
-            금 하나만 기록하면 현재 적용 시세 기준 참고가치와 변화를 확인할 수 있습니다. MY GOLD는 개인 금 기록 공간입니다.
+            반지 하나, 목걸이 하나부터 가볍게 시작해 보세요.
           </EmptyCopy>
           <ActionRow>
             <PrimaryAction to="/my-gold?add=1">
               <Plus aria-hidden /> 첫 금 기록
             </PrimaryAction>
+            <SecondaryEmptyAction to="/gold-value">
+              먼저 금 가치 계산하기
+            </SecondaryEmptyAction>
           </ActionRow>
         </Inner>
       </Card>
@@ -436,7 +461,7 @@ export default function AppMyGoldDashboard({ user, dashboard, animateValue = fal
         value={ratesReady && dashboard.publicPriceEnabled ? formatWon(totals.current) : undefined}
         description={
           !ratesReady
-            ? "서버 환산 기준을 확인하고 있어요."
+            ? "계산에 필요한 정보를 확인하고 있어요."
             : dashboard.publicPriceEnabled
               ? `${Number.isFinite(totals.percent) ? `이전 시세 대비 ${formatSignedWon(totals.amount)} · ` : ""}예상 순금 ${Number(dashboard.summary.pureGoldG || 0).toFixed(2)}g`
               : "현재 적용 시세 기준 MY GOLD 가치를 확인하고 있어요."

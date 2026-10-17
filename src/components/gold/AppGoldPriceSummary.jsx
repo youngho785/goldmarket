@@ -4,12 +4,17 @@ import styled from "styled-components";
 import { ArrowDownRight, ArrowUpRight, ChevronRight, Minus } from "lucide-react";
 
 const Card = styled(Link)`
-display:block; height:100%; overflow:hidden; border:1px solid var(--gm-border); border-radius:10px; background:var(--gm-surface);
-    color:var(--gm-text); text-decoration:none; box-shadow:none; &:hover { border-color:var(--gm-border-strong); }
+display:block; height:100%; overflow:hidden;
+  border:1px solid color-mix(in srgb,var(--gm-gold) 29%,var(--gm-border)); border-radius:24px;
+  background:linear-gradient(160deg,var(--gm-surface) 0%,color-mix(in srgb,var(--gm-gold-light) 54%,var(--gm-surface)) 100%);
+  color:var(--gm-text); text-decoration:none; box-shadow:0 14px 36px rgba(54,50,31,.065);
+  &:hover { border-color:var(--gm-gold); }
 `;
 
 const Inner = styled.div`
-display:grid; align-content:start; height:100%; padding:28px; @media(max-width:560px) { padding:22px; }
+display:grid; align-content:start; height:100%; padding:30px;
+  border-top:4px solid var(--gm-gold);
+  @media(max-width:560px) { padding:22px; }
 `;
 
 const Head = styled.div`
@@ -54,7 +59,7 @@ const Kind = styled.strong`
 `;
 
 const Price = styled.strong`
-color:var(--gm-primary); font-family:inherit; font-variant-numeric:tabular-nums; font-size:19px; font-weight:550; letter-spacing:-.04em; white-space:nowrap;
+color:var(--gm-primary); font-family:inherit; font-variant-numeric:tabular-nums; font-size:clamp(19px,2.5vw,23px); font-weight:720; letter-spacing:-.04em; white-space:nowrap;
 `;
 
 const Change = styled.span`

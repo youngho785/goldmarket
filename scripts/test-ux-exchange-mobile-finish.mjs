@@ -13,12 +13,12 @@ const reservation = steps.slice(steps.indexOf('export function ReserveStep'), st
 test('MY GOLD 불러오기 안내는 계산 단계에만 표시해 뒤 단계에서 반복되지 않는다', () => {
   assert.match(exchange, /fromVault && step === STEP\.CALC/);
   assert.match(exchange, /!showStartMethod && step === STEP\.CALC && \(\s*<EstimateBoundary>/);
-  assert.match(exchange, /실제 순도·중량·골드바 제작공임과 교환 조건/);
+  assert.match(exchange, /온라인 계산은 예상값이에요\. 실제 순도·중량과 비용은 매장에서 확인하고 동의한 뒤 확정해요/);
 });
 
 test('골드바 선택은 예상 순금·선택 중량·남는 금·제작 공임을 분리하고, 부족분을 공임과 혼동하지 않는다', () => {
   assert.match(bar, /내 금의 예상 순금량/);
-  assert.match(bar, /safeQty > 1/);
+  assert.doesNotMatch(bar, /safeQty > 1/); // Show total weight for one bar too
   assert.match(bar, /선택한 골드바 총중량/);
   assert.match(bar, /추가로 필요한 순금/);
   assert.match(bar, /예상 남는 순금/);
@@ -38,11 +38,11 @@ test('추가 골드바 자동 계산안은 참고로만 제시하고 별도 공�
 test('예약 화면은 실제 선택·잔여·공임과 요청/확정 차이를 안내하며 서버 처리 로직을 건드리지 않는다', () => {
   assert.match(reservation, /내 금 예상 순금/);
   assert.match(reservation, /difference < 0 \? "추가로 필요한 순금" : "예상 남는 순금"/);
-  assert.match(reservation, /부족한 순금의 비용과 추가 골드바 공임은 별도입니다/);
+  assert.match(reservation, /부족한 금의 비용과 추가 골드바 공임은 별도예요/);
   assert.match(reservation, /예상 제작 공임/);
   assert.match(reservation, /aria-label="MEMBER GOLD 혜택 사용 선택"/);
-  assert.match(reservation, /아직 예약 확정·시간 선점 상태는 아닙니다/);
-  assert.match(reservation, /예약 요청을 접수한 뒤 매장에서 확인합니다/);
+  assert.match(reservation, /아직 예약이 확정되거나 시간이 확보된 것은 아니에요/);
+  assert.match(reservation, /예약자 이름·연락처 확인과 개인정보 동의 후 예약 요청이 접수됩니다/);
   assert.match(reservation, /onSubmitReservation\(e\)/);
   assert.doesNotMatch(reservation, /addDoc\(|setDoc\(|updateDoc\(/);
 });

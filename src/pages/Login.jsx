@@ -397,8 +397,8 @@ export default function Login() {
         {(returningToExchange || returningToMyGold) && !mfaChallenge && (
           <AuthReturnNotice role="note">
             {returningToExchange
-              ? "로그인 후 이 기기에 남아 있는 계산·예약 정보를 다시 확인합니다. 임시 정보가 만료된 경우에는 재입력이 필요할 수 있습니다."
-              : "로그인 후 내 금 기록으로 돌아갑니다. 다른 기기에만 저장한 비회원 체험 기록은 자동으로 옮겨지지 않습니다."}
+              ? "이 기기에 남아 있는 계산·예약 정보를 이어가요. 임시 저장이 만료됐다면 다시 입력해 주세요."
+              : "로그인하면 내 금 기록으로 돌아가요. 다른 기기의 체험 기록은 그 기기에서 이어가 주세요."}
           </AuthReturnNotice>
         )}
 

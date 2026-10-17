@@ -394,7 +394,7 @@ export default function GoldPrice() {
         } else {
           setPushStatus("error");
           setMessage(
-            "이 기기에서 푸시 알림을 등록하지 못했습니다. 브라우저 알림 지원 여부를 확인해 주세요."
+            "이 기기에 알림을 연결하지 못했어요. 브라우저의 알림 설정을 확인해 주세요."
           );
         }
         return;
@@ -645,18 +645,18 @@ export default function GoldPrice() {
             <div>
               <SectionKicker>MY GOLD</SectionKicker>
               <SectionTitle id="gold-price-my-gold-title">
-                시세를 봤다면, 이제 내 금으로 계산해 보세요.
+                내 금은 지금 얼마일까요?
               </SectionTitle>
             </div>
             <SectionNote>
-              MY GOLD는 실물 금을 맡기는 서비스가 아니라 내가 가진 금을 기록해 참고가치와 변화를 확인하는 공간입니다.
+              종류와 무게로 예상 가치를 확인해 보세요.
             </SectionNote>
           </SectionHead>
 
           <QuickGoldValueCalculator
             source="gold-price"
             eyebrow="오늘 시세 · 내 금 계산"
-            title="내 금은 오늘 얼마일까요?"
+            title="금 종류와 무게를 알려주세요"
             description="금 종류와 중량을 입력하면 오늘 공개 시세를 기준으로 참고가치와 예상 순금량을 확인합니다."
             compact
           />
@@ -666,12 +666,10 @@ export default function GoldPrice() {
           <AlertCard>
             <div>
               <AlertTitle id="gold-price-alert-title">
-                금시세·혜택 소식, <em>설정한 기기로 받아보세요.</em>
+                금시세 소식, <em>편하게 받아보세요.</em>
               </AlertTitle>
               <AlertText>
-                선택 동의한 회원에게 금시세·주요 소식과 혜택을 안내합니다.
-                원하는 순금 가격 도달 알림은 MY GOLD에서 직접 설정할 수 있습니다.
-                주간 MY GOLD 리포트는 수신 조건에 따라 제공됩니다.
+                금시세와 혜택 소식을 선택해서 받아보세요. 원하는 목표 가격은 MY GOLD에서 따로 정할 수 있어요.
               </AlertText>
 
               <AlertBullets>
@@ -716,10 +714,10 @@ export default function GoldPrice() {
                   <>
                     <MainButton type="button" disabled>
                       <CheckCircle2 size={18} aria-hidden />
-                      금시세·혜택 알림 설정 완료
+                      소식 받기 설정 완료
                     </MainButton>
                     <SecondaryLink to="/settings">
-                      알림 설정 관리
+                      소식 받기 변경
                     </SecondaryLink>
                   </>
                 ) : (
@@ -730,12 +728,12 @@ export default function GoldPrice() {
                           <ConsentAccepted>
                             <CheckCircle2 size={16} aria-hidden />
                             <span>
-                              광고성 정보 수신동의가 확인되어 있습니다.
+                              광고성 소식 받기에 동의하셨어요.
                               {marketingNotificationsEnabled
                                 ? marketingFcmBrowser
                                   ? ` 현재 ${marketingFcmBrowser}로 알림을 받고 있습니다.`
-                                  : " 대표 수신 브라우저를 선택해 주세요."
-                                : " 아래 버튼을 누르면 금시세·소식·혜택 알림을 다시 활성화할 수 있습니다."}
+                                  : " 소식을 받을 기기를 골라주세요."
+                                : " 아래에서 소식 받기를 다시 켤 수 있어요."}
                             </span>
                           </ConsentAccepted>
                         ) : (
@@ -774,7 +772,7 @@ export default function GoldPrice() {
                           ? "알림 설정 중…"
                           : !isEmailVerified
                             ? "이메일 인증 후 금시세 알림 받기"
-                            : "금시세 알림 설정하기"}
+                            : "금시세 소식 받기"}
                     </MainButton>
 
                     {pushStatus === "denied" && (
@@ -786,8 +784,7 @@ export default function GoldPrice() {
 
                     {pushStatus === "unsupported" && (
                       <Status $error>
-                        현재 브라우저에서는 웹 푸시 알림을 사용할 수
-                        없습니다.
+                        이 브라우저는 알림을 지원하지 않아요. 다른 브라우저나 앱에서 이용해 주세요.
                       </Status>
                     )}
 
@@ -813,7 +810,7 @@ export default function GoldPrice() {
                   회원 혜택 <span>최대 순금 0.03g</span>
                 </RewardTitle>
                 <RewardLead>
-                  회원가입 · 퀵퀴즈 · 금시세 알림에 참여하며 순금 혜택을 이어가세요. 각 혜택은 지급 조건을 충족해야 하며, 알림 수신 설정만으로 지급이 확정되지는 않습니다.
+                  가입·퀴즈·소식 받기로 혜택을 모아보세요. 각 혜택은 지급 조건을 충족하면 적립돼요.
                 </RewardLead>
                 <RewardSummary aria-label="회원 혜택 구성">
                   <span>회원가입 <b>0.01g</b></span>

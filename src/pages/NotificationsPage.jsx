@@ -499,7 +499,7 @@ export default function NotificationsPage() {
         <EmptyState role="status">
           {hasMore
             ? "현재 불러온 목록에 해당 알림이 없습니다. 이전 알림도 확인해 보세요."
-            : filter === "all" ? "새로운 알림이 없습니다." : "이 종류의 알림이 없습니다."}
+            : filter === "all" ? "새 소식이 오면 여기에 모아둘게요." : "아직 이 종류의 소식은 없어요."}
         </EmptyState>
       ) : (
         <List>

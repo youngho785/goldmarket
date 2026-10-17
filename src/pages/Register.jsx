@@ -18,6 +18,8 @@ import {
   markGuestMyGoldAutoImportPending,
   prepareGuestMyGoldImportDraft,
 } from "@/lib/guestMyGoldAuthBridge";
+import { readSavedGuestMyGoldItems } from "@/lib/myGoldGuestDemo";
+import { readGoldVaultImportDraft } from "@/lib/goldVaultImportDraft";
 
 const REGISTER_FORM_KEY = "registerFormData";
 const CURRENT_CONSENT_VERSION = "terms-v2.0_privacy-v2.6";
@@ -248,6 +250,9 @@ export default function Register() {
   const returningToGuestMyGoldImport = returnTo.startsWith("/my-gold?import=guest");
   const returningToMyGold = returnTo === "/my-gold" || returnTo.startsWith("/my-gold?") || returnTo.startsWith("/my-gold/");
   const returningToExchange = returnTo.startsWith("/gold-exchange");
+  const guestRecordCount = returningToGuestMyGoldImport
+    ? (readSavedGuestMyGoldItems().length || readGoldVaultImportDraft("guest-my-gold")?.items?.length || 0)
+    : 0;
   const onboardingPath = buildMemberOnboardingPath(returnTo);
 
   const [email, setEmail] = useState(location.state?.email || "");
@@ -296,10 +301,10 @@ export default function Register() {
     if (returningToGuestMyGoldImport) {
       return {
         title: "지금 만든 MY GOLD를 이어두세요",
-        lead: "체험에서 기록한 금은 그대로 두고, 계정만 간단히 만들어 다음에도 이어서 확인할 수 있습니다.",
-        noticeTitle: "입력한 금 정보는 다시 묻지 않습니다",
-        noticeBody: "이메일 인증 후 지금 만든 금 이름·종류·중량·메모를 MY GOLD에 그대로 이어 저장합니다.",
-        button: "내 금 저장하고 시작하기",
+        lead: "지금 만든 금 기록을 계정에 이어두세요. 이메일 인증 후 MY GOLD에서 계속할 수 있습니다.",
+        noticeTitle: `이 기기에 기록한 금 ${guestRecordCount}개를 이어갑니다`,
+        noticeBody: "가입 전 기록은 인증 과정에도 이 기기에 보관됩니다. 인증 후 계정에 이어 저장하며, 기존 기록이 있으면 중복 여부를 먼저 확인합니다.",
+        button: "이메일 인증하고 내 금 이어가기",
       };
     }
     if (returningToMyGold) {
@@ -308,7 +313,7 @@ export default function Register() {
         lead: "이메일과 비밀번호로 계정을 만들고 이메일 인증까지 마치면 MY GOLD 기록을 계속 관리할 수 있습니다.",
         noticeTitle: "MY GOLD 흐름을 그대로 이어갑니다",
         noticeBody: "이메일 인증이 끝나면 가입 전에 하던 MY GOLD 화면으로 돌아가 그대로 이어집니다.",
-        button: "내 금 저장하고 시작하기",
+        button: "이메일 인증하고 MY GOLD 계속하기",
       };
     }
     if (returningToExchange) {
@@ -327,7 +332,7 @@ export default function Register() {
       noticeBody: "내 금을 기록하고 알림을 켜면 주요 금시세 변동과 MY GOLD의 주간 가치 변화를 받아볼 수 있습니다.",
       button: "간편하게 시작하기",
     };
-  }, [returningToExchange, returningToGuestMyGoldImport, returningToMyGold]);
+  }, [returningToExchange, returningToGuestMyGoldImport, returningToMyGold, guestRecordCount]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();

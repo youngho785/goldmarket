@@ -294,11 +294,15 @@ export const HeroExchangeAction = styled(Link)`
 export const GuestModeNote = styled.p`
   position: relative;
   z-index: 1;
-  margin: -2px 0 0;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 10px;
+  background: ${({ theme }) => theme.colors.surfaceAlt};
   color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: 0.62rem;
-  line-height: 1.45;
-  text-align: center;
+  font-size: .79rem;
+  line-height: 1.55;
+  text-align: left;
   word-break: keep-all;
 `;
 

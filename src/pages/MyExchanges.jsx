@@ -959,7 +959,7 @@ function ScheduleActions({ group }) {
         reason: reason.trim(),
       });
       setMode('');
-      setNotice('일정 변경 요청이 접수되었습니다. 관리자 확인 후 변경된 예약 확정 알림이 발송됩니다.');
+      setNotice('일정 변경을 요청했어요. 매장에서 확인하면 새 일정을 알려드려요.');
     } catch (submitError) {
       setError(
         submitError?.code === 'aborted'
@@ -1596,7 +1596,7 @@ export default function MyExchanges() {
     <Page>
       <PageHeader>
         <SectionTitle>금교환 기록</SectionTitle>
-        <HeaderLead>신청부터 방문·완료까지 금교환의 진행 상태와 결과를 한곳에서 기록합니다.</HeaderLead>
+        <HeaderLead>방문 일정과 교환 진행 상황을 확인하세요.</HeaderLead>
       </PageHeader>
       <FilterBar>
         {Object.entries(FILTER_LABEL).map(([key, label]) => (
@@ -1627,7 +1627,7 @@ export default function MyExchanges() {
     <Page>
       <PageHeader>
         <SectionTitle>금교환 기록</SectionTitle>
-        <HeaderLead>신청부터 방문·완료까지 금교환의 진행 상태와 결과를 한곳에서 기록합니다.</HeaderLead>
+        <HeaderLead>방문 일정과 교환 진행 상황을 확인하세요.</HeaderLead>
       </PageHeader>
       <EmptyState>
         <EmptyStateTitle>등록된 교환내역이 없습니다.</EmptyStateTitle>
@@ -1643,9 +1643,9 @@ export default function MyExchanges() {
     <Page>
       <PageHeader>
         <SectionTitle>금교환 기록</SectionTitle>
-        <HeaderLead>신청부터 방문·완료까지 금교환의 진행 상태와 결과를 한곳에서 기록합니다.</HeaderLead>
+        <HeaderLead>방문 일정과 교환 진행 상황을 확인하세요.</HeaderLead>
       </PageHeader>
-      <Help role="note">예약 요청은 곧 예약 확정이 아닙니다. 각 교환건을 펼치면 매장 확인 상태, 일정 변경·취소 및 해당 건 문의 방법을 확인할 수 있습니다.</Help>
+      <Help role="note">매장에서 확인하면 예약이 확정돼요. 각 내역을 펼치면 일정 변경·취소와 문의를 할 수 있어요.</Help>
 
       <LedgerSummary aria-label="금교환 진행 요약">
         <LedgerMetric><small>진행 중</small><strong>{!legacyMode && hasMore ? `${counts.active}+` : counts.active}</strong></LedgerMetric>

@@ -30,7 +30,7 @@ test('제작공임은 보조 영역으로 축소하되 사용자에게 숨기지
   assert.match(steps, /<ExchangeFeeNote role="group" aria-label="예상 제작 공임">/);
   assert.match(steps, /<strong>\{feeLabel\}<\/strong>/);
   assert.match(steps, /전체 공임표 보기/);
-  assert.match(steps, /추가로 필요한 금의 비용은 위 제작 공임에 포함되지 않습니다/);
+  assert.match(steps, /부족한 순금의 비용은 제작 공임과 별도입니다/);
   assert.match(styles, /export const ExchangeFeeNote/);
 });
 test('골드바 미리보기는 Android와 웹에 모두 남는다', () => {

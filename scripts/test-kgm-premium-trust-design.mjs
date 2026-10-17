@@ -9,7 +9,7 @@ test('Premium Trust: 홈의 신뢰 정보는 반복 카드 없이 노출하고 �
     read('src/pages/LandingPage.jsx'), read('src/pages/AppHome.jsx'),
     read('src/pages/AndroidHome.jsx'), read('src/components/common/TrustProofBar.jsx'),
   ]);
-  assert.match(landing, /실측·동의 후 최종 확정/);
+  assert.match(landing, /실제 순도·중량과 공임은 매장에서 확인하고 동의 후 확정합니다/);
   assert.match(landing, /고객 앞에서 현장 실측/);
   assert.doesNotMatch(landing, /<TrustProofBar(?: compact)?\s*\/>/);
   assert.match(web, /AppMyGoldDashboard/);
@@ -26,9 +26,9 @@ test('Premium Trust: 신뢰 메시지가 온라인 예상과 매장 확정을 �
     read('src/components/goldExchange/GoldExchangeSteps.jsx'),
     read('src/components/common/TrustProofBar.jsx'),
   ]);
-  assert.match(landing, /회원가입 없이 먼저 계산/);
-  assert.match(exchange, /온라인 화면은 예상값입니다/);
-  assert.match(steps, /방문 예약 요청/);
+  assert.match(landing, /회원가입 없이 계산/);
+  assert.match(exchange, /온라인 계산은 예상값이에요/);
+  assert.match(steps, /<Title>방문 예약 요청<\/Title>/);
   assert.match(proof, /온라인 계산은 참고값/);
   assert.doesNotMatch(proof, /100% 안전|무조건 보장|정부 인증|공식 금융기관/);
 });
@@ -40,9 +40,10 @@ test('Premium Trust: 프리미엄 테마·모바일·다크모드 분기 보존'
     read('src/components/common/BottomNav.jsx'),
   ]);
   assert.match(theme, /export const darkTheme/);
-  assert.match(theme, /small: "8px"/);
+  assert.match(theme, /small: "10px"/);
   assert.match(global, /prefers-reduced-motion: reduce/);
-  assert.match(global, /color-mix\(in srgb/);
+  assert.match(global, /--gm-gold:/);
+  assert.match(global, /padding-top: env\(safe-area-inset-top\)/);
   assert.match(proof, /max-width: 560px/);
   assert.match(bottom, /safe-area-inset-bottom/);
 });

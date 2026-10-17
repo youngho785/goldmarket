@@ -116,6 +116,9 @@ export const Row = styled.div`
   align-items: center;
   padding: 11px 0;
   border-bottom: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
+  @media (max-width: 520px) {
+    grid-template-columns: ${({ $stackOnMobile }) => $stackOnMobile ? "1fr" : "minmax(0, 1fr) auto"};
+  }
 `;
 
 export const RowText = styled.span`
@@ -144,11 +147,11 @@ export const RowText = styled.span`
 export const Switch = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
-  width: 92px;
-  height: 34px;
+  width: 180px;
+  min-height: 52px;
   padding: 3px;
   border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 999px;
+  border-radius: 8px;
   background: ${({ theme }) => theme.colors.surfaceAlt};
 `;
 
@@ -157,9 +160,11 @@ export const SwitchOption = styled.button`
   align-items: center;
   justify-content: center;
   min-width: 0;
-  padding: 0;
+  min-height: 44px;
+  padding: 0 10px;
+  white-space: nowrap;
   border: 0;
-  border-radius: 999px;
+  border-radius: 5px;
   background: ${({ $active, theme }) =>
     $active ? theme.colors.primary : "transparent"};
   color: ${({ $active, theme }) =>

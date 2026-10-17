@@ -102,21 +102,19 @@ export default function MemberBenefitsDialog({ open, onClose, triggerRef, regist
         <div className="top">
           <div>
             <span className="kicker">MY GOLD · 회원혜택</span>
-            <h2 id="web-member-benefits-title">내 금의 변화, 놓치지 마세요.</h2>
+            <h2 id="web-member-benefits-title">내 금과 함께, 혜택도 모아보세요.</h2>
           </div>
           <button ref={closeRef} type="button" className="close" aria-label="혜택 안내 닫기" onClick={onClose}>
             <X size={22} aria-hidden="true" />
           </button>
         </div>
         <p id="web-member-benefits-lead" className="lead">
-          MY GOLD에 금을 기록하면 가치 변화를 확인하고, 설정한 목표에 도달했을 때 알림을 받을 수 있어요.
+          금은 내 기록으로 남기고, 원하는 소식은 골라 받아보세요.
         </p>
         <ul className="services">
-          <li><strong>주요 금시세 변동 알림</strong><span>새 금시세가 공개될 때, 주요 시세 변동 소식을 받아볼 수 있어요.</span></li>
-          <li><strong>매주 내 금 소식</strong><span>지난주보다 내 금의 예상 가치가 얼마나 달라졌는지 알려드려요.</span></li>
-          <li><strong>원하는 금 가격 알림</strong><span>순금 1돈 가격이 설정한 상승·하락 가격에 도달하면 알려드려요.</span></li>
-          <li><strong>내 금 가치 알림</strong><span>기록한 금의 예상 가치가 설정 금액에 도달하면 알려드려요.</span></li>
-          <li><strong>골드바 교환 목표 알림</strong><span>원하는 골드바로 교환 가능한 예상 금량에 도달하면 알려드려요.</span></li>
+          <li><strong>금시세·혜택 소식</strong><span>선택 동의한 소식과 제공 조건에 맞는 주간 리포트를 받아보세요.</span></li>
+          <li><strong>내 금 목표 알림</strong><span>원하는 가격·가치·골드바 목표를 정해두세요.</span></li>
+          <li><strong>내 금 기록</strong><span>반지 하나부터 기록하고 가치 변화를 살펴보세요.</span></li>
         </ul>
         <div className="rewards">
           <strong>회원가입하고 최대 순금 0.03g 혜택도 확인해 보세요.</strong>
@@ -126,13 +124,13 @@ export default function MemberBenefitsDialog({ open, onClose, triggerRef, regist
             <li>금 퀵퀴즈 완료 · 0.01g</li>
           </ul>
         </div>
-        <p className="note">
+        <details className="note"><summary>혜택·소식 안내</summary><p>
           각 혜택은 조건 충족 시 제공되며 MEMBER GOLD로 별도 관리됩니다.
-          알림 혜택 0.01g은 수신 동의와 기기 푸시 등록 등 지급 조건을 충족해야 합니다.
+          알림 혜택 0.01g은 광고성 정보 수신 동의와 기기 연결 등 지급 조건 충족 시 적립됩니다.
           금시세 변동 소식은 관리자 시세 공개 시 알림 발송을 선택한 경우에 전송됩니다.
           목표 가격 알림은 정기 점검 방식으로 실시간 알림이 아닙니다.
           알림 수신은 선택 사항이며 회원가입만으로 자동 동의되지 않습니다.
-        </p>
+        </p></details>
         <div className="actions">
           <Link to={registerPath} state={{ intent: "member-benefit" }} onClick={onClose}>
             가입하고 혜택 시작하기

@@ -21,13 +21,15 @@ test("시작 화면은 직접 계산→정보 모름→기록 불러오기 순�
   assert.doesNotMatch(flow, /openGate|navigate|setDoc|updateDoc/);
 });
 
-test("골드바 결과의 핵심 세 항목을 규격 선택·상세 표보다 먼저 보여준다", () => {
+test("규격·수량 선택 다음에 하나의 실시간 예상 결과와 제작 공임을 보여준다", () => {
   const bar = section("export function BarStep", "/* ── Step 3:");
   const summaryAt = bar.indexOf('<ExchangeDecisionSummary');
   assert.ok(summaryAt > bar.indexOf('<ExchangeOutcome'));
+  assert.ok(bar.indexOf('<SubTitle>골드바 규격 선택') < bar.indexOf('id="bar-quantity"'));
+  assert.ok(bar.indexOf('id="bar-quantity"') < bar.indexOf('<ExchangeOutcome'));
   assert.ok(summaryAt < bar.indexOf('<details'));
-  assert.match(bar, /safeQty > 1/); // 총중량은 2개 이상 선택했을 때만 강조
-  assert.ok(summaryAt < bar.indexOf('<SubTitle>골드바 규격 선택'));
+  assert.equal((bar.match(/<ExchangeOutcome/g) || []).length, 1);
+  assert.equal((bar.match(/<ExchangeDecisionSummary/g) || []).length, 1);
   for (const copy of ["선택한 골드바 총중량", "추가로 필요한 순금", "예상 남는 순금", "예상 제작 공임"]) {
     assert.ok(bar.includes(copy), `${copy} missing`);
   }
@@ -40,7 +42,7 @@ test("예상 부족·잔여와 공임은 기존 계산식을 재사용하며 음
   assert.match(bar, /Math\.max\(0, totalGrams - selectedTotalG\)/);
   assert.match(bar, /feeEstimate\.totalFee == null/);
   assert.match(bar, /formatGoldBarFee\(feeEstimate\.totalFee\)/);
-  assert.match(bar, /매장 실측과 고객 동의 후 확정/);
+  assert.match(bar, /매장에서 확인하고 동의한 뒤 확정해요/);
   assert.doesNotMatch(bar, /updateDoc|addDoc|runTransaction|setDoc/);
 });
 

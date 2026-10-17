@@ -29,6 +29,8 @@ import {
   getGuestMyGoldAuthReturnPath,
   prepareGuestMyGoldImportDraft,
 } from "@/lib/guestMyGoldAuthBridge";
+import { readSavedGuestMyGoldItems } from "@/lib/myGoldGuestDemo";
+import { readGoldVaultImportDraft } from "@/lib/goldVaultImportDraft";
 import {
   clearPendingQuizBonus,
   readPendingQuizBonus,
@@ -280,10 +282,43 @@ const WelcomeRewardCard = styled.section`
   border-radius: 14px;
   background: ${({ theme }) => theme.semantic.badgeGoldBg};
 
-  small { color: ${({ theme }) => theme.colors.secondaryDark}; font-size: .77rem; font-weight: 850; }
+  small { color: ${({ theme }) => theme.colors.secondaryDark}; font-size: .84rem; font-weight: 850; }
   strong { color: ${({ theme }) => theme.colors.primary}; font-size: clamp(1.1rem, 3.8vw, 1.38rem); line-height: 1.4; }
-  p { color: ${({ theme }) => theme.colors.textSecondary}; font-size: .8rem; line-height: 1.55; margin: 0; }
+  p { color: ${({ theme }) => theme.colors.textSecondary}; font-size: .875rem; line-height: 1.55; margin: 0; }
 `;
+const RewardMilestones = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 10px 0 5px;
+
+  @media (max-width: 380px) {
+    gap: 5px;
+  }
+`;
+
+const RewardMilestone = styled.div`
+  min-width: 0;
+  padding: 11px 7px;
+  border: 1px solid ${({ $done, theme }) => $done
+    ? theme.colors.secondary
+    : theme.colors.border};
+  border-radius: 10px;
+  background: ${({ $done, theme }) => $done
+    ? theme.semantic.alertSuccessBg
+    : theme.colors.surface};
+  text-align: center;
+
+  span, b, small {
+    display: block;
+    overflow-wrap: anywhere;
+  }
+
+  span { font-size: .84rem; font-weight: 800; color: ${({ theme }) => theme.colors.textSecondary}; }
+  b { margin-top: 3px; font-size: 1.06rem; color: ${({ theme }) => theme.colors.primary}; }
+  small { margin-top: 3px; font-size: .82rem; font-weight: 750; color: ${({ theme }) => theme.colors.textSecondary}; }
+`;
+
 const ContinueCard = styled.section`
   margin-top: 14px;
   padding: 16px;
@@ -359,6 +394,11 @@ export default function WelcomeOnboarding() {
     () => `/welcome?next=${encodeURIComponent(nextPath)}`,
     [nextPath]
   );
+  const guestRecordCount = useMemo(() => {
+    if (!nextPath.startsWith("/my-gold?import=guest")) return 0;
+    return readSavedGuestMyGoldItems().length ||
+      readGoldVaultImportDraft("guest-my-gold")?.items?.length || 0;
+  }, [nextPath]);
 
   useEffect(() => {
     if (!user?.uid || isEmailVerified) return;
@@ -373,6 +413,7 @@ export default function WelcomeOnboarding() {
   const [marketingBusy, setMarketingBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [continueError, setContinueError] = useState("");
 
   const refreshStatus = useCallback(async () => {
     if (!user?.uid) return null;
@@ -521,12 +562,20 @@ export default function WelcomeOnboarding() {
   };
 
   const handleFinish = () => {
+    setContinueError("");
     if (nextPath.startsWith("/my-gold?import=guest")) {
       try {
-        prepareGuestMyGoldImportDraft();
+        // Keep the guest record intact. The account write occurs only on the
+        // MY GOLD screen and never on this onboarding page.
+        const prepared = prepareGuestMyGoldImportDraft();
+        const draft = readGoldVaultImportDraft("guest-my-gold");
+        if (!prepared && !draft?.items?.length) {
+          setContinueError("이어갈 금 기록을 찾지 못했습니다. MY GOLD에서 기록을 확인해 주세요.");
+          return;
+        }
       } catch (draftError) {
         console.warn("[WelcomeOnboarding] guest MY GOLD draft save failed:", draftError?.message || draftError);
-        setError("가입 전에 기록한 MY GOLD를 이어갈 준비를 하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+        setContinueError("기록을 이어갈 준비를 하지 못했습니다. 이 기기의 MY GOLD 기록을 확인하고 다시 시도해 주세요.");
         return;
       }
     }
@@ -567,6 +616,8 @@ export default function WelcomeOnboarding() {
   const hasRequestedFlow = nextPath !== "/";
   const finishLabel = nextPath.startsWith("/gold-exchange")
     ? "계산·예약 계속하기"
+    : nextPath.startsWith("/my-gold?import=guest") && guestRecordCount > 0
+      ? `기록한 금 ${guestRecordCount}개 이어가기`
     : nextPath.startsWith("/my-gold")
       ? "MY GOLD 계속하기"
       : nextPath.startsWith("/profile")
@@ -575,6 +626,8 @@ export default function WelcomeOnboarding() {
 
   const finishDescription = nextPath.startsWith("/gold-exchange")
     ? "가입 전 예약 화면으로 돌아갑니다. 계산·일정은 같은 브라우저에서 최대 2시간 동안 불러올 수 있으며, 만료되면 다시 입력해야 할 수 있습니다."
+    : nextPath.startsWith("/my-gold?import=guest")
+      ? `현재 기기에 있는 금 ${guestRecordCount}개를 계정으로 이어갑니다. 기존 기록이 있으면 중복 여부를 확인한 뒤 저장합니다.`
     : nextPath.startsWith("/my-gold")
       ? "가입 전에 기록하거나 계산한 내 금 흐름을 그대로 이어갑니다."
       : "집에 있는 금 하나를 기록하면 오늘 가치와 이후의 변화를 계속 확인할 수 있습니다.";
@@ -595,10 +648,28 @@ export default function WelcomeOnboarding() {
         </Lead>
       </Hero>
 
-      <WelcomeRewardCard aria-label="기본 회원가입 혜택">
+      <WelcomeRewardCard aria-label="신규 회원 최대 순금 혜택">
         <small>기본 혜택 · 인증 이메일 기준 1회</small>
-        <strong aria-live="polite">{welcomeRewardLabel}</strong>
-        <p>회원혜택(MEMBER GOLD)은 내가 기록한 MY GOLD와 별도로 관리됩니다. 적립 여부는 서버에서 확인한 실제 기록에 따라 표시합니다.</p>
+        <strong>신규 회원 최대 순금 0.03g</strong>
+        <RewardMilestones aria-label="혜택 3단계 진행 현황">
+          <RewardMilestone $done={status.welcome.claimed}>
+            <span>이메일 인증</span>
+            <b>0.01g</b>
+            <small>{loading ? "확인 중" : status.welcome.previouslyReceived ? "기지급" : status.welcome.claimed ? "지급 확인" : "확인 필요"}</small>
+          </RewardMilestone>
+          <RewardMilestone $done={status.marketingPush.claimed}>
+            <span>알림 설정</span>
+            <b>+0.01g</b>
+            <small>{loading ? "확인 중" : status.marketingPush.claimed ? "지급 확인" : "선택 혜택"}</small>
+          </RewardMilestone>
+          <RewardMilestone $done={status.quiz.claimed}>
+            <span>금 퀵퀴즈</span>
+            <b>+0.01g</b>
+            <small>{loading ? "확인 중" : status.quiz.claimed ? "지급 확인" : "선택 혜택"}</small>
+          </RewardMilestone>
+        </RewardMilestones>
+        <p aria-live="polite">기본 혜택: {welcomeRewardLabel}. 알림과 퀴즈는 아래에서 선택할 수 있어요.</p>
+        <p>가입 혜택은 MEMBER GOLD에서 확인할 수 있어요. 내 금 기록과는 별도로 관리해요.</p>
       </WelcomeRewardCard>
 
       <ContinueCard aria-label="가입 후 다음 행동">
@@ -608,6 +679,7 @@ export default function WelcomeOnboarding() {
           {finishLabel}
           <ChevronRight />
         </ActionButton>
+        {continueError && <Message $error role="alert">{continueError}</Message>}
       </ContinueCard>
 
       <ProgressText>
@@ -635,8 +707,7 @@ export default function WelcomeOnboarding() {
               </b>
             </StepTop>
             <StepDescription>
-              주요 금시세 소식과 회원혜택 알림을 받을 수 있습니다. MY GOLD 주간 리포트는 제공 조건을 충족한 경우 발송됩니다.
-              이 항목은 선택이며, MY GOLD 목표 도달 같은 서비스 알림과는 별도로 운영됩니다.
+              금시세와 회원혜택 소식을 받아보세요. 광고성 정보 수신 동의는 선택이며, 내 금 목표 알림과는 별개예요. 주간 리포트는 제공 조건을 충족한 경우 보내드려요.
             </StepDescription>
 
             {!status.marketingPush.claimed && (
@@ -649,7 +720,7 @@ export default function WelcomeOnboarding() {
                   <BellRing />
                   {marketingBusy
                     ? "알림 설정 중…"
-                    : "알림 받고 순금 0.01g 혜택 받기"}
+                    : "소식 받기 · 조건 충족 시 순금 0.01g"}
                 </ActionButton>
               </>
             )}
@@ -699,7 +770,7 @@ export default function WelcomeOnboarding() {
         <RewardCompletion role="status" aria-live="polite" aria-label="선택 혜택 완료">
           <strong>선택 혜택 2개를 모두 완료했습니다!</strong>
           <p>
-            알림 설정과 퀵퀴즈 혜택의 지급 상태를 서버에서 확인했습니다.
+            선택한 혜택을 모두 확인했어요.
             현재 MEMBER GOLD 잔액은 순금 {status.balanceG.toFixed(2)}g입니다.
             이전에 받은 혜택은 다시 지급되지 않습니다.
           </p>

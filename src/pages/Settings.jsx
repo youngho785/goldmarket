@@ -588,7 +588,7 @@ export default function Settings() {
 
           <DetailsBody>
             <DangerNote>
-              탈퇴 시 Firebase 인증 계정,
+              탈퇴 시 로그인 계정,
               알림, 프로필 사진은 삭제됩니다.
               진행 중인 예약·교환 또는 미완료
               처리가 있는 경우에는 탈퇴할 수

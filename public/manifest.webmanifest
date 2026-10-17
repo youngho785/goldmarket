@@ -5,8 +5,8 @@
   "start_url": "/",
   "scope": "/",
   "display": "browser",
-  "background_color": "#F5F1E8",
-  "theme_color": "#0D2034",
+  "background_color": "#FAF9F6",
+  "theme_color": "#29443C",
   "description": "보유한 금의 예상 순금 중량을 확인하고 원일귀금속 매장에서 999.9 골드바로 교환하는 서비스",
   "icons": [
     {

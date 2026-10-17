@@ -22,11 +22,11 @@ import { db } from "@/firebase/firebase";
 
 // KGM_EXPERIENCE_FIRST_FINAL · member-first MY GOLD summary
 const Page = styled.div`
-display:grid; gap:24px; width:min(1200px,100%); margin:0 auto; padding:16px 0 30px;
+display:grid; gap:25px; width:min(1200px,100%); margin:0 auto; padding:26px 0 48px;
 `;
 
 const OverviewGrid = styled.section`
-display:grid; grid-template-columns:minmax(0,1.6fr) minmax(300px,1fr); gap:24px; align-items:stretch;
+display:grid; grid-template-columns:minmax(0,1.6fr) minmax(300px,1fr); gap:20px; align-items:stretch;
       > * { min-width:0; } @media(max-width:900px) { grid-template-columns:1fr; gap:18px; }
 `;
 
@@ -38,7 +38,7 @@ const ReservationCard = styled(Link)`
   min-height: 66px;
   padding: 10px 13px;
   border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 20%, ${({ theme }) => theme.colors.border});
-  border-radius: 16px;
+  border-radius: 18px;
   background: ${({ theme }) => theme.semantic.badgeGoldBg};
   color: ${({ theme }) => theme.colors.text};
   text-decoration: none;
@@ -77,28 +77,11 @@ const ReservationCopy = styled.div`
 `;
 
 
-const FirstGoldStart = styled.section`
-  display: grid;
-  gap: 8px;
-  padding: 18px 20px;
-  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 24%, ${({ theme }) => theme.colors.border});
-  border-radius: 16px;
-  background: ${({ theme }) => theme.semantic.badgeGoldBg};
-  > strong { font-size: 1.03rem; font-weight: 950; color: ${({ theme }) => theme.colors.primary}; }
-  p { margin: 0; font-size: .83rem; line-height: 1.55; color: ${({ theme }) => theme.colors.textSecondary}; }
-  > div { display: flex; gap: 9px; flex-wrap: wrap; margin-top: 5px; }
-  a { display: inline-flex; align-items: center; min-height: 42px; padding: 9px 13px;
-    border-radius: 10px; font-size: .82rem; font-weight: 900; text-decoration: none;
-    border: 1px solid ${({ theme }) => theme.colors.primary}; }
-  a:first-child { background: ${({ theme }) => theme.colors.primary}; color: ${({ theme }) => theme.on.primary}; }
-  a:last-child { background: ${({ theme }) => theme.colors.surface}; color: ${({ theme }) => theme.colors.primary}; }
-  a:focus-visible { outline: 2px solid ${({ theme }) => theme.colors.secondary}; outline-offset: 2px; }
-`;
 
 const QuickGrid = styled.section`
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 9px;
+  gap: 12px;
 
   @media (max-width: 720px) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -110,11 +93,15 @@ const QuickLink = styled(Link)`
   grid-template-columns: 32px minmax(0, 1fr);
   gap: 8px;
   align-items: center;
-  min-height: 62px;
-  padding: 9px 10px;
+  min-height: 74px;
+  padding: 12px 14px;
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 15px;
   background: ${({ theme }) => theme.colors.surface};
+  box-shadow: 0 5px 18px rgba(28,46,35,.04);
+  transition: transform .18s ease, border-color .18s ease;
+  &:hover { transform: translateY(-2px); border-color: ${({ theme }) => theme.colors.secondary}; }
+  &:focus-visible {outline:3px solid ${({ theme }) => theme.colors.secondary};outline-offset:3px; }
   color: ${({ theme }) => theme.colors.primary};
   text-decoration: none;
 
@@ -266,16 +253,6 @@ export default function AppHome() {
         />
       </OverviewGrid>
 
-      {user?.uid && !myGoldDashboard.itemsLoading && !hasMyGold && (
-        <FirstGoldStart aria-label="처음 사용하는 MY GOLD 안내">
-          <strong>내 금 하나부터 기록해 보세요.</strong>
-          <p>금 종류와 중량을 기록하면 예상 가치와 변화를 확인할 수 있습니다. 회원 혜택인 MEMBER GOLD는 별도로 관리됩니다.</p>
-          <div>
-            <Link to="/my-gold/items?add=1">첫 금 기록하기</Link>
-            <Link to="/gold-value">먼저 금 가치 계산하기</Link>
-          </div>
-        </FirstGoldStart>
-      )}
 
       {hasMyGold && <HomePriorityActions />}
 

@@ -353,89 +353,8 @@ export function BarStep({
         <small>1돈 = 3.75g · 매장 실측 후 최종 확정</small>
       </ExchangePureGoldTotal>
 
-      <ExchangeOutcome $native={isNative} aria-label="예상 금교환 결과">
-        <div>
-          <small>내 금 → 999.9 골드바 예상 · 온라인 안내</small>
-          <strong>{selectedBar.label} × {safeQty}개</strong>
-          {safeQty > 1 && (
-            <p>선택한 골드바 총중량 {fmtG(selectedTotalG)}g ({fmtD(selectedTotalG / DON_TO_GRAMS)}돈)</p>
-          )}
-        </div>
-        <MiniGoldBar aria-hidden="true">
-          <small>KOREA GOLD MARKET</small>
-          <b>FINE GOLD 999.9</b>
-          <em>{fmtG(selectedBar.grams)}g · {fmtD(selectedBar.don)}돈</em>
-        </MiniGoldBar>
-      </ExchangeOutcome>
-
-      <ExchangeDecisionSummary $twoColumn role="group" aria-label="교환 예상 핵심 요약" aria-live="polite">
-        <ExchangeDecisionFact>
-          <span>{neededG > 0 ? "추가로 필요한 순금" : "예상 남는 순금"}</span>
-          <strong>
-            {fmtG(neededG > 0 ? neededG : remainingG)}g
-            {" "}<em>({fmtD((neededG > 0 ? neededG : remainingG) / DON_TO_GRAMS)}돈)</em>
-          </strong>
-        </ExchangeDecisionFact>
-      </ExchangeDecisionSummary>
-      <ExchangeFeeNote role="group" aria-label="예상 제작 공임">
-        <span>예상 제작 공임 <small>· 선택한 골드바 {safeQty}개 기준</small></span>
-        <strong>{feeLabel}</strong>
-      </ExchangeFeeNote>
-      <HelpText style={{ margin: "6px 0 10px", lineHeight: 1.5 }}>
-        온라인 예상입니다. 실제 순도·중량·공임·남는 금 처리는 매장 실측과 고객 동의 후 확정됩니다.
-        {neededG > 0 && " 부족한 순금의 비용은 제작 공임과 별도입니다."}
-        추가 골드바 제작 공임도 별도입니다.
-        {" "}<FeeLink href="/goldbar-fee">전체 공임표 보기</FeeLink>
-      </HelpText>
-
-      {neededG === 0 && remainingCombo.items.length > 0 && (
-        <InfoCard role="note" style={{ margin: "8px 0 10px", padding: "10px 12px" }}>
-          <strong>남는 금 활용 참고</strong> · {remainingCombo.items.slice(0, 3).map(({ denom, qty }) => `${denom.label} × ${qty}`).join(", ")}
-          {remainingCombo.items.length > 3 ? " 외" : ""}
-          <br />추가 골드바의 제작 가능 여부·공임·잔여 금 처리는 매장에서 안내하고 동의 후 확정합니다.
-        </InfoCard>
-      )}
-
-      <details style={{ margin: "14px 0 4px" }}>
-        <summary style={{ cursor: "pointer", color: "var(--gm-primary)", fontWeight: 850, fontSize: ".88rem" }}>
-          제품별 환산 결과 자세히 보기
-        </summary>
-        <TableWrap style={{ marginTop: 10 }}>
-        <Table>
-          <thead>
-            <tr>
-              <th style={{ width: "28%" }}>제품 종류</th>
-              <th style={{ width: "32%" }}>입력 값</th>
-              <th style={{ width: "20%" }}>예상 순금(g)</th>
-              <th style={{ width: "20%" }}>예상 순금(돈)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {products.map((p, idx) => {
-              const g = p.finalWeight || 0;
-              const d = g / DON_TO_GRAMS;
-              return (
-                <tr key={`sum-${idx}`}>
-                  <td>{p.productName || p.goldType || "-"}</td>
-                  <td>{displayOriginal(p.quantity, p.inputUnit)}</td>
-                  <td>{fmtG(g)}g</td>
-                  <td>{fmtD(d)}돈</td>
-                </tr>
-              );
-            })}
-          </tbody>
-          <tfoot>
-            <tr>
-              <td colSpan={2}>합계(예상 순금량)</td>
-              <td>{fmtG(totalGrams)}g</td>
-              <td>{fmtD(totalDon)}돈</td>
-            </tr>
-          </tfoot>
-        </Table>
-        </TableWrap>
-      </details>
-
       <SubTitle>골드바 규격 선택</SubTitle>
+      <HelpText>규격과 수량을 선택하면 아래 예상 결과가 즉시 바뀝니다.</HelpText>
       <Seg role="tablist" aria-label="골드바 규격 선택 탭">
         <SegBtn
           type="button"
@@ -575,6 +494,89 @@ export function BarStep({
           (최대 {maxSelectableQty}개 선택 가능)
         </HelpText>
       </FormGroup>
+
+      {/* The selected denomination and count appear before this single live preview.
+          Keep the result next to the customer's last input rather than above the grid. */}
+      <ExchangeOutcome $native={isNative} aria-label="예상 금교환 결과">
+        <div>
+          <small>내 금 → 999.9 골드바 예상 · 온라인 안내</small>
+          <strong>{selectedBar.label} × {safeQty}개</strong>
+          <p>선택한 골드바 총중량 {fmtG(selectedTotalG)}g ({fmtD(selectedTotalG / DON_TO_GRAMS)}돈)</p>
+        </div>
+        <MiniGoldBar aria-hidden="true">
+          <small>KOREA GOLD MARKET</small>
+          <b>FINE GOLD 999.9</b>
+          <em>{fmtG(selectedBar.grams)}g · {fmtD(selectedBar.don)}돈</em>
+        </MiniGoldBar>
+      </ExchangeOutcome>
+
+      <ExchangeDecisionSummary $twoColumn role="group" aria-label="교환 예상 핵심 요약" aria-live="polite">
+        <ExchangeDecisionFact>
+          <span>{neededG > 0 ? "추가로 필요한 순금" : "예상 남는 순금"}</span>
+          <strong>
+            {fmtG(neededG > 0 ? neededG : remainingG)}g
+            {" "}<em>({fmtD((neededG > 0 ? neededG : remainingG) / DON_TO_GRAMS)}돈)</em>
+          </strong>
+        </ExchangeDecisionFact>
+      </ExchangeDecisionSummary>
+      <ExchangeFeeNote role="group" aria-label="예상 제작 공임">
+        <span>예상 제작 공임 <small>· 선택한 골드바 {safeQty}개 기준</small></span>
+        <strong>{feeLabel}</strong>
+      </ExchangeFeeNote>
+      <HelpText style={{ margin: "6px 0 10px", lineHeight: 1.5 }}>
+        실제 순도·중량·공임과 남는 금은 매장에서 확인하고 동의한 뒤 확정해요.
+        {neededG > 0 && " 부족한 순금의 비용은 제작 공임과 별도입니다."}
+        추가 골드바 제작 공임도 별도입니다.
+        {" "}<FeeLink href="/goldbar-fee">전체 공임표 보기</FeeLink>
+      </HelpText>
+
+      {neededG === 0 && remainingCombo.items.length > 0 && (
+        <InfoCard role="note" style={{ margin: "8px 0 10px", padding: "10px 12px" }}>
+          <strong>남는 금 활용 참고</strong> · {remainingCombo.items.slice(0, 3).map(({ denom, qty }) => `${denom.label} × ${qty}`).join(", ")}
+          {remainingCombo.items.length > 3 ? " 외" : ""}
+          <br />추가 골드바의 제작 가능 여부·공임·잔여 금 처리는 매장에서 안내하고 동의 후 확정합니다.
+        </InfoCard>
+      )}
+
+      <details style={{ margin: "14px 0 4px" }}>
+        <summary style={{ cursor: "pointer", color: "var(--gm-primary)", fontWeight: 850, fontSize: ".88rem" }}>
+          제품별 환산 결과 자세히 보기
+        </summary>
+        <TableWrap style={{ marginTop: 10 }}>
+        <Table>
+          <thead>
+            <tr>
+              <th style={{ width: "28%" }}>제품 종류</th>
+              <th style={{ width: "32%" }}>입력 값</th>
+              <th style={{ width: "20%" }}>예상 순금(g)</th>
+              <th style={{ width: "20%" }}>예상 순금(돈)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {products.map((p, idx) => {
+              const g = p.finalWeight || 0;
+              const d = g / DON_TO_GRAMS;
+              return (
+                <tr key={`sum-${idx}`}>
+                  <td>{p.productName || p.goldType || "-"}</td>
+                  <td>{displayOriginal(p.quantity, p.inputUnit)}</td>
+                  <td>{fmtG(g)}g</td>
+                  <td>{fmtD(d)}돈</td>
+                </tr>
+              );
+            })}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colSpan={2}>합계(예상 순금량)</td>
+              <td>{fmtG(totalGrams)}g</td>
+              <td>{fmtD(totalDon)}돈</td>
+            </tr>
+          </tfoot>
+        </Table>
+        </TableWrap>
+      </details>
+
 
       {(() => {
         const GuideWrapper = isNative ? "details" : "div";
@@ -834,7 +836,7 @@ export function ReserveStep({
                   feeConfig: { fees: feeSettings.fees },
                 }).totalFee)}</b>
             </ReservationFeeLine>
-            <p>부족한 순금의 비용과 추가 골드바 공임은 별도입니다. 예약 요청 시 공임을 다시 확인하며, 실측과 고객 동의 후 확정됩니다.</p>
+            <p>부족한 금의 비용과 추가 골드바 공임은 별도예요. 예약할 때 공임을 다시 확인하고, 매장에서 동의 후 확정해요.</p>
           </>
         ) : (
           <>
@@ -884,7 +886,7 @@ export function ReserveStep({
         <ReservationScheduleStatus $selected={!!visitTime} role="status" aria-live="polite">
           <span>선택한 방문 일정</span>
           <strong>{visitTime ? `${dateKey} · ${visitTime}` : `${dateKey} · 시간 선택 필요`}</strong>
-          {visitTime && <small>예약 요청을 접수한 뒤 매장에서 확인합니다. 아직 예약 확정·시간 선점 상태는 아닙니다.</small>}
+          {visitTime && <small>선택한 일정은 매장 확인이 필요해요. 아직 예약이 확정되거나 시간이 확보된 것은 아니에요.</small>}
         </ReservationScheduleStatus>
       )}
       <HelpText>
@@ -1013,7 +1015,7 @@ export function ReserveStep({
                     </span>
                   </MemberGoldSelection>
                   <p id="member-gold-usage-details" style={{ margin: 0, fontSize: ".79rem", lineHeight: 1.55, color: "var(--gm-text-secondary)" }}>
-                    선택해도 지금 바로 차감되지 않습니다. 예약 접수 후 사용 신청이 연결되며 매장에서 6자리 확인 코드를 확인하고 실제 교환을 확정할 때 차감됩니다.
+                    지금은 사용 신청만 해요. 매장에서 6자리 코드를 확인하고 실제 교환을 확정할 때 차감돼요.
                   </p>
                   <MemberGoldStatusNote role="status" $selected={useMemberGold}>
                     {useMemberGold
@@ -1094,7 +1096,7 @@ export function ReserveStep({
         )}
 
         <HelpText style={{ display: "block", margin: "10px 0" }}>
-          아래 버튼은 방문 예약 <b>요청</b>입니다. 접수 후 매장에서 일정을 확인해 확정 여부를 안내합니다.
+          방문 예약 <b>요청</b>을 보내면 매장에서 일정을 확인해 알려드려요.
         </HelpText>
         <div style={{ display: "grid", gap: 10 }}>
           <Button type="submit" disabled={loading} aria-busy={loading}>
@@ -1162,7 +1164,7 @@ export function DoneStep({ status, memberGoldUsage = null, memberGoldUsageError 
         ) : status === "canceled" || status === "rejected" ? (
           <><PendingBadge>현재 상태 · 예약 종료</PendingBadge><Title>예약 상태를 확인해 주세요</Title><HelpText>취소 또는 반려 사유와 재예약 가능 여부는 내 예약에서 확인해 주세요.</HelpText></>
         ) : (
-          <><PendingBadge>현재 상태 · 예약 확인 대기</PendingBadge><Title>방문 예약 요청이 접수되었습니다</Title><HelpText>아직 예약 확정이나 교환 완료 상태가 아닙니다. 관리자 확인 후 방문 예약이 확정되면 알림으로 안내드립니다.</HelpText></>
+          <><PendingBadge>매장 확인 중</PendingBadge><Title>방문 예약 요청이 접수되었습니다</Title><HelpText>매장에서 일정을 확인한 뒤 예약 확정 소식을 알려드려요.</HelpText></>
         )}
         <ReservationNextSteps aria-label="금교환 이후 진행 절차">
           <li><span>STEP 01</span><strong>매장 확인</strong><small>요청 일정과 예약 가능 여부 확인</small></li>

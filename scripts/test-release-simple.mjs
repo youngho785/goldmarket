@@ -112,6 +112,9 @@ async function main() {
   });
   if (!preflight) return finish(1);
 
+  const sourcePreflight = await step('SOURCE PREFLIGHT', () => runNode(['scripts/test-release-preflight.mjs']));
+  if (!sourcePreflight) return finish(1);
+
   const build = await step('WEB BUILD', () => runNpm(['run', 'build']));
   if (!build) return finish(1);
 
@@ -160,11 +163,32 @@ async function main() {
   const priceDate = await step('GOLD PRICE DATE LABEL', () => runNode(['--test', 'scripts/test-gold-price-date-presentation.mjs']));
   if (!priceDate) return finish(1);
 
+  const pricePolicy = await step('GOLD PRICE POLICY REGRESSION', () => runNode(['--test', 'scripts/test-kgm-price-date-fix.mjs']));
+  if (!pricePolicy) return finish(1);
+
+  const guestVaultSafety = await step('GUEST MY GOLD PRESERVATION',
+    () => runNode(['--test', 'scripts/test-guest-my-gold-preservation.mjs']));
+  if (!guestVaultSafety) return finish(1);
+
+  const guestImportSafety = await step('GUEST MY GOLD ACCOUNT IMPORT',
+    () => runNode(['--test', 'scripts/test-guest-my-gold-import.mjs']));
+  if (!guestImportSafety) return finish(1);
+
+  const onboardingExperience = await step('EXPERIENCE ONBOARDING UX',
+    () => runNode(['--test', 'scripts/test-experience-onboarding-continuity.mjs']));
+  if (!onboardingExperience) return finish(1);
+
+  const quickHelp = await step('QUICK CALCULATOR HELP UX', () => runNode(['--test', 'scripts/test-quick-calc-help-layout.mjs']));
+  if (!quickHelp) return finish(1);
+
   const homeFlowUx = await step('HOME JOURNEY UX', () => runNode(['--test', 'scripts/test-home-journey-consistency.mjs']));
   if (!homeFlowUx) return finish(1);
 
   const exchangeClarity = await step('GOLD EXCHANGE RESERVATION UX', () => runNode(['--test', 'scripts/test-gold-exchange-reservation-clarity.mjs']));
   if (!exchangeClarity) return finish(1);
+
+  const bookingUx = await step('BOOKING UX POLICY', () => runNode(['--test', 'scripts/test-kgm-ux-phase4c.mjs', 'scripts/test-kgm-ux-phase4d.mjs']));
+  if (!bookingUx) return finish(1);
 
   const screenTrust = await step('GOLD EXCHANGE SCREEN TRUST', () => runNode(['--test', 'scripts/test-gold-exchange-screen-trust.mjs']));
   if (!screenTrust) return finish(1);
@@ -177,6 +201,9 @@ async function main() {
 
   const authStatic = await step('AUTH SAFETY', () => runNode(['scripts/test-auth-core-safety.mjs']));
   if (!authStatic) return finish(1);
+
+  const authSmokeGuard = await step('AUTH SMOKE STATIC GUARD', () => runNode(['--test', 'scripts/test-auth-e2e-safety.mjs']));
+  if (!authSmokeGuard) return finish(1);
 
   const memberAuthCopy = await step('MEMBER AUTH ERROR COPY', () => runNode(['--test', 'scripts/test-member-auth-error-copy.mjs']));
   if (!memberAuthCopy) return finish(1);
@@ -225,6 +252,15 @@ async function main() {
 
   const ui = await step('UI STATIC SAFETY', () => runNpm(['run', 'test:ui-safety']));
   if (!ui) return finish(1);
+
+  const experience5v2 = await step('EXPERIENCE PHASE 5 DESIGN V2', () => runNode(['--test', 'scripts/test-experience-phase5-v2.mjs']));
+  if (!experience5v2) return finish(1);
+
+  const experience5 = await step('EXPERIENCE PHASE 5 DESIGN', () => runNode(['--test', 'scripts/test-experience-phase5.mjs']));
+  if (!experience5) return finish(1);
+
+  const experience4 = await step('EXPERIENCE PHASE 4', () => runNode(['--test', 'scripts/test-experience-phase4.mjs', 'scripts/test-kgm-ux-home-phase2.mjs', 'scripts/test-ux-exchange-decision.mjs']));
+  if (!experience4) return finish(1);
 
   return finish(0);
 }

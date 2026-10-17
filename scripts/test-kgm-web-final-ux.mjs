@@ -32,11 +32,11 @@ test("웹 금시세의 첫 동작은 시세 후 가치 계산·알림 혜택·�
   assert.match(price, /<QuizButton/);
 });
 
-test("알림 활성화와 0.01g 지급 확정을 별개로 안내", () => {
-  assert.match(price, /알림 수신 설정만으로 지급이 확정되지는 않습니다/);
-  assert.match(price, /금시세 알림 설정하기/);
-  assert.doesNotMatch(price, /금시세 알림 받고 순금 0\.01g 더 받기/);
+test("알림을 켰다는 사실과 MEMBER GOLD 지급 확정을 혼동하지 않게 안내", () => {
+  assert.match(price, /각 혜택은 지급 조건을 충족하면 적립돼요/);
+  assert.match(price, /광고성 정보[\s\S]{0,100}수신동의\(선택\)/);
   assert.match(price, /금시세 알림 <b>0\.01g<\/b>/);
+  assert.doesNotMatch(price, /금시세 알림 받고 순금 0\.01g 더 받기/);
   assert.match(price, /const notificationActive = pushStatus === "active"/);
 });
 
@@ -57,11 +57,13 @@ test("랜딩 골드바 목표 링크는 MY GOLD의 실제 목표 블록에 도�
   assert.match(vault, /MY GOLD에 금을 기록하면 예상 순금량으로 골드바 목표/);
 });
 
-test("웹 회원 홈은 목표에 바로 이동하면서 목표 상세 펼침은 유지", () => {
-  assert.match(webMemberHome, /<WebGoalLink to="\/my-gold#goldbar-goal">/);
-  assert.match(webMemberHome, /예상 순금 \{pureGoldG.toFixed\(2\)\}g/);
+test("웹 회원 홈은 중복 골드바 목표 링크 없이 목표 정보를 접어서 보여준다", () => {
+  assert.doesNotMatch(webMemberHome, /WebGoalLink/);
+  assert.match(webMemberHome, /<HomePriorityActions \/>/);
   assert.match(webMemberHome, /<HomeOptionalDetails>/);
   assert.match(webMemberHome, /<AppGoldJourney/);
+  assert.match(webMemberHome, /pureGoldG={pureGoldG}/);
+  assert.match(vault, /id="goldbar-goal"/);
 });
 
 test("웹 상단과 모바일 웹 전체 메뉴는 계산과 스토리를 분리, Android 홈은 미변경", () => {

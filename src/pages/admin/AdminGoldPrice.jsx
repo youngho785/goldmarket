@@ -6,6 +6,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  limit,
   onSnapshot,
   orderBy,
   query,
@@ -102,6 +103,7 @@ const Check = styled.label`
   margin-bottom: 15px;
   color: ${({ theme }) => theme.colors.text};
   font-weight: 800;
+  input { width: 18px; height: 18px; flex: 0 0 auto; }
 `;
 
 const NotificationOption = styled.div`
@@ -440,14 +442,17 @@ export default function AdminGoldPrice() {
   const [display14kSellPrice, setDisplay14kSellPrice] = useState(false);
   const [sourceDate, setSourceDate] = useState(inputDate(todayKey()));
   const [market, setMarket] = useState(emptyMarket);
+  const [loadedMarket, setLoadedMarket] = useState(emptyMarket);
+  const [loadedDate, setLoadedDate] = useState("");
+  const [dateLoadState, setDateLoadState] = useState("loading");
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [current, setCurrent] = useState(null);
+  const [historicalPrevious, setHistoricalPrevious] = useState(null);
   const [krxReference, setKrxReference] = useState(null);
   const [busy, setBusy] = useState(false);
   const [sendPriceNotification, setSendPriceNotification] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [correctionReason, setCorrectionReason] = useState("");
-  const [correctionPreview, setCorrectionPreview] = useState(null);
   const [exportStart, setExportStart] = useState(inputDate(todayKey().slice(0, 4) + "0101"));
   const [exportEnd, setExportEnd] = useState(inputDate(todayKey()));
   const [selectedYear, setSelectedYear] = useState(todayKey().slice(0, 4));
@@ -469,24 +474,60 @@ export default function AdminGoldPrice() {
         setCurrent(null);
         return;
       }
-      const value = snap.data();
-      setCurrent(value);
-
-      /*
-       * 관리 화면을 새로 열 때 기준일은 항상 한국시간 "오늘"로 맞춥니다.
-       * 마지막 공개 시세의 가격은 그대로 불러오므로 변동이 없는 날에도
-       * 저장하면 오늘 날짜의 goldPriceHistory 문서가 생성됩니다.
-       *
-       * 과거 날짜를 직접 선택해 불러오는 동작은 아래 loadDate()가 담당합니다.
-       */
-      setCorrectionPreview(null);
-      setSourceDate(inputDate(todayKey()));
-      setMarket(Object.fromEntries(
-        PRICE_FIELDS.map(([key]) => [key, validPrice(value.market?.[key]) ? String(value.market[key]) : ""])
-      ));
+      // 실시간 공개 시세는 미리보기에만 반영합니다.
+      // 관리자가 선택한 날짜와 편집 중인 가격은 절대 덮어쓰지 않습니다.
+      setCurrent(snap.data());
     },
     (listenerError) => setError(readableError(listenerError))
   ), []);
+
+  // 기준일을 바꾸면 자동으로 그 날짜의 최종 시세를 조회합니다.
+  // 먼저 입력값을 비워 이전 날짜의 가격이 다른 날짜에 저장되는 일을 막습니다.
+  useEffect(() => {
+    let active = true;
+    const key = compactDate(sourceDate);
+    setLoadedDate("");
+    setDateLoadState("loading");
+    setMarket({ ...emptyMarket });
+    setLoadedMarket({ ...emptyMarket });
+
+    if (!/^\d{8}$/.test(key) || key > todayKey()) {
+      setDateLoadState("invalid");
+      return () => { active = false; };
+    }
+
+    const fetchDate = async () => {
+      try {
+        const history = await getDoc(doc(db, "goldPriceHistory", key));
+        let value = history.exists() ? history.data() : null;
+        let state = history.exists() ? "ready" : "missing";
+
+        // 오늘 기록이 아직 없으면 마지막 공개 시세를 입력 시작값으로 사용합니다.
+        // 과거 날짜에 기록이 없을 때는 다른 날짜 가격을 대신 보여주지 않습니다.
+        if (!value && key === todayKey()) {
+          const live = await getDoc(doc(db, "goldPrices", "current"));
+          if (live.exists() && live.data()?.market) {
+            value = live.data();
+            state = "todayCarry";
+          }
+        }
+        if (!active) return;
+        const nextMarket = Object.fromEntries(PRICE_FIELDS.map(([field]) => [
+          field, validPrice(value?.market?.[field]) ? String(value.market[field]) : "",
+        ]));
+        setMarket(nextMarket);
+        setLoadedMarket(nextMarket);
+        setLoadedDate(key);
+        setDateLoadState(state);
+      } catch (loadError) {
+        if (!active) return;
+        setDateLoadState("error");
+        setError(`선택 날짜 시세 조회 실패: ${readableError(loadError)}`);
+      }
+    };
+    fetchDate();
+    return () => { active = false; };
+  }, [sourceDate, loadAttempt]);
 
   useEffect(() => onSnapshot(
     doc(db, "goldPrices", "pending"),
@@ -494,12 +535,23 @@ export default function AdminGoldPrice() {
     () => setKrxReference(null)
   ), []);
 
+  useEffect(() => {
+    let active = true;
+    setHistoricalPrevious(null);
+    const key = compactDate(sourceDate);
+    if (key >= todayKey() || !/^\d{8}$/.test(key)) return;
+    getDocs(query(collection(db, "goldPriceHistory"), where("sourceDate", "<", key), orderBy("sourceDate", "desc"), limit(1)))
+      .then(snapshot => { if (active) setHistoricalPrevious(snapshot.docs[0]?.data()?.market || null); })
+      .catch(e => { if (active) setError(readableError(e)); });
+    return () => { active = false; };
+  }, [sourceDate, current]);
+
   const previewPreviousMarket = useMemo(
     () =>
-      current?.sourceDate === compactDate(sourceDate)
+      compactDate(sourceDate) < todayKey() ? historicalPrevious : current?.sourceDate === compactDate(sourceDate)
         ? current?.previousMarket || null
         : current?.market || null,
-    [current, sourceDate]
+    [current, sourceDate, historicalPrevious]
   );
 
   const previewRows = useMemo(
@@ -510,6 +562,26 @@ export default function AdminGoldPrice() {
     ],
     []
   );
+
+  const dateReady = loadedDate === compactDate(sourceDate) &&
+    ["ready", "missing", "todayCarry"].includes(dateLoadState);
+  const priceChanged = dateReady && PRICE_FIELDS.some(([key]) =>
+    String(market[key] ?? "") !== String(loadedMarket[key] ?? "")
+  );
+
+  const changeSourceDate = (nextDate) => {
+    if (nextDate === sourceDate) return;
+    if (priceChanged && !window.confirm(
+      "저장하지 않은 금시세 수정 내용이 있습니다. 날짜를 바꾸면 입력 중인 가격이 사라집니다. 계속할까요?"
+    )) return;
+    setSourceDate(nextDate);
+    setSendPriceNotification(false);
+    setMessage("");
+    setError("");
+    setLoadedDate("");
+    setDateLoadState("loading");
+    setMarket({ ...emptyMarket });
+  };
 
   const run = async (action, successText) => {
     setBusy(true);
@@ -530,9 +602,10 @@ export default function AdminGoldPrice() {
     if (!uid) throw new Error("로그인이 필요합니다.");
 
     const dateKey = compactDate(sourceDate);
+    if (!dateReady) throw new Error("선택한 날짜의 시세 조회가 완료된 후 저장해 주세요.");
     if (!/^\d{8}$/.test(dateKey)) throw new Error("기준일을 올바르게 선택해 주세요.");
 
-    if (dateKey !== todayKey()) throw new Error("과거 날짜는 아래 과거 금시세 연쇄 보정 기능을 이용하세요.");
+    if (dateKey > todayKey()) throw new Error("오늘 또는 과거 날짜를 선택해 주세요.");
 
     const normalizedMarket = Object.fromEntries(
       PRICE_FIELDS.map(([key, label]) => {
@@ -542,8 +615,27 @@ export default function AdminGoldPrice() {
       })
     );
 
+    if (dateKey < todayKey()) {
+      const changes = PRICE_FIELDS.filter(([key]) =>
+        Number(loadedMarket[key]) !== normalizedMarket[key]
+      ).map(([key, label]) =>
+        `${label}: ${money(loadedMarket[key])} → ${money(normalizedMarket[key])}`
+      );
+      const confirmed = window.confirm([
+        `${dateText(dateKey)} 과거 금시세를 저장하시겠습니까?`,
+        "",
+        ...(changes.length ? changes : ["가격 변경 없음 (선택 날짜 재저장)"]),
+        "",
+        "다음에 직접 시세를 변경한 날짜 전날까지 가격이 함께 적용될 수 있습니다.",
+      ].join("\n"));
+      if (!confirmed) return { message: "과거 시세 저장을 취소했습니다." };
+    }
+
     const save = httpsCallable(getFunctions(undefined, "asia-northeast3"), "saveDailyGoldPrice");
-    await save({ date: dateKey, market: normalizedMarket, enabled, display14kSellPrice });
+    const result = await save({ date: dateKey, market: normalizedMarket, enabled, display14kSellPrice });
+    setLoadedMarket(Object.fromEntries(PRICE_FIELDS.map(([key]) => [key, String(normalizedMarket[key])])));
+    setDateLoadState("ready");
+    if (dateKey < todayKey()) return { message: `${dateText(dateKey)} 시세를 저장했습니다. 다음 변경일 전까지 같은 시세로 적용했습니다.${result.data.updatedCurrent ? " 현재 공개 시세도 반영했습니다." : ""}` };
 
     if (!sendPriceNotification) {
       return { message: "금시세를 저장하고 공개했습니다." };
@@ -570,27 +662,6 @@ export default function AdminGoldPrice() {
         `금시세 저장·공개는 완료되었지만 알림 발송에 실패했습니다. ${detail}`
       );
     }
-  };
-
-  const correctionMarket = () => Object.fromEntries(PRICE_FIELDS.map(([key,label]) => {
-    const value = numberValue(market[key]);
-    if(value<=0) throw new Error(`${label}를 입력해 주세요.`);
-    return [key,value];
-  }));
-  const previewCorrection = async () => {
-    const fn=httpsCallable(getFunctions(undefined,"asia-northeast3"),"previewGoldPriceCorrection");
-    setCorrectionPreview(null);
-    const result=await fn({date:compactDate(sourceDate),market:correctionMarket()});
-    setCorrectionPreview(result.data);
-    return {message:`${result.data.rows.length}일의 수정 예정 기록을 확인해 주세요.`};
-  };
-  const applyCorrection = async () => {
-    if(!correctionPreview?.expected) throw new Error("먼저 수정 미리보기를 실행하세요.");
-    if(!window.confirm(`${correctionPreview.rows.length}일의 과거 기록을 수정하시겠습니까?`)) return {message:"취소했습니다."};
-    const fn=httpsCallable(getFunctions(undefined,"asia-northeast3"),"saveGoldPriceCorrection");
-    const result=await fn({date:compactDate(sourceDate),market:correctionMarket(),reason:correctionReason,expected:correctionPreview.expected});
-    setCorrectionPreview(null);
-    return {message:`${result.data.count}일의 기록을 보정했습니다.${result.data.updatedCurrent ? " 현재 공개 시세의 가격 또는 전일 대비 기준도 반영했습니다." : ""} 확정 거래 내역은 변경하지 않았습니다.`};
   };
 
   const downloadHistory = async () => {
@@ -634,16 +705,6 @@ export default function AdminGoldPrice() {
     }, { merge: true });
   };
 
-  const loadDate = async () => {
-    setCorrectionPreview(null);
-    const key = compactDate(sourceDate);
-    const snap = await getDoc(doc(db, "goldPriceHistory", key));
-    if (!snap.exists()) throw new Error("선택한 날짜에 저장된 시세가 없습니다.");
-    const value = snap.data();
-    setMarket(Object.fromEntries(
-      PRICE_FIELDS.map(([field]) => [field, validPrice(value.market?.[field]) ? String(value.market[field]) : ""])
-    ));
-  };
 
   return (
     <Page>
@@ -664,7 +725,13 @@ export default function AdminGoldPrice() {
           <FormGrid>
             <Field>
               기준일
-              <input type="date" value={sourceDate} onChange={(e) => {setSourceDate(e.target.value);setCorrectionPreview(null);}} />
+              <input
+                type="date"
+                value={sourceDate}
+                max={inputDate(todayKey())}
+                disabled={busy}
+                onChange={(e) => changeSourceDate(e.target.value)}
+              />
             </Field>
             <Field>
               14K 살 때 표시 방식
@@ -683,9 +750,10 @@ export default function AdminGoldPrice() {
                 <input
                   type="text"
                   inputMode="numeric"
+                  disabled={busy || !dateReady}
                   value={market[key]}
                   placeholder="예: 848000"
-                  onChange={(e) => {setCorrectionPreview(null);setMarket((prev) => ({
+                  onChange={(e) => {setMarket((prev) => ({
                     ...prev,
                     [key]: e.target.value.replace(/[^0-9]/g, ""),
                   }));}}
@@ -694,8 +762,16 @@ export default function AdminGoldPrice() {
             ))}
           </FormGrid>
 
+          <Hint aria-live="polite" role="status">
+            {dateLoadState === "loading" && "선택 날짜의 금시세를 불러오는 중입니다..."}
+            {dateLoadState === "error" && "시세를 불러오지 못했습니다. 다시 조회를 눌러 주세요."}
+            {dateLoadState === "invalid" && "오늘 또는 과거 날짜를 선택해 주세요."}
+            {dateLoadState === "missing" && "선택 날짜에 저장된 시세가 없습니다. 새로 기록하려면 6개 가격을 직접 입력한 후 저장하세요."}
+            {dateLoadState === "todayCarry" && "오늘 날짜의 기록은 아직 없습니다. 마지막 공개 시세를 불러왔으며, 저장하면 오늘 가격으로 기록됩니다."}
+            {dateLoadState === "ready" && `${dateText(loadedDate)}에 저장된 금시세를 불러왔습니다. 수정 후 시세 저장을 눌러 주세요.`}
+          </Hint>
           <Hint>
-            같은 기준일로 여러 번 저장하면 그날의 최종 시세가 갱신됩니다. 전일 대비는 이전에 저장된 가장 최근 날짜의 최종 시세를 기준으로 유지됩니다.
+            기준일을 선택하면 해당 날짜의 시세가 자동으로 표시됩니다. 저장한 날짜부터 다음 직접 변경일 전날까지 같은 시세가 적용될 수 있습니다.
           </Hint>
 
           <NotificationOption>
@@ -703,14 +779,14 @@ export default function AdminGoldPrice() {
               <input
                 type="checkbox"
                 checked={sendPriceNotification}
-                disabled={busy}
+                disabled={busy || compactDate(sourceDate) !== todayKey()}
                 onChange={(e) => setSendPriceNotification(e.target.checked)}
               />
               <span>
                 저장 후 금시세 알림 보내기
                 <small>
                   광고성 정보 수신에 동의하고 금시세·혜택 알림이 활성화된 회원에게만 발송합니다.
-                  단순 수정이나 재저장 시에는 체크하지 않는 것을 권장합니다.
+                  오늘 시세를 저장할 때만 보낼 수 있습니다. 과거 날짜 저장은 알림을 보내지 않습니다.
                 </small>
               </span>
             </NotificationCheck>
@@ -719,36 +795,18 @@ export default function AdminGoldPrice() {
           <Actions>
             <Button
               $primary
-              disabled={busy}
+              disabled={busy || !dateReady}
               onClick={() => run(saveAndPublish, "금시세를 저장하고 공개했습니다.")}
             >
-              {sendPriceNotification ? "저장·공개 + 알림 발송" : "저장 및 공개"}
+              {sendPriceNotification && compactDate(sourceDate) === todayKey() ? "시세 저장 + 알림 발송" : "시세 저장"}
             </Button>
             <Button disabled={busy} onClick={() => run(saveDisplaySettings, "표시 설정을 저장했습니다.")}>표시 설정만 저장</Button>
-            <Button disabled={busy} onClick={() => run(loadDate, "선택한 날짜의 시세를 불러왔습니다.")}>선택 날짜 불러오기</Button>
+            {dateLoadState === "error" && (
+              <Button disabled={busy} onClick={() => { setError(""); setLoadAttempt((count) => count + 1); }}>
+                선택 날짜 다시 조회
+              </Button>
+            )}
           </Actions>
-          <Card style={{marginTop:18}}>
-            <CardTitle>과거 금시세 연쇄 보정</CardTitle>
-            <Hint>선택 날짜는 직접 정정하고, 이후는 다음 직접 등록일 전날까지 함께 보정합니다. 이후 직접 등록한 가격은 유지하며 전일 대비 기준만 다시 계산합니다. 다음 직접 등록일이 없으면 오늘의 공개 시세도 반영합니다. 과거 보정은 알림을 보내지 않습니다.</Hint>
-            <Field>수정 사유 (5~200자)
-              <input value={correctionReason} maxLength={200} onChange={e=>setCorrectionReason(e.target.value)} placeholder="예: 10월 3일 실제 변동 확인" />
-            </Field>
-            <Actions>
-              <Button disabled={busy} onClick={()=>run(previewCorrection,"미리보기를 확인하세요.")}>보정 미리보기</Button>
-              <Button $primary disabled={busy||!correctionPreview} onClick={()=>run(applyCorrection,"기록을 수정했습니다.")}>확인 후 보정 저장</Button>
-            </Actions>
-            {correctionPreview && <div style={{maxHeight:260,overflow:"auto",marginTop:12}}>
-              <strong>변경 예정 {correctionPreview.rows.length}일 / 다음 직접 등록일: {correctionPreview.stopDate ? dateText(correctionPreview.stopDate) : "없음"}</strong>
-              {correctionPreview.rows.map(row=><div key={row.date} style={{padding:"6px 0",borderBottom:"1px solid #ddd"}}>
-                {dateText(row.date)} · {row.kind==="manual"?"직접 등록":"자동 유지"} · {PRICE_FIELDS.some(([key]) => Number(row.before?.[key]) !== Number(row.after?.[key])) ? "가격 변경" : "동일 가격"}
-                <details>
-                  <summary>6종 가격 변경 보기</summary>
-                  {PRICE_FIELDS.map(([key, label]) => <div key={key}>{label}: {money(row.before?.[key])} → {money(row.after?.[key])}</div>)}
-                </details>
-              </div>)}
-              <Hint>{correctionPreview.updatesCurrent ? "현재 공개 시세의 가격 또는 전일 대비 기준도 반영됩니다." : "현재 공개 시세의 가격은 유지됩니다."}</Hint>
-            </div>}
-          </Card>
           {message && <Message>{message}</Message>}
           {error && <Message $error>{error}</Message>}
         </Card>

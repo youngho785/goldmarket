@@ -645,7 +645,7 @@ export default function GoldExchange() {
     setLoading(true);
     try {
       const res = await submitGoldExchangeGroup(payload);
-      if (!res?.ok || !res?.groupId) throw new Error("서버 응답이 올바르지 않습니다.");
+      if (!res?.ok || !res?.groupId) throw new Error("예약 결과를 확인하지 못했어요. 예약·교환 내역을 확인한 뒤 다시 시도해 주세요.");
       clearGoldExchangeDraft();
       void saveReservationContact(user.uid, {
         displayName: nameTrim,
@@ -694,8 +694,7 @@ export default function GoldExchange() {
         <PageEyebrow>GOLD TO GOLD</PageEyebrow>
         <PageTitle $compact={!showStartMethod}>내 금을 999.9 골드바로 교환</PageTitle>
         <PageLead $compact={!showStartMethod}>
-          예상 계산과 방문 날짜·시간 선택은 로그인 없이 이용할 수 있습니다.
-          예약 요청만 로그인 또는 회원가입 후 완료합니다.
+          먼저 계산하고 방문할 날짜를 골라보세요. 예약 요청을 보낼 때 로그인하면 돼요.
         </PageLead>
         {!isNative && step === STEP.CALC && !showStartMethod && (
           <Link to="/gold-exchange?mode=start" style={{ display: "inline-flex", marginTop: 8, color: "#846326", fontSize: ".9rem", fontWeight: 800, textDecoration: "underline", textUnderlineOffset: 3 }}>
@@ -737,7 +736,7 @@ export default function GoldExchange() {
         )}
         {!showStartMethod && step === STEP.CALC && (
           <EstimateBoundary>
-            온라인 화면은 예상값입니다. 실제 순도·중량·골드바 제작공임과 교환 조건은 매장에서 실물을 확인하고 고객이 동의한 뒤 확정됩니다.
+            온라인 계산은 예상값이에요. 실제 순도·중량과 비용은 매장에서 확인하고 동의한 뒤 확정해요.
           </EstimateBoundary>
         )}
       </FlowHeader>

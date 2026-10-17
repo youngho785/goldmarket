@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useId, useMemo, useState } from "react";
 import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
 import { Link, useNavigate } from "react-router-dom";
 import styled from "styled-components";
@@ -14,7 +14,7 @@ import {
   computeVaultPureGoldG,
   getGoldVaultProductOptions,
 } from "@/lib/goldVaultCatalog";
-import { saveGuestMyGoldItems } from "@/lib/myGoldGuestDemo";
+import { appendGuestMyGoldItem } from "@/lib/myGoldGuestDemo";
 import { isGoldToGoldInputProduct } from "@/lib/goldExchangeForm";
 import { getQuickGoldTypeGroups, isQuickPureGoldType } from "@/lib/quickGoldTypeChoices";
 import {
@@ -32,35 +32,43 @@ const PRIORITY_PRODUCT_IDS = [
 ];
 
 const Card = styled.section`
-overflow:hidden; border:1px solid var(--gm-border); border-radius:8px; background:var(--gm-surface); box-shadow:0 5px 30px rgba(35,45,25,.025);
+overflow:hidden; border:1px solid var(--gm-border); border-radius:22px; background:var(--gm-surface); box-shadow:0 14px 35px rgba(27,53,43,.065);
 `;
 
 const Head = styled.div`
-padding:26px 28px 22px; border-bottom:1px solid var(--gm-border); background:var(--gm-surface); color:var(--gm-text);
-    small { display:block; font-size:10px; font-weight:600; letter-spacing:.12em; color:var(--gm-text-secondary); }
-    h2 { margin:8px 0 0; font-family:inherit; font-size:23px; font-weight:600; line-height:1.4; color:var(--gm-primary); }
-    p { margin:8px 0 0; font-size:12px; line-height:1.7; color:var(--gm-text-secondary); }
+position:relative; overflow:hidden; padding:26px 28px 23px; border-bottom:0;
+    background:linear-gradient(115deg,#25463A 0%,#315344 67%,#49634A 100%); color:#F8F5EC;
+    &::after {content:"";position:absolute;inset:auto -40px -65px auto;width:190px;height:190px;border:1px solid rgba(233,207,151,.23);border-radius:50%;box-shadow:0 0 0 22px rgba(233,207,151,.07),0 0 0 50px rgba(233,207,151,.045);pointer-events:none;}
+    small { position:relative; display:block; font-size:11px; font-weight:700; letter-spacing:.15em; color:#DCD1B5; }
+    h2 {position:relative; margin:9px 0 0; font-family:inherit; font-size:clamp(23px,2.4vw,29px); font-weight:730; line-height:1.35; color:#FFFDF8; }
+    p {position:relative; margin:8px 0 0; font-size:13px; line-height:1.65; color:#E1EAE0; }
     @media(max-width:600px) { padding:22px 20px 18px; h2 { font-size:20px; } }
 `;
 
 const Body = styled.div`
-padding:24px 28px 26px; @media(max-width:600px) { padding:20px; }
+padding:22px 26px 25px; @media(max-width:600px) { padding:20px; }
 `;
 
-const IntroHelp = styled.button`
-  display: inline-block;
-  margin-bottom: 12px;
-  padding: 4px 0;
-  border: 0;
-  background: transparent;
-  color: ${({ theme }) => theme.colors.secondaryDark};
+const CompactHelpToggle = styled.button`
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  margin-top: 13px;
+  padding: 9px 13px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 11px;
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+  color: ${({ theme }) => theme.colors.primary};
   font: inherit;
-  font-size: .84rem;
-  font-weight: 900;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  font-size: .875rem;
+  font-weight: 800;
+  text-align: left;
   cursor: pointer;
-  &:focus-visible { outline: 2px solid ${({ theme }) => theme.colors.secondary}; outline-offset: 2px; }
+  > span:last-child { color: ${({ theme }) => theme.colors.secondaryDark}; font-size: 1rem; }
+  &:focus-visible { outline: 3px solid ${({ theme }) => theme.colors.secondary}; outline-offset: 2px; }
 `;
 
 const NextActions = styled.div`
@@ -137,26 +145,31 @@ const EntryModeButton = styled.button`
 
 const UnknownGuide = styled.section`
   display: grid;
-  gap: 9px;
-  margin-bottom: 16px;
-  padding: 15px;
+  gap: 7px;
+  margin-top: 8px;
+  padding: 12px 14px;
   border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 15px;
+  border-radius: 12px;
   background: ${({ theme }) => theme.colors.surfaceAlt};
   color: ${({ theme }) => theme.colors.text};
-  line-height: 1.6;
+  line-height: 1.5;
   word-break: keep-all;
 
-  strong { font-size: .93rem; }
-  p { margin: 0; font-size: .86rem; color: ${({ theme }) => theme.colors.textSecondary}; }
+  > strong { font-size: .88rem; }
+  > p { margin: 0; font-size: .82rem; color: ${({ theme }) => theme.colors.textSecondary}; }
+  > p strong { color: ${({ theme }) => theme.colors.text}; }
 `;
 
-const UnknownActions = styled.div`
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 9px;
-
-  @media (max-width: 440px) { grid-template-columns: 1fr; }
+const GuideDetails = styled.details`
+  margin-top: 1px;
+  border-top: 1px solid ${({ theme }) => theme.colors.border};
+  padding-top: 6px;
+  font-size: .8rem;
+  line-height: 1.5;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  summary { color: ${({ theme }) => theme.colors.secondaryDark}; font-weight: 800; cursor: pointer; }
+  summary:focus-visible { outline: 2px solid ${({ theme }) => theme.colors.secondary}; outline-offset: 3px; }
+  p { margin: 4px 0 0; }
 `;
 
 const UnknownVisitLink = styled(Link)`
@@ -171,21 +184,6 @@ const UnknownVisitLink = styled(Link)`
   font-weight: 850;
   text-align: center;
   text-decoration: none;
-
-  &:focus-visible { outline: 3px solid ${({ theme }) => theme.colors.secondary}; outline-offset: 2px; }
-`;
-
-const UnknownBackButton = styled.button`
-  min-height: 46px;
-  padding: 10px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 11px;
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.primary};
-  font: inherit;
-  font-size: .88rem;
-  font-weight: 850;
-  cursor: pointer;
 
   &:focus-visible { outline: 3px solid ${({ theme }) => theme.colors.secondary}; outline-offset: 2px; }
 `;
@@ -241,17 +239,6 @@ const QuickTypeGroup = styled.div`
   }
 `;
 
-const QuickTypeHeading = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 5px 10px;
-
-  > span { color: ${({ theme }) => theme.colors.textSecondary}; font-size: .84rem; font-weight: 900; }
-  button { margin: 0; font-size: .77rem; }
-`;
-
 const QuickTypeButtons = styled.div`
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -260,8 +247,8 @@ const QuickTypeButtons = styled.div`
 
 const QuickTypeButton = styled.button`
   min-width: 0;
-  min-height: 46px;
-  padding: 9px 5px;
+  min-height: 50px;
+  padding: 10px 5px;
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 13px;
   background: ${({ theme }) => theme.colors.surface};
@@ -273,8 +260,9 @@ const QuickTypeButton = styled.button`
 
   &[aria-pressed="true"] {
     border: 2px solid ${({ theme }) => theme.colors.secondary};
-    background: ${({ theme }) => theme.semantic.badgeGoldBg};
+    background: linear-gradient(135deg, ${({ theme }) => theme.semantic.badgeGoldBg}, ${({ theme }) => theme.colors.surface});
     color: ${({ theme }) => theme.colors.primary};
+    box-shadow: inset 0 -3px 0 color-mix(in srgb, ${({ theme }) => theme.colors.gold} 35%, transparent);
   }
 
   &:focus-visible {
@@ -331,54 +319,6 @@ const WeightField = styled.div`
 
 const FieldGroup = styled.div`
   min-width: 0;
-`;
-
-const HelpRow = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 7px 12px;
-  flex-wrap: wrap;
-  margin-top: 7px;
-`;
-
-const HelpButton = styled.button`
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font: inherit;
-  font-size: .84rem;
-  font-weight: 800;
-  text-align: left;
-  cursor: pointer;
-
-  strong {
-    color: ${({ theme }) => theme.colors.secondaryDark};
-    font-weight: 950;
-  }
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.secondary};
-    outline-offset: 3px;
-    border-radius: 4px;
-  }
-`;
-
-const HelpPanel = styled.div`
-  display: grid;
-  gap: 5px;
-  margin-top: 8px;
-  padding: 10px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 12px;
-  background: ${({ theme }) => theme.colors.surfaceAlt};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: .84rem;
-  line-height: 1.55;
-
-  p { margin: 0; }
-  strong { color: ${({ theme }) => theme.colors.text}; }
 `;
 
 const HelpAction = styled.button`
@@ -473,8 +413,8 @@ const SavePrompt = styled.div`
 const Results = styled.div`
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 9px;
-  margin-top: 13px;
+  gap: 10px;
+  margin-top: 18px;
 
   @media (max-width: 480px) {
     grid-template-columns: 1fr;
@@ -482,15 +422,19 @@ const Results = styled.div`
 `;
 
 const Result = styled.div`
-  padding: 13px 14px;
+  padding: 19px 18px;
   border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 14px;
-  background: ${({ theme }) => theme.colors.surfaceAlt};
+  border-radius: 17px;
+  background: ${({ $highlight, theme }) => $highlight
+    ? `linear-gradient(145deg, ${theme.semantic.badgeGoldBg}, ${theme.colors.surface})`
+    : theme.colors.surfaceAlt};
+  border-color: ${({ $highlight, theme }) => $highlight ? theme.colors.gold : theme.colors.border};
+  border-top-width: ${({ $highlight }) => $highlight ? '4px' : '1px'};
 
   small {
     display: block;
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .83rem;
+    font-size: .875rem;
     font-weight: 850;
   }
 
@@ -499,8 +443,8 @@ const Result = styled.div`
     margin-top: 5px;
     color: ${({ theme }) => theme.colors.primary};
     font-family: ${({ theme }) => theme.fonts.numeric};
-    font-size: clamp(1.2rem, 4vw, 1.72rem);
-    font-weight: 950;
+    font-size: clamp(1.35rem, 4.5vw, 2rem);
+    font-weight: 850;
     letter-spacing: -.035em;
   }
 `;
@@ -511,9 +455,9 @@ const Action = styled.button`
   justify-content: center;
   gap: 7px;
   width: 100%;
-  min-height: 46px;
-  margin-top: 12px;
-  padding: 10px 14px;
+  min-height: 52px;
+  margin-top: 14px;
+  padding: 12px 18px;
   border: 1px solid ${({ theme }) => theme.colors.primary};
   border-radius: 13px;
   background: ${({ theme }) => theme.colors.primary};
@@ -526,6 +470,14 @@ const Action = styled.button`
     opacity: .5;
     cursor: not-allowed;
   }
+`;
+
+const GuestSaveError = styled.p`
+  margin: 10px 2px 0;
+  color: ${({ theme }) => theme.semantic.alertErrorText};
+  font-size: .875rem;
+  line-height: 1.55;
+  word-break: keep-all;
 `;
 
 const Note = styled.p`
@@ -616,6 +568,7 @@ export default function QuickGoldValueCalculator({
   const [productId, setProductId] = useState("");
   const [weightValue, setWeightValue] = useState("");
   const [weightUnit, setWeightUnit] = useState("g");
+  const [guestSaveError, setGuestSaveError] = useState("");
   const [entryMode, setEntryMode] = useState("known");
   const [pureOptionsOpen, setPureOptionsOpen] = useState(false);
   const [moreTypesOpen, setMoreTypesOpen] = useState(false);
@@ -623,8 +576,7 @@ export default function QuickGoldValueCalculator({
   // Only web landing gets the quick product choice: native home behavior stays unchanged.
   const webLandingExperience = source === "landing";
   const quickEntryExperience = appFirstExperience || webLandingExperience;
-  const [stampHelpOpen, setStampHelpOpen] = useState(false);
-  const [weightHelpOpen, setWeightHelpOpen] = useState(false);
+  const guideId = useId();
   const [hallmarkBusy, setHallmarkBusy] = useState(false);
   const [hallmarkResult, setHallmarkResult] = useState(null);
   const [hallmarkError, setHallmarkError] = useState("");
@@ -802,18 +754,6 @@ export default function QuickGoldValueCalculator({
     }
   };
 
-  const toggleStampHelp = () => {
-    setStampHelpOpen((open) => !open);
-  };
-
-  const toggleWeightHelp = () => {
-    setWeightHelpOpen((open) => !open);
-  };
-
-  const openStoreMeasurementHelp = () => {
-    navigate("/stores");
-  };
-
   const scanHallmarkWithSystemCamera = async () => {
     if (!isAndroid || hallmarkBusy) return;
 
@@ -960,8 +900,13 @@ export default function QuickGoldValueCalculator({
       return;
     }
 
-    saveGuestMyGoldItems([item]);
-    navigate("/my-gold");
+    setGuestSaveError("");
+    try {
+      appendGuestMyGoldItem(item);
+      navigate("/my-gold");
+    } catch (error) {
+      setGuestSaveError(error?.message || "기록을 저장하지 못했습니다. 다시 시도해 주세요.");
+    }
   };
 
   return (
@@ -972,16 +917,6 @@ export default function QuickGoldValueCalculator({
         {!(compact && appFirstExperience) && <p>{description}</p>}
       </Head>
       <Body $compact={compact} $nativeFirst={compact && appFirstExperience} $webLanding={webLandingExperience}>
-        {appFirstExperience && !compact && (
-          <IntroHelp
-            type="button"
-            onClick={() => selectEntryMode(entryMode === "unknown" ? "known" : "unknown")}
-            aria-expanded={entryMode === "unknown"}
-          >
-            금 종류나 무게를 모르겠어요
-          </IntroHelp>
-        )}
-
         {!quickEntryExperience && <EntryModeChooser>
           <p>금 종류와 무게를 알고 계신가요?</p>
           <div role="group" aria-label="금 가치 확인 시작 방법">
@@ -1002,46 +937,11 @@ export default function QuickGoldValueCalculator({
           </div>
         </EntryModeChooser>}
 
-        {entryMode === "unknown" && (
-          <UnknownGuide role="region" aria-label="금 종류와 무게 확인 방법">
-            <strong>모르셔도 괜찮습니다. 확인 방법부터 안내해 드릴게요.</strong>
-            <p>① 금 종류: 반지·목걸이 안쪽의 14K·585, 18K·750 등의 표시를 살펴보세요. 각인은 참고용이며 실제 순도를 확정하지 않습니다.</p>
-            <p>② 무게: 보증서·구매 영수증을 확인하거나 정밀 저울로 참고 측정할 수 있어요. 사진만으로 무게를 알 수는 없습니다.</p>
-            <p>정보를 확인할 수 없으면 계산 없이 매장 실측 방문 예약을 진행할 수 있습니다.</p>
-            <UnknownActions>
-              <UnknownVisitLink
-                to="/gold-exchange?mode=visit"
-                onClick={() => trackProductEventOncePerSession(
-                  "quick_calc_store_visit_clicked",
-                  { source },
-                  `quick-calc-store-visit-${source}`
-                )}
-              >
-                매장에서 확인 예약하기
-              </UnknownVisitLink>
-              <UnknownBackButton type="button" onClick={() => selectEntryMode("known")}>
-                입력해서 계산하기
-              </UnknownBackButton>
-            </UnknownActions>
-          </UnknownGuide>
-        )}
-
         <Fields className="quick-calc-fields">
           <FieldGroup>
             {quickEntryExperience ? (
               <QuickTypeGroup $nativeFirst={compact}>
-                {(compact || webLandingExperience) ? (
-                  <QuickTypeHeading>
-                    <span>금 종류</span>
-                    <IntroHelp
-                      type="button"
-                      onClick={() => selectEntryMode(entryMode === "unknown" ? "known" : "unknown")}
-                      aria-expanded={entryMode === "unknown"}
-                    >
-                      금 종류·무게를 모르겠어요
-                    </IntroHelp>
-                  </QuickTypeHeading>
-                ) : <span>금 종류</span>}
+                <span>금 종류</span>
                 <QuickTypeButtons role="group" aria-label="자주 선택하는 금 종류">
                   {quickTypeGroups.quick.map((option) => (
                     <QuickTypeButton
@@ -1133,96 +1033,6 @@ export default function QuickGoldValueCalculator({
               </Field>
             )}
 
-            {((!compact && !webLandingExperience) || entryMode === "unknown") && <HelpRow>
-              <HelpButton type="button" onClick={toggleStampHelp} aria-expanded={stampHelpOpen}>
-                금 종류를 모르시나요? <strong>각인 확인 방법</strong>
-              </HelpButton>
-
-              {isAndroid && (
-                <HallmarkScanButton
-                  type="button"
-                  onClick={scanHallmarkWithSystemCamera}
-                  disabled={hallmarkBusy}
-                >
-                  <CameraIcon size={14} aria-hidden />
-                  {hallmarkBusy
-                    ? "각인 확인 중..."
-                    : "각인 촬영으로 확인"}
-                </HallmarkScanButton>
-              )}
-            </HelpRow>}
-            {isAndroid && (hallmarkError || hallmarkResult) && (
-              <HallmarkStatus
-                role={hallmarkError ? "alert" : "status"}
-                aria-live="polite"
-              >
-                {hallmarkError ? (
-                  <p>{hallmarkError}</p>
-                ) : (
-                  <>
-                    <p>
-                      <strong>
-                        {hallmarkResult.message}
-                      </strong>
-                    </p>
-
-                    {(hallmarkResult.recommendationProductId ||
-                      hallmarkResult.suggestedProductId) &&
-                      !hallmarkResult.applied && (
-                        <HelpAction
-                          type="button"
-                          onClick={applyHallmarkRecommendation}
-                        >
-                          {hallmarkResult.suggestedProductId
-                            ? `${hallmarkResult.suggestedLabel || "후보"}로 선택하기`
-                            : "이 금 종류로 선택"}
-                        </HelpAction>
-                      )}
-
-                    {(hallmarkResult.suggestedProductId ||
-                      hallmarkResult.matchConfidence === "medium") &&
-                      !hallmarkResult.applied && (
-                        <small>
-                          제품의 실제 각인을 눈으로 확인한 경우에만 선택해 주세요.
-                        </small>
-                      )}
-
-                    {hallmarkResult.applied && (
-                      <small>
-                        금 종류에 반영했습니다. 선택값을 한 번 더 확인해 주세요.
-                      </small>
-                    )}
-
-                    {hallmarkResult.requiresProductForm && (
-                      <small>
-                        순금 계열은 각인만으로 제품 형태를 구분하기 어려울 수 있으므로 아래 목록에서 형태를 직접 선택해 주세요.
-                      </small>
-                    )}
-                  </>
-                )}
-
-                <small>
-                  각인 촬영은 제품의 표시를 읽는 보조 기능이며 실제 금 순도를 판정하지 않습니다. 실제 교환은 매장 실측 후 확정됩니다.
-                </small>
-                <small>
-                  촬영 이미지는 각인 확인을 위해 분석하며 한국골드마켓에는 저장하지 않습니다.
-                </small>
-              </HallmarkStatus>
-            )}
-
-            {stampHelpOpen && (
-              <HelpPanel>
-                <p><strong>제품 안쪽 각인을 확인해 보세요.</strong></p>
-                <p><strong>585 · 14K · K14</strong> → 14K</p>
-                <p><strong>750 · 18K · K18</strong> → 18K</p>
-                <p><strong>995 · 99.5</strong> → 순금 99.5%</p>
-                <p><strong>999 · 99.9</strong> → 순금 99.9% 계열</p>
-                <p><strong>24K · K24</strong> → 순금 계열</p>
-                <p><strong>999.9 · 9999 · 99.99</strong> → 순금 999.9 계열</p>
-                <p>각인이 없거나 흐리다면 금 종류를 직접 선택하거나 매장에서 확인할 수 있습니다.</p>
-                <HelpAction type="button" onClick={openStoreMeasurementHelp}>매장에서 확인하기</HelpAction>
-              </HelpPanel>
-            )}
           </FieldGroup>
 
           <FieldGroup>
@@ -1254,41 +1064,96 @@ export default function QuickGoldValueCalculator({
               )}
             </Field>
 
-            {((!compact && !webLandingExperience) || entryMode === "unknown") && <HelpRow>
-              <HelpButton type="button" onClick={toggleWeightHelp} aria-expanded={weightHelpOpen}>
-                무게를 모르시나요? <strong>확인 방법 보기</strong>
-              </HelpButton>
-            </HelpRow>}
-
-            {weightHelpOpen && (
-              <HelpPanel>
-                <p><strong>보증서·영수증 확인</strong> · 구입 당시 중량이 표시되어 있는지 확인해 보세요.</p>
-                <p><strong>집에서 참고 측정</strong> · 0.01g 단위 전자저울을 이용하면 참고 중량을 확인할 수 있습니다.</p>
-                <p>일반 주방저울은 작은 귀금속을 측정할 때 오차가 클 수 있습니다.</p>
-                <p><strong>정확한 중량은 매장에서 직접 실측할 수 있습니다.</strong></p>
-                <HelpAction type="button" onClick={openStoreMeasurementHelp}>매장 실측 안내</HelpAction>
-              </HelpPanel>
-            )}
           </FieldGroup>
         </Fields>
 
+        {quickEntryExperience && (
+          <CompactHelpToggle
+            type="button"
+            aria-expanded={entryMode === "unknown"}
+            aria-controls={guideId}
+            onClick={() => selectEntryMode(entryMode === "unknown" ? "known" : "unknown")}
+          >
+            <span>{appFirstExperience ? "금 종류나 무게를 모르겠어요" : "금 종류·무게를 모르겠어요"}</span>
+            <span aria-hidden="true">{entryMode === "unknown" ? "▴" : "▾"}</span>
+          </CompactHelpToggle>
+        )}
+
+        {entryMode === "unknown" && (
+          <UnknownGuide id={guideId} role="region" aria-label="금 종류와 무게 확인 방법">
+            <strong>금 종류와 무게, 이렇게 확인하세요.</strong>
+            <p><strong>금 종류를 모르시나요?</strong> 반지·목걸이의 14K·585, 18K·750 각인을 참고해 주세요.</p>
+            <p><strong>무게를 모르시나요?</strong> 보증서·구매 영수증 또는 전자저울로 참고 중량을 확인해 주세요.</p>
+            <p>정확한 순도·중량은 매장 실측 후 확인합니다.</p>
+            {isAndroid && (
+              <HallmarkScanButton type="button" onClick={scanHallmarkWithSystemCamera} disabled={hallmarkBusy}>
+                <CameraIcon size={14} aria-hidden />
+                {hallmarkBusy ? "각인 확인 중..." : "각인 촬영으로 확인"}
+              </HallmarkScanButton>
+            )}
+            <UnknownVisitLink
+              to="/gold-exchange?mode=visit"
+              onClick={() => trackProductEventOncePerSession(
+                "quick_calc_store_visit_clicked",
+                { source },
+                `quick-calc-store-visit-${source}`
+              )}
+            >
+              매장에서 확인 예약하기
+            </UnknownVisitLink>
+            <GuideDetails>
+              <summary>각인 확인 방법 자세히 보기</summary>
+              <p>585 · 14K · K14 → 14K / 750 · 18K · K18 → 18K</p>
+              <p>995 · 99.5 → 순금 99.5% / 999 · 99.9 → 순금 99.9% 계열</p>
+              <p>24K · K24 → 순금 계열 / 999.9 · 9999 · 99.99 → 순금 999.9 계열</p>
+              <p>표시가 없거나 흐려도 매장에서 확인할 수 있습니다. 각인만으로 실제 순도는 확정할 수 없습니다.</p>
+            </GuideDetails>
+          </UnknownGuide>
+        )}
+
+        {isAndroid && (hallmarkError || hallmarkResult) && (
+          <HallmarkStatus role={hallmarkError ? "alert" : "status"} aria-live="polite">
+            {hallmarkError ? (
+              <p>{hallmarkError}</p>
+            ) : (
+              <>
+                <p><strong>{hallmarkResult.message}</strong></p>
+                {(hallmarkResult.recommendationProductId || hallmarkResult.suggestedProductId) && !hallmarkResult.applied && (
+                  <HelpAction type="button" onClick={applyHallmarkRecommendation}>
+                    {hallmarkResult.suggestedProductId ? `${hallmarkResult.suggestedLabel || "후보"}로 선택하기` : "이 금 종류로 선택"}
+                  </HelpAction>
+                )}
+                {(hallmarkResult.suggestedProductId || hallmarkResult.matchConfidence === "medium") && !hallmarkResult.applied && (
+                  <small>제품의 실제 각인을 눈으로 확인한 경우에만 선택해 주세요.</small>
+                )}
+                {hallmarkResult.applied && <small>금 종류에 반영했습니다. 선택값을 한 번 더 확인해 주세요.</small>}
+                {hallmarkResult.requiresProductForm && (
+                  <small>순금 계열은 각인만으로 제품 형태를 구분하기 어려울 수 있으므로 목록에서 형태를 직접 선택해 주세요.</small>
+                )}
+              </>
+            )}
+            <small>사진으로 각인을 읽는 기능이에요. 실제 순도는 매장에서 확인해요.</small>
+            <small>촬영 이미지는 각인 확인을 위해 분석하며 한국골드마켓에는 저장하지 않습니다.</small>
+          </HallmarkStatus>
+        )}
+
         {canCalculate && (
           <Results aria-live="polite" role="status" aria-label="내 금 예상 계산 결과">
-            <Result>
-              <small>오늘 예상 참고가치</small>
-              <strong>{publishedEstimateReady ? formatWon(estimatedValueWon) : "시세 확인 중 · 잠시 후 다시 확인"}</strong>
+            <Result $highlight>
+              <small>내 금의 예상 순금량</small>
+              <strong>{pureGoldEstimateReady ? formatGoldWeightPair(pureGoldG) : "환산 기준 확인 중"}</strong>
             </Result>
             <Result>
-              <small>예상 순금량</small>
-              <strong>{pureGoldEstimateReady ? formatGoldWeightPair(pureGoldG) : "환산 기준 확인 중"}</strong>
+              <small>지금 예상 가치</small>
+              <strong>{publishedEstimateReady ? formatWon(estimatedValueWon) : "시세 확인 중 · 잠시 후 다시 확인"}</strong>
             </Result>
           </Results>
         )}
 
         {canCalculate && !quickEntryExperience && (
           <SavePrompt>
-            <strong>한 번 기록하면, 매주 내 금의 변화가 보입니다.</strong>
-            <p>다시 입력할 필요 없이 확인할 수 있어요. 주간 알림은 회원의 수신 동의 후 제공됩니다.</p>
+            <strong>다시 보고 싶다면 내 금에 기록해 두세요.</strong>
+            <p>시세가 바뀌어도 다시 입력할 필요가 없어요.</p>
           </SavePrompt>
         )}
 
@@ -1310,24 +1175,13 @@ export default function QuickGoldValueCalculator({
                 <Gem size={16} aria-hidden /> MY GOLD에 기록하기 <ArrowRight size={16} aria-hidden />
               </Action>
             )}
+            {guestSaveError && <GuestSaveError role="alert">{guestSaveError}</GuestSaveError>}
             <Note>
-              <strong>MY GOLD는 금 실물을 맡기는 보관 서비스가 아닙니다.</strong> 오늘 가치는 참고용이며,
-              실제 교환은 매장 실측 후 확정됩니다.
+              공개 시세로 계산한 예상 금액이에요. 실제 금액은 매장에서 확인해요.
             </Note>
           </>
         )}
-        {!canCalculate && compact && !appFirstExperience && (
-          <Note>금 종류와 중량을 입력하면 예상 결과가 나타납니다. 입력한 금은 이곳에 맡기지 않습니다.</Note>
-        )}
-        {!canCalculate && !compact && (
-          <Note>
-            {webLandingExperience ? (
-              <>예상 가치는 참고용 · 실제 교환은 매장 실측·동의 후 확정됩니다. MY GOLD는 금 실물 보관이 아닙니다.</>
-            ) : (
-              <><strong>MY GOLD는 금 실물을 맡기는 보관 서비스가 아닙니다.</strong> 금 종류와 중량을 입력해 참고가치를 확인할 수 있으며, 실제 교환은 매장 실측 후 확정됩니다.</>
-            )}
-          </Note>
-        )}
+
       </Body>
     </Card>
   );

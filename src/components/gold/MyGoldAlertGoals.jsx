@@ -350,7 +350,7 @@ export default function MyGoldAlertGoals({
         setPushReady(false);
         setMessage(
           hasAnyGoal
-            ? "체험 설정을 저장했습니다. 실제 푸시 알림은 로그인 후 같은 방식으로 설정할 수 있습니다."
+            ? "이 기기에 체험 설정을 저장했어요. 실제 알림은 로그인 후 설정할 수 있어요."
             : "체험 알림을 해제했습니다."
         );
         return;
@@ -403,7 +403,7 @@ export default function MyGoldAlertGoals({
         <h2 id="my-gold-alert-goals-title">알림 설정</h2>
         <Status $ready={pushReady}>
           {pushReady ? <BellRing size={13} aria-hidden /> : <Bell size={13} aria-hidden />}
-          {demoMode ? "체험" : pushReady ? "기기 준비됨" : "기기 알림 확인 필요"}
+          {demoMode ? "체험" : pushReady ? "알림 연결됨" : "기기 연결 확인"}
         </Status>
       </Head>
 
@@ -457,8 +457,8 @@ export default function MyGoldAlertGoals({
                 }))}
                 aria-label="순금 가격 알림 방향"
               >
-                <option value="up">상승 도달</option>
-                <option value="down">하락 도달</option>
+                <option value="up">이 가격 이상</option>
+                <option value="down">이 가격 이하</option>
               </select>
               <input
                 type="number"
@@ -495,7 +495,7 @@ export default function MyGoldAlertGoals({
       </Fields>
 
       {alreadyMetPriceTarget && (
-        <Message role="status">현재 순금 1돈 참고시세가 이미 입력한 목표 조건을 충족합니다. 저장 시 목표 도달 여부가 확인되며, 알림 수신은 기기 설정과 서비스 조건에 따라 달라집니다.</Message>
+        <Message role="status">현재 시세가 이미 목표 가격에 닿았어요. 저장할 때 목표를 확인하며, 알림은 기기 설정에 따라 전달돼요.</Message>
       )}
 
       {!pushReady && (
@@ -503,8 +503,8 @@ export default function MyGoldAlertGoals({
           <Bell size={15} aria-hidden />
           <span>
             {demoMode
-              ? "지금은 알림 기능을 체험하는 중입니다. 실제 자동 푸시는 로그인 후 받을 수 있습니다."
-              : "MY GOLD 목표 도달 푸시를 받으려면 이 기기의 알림 권한을 켜 주세요. 마케팅 수신동의와는 별도입니다."}
+              ? "지금은 목표를 골라보는 체험이에요. 로그인하면 실제 알림을 설정할 수 있어요."
+              : "목표 알림을 받으려면 이 기기에서 알림을 허용해 주세요. 광고성 소식에 동의하지 않아도 이용할 수 있어요."}
           </span>
           <Link to={demoMode ? "/login?next=%2Fmy-gold%2Falerts" : "/settings"}>
             {demoMode ? "로그인" : "알림 설정"}
@@ -526,13 +526,13 @@ export default function MyGoldAlertGoals({
       {!error && message && <Message>{message}</Message>}
 
       <Details>
-        <summary>알림 계산 기준 보기</summary>
+        <summary>언제, 어떤 기준으로 알려주나요?</summary>
         <p>
           MY GOLD 가치 목표는 내가 직접 기록한 금의 현재 참고가치만 반영합니다.
           MEMBER GOLD는 MY GOLD 가치와 분리하며, 골드바 교환 가능 목표에서만 함께 사용할 수 있는 금량으로 확인합니다.
         </p>
         <p>
-          순금 가격은 상승 도달이면 목표가 이상, 하락 도달이면 목표가 이하가 되는 순간을 확인합니다.
+          순금 가격은 이 가격 이상이면 목표가 이상, 이 가격 이하이면 목표가 이하가 되는 순간을 확인합니다.
           설정값마다 처음 도달할 때 1회 알림을 보내며, 저장 시 즉시 확인하고 이후 매일 오후 4시 20분(한국시간)에 자동 점검합니다.
           실제 금교환 순금량은 매장 실측 후 확정됩니다.
         </p>

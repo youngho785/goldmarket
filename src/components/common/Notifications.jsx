@@ -253,7 +253,7 @@ export default function Notifications() {
             </Item>
           ) : visibleNotifications.length === 0 ? (
             <Item type="button" $unread={false} disabled>
-              <Body>알림이 없습니다.</Body>
+              <Body>새 소식이 오면 여기에 모아둘게요.</Body>
             </Item>
           ) : (
             visibleNotifications.map((item) => {

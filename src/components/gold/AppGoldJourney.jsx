@@ -6,7 +6,12 @@ import { Check, ChevronRight, Sparkles } from "lucide-react";
 import { GOLD_BAR_DENOMS, getGoldBarReadiness } from "@/utils/goldBarReadiness";
 
 const Card = styled.section`
-display:grid; gap:18px; padding:24px; border:1px solid var(--gm-border); border-radius:8px; background:var(--gm-surface); box-shadow:none; @media(max-width:600px){padding:22px 18px;}
+display:grid; gap:18px; padding:26px;
+  border:1px solid color-mix(in srgb,var(--gm-gold) 24%,var(--gm-border));
+  border-radius:20px;
+  background:linear-gradient(145deg,var(--gm-surface),color-mix(in srgb,var(--gm-gold-light) 52%,var(--gm-surface)));
+  box-shadow:0 10px 29px rgba(98,80,49,.04);
+  @media(max-width:600px){padding:22px 18px;}
 `;
 
 const Head = styled.div`
@@ -20,7 +25,7 @@ const Head = styled.div`
     align-items: center;
     gap: 5px;
     color: ${({ theme }) => theme.colors.secondaryDark};
-    font-size: .69rem;
+    font-size: .78rem;
     font-weight: 950;
     letter-spacing: .08em;
   }
@@ -39,7 +44,7 @@ const Head = styled.div`
   p {
     margin: 5px 0 0;
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .72rem;
+    font-size: .82rem;
     line-height: 1.45;
     word-break: keep-all;
   }
@@ -54,7 +59,7 @@ const StatusPill = styled.span`
   border-radius: 999px;
   background: ${({ theme }) => theme.colors.primary};
   color: ${({ theme }) => theme.colors.goldLight};
-  font-size: .67rem;
+  font-size: .75rem;
   font-weight: 950;
   white-space: nowrap;
 
@@ -66,8 +71,8 @@ const ExchangeNow = styled(Link)`
   justify-content: space-between;
   gap: 12px;
   align-items: center;
-  min-height: 40px;
-  padding: 7px 1px;
+  min-height: 44px;
+  padding: 9px 1px;
   border-top: 1px solid ${({ theme }) => theme.colors.dividerSubtle};
   background: transparent;
   color: inherit;
@@ -76,7 +81,7 @@ const ExchangeNow = styled(Link)`
   small {
     display: block;
     color: ${({ theme }) => theme.colors.secondaryDark};
-    font-size: .68rem;
+    font-size: .78rem;
     font-weight: 900;
   }
 
@@ -84,7 +89,7 @@ const ExchangeNow = styled(Link)`
     display: block;
     margin-top: 3px;
     color: ${({ theme }) => theme.colors.primary};
-    font-size: .84rem;
+    font-size: .88rem;
     line-height: 1.3;
     word-break: keep-all;
   }
@@ -111,13 +116,13 @@ const MilestoneHead = styled.div`
 
   strong {
     color: ${({ theme }) => theme.colors.primary};
-    font-size: .64rem;
+    font-size: .78rem;
     letter-spacing: .08em;
   }
 
   span {
     color: ${({ theme }) => theme.colors.textSecondary};
-    font-size: .63rem;
+    font-size: .76rem;
     font-weight: 850;
   }
 `;
@@ -178,7 +183,7 @@ const Milestone = styled.li`
     overflow: hidden;
     text-overflow: ellipsis;
     color: inherit;
-    font-size: .66rem;
+    font-size: .76rem;
     font-weight: 900;
     white-space: nowrap;
   }
@@ -190,7 +195,7 @@ const ProgressLabels = styled.div`
   justify-content: space-between;
   gap: 10px;
   color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: .69rem;
+  font-size: .78rem;
 
   strong {
     color: ${({ theme }) => theme.colors.primary};
@@ -201,7 +206,7 @@ const ProgressLabels = styled.div`
 const ProgressTrack = styled.div`
   position: relative;
   overflow: hidden;
-  height: 8px;
+  height: 10px;
   border-radius: 999px;
   background: ${({ theme }) => theme.colors.surfaceAlt};
 
@@ -229,7 +234,7 @@ const Footer = styled.div`
   justify-content: space-between;
   gap: 10px;
   color: ${({ theme }) => theme.colors.textLight};
-  font-size: .61rem;
+  font-size: .75rem;
   line-height: 1.35;
 
   a {
@@ -353,7 +358,14 @@ export default function AppGoldJourney({ pureGoldG = 0, vaultProducts = [], onEx
             {next ? <>다음 <strong>{formatGoldGrams(next.grams)}</strong></> : <strong>달성</strong>}
           </span>
         </ProgressLabels>
-        <ProgressTrack $progress={progress} aria-label={`다음 골드바 목표 진행률 ${progress.toFixed(0)}%`}>
+        <ProgressTrack
+          $progress={progress}
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(progress)}
+          aria-label={`다음 골드바 목표 진행률 ${progress.toFixed(0)}%`}
+        >
           <span />
         </ProgressTrack>
       </div>

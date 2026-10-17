@@ -18,37 +18,37 @@ test('골드바 선택에서 부족한 중량을 순금으로 명확하게 표�
 });
 
 test('예약 단계는 부족분 비용·공임과 실측 확정을 구분한다', () => {
-  assert.match(steps, /부족한 순금의 비용과 추가 골드바 공임은 별도입니다/);
-  assert.match(steps, /실제 순도·중량·공임·남는 금 처리는 매장 실측과 고객 동의 후 확정됩니다/);
-  assert.match(steps, /예약 요청 시 공임을 다시 확인하며, 실측과 고객 동의 후 확정됩니다/);
+  assert.match(steps, /부족한 금의 비용과 추가 골드바 공임은 별도예요/);
+  assert.match(steps, /실물 순도·중량과 공임을 매장에서 확인하고 동의 후 진행합니다/);
+  assert.match(steps, /예약할 때 공임을 다시 확인하고, 매장에서 동의 후 확정해요/);
   assert.doesNotMatch(steps, /적용 예정 공임표 버전/);
 });
 
 test('방문 날짜·시간 선택만으로 일정이 선점되거나 확정되지 않음을 안내한다', () => {
-  assert.match(steps, /visitTime && <small>예약 요청을 접수한 뒤 매장에서 확인합니다\. 아직 예약 확정·시간 선점 상태는 아닙니다/);
-  assert.match(steps, /예약 요청을 접수한 뒤 매장에서 확인합니다/);
+  assert.match(steps, /visitTime && <small>선택한 일정은 매장 확인이 필요해요\. 아직 예약이 확정되거나 시간이 확보된 것은 아니에요/);
+  assert.match(steps, /선택한 일정은 매장 확인이 필요해요/);
 });
 
 test('예약 요청 버튼 근처에서는 접수와 확정을 한 번만 간결하게 안내한다', () => {
-  assert.equal((steps.match(/아래 버튼은 방문 예약 <b>요청<\/b>입니다/g) || []).length, 1);
+  assert.equal((steps.match(/방문 예약 <b>요청<\/b>을 보내면 매장에서 일정을 확인해 알려드려요/g) || []).length, 1);
   assert.doesNotMatch(steps, /이 버튼은 예약 <b>요청<\/b>입니다/);
   assert.match(steps, /\{loading \? "제출 중\.\.\." : "방문 예약 요청"\}/);
 });
 
 test('비회원은 계산·방문 시간 선택 후 인증할 수 있다', () => {
-  assert.match(page, /예약 요청만 로그인 또는 회원가입 후 완료합니다/);
+  assert.match(page, /예약 요청을 보낼 때 로그인하면 돼요/);
   assert.match(steps, /user \? "이메일 인증하고 예약 이어가기" : "로그인·가입하고 예약 이어가기"/);
   assert.match(page, /saveGoldExchangeDraft\(/);
 });
 
 test('MEMBER GOLD는 선택사항이며 매장에서 교환 확정 시 차감한다', () => {
   assert.match(steps, /선택하지 않아도 방문 예약은 가능합니다/);
-  assert.match(steps, /선택해도 지금 바로 차감되지 않습니다/);
-  assert.match(steps, /매장에서 6자리 확인 코드를 확인하고 실제 교환을 확정할 때 차감됩니다/);
+  assert.match(steps, /지금은 사용 신청만 해요/);
+  assert.match(steps, /매장에서 6자리 코드를 확인하고 실제 교환을 확정할 때 차감돼요/);
 });
 
 test('완료 화면은 예약 대기와 확정을 구분한다', () => {
-  assert.match(steps, /현재 상태 · 예약 확인 대기/);
+  assert.match(steps, /매장 확인 중/);
   assert.match(steps, /방문 예약 요청이 접수되었습니다/);
   assert.match(steps, /현재 상태 · 예약 확정/);
 });

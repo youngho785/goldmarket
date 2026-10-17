@@ -429,8 +429,8 @@ export default function MyGoldValueTrend({
       <Card id="my-gold-value-trend" aria-labelledby="my-gold-value-trend-title">
         <CompactHead>
           <div>
-            <h2 id="my-gold-value-trend-title">{bonusOnly ? "MEMBER GOLD 가치 변화" : "내 금 참고가치 변화"}</h2>
-            <p>{trend.selectedPeriod.label} 동안 내 금 참고가치가 어떻게 움직였는지 빠르게 확인합니다.</p>
+            <h2 id="my-gold-value-trend-title">{bonusOnly ? "MEMBER GOLD 가치 변화" : "내 금의 가치 변화"}</h2>
+            <p>{trend.selectedPeriod.label} 동안 내 금의 예상 가치가 얼마나 달라졌는지 살펴보세요.</p>
           </div>
           <DetailsLink to={detailsTo}>자세히 보기</DetailsLink>
         </CompactHead>
@@ -449,7 +449,7 @@ export default function MyGoldValueTrend({
             <CompactEmpty>비교할 과거 공개 시세가 아직 충분하지 않습니다.</CompactEmpty>
           ) : (
             <>
-              <CompactSvg viewBox={`0 0 ${geometry.width} ${geometry.height}`} role="img" aria-label={`${trend.selectedPeriod.label} 내 금 참고가치 변화 미리보기`} preserveAspectRatio="none">
+              <CompactSvg viewBox={`0 0 ${geometry.width} ${geometry.height}`} role="img" aria-label={`${trend.selectedPeriod.label} 내 금의 가치 변화 미리보기`} preserveAspectRatio="none">
                 <line x1="12" y1="14" x2="628" y2="14" stroke="currentColor" opacity="0.10" />
                 <line x1="12" y1="83" x2="628" y2="83" stroke="currentColor" opacity="0.08" />
                 <AnimatedArea key={`compact-area-${trend.period}-${geometry.polyline}`} points={geometry.area} fill="currentColor" />
@@ -471,8 +471,8 @@ export default function MyGoldValueTrend({
     <Card id="my-gold-value-trend" aria-labelledby="my-gold-value-trend-title">
       <Head>
         <div>
-          <h2 id="my-gold-value-trend-title">{bonusOnly ? "MEMBER GOLD 가치 변화" : "내 금 참고가치 변화"}</h2>
-          <p>{bonusOnly ? `현재 MEMBER GOLD ${Number(bonusGoldG || 0).toFixed(2)}g을 과거 공개 시세로 비교합니다.` : "현재 기록한 금량은 그대로 두고 시세 변화가 내 금 참고가치에 미친 영향만 비교합니다."}</p>
+          <h2 id="my-gold-value-trend-title">{bonusOnly ? "MEMBER GOLD 가치 변화" : "내 금의 가치 변화"}</h2>
+          <p>{bonusOnly ? `현재 MEMBER GOLD ${Number(bonusGoldG || 0).toFixed(2)}g을 과거 공개 시세로 비교합니다.` : "현재 기록한 금을 기준으로, 시세에 따른 예상 가치 변화를 보여드려요."}</p>
         </div>
         <Periods aria-label="내 금 참고가치 그래프 기간 선택">
           {MY_GOLD_TREND_PERIODS.map((option) => (
@@ -503,7 +503,7 @@ export default function MyGoldValueTrend({
           <Empty>비교할 과거 공개 시세가 아직 충분하지 않습니다.</Empty>
         ) : (
           <>
-            <Svg viewBox={`0 0 ${geometry.width} ${geometry.height}`} role="img" aria-label={`${trend.selectedPeriod.label} 내 금 참고가치 변화 그래프`} preserveAspectRatio="none">
+            <Svg viewBox={`0 0 ${geometry.width} ${geometry.height}`} role="img" aria-label={`${trend.selectedPeriod.label} 내 금의 가치 변화 그래프`} preserveAspectRatio="none">
               <line x1="12" y1="14" x2="628" y2="14" stroke="currentColor" opacity="0.10" />
               <line x1="12" y1="83" x2="628" y2="83" stroke="currentColor" opacity="0.08" />
               <line x1="12" y1="152" x2="628" y2="152" stroke="currentColor" opacity="0.10" />

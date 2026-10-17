@@ -82,7 +82,7 @@ test("회원가입은 최소 계정 생성과 점진적 프로필 구조를 사�
 });
 
 test("가입 CTA는 사용자의 원래 목적을 말하고 혜택은 보조로 둔다", () => {
-  assert.match(registerSource, /내 금 저장하고 시작하기/);
+  assert.match(registerSource, /이메일 인증하고 내 금 이어가기/);
   assert.match(registerSource, /회원가입 후 예약 이어가기/);
   assert.match(loginSource, /내 금 기록을 이어가세요/);
   assert.match(loginSource, /예약을 이어서 진행하세요/);
@@ -102,8 +102,8 @@ test("이메일 인증 후에는 원래 하던 일을 혜택보다 먼저 이어
 test("선택 마케팅 푸시는 사용자 행동으로 요청하고 MY GOLD 서비스 알림과 분리해 설명한다", () => {
   assert.match(welcomeSource, /선택 1\. 금시세·혜택 소식 알림/);
   assert.match(welcomeSource, /버튼을 누른 경우에만 OS\/브라우저 알림 권한을 요청/);
-  assert.match(welcomeSource, /MY GOLD 목표 도달 같은 서비스 알림과는 별도로 운영/);
-  assert.match(welcomeSource, /알림 받고 순금 0\.01g 혜택 받기/);
+  assert.match(welcomeSource, /광고성 정보 수신 동의는 선택이며, 내 금 목표 알림과는 별개예요/);
+  assert.match(welcomeSource, /소식 받기 · 조건 충족 시 순금 0\.01g/);
   assert.match(welcomeSource, /onClick=\{handleMarketingReward\}/);
 });
 
@@ -137,7 +137,7 @@ test("MY GOLD는 저장한 금으로 GOLD TO GOLD 결과 단계까지 자동 연
 test("MY GOLD는 회원혜택 잔액을 합산하지 않고 기록한 금만 보여준다", () => {
   assert.match(myGoldSource, /MY GOLD는 사용자가 실제로 보유한 금을 기록해 보는 개인 기록 공간/);
   assert.match(myGoldSource, /const vaultValueWon = Number\(activeSummary\.estimatedValueWon \|\| 0\)/);
-  assert.match(myGoldSource, /MEMBER GOLD는 별도 회원혜택이며 MY GOLD 참고가치에는 합산하지 않습니다/);
+  assert.match(myGoldSource, /MEMBER GOLD는 별도 회원혜택이며 MY GOLD 예상 가치에 합산하지 않아요/);
   assert.doesNotMatch(appHomeSource, /<BenefitCard/);
 });
 

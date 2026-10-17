@@ -65,8 +65,8 @@ if (!existsSync(path.join(root, "tests", "smoke", "node_modules", "@playwright",
   } else {
     mkdirSync(outputDir, { recursive: true });
     const inner = headed
-      ? "npm --prefix tests/smoke run test:inner:headed"
-      : "npm --prefix tests/smoke run test:inner";
+      ? (process.platform === "win32" ? "tests\\smoke\\run-desktop-inner.cmd headed" : "npm --prefix tests/smoke run test:inner:headed")
+      : (process.platform === "win32" ? "tests\\smoke\\run-desktop-inner.cmd" : "npm --prefix tests/smoke run test:inner");
     const result = await runFirebase([
       "--config", "firebase.json",
       "--project", "demo-goldmarket",

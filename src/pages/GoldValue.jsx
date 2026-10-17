@@ -91,25 +91,23 @@ export default function GoldValue() {
     <Page>
       <Hero>
         <small>GOLD VALUE CALCULATOR</small>
-        <h1>14K·18K·순금, 오늘 내 금 가치를 계산해 보세요.</h1>
+        <h1>내 금, 지금 얼마일까요?</h1>
         <p>
-          금 종류와 중량을 입력하면 한국골드마켓의 공개 시세 기준 참고가치와 예상 순금량을 확인할 수 있습니다.
-          계산 결과는 참고값이며 실제 교환 조건은 매장 실측 후 확정됩니다.
+          종류와 무게를 알려주시면 공개 시세로 예상 가치를 계산해 드려요.
         </p>
       </Hero>
 
       <QuickGoldValueCalculator
         source="gold-value"
         eyebrow="금 중량별 가치 계산"
-        title="내 금은 오늘 얼마일까요?"
+        title="금 종류와 무게를 알려주세요"
         description="14K·18K·순금의 종류와 중량을 입력해 오늘 참고가치와 예상 순금량을 바로 확인하세요."
       />
 
       <Guide>
-        <h2>MY GOLD와 계산기의 차이</h2>
+        <h2>다시 보고 싶다면 기록해 두세요</h2>
         <p>
-          이 계산기는 지금 가치를 한 번 확인하는 도구입니다. MY GOLD에 기록하면 내가 실제로 가진 금의 종류와 중량을
-          개인 기록으로 저장하고, 이후 시세 변화에 따른 참고가치 변화를 계속 확인할 수 있습니다. MY GOLD는 실물 금 보관 서비스가 아닙니다.
+          MY GOLD에 남겨두면 다음에는 다시 입력하지 않고 내 금의 가치를 확인할 수 있어요. 실물 금은 직접 보관하는 개인 기록이에요.
         </p>
         <Links>
           <Link to="/gold-price">오늘 금시세 <ArrowRight size={13} aria-hidden /></Link>

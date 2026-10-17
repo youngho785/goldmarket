@@ -1,6 +1,7 @@
 // src/lib/goldVaultImportDraft.js
 import { DON_TO_GRAMS } from "@/lib/goldRates";
 import {
+  GOLD_VAULT_MAX_ITEMS,
   GOLD_VAULT_MAX_WEIGHT_G,
   getGoldVaultTypeLabel,
   isSupportedGoldVaultType,
@@ -10,7 +11,10 @@ import {
 const STORAGE_KEY = "kgm_my_gold_import_draft_v1";
 const VERSION = 1;
 const TTL_MS = 24 * 60 * 60 * 1000;
-const MAX_ITEMS = 20;
+// GOLD TO GOLD starts with at most 20 exchange products, while the guest
+// MY GOLD vault may contain 30. Never silently drop guest records on sign-up.
+const MAX_EXCHANGE_ITEMS = 20;
+const MAX_GUEST_ITEMS = GOLD_VAULT_MAX_ITEMS;
 
 function roundWeight(value) {
   return Math.round(Number(value) * 1000) / 1000;
@@ -33,7 +37,7 @@ function sanitizeProducts(products) {
   const counts = new Map();
   const items = [];
 
-  for (const product of products.slice(0, MAX_ITEMS)) {
+  for (const product of products.slice(0, MAX_EXCHANGE_ITEMS)) {
     const productId = String(product?.productId || "").trim();
     const goldType = String(product?.goldType || "").trim();
     if (!productId && !isSupportedGoldVaultType(goldType)) continue;
@@ -93,7 +97,7 @@ export function saveGoldVaultImportDraft(products) {
 function sanitizeGuestItems(items) {
   if (!Array.isArray(items)) return [];
   const result = [];
-  for (const item of items.slice(0, MAX_ITEMS)) {
+  for (const item of items.slice(0, MAX_GUEST_ITEMS)) {
     try {
       const normalized = validateGoldVaultValues(item || {});
       result.push(normalized);
@@ -109,9 +113,16 @@ export function saveGoldVaultGuestDraft(items) {
     throw new Error("이 브라우저에서는 임시 저장을 사용할 수 없습니다.");
   }
 
-  const sanitized = sanitizeGuestItems(items);
-  if (!sanitized.length) {
+  if (!Array.isArray(items) || items.length === 0) {
     throw new Error("저장할 체험 금이 없습니다.");
+  }
+  if (items.length > MAX_GUEST_ITEMS) {
+    throw new Error(`MY GOLD 체험 기록은 최대 ${MAX_GUEST_ITEMS}개까지 옮길 수 있습니다.`);
+  }
+  const sanitized = sanitizeGuestItems(items);
+  // Invalid records must not vanish silently during guest-to-account transfer.
+  if (sanitized.length !== items.length) {
+    throw new Error("체험 기록 중 확인이 필요한 항목이 있습니다. MY GOLD에서 기록을 확인한 후 다시 시도해 주세요.");
   }
 
   const draft = {
@@ -167,6 +178,16 @@ export function readGoldVaultImportDraft(expectedSource = "") {
 
     if (!items.length) {
       localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+
+    // A corrupted draft must not appear as a successful partial import.
+    // Keep the guest MY GOLD source intact so the customer can retry safely.
+    if (source === "guest-my-gold" && (
+      !Array.isArray(parsed.items) ||
+      parsed.items.length > MAX_GUEST_ITEMS ||
+      items.length !== parsed.items.length
+    )) {
       return null;
     }
 

@@ -36,7 +36,9 @@ import { trackProductEventOncePerSession } from "@/analytics/productAnalytics";
 
 // KGM_EXPERIENCE_FIRST_FINAL · direct guest calculator and gold exchange
 const Page = styled.div`
-display:grid; gap:20px; width:min(760px,100%); margin:0 auto; padding:12px 0 calc(28px + env(safe-area-inset-bottom,0px));
+display:grid; gap:19px; width:min(760px,100%); margin:0 auto;
+  padding:14px 0 calc(28px + env(safe-area-inset-bottom,0px));
+  @media (max-width:600px) { gap:16px; }
 `;
 
 const ReservationCard = styled(Link)`
@@ -47,7 +49,7 @@ const ReservationCard = styled(Link)`
   min-height: 62px;
   padding: 11px 14px;
   border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 24%, ${({ theme }) => theme.colors.border});
-  border-radius: 15px;
+  border-radius: 18px;
   background: ${({ theme }) => theme.semantic.badgeGoldBg};
   color: ${({ theme }) => theme.colors.text};
   text-decoration: none;
@@ -81,9 +83,10 @@ const PriceCard = styled(Link)`
   padding: 13px 15px;
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 15px;
-  background: ${({ theme }) => theme.colors.surface};
+  background: linear-gradient(115deg, ${({ theme }) => theme.colors.surface}, ${({ theme }) => theme.semantic.badgeGoldBg});
   color: inherit;
   text-decoration: none;
+  border-left: 4px solid ${({ theme }) => theme.colors.gold};
 
   small { display: block; color: ${({ theme }) => theme.colors.secondaryDark}; font-size: .76rem; font-weight: 900; }
   strong { display: block; margin-top: 3px; color: ${({ theme }) => theme.colors.primary}; font-size: .88rem; }
@@ -97,18 +100,18 @@ const GoldToGoldStory = styled(Link)`
   align-items: center;
   min-height: 62px;
   padding: 11px 14px;
-  border: 1px solid color-mix(in srgb, ${({ theme }) => theme.colors.gold} 30%, ${({ theme }) => theme.colors.border});
-  border-radius: 15px;
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.primary};
+  border: 1px solid #325548;
+  border-radius: 18px;
+  background: linear-gradient(120deg,#213E32,#315949);
+  color: #F8F5E9;
   text-decoration: none;
 
   > span:first-child { display: grid; place-items: center; width: 36px; height: 36px;
-    border-radius: 12px; background: ${({ theme }) => theme.semantic.badgeGoldBg}; }
+    border-radius: 12px; background: rgba(239,217,161,.16); color:#EED9A3; }
   svg { width: 18px; height: 18px; }
-  small { display: block; color: ${({ theme }) => theme.colors.secondaryDark}; font-size: .76rem; font-weight: 900; }
-  strong { display: block; margin-top: 3px; font-size: .87rem; line-height: 1.45; }
-  p { margin: 3px 0 0; font-size: .8rem; color: ${({ theme }) => theme.colors.textSecondary}; }
+  small { display: block; color: #EED9A3; font-size: .76rem; font-weight: 900; }
+  strong { display: block; margin-top: 3px; font-size: .9rem; line-height: 1.45; color:#FAF8F1; }
+  p { margin: 3px 0 0; font-size: .8rem; color:#D3E0D6; }
 `;
 
 const MemberUtilities = styled.section`
@@ -130,7 +133,7 @@ const QuickAction = styled(Link)`
   min-height: 62px;
   padding: 11px 12px;
   border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 14px;
+  border-radius: 12px;
   background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.text};
   text-decoration: none;
@@ -322,7 +325,7 @@ export default function AndroidHome() {
           compact
           eyebrow="첫 금 기록"
           title="내 금의 가치부터 확인해 보세요"
-          description="금 종류와 무게를 입력하면 바로 계산하고 기록할 수 있어요."
+          description="종류와 무게만 알려주세요."
         />
       )}
 
@@ -337,8 +340,6 @@ export default function AndroidHome() {
         </FirstGoldOptions>
       )}
 
-      <MemberGoldSummaryCard uid={user?.uid} compact />
-
       {!user?.uid && (
         <QuickGoldValueCalculator
           source="app-home"
@@ -349,6 +350,7 @@ export default function AndroidHome() {
         />
       )}
 
+      <MemberGoldSummaryCard uid={user?.uid} compact />
 
       {user?.uid && (
         <MemberUtilities aria-label="예약과 내 금 알림">
@@ -377,7 +379,7 @@ export default function AndroidHome() {
         <div>
           <small>GOLD TO GOLD</small>
           <strong>내 금의 다음 가치를 알아보세요</strong>
-          <p>보유한 금의 가치를 골드바로 이어가는 이야기를 확인하세요.</p>
+          <p>내 금으로 어떤 골드바를 만들 수 있을까요?</p>
         </div>
         <ChevronRight aria-hidden />
       </GoldToGoldStory>}

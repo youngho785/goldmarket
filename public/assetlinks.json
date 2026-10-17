@@ -7,7 +7,9 @@
       "namespace": "android_app",
       "package_name": "com.koreagoldmarket.app",
       "sha256_cert_fingerprints": [
-        "4D:1F:D5:46:BD:40:DC:F2:0F:C4:66:16:07:61:1A:45:17:58:45:84:83:F7:AB:96:C9:2E:E5:CC:7F:57:6D:97"
+        "E3:2D:0B:58:75:6B:5B:6A:26:D5:C3:91:48:E8:DE:EA:56:7D:CE:4F:17:BD:03:DF:05:44:26:D2:96:88:9E:C2",
+        "4D:1F:D5:46:BD:40:DC:F2:0F:C4:66:16:07:61:1A:45:17:58:45:84:83:F7:AB:96:C9:2E:E5:CC:7F:57:6D:97",
+        "00:55:D5:73:4E:F9:D8:75:8E:C8:9F:DA:D2:BD:02:3F:C7:02:D7:3F:9B:08:3E:2D:6F:94:04:A8:90:F5:E0:AB"
       ]
     }
   }

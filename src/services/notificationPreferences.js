@@ -186,7 +186,7 @@ export async function saveMarketingPushTarget(uid, token, browserName = "") {
 
   const normalizedToken = String(token || "").trim();
   if (!normalizedToken || normalizedToken.length < 20) {
-    throw new Error("유효한 FCM 토큰이 필요합니다.");
+    throw new Error("알림 연결을 확인한 뒤 다시 시도해 주세요.");
   }
 
   const normalizedBrowser = String(browserName || "현재 브라우저")
@@ -203,7 +203,7 @@ export async function saveMarketingPushTarget(uid, token, browserName = "") {
     preferences.allEnabled === false ||
     preferences.goldNews === false
   ) {
-    throw new Error("광고성 정보 수신동의(앱푸시)가 먼저 필요합니다.");
+    throw new Error("금시세·혜택 소식을 받으려면 광고성 정보 수신에 선택 동의해 주세요.");
   }
 
   await setDoc(

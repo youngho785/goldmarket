@@ -217,14 +217,14 @@ export default function MyGoldAlertSummary({ uid, demoMode = false, compact = fa
       : activeGoals.length > 0
         ? `${activeGoals.length}개 조건 ${demoMode ? "체험 중" : "설정 중"}`
         : demoMode
-          ? "가치·순금 가격·골드바 목표 알림을 체험해 보세요."
-          : "가치·순금 가격·골드바 목표를 설정할 수 있습니다.";
+          ? "원하는 가격과 목표를 골라보세요."
+          : "원하는 가격과 목표를 정해보세요.";
 
     return (
       <CompactCard id="my-gold-alert-summary" to="/my-gold/alerts" aria-label="내 금 알림 설정 보기">
         <div>
           <strong id="my-gold-alert-summary-title"><BellRing size={16} aria-hidden /> 내 금 알림</strong>
-          <p>{summaryText}{!demoMode && (pushReady ? " · 기기 준비됨" : activeGoals.length > 0 ? " · 기기 알림 확인 필요" : "")}</p>
+          <p>{summaryText}{!demoMode && (pushReady ? "" : activeGoals.length > 0 ? " · 알림 연결 확인" : "")}</p>
         </div>
         <ChevronRight aria-hidden />
       </CompactCard>
@@ -246,12 +246,12 @@ export default function MyGoldAlertSummary({ uid, demoMode = false, compact = fa
                     : `${activeGoals.length}개 조건을 지켜보고 있어요.`
                   : demoMode
                     ? "가치·순금 가격·골드바 목표 알림을 직접 설정해볼 수 있어요."
-                    : "내 금 가치나 원하는 골드바 조건에 도달하면 알려드릴 수 있어요."}
+                    : "원하는 가격과 골드바 목표를 정해두세요."}
             </p>
           </Title>
           <Status $ready={pushReady}>
             {pushReady ? <BellRing size={12} aria-hidden /> : <Bell size={12} aria-hidden />}
-            {demoMode ? "체험" : pushReady ? "알림 켜짐" : "알림 설정 확인"}
+            {demoMode ? "체험" : pushReady ? "기기 연결됨" : "알림 연결 확인"}
           </Status>
         </Head>
 
