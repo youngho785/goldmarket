@@ -917,7 +917,7 @@ export default function QuickGoldValueCalculator({
         {!(compact && appFirstExperience) && <p>{description}</p>}
       </Head>
       <Body $compact={compact} $nativeFirst={compact && appFirstExperience} $webLanding={webLandingExperience}>
-        {!quickEntryExperience && <EntryModeChooser>
+        {!quickEntryExperience && source !== "gold-price" && <EntryModeChooser>
           <p>금 종류와 무게를 알고 계신가요?</p>
           <div role="group" aria-label="금 가치 확인 시작 방법">
             <EntryModeButton
@@ -1067,7 +1067,7 @@ export default function QuickGoldValueCalculator({
           </FieldGroup>
         </Fields>
 
-        {quickEntryExperience && (
+        {(quickEntryExperience || source === "gold-price") && (
           <CompactHelpToggle
             type="button"
             aria-expanded={entryMode === "unknown"}

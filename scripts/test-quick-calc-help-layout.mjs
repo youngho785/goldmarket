@@ -13,7 +13,7 @@ const results = calc.indexOf("{canCalculate && (\n          <Results", fieldsEnd
 
 test("모바일·웹·앱 공용 계산기는 금 종류와 중량 뒤에서 도움말을 펼친다", () => {
   assert.ok(fieldsEnd >= 0 && toggle > fieldsEnd && guide > toggle && results > guide);
-  assert.match(calc, /quickEntryExperience && \(\n          <CompactHelpToggle/);
+  assert.match(calc, /\(quickEntryExperience \|\| source === "gold-price"\) && \(\n          <CompactHelpToggle/);
   assert.equal((calc.match(/<CompactHelpToggle/g) || []).length, 1);
   assert.match(calc, /aria-controls=\{guideId\}/);
   assert.match(calc, /aria-expanded=\{entryMode === "unknown"\}/);
