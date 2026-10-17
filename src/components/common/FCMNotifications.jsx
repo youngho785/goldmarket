@@ -176,22 +176,6 @@ export default function FCMNotifications() {
 
     const clickAction = data.link || null;
 
-    switch (type) {
-      case "exchange_scheduled":
-        title = "예약이 확정되었습니다!";
-        break;
-
-      case "exchange_in_progress":
-        title = "교환 진행 중입니다";
-        break;
-
-      case "exchange_completed":
-        title = "교환이 완료되었습니다!";
-        break;
-
-      default:
-        break;
-    }
 
     /*
      * Functions의 onNotificationCreate가 notificationId를 전달합니다.
