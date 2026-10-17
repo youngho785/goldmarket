@@ -213,8 +213,8 @@ async function announceCarryoverRestore(
   try {
     await addNotificationForUser(uid, {
       type: "bonus_gold_carryover_restored",
-      title: "미사용 MEMBER GOLD 복원 완료",
-      body: `이전 계정에서 사용하지 않은 순금 ${result.restoredG.toFixed(2)}g을 복원했습니다. 기존 혜택은 중복 지급되지 않습니다.`,
+      title: "MEMBER GOLD가 복원됐어요",
+      body: `이전 계정의 미사용 MEMBER GOLD ${result.restoredG.toFixed(2)}g이 복원됐어요. 기존 혜택은 중복 지급되지 않아요.`,
       link: "/member-gold",
       meta: {
         event: BENEFIT_BALANCE_CARRYOVER_LEDGER_SOURCE,
@@ -629,8 +629,8 @@ export const welcomeClaimGoldBonus = onCall(
       try {
         await addNotificationForUser(uid, {
           type: "welcome_bonus",
-          title: "웰컴 MEMBER GOLD 적립 완료",
-          body: `회원가입 웰컴 순금 ${res.creditedG.toFixed(2)}g이 적립되었습니다. 골드바 교환 시 사용할 수 있습니다.`,
+          title: "첫 MEMBER GOLD가 적립됐어요",
+          body: `한국골드마켓 가입을 환영해요! 회원 혜택 순금 ${res.creditedG.toFixed(2)}g이 적립됐어요. GOLD TO GOLD에서 사용할 수 있어요.`,
           link: "/member-gold",
           meta: { event: WELCOME_BONUS_PROMO_ID, creditedG: res.creditedG },
         });
@@ -645,8 +645,8 @@ export const welcomeClaimGoldBonus = onCall(
         const maskedEmail = maskEmailForAdminNotification(verifiedUser.email);
         const adminCount = await addNotificationForAdmins({
           type: "admin_member_signup",
-          title: "신규 회원 가입 완료",
-          body: `이메일 인증을 완료한 새 회원이 가입했습니다. ${maskedEmail}`,
+          title: "새로운 회원이 가입했어요",
+          body: `이메일 인증을 완료한 새 회원이 가입했어요. ${maskedEmail}`,
           link: "/admin/members",
           meta: {
             event: "verified_member_signup",
@@ -737,8 +737,8 @@ export const marketingPushClaimGoldBonus = onCall(
       try {
         await addNotificationForUser(uid, {
           type: "marketing_push_bonus",
-          title: "MEMBER GOLD 적립 완료",
-          body: `광고성 정보 수신 앱푸시 설정 혜택 순금 ${res.creditedG.toFixed(2)}g이 적립되었습니다. 골드바 교환 시 사용할 수 있습니다.`,
+          title: "알림 설정 혜택이 적립됐어요",
+          body: `알림 수신 설정 혜택으로 MEMBER GOLD ${res.creditedG.toFixed(2)}g이 적립됐어요. GOLD TO GOLD에서 사용할 수 있어요.`,
           link: "/member-gold",
           meta: {
             event: MARKETING_PUSH_BONUS_PROMO_ID,
@@ -1034,8 +1034,8 @@ export const quizClaimGoldBonus = onCall<{
       try {
         await addNotificationForUser(uid, {
           type: "promo_bonus",
-          title: "퀴즈 참여 혜택 적립 완료",
-          body: `축하합니다! ${res.creditedG.toFixed(2)}g 보너스가 적립되었습니다.`,
+          title: "퀴즈 혜택이 적립됐어요",
+          body: `퀴즈 참여로 MEMBER GOLD ${res.creditedG.toFixed(2)}g이 적립됐어요. 잔액을 확인해 보세요.`,
           link: "/member-gold",
           meta: { event: QUIZ_BONUS_PROMO_ID, creditedG: res.creditedG, score },
         });
@@ -1236,15 +1236,15 @@ export const bonusRequestGoldUsage = onCall<{ groupId: string }>(
       await Promise.allSettled([
         addNotificationForUser(uid, {
           type: "bonus_gold_usage_requested",
-          title: "MEMBER GOLD 사용 신청 접수",
-          body: `${amountG.toFixed(2)}g 사용 신청을 매장에서 확인합니다. 6자리 확인 코드를 준비해 주세요.`,
+          title: "MEMBER GOLD 사용 신청을 받았어요",
+          body: `MEMBER GOLD ${amountG.toFixed(2)}g 사용 신청을 받았어요. 매장에서 확인할 때 6자리 코드를 준비해 주세요.`,
           link: "/member-gold",
           meta: { groupId, amountG },
         }),
         addNotificationForAdmins({
           type: "admin_bonus_gold_usage_requested",
-          title: "MEMBER GOLD 사용 신청",
-          body: `${amountG.toFixed(2)}g 사용 확인이 필요한 금교환 예약입니다.`,
+          title: "MEMBER GOLD 사용 확인이 필요해요",
+          body: `금교환 예약에서 MEMBER GOLD ${amountG.toFixed(2)}g 사용 확인이 필요해요.`,
           link: `/admin/gold-exchange?groupId=${encodeURIComponent(groupId)}`,
           meta: { groupId, customerUid: uid, amountG },
         }),
@@ -1298,15 +1298,15 @@ export const bonusCancelGoldUsage = onCall(
     await Promise.allSettled([
       addNotificationForUser(uid, {
         type: "bonus_gold_usage_canceled",
-        title: "MEMBER GOLD 사용 신청 취소",
-        body: `${result.amountG.toFixed(2)}g이 다시 사용 가능한 상태입니다.`,
+        title: "MEMBER GOLD 사용 신청이 취소됐어요",
+        body: `MEMBER GOLD ${result.amountG.toFixed(2)}g이 다시 사용 가능한 상태예요.`,
         link: "/member-gold",
         meta: { groupId: result.groupId, amountG: result.amountG },
       }),
       addNotificationForAdmins({
         type: "admin_bonus_gold_usage_canceled",
-        title: "MEMBER GOLD 사용 신청 취소",
-        body: "고객이 MEMBER GOLD 사용 신청을 취소했습니다.",
+        title: "MEMBER GOLD 사용 신청이 취소됐어요",
+        body: "고객이 MEMBER GOLD 사용 신청을 취소했어요. 내역을 확인해 주세요.",
         link: `/admin/gold-exchange?groupId=${encodeURIComponent(result.groupId)}`,
         meta: { groupId: result.groupId, customerUid: uid },
       }),
@@ -1552,10 +1552,10 @@ export const bonusAdminConfirmGoldUsage = onCall<{
     if (!result.alreadyUsed) {
       await addNotificationForUser(result.uid, {
         type: "bonus_gold_usage_completed",
-        title: "MEMBER GOLD 사용 완료",
+        title: "MEMBER GOLD 사용이 완료됐어요",
         body:
-          `MEMBER GOLD ${result.amountG.toFixed(2)}g을 적용해 ` +
-          `최종 ${result.finalAppliedG.toFixed(2)}g으로 확인했습니다.`,
+          `MEMBER GOLD ${result.amountG.toFixed(2)}g이 적용됐어요. ` +
+          `최종 적용량은 ${result.finalAppliedG.toFixed(2)}g이에요.`,
         link: "/my-exchanges",
         meta: {
           groupId,
@@ -1604,8 +1604,8 @@ export const bonusAdminCancelGoldUsage = onCall<{ groupId: string; reason?: stri
 
     await addNotificationForUser(result.uid, {
       type: "bonus_gold_usage_canceled",
-      title: "MEMBER GOLD 사용 신청 취소",
-      body: `${result.amountG.toFixed(2)}g 사용 신청이 취소되어 다시 사용할 수 있습니다.`,
+      title: "MEMBER GOLD 사용 신청이 취소됐어요",
+      body: `MEMBER GOLD ${result.amountG.toFixed(2)}g 사용 신청이 취소됐어요. 다시 사용할 수 있어요.`,
       link: "/member-gold",
       meta: { groupId, amountG: result.amountG, reason },
     });

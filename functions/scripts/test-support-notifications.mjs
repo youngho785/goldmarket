@@ -30,7 +30,7 @@ test("admin push preview never copies inquiry title or body to lock-screen notif
     supportSource.indexOf("export const onSupportTicketAnswered")
   );
   assert.doesNotMatch(createdBlock, /\.title\b|\.content\b/);
-  assert.match(createdBlock, /body:\s*"새로운 1:1 문의가 등록되었습니다\."/);
+  assert.match(createdBlock, /body:\s*"새로운 고객 문의가 도착했어요\. 확인해 주세요\."/);
 });
 
 test("answer notification is sent only on transition into answered state", () => {

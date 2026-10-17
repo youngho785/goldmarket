@@ -636,7 +636,7 @@ export const sendPushTestNotification = onCall<{ token: string }>(
 
     const requestedAt = new Date().toISOString();
     const title = "한국골드마켓 시험 알림";
-    const body = "현재 기기의 알림 연결이 정상입니다.";
+    const body = "현재 기기의 알림 연결이 정상이에요.";
     const notificationId = `push-test-${Date.now()}`;
 
     const data = {
@@ -1371,8 +1371,8 @@ export const sendAdminExchangeDayBeforeSummary = onSchedule(
     const notificationId = `admin-exchange-day-before-${tomorrow}`;
     const recipientCount = await addUniqueNotificationForAdmins(notificationId, {
       type: "admin_exchange_day_before_summary",
-      title: `내일 금교환 예약 ${count}건`,
-      body: `내일 방문 예정 금교환 예약이 ${count}건 있습니다.`,
+      title: `내일 방문 예약이 ${count}건 있어요`,
+      body: `내일 방문이 확정된 금교환 예약 ${count}건을 확인해 주세요.`,
       link: "/admin/gold-exchange",
       meta: {
         visitDate: tomorrow,
@@ -1433,8 +1433,8 @@ export const sendExchangeVisitDayBeforeReminders = onSchedule(
         if (!notificationSnapshot.exists) {
           tx.set(notificationRef, {
             type: "exchange_visit_reminder",
-            title: "내일 금교환 방문 안내",
-            body: `내일 ${visitTime} 원일귀금속 방문 예약이 있습니다.`,
+            title: "내일 방문 예약이 있어요",
+            body: `내일 ${visitTime} 원일귀금속 방문이 예정돼 있어요.`,
             link: "/my-exchanges",
             meta: {
               groupId,

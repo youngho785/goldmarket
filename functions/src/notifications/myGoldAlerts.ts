@@ -474,10 +474,11 @@ async function evaluateUserGoals(
       tx.set(notificationRef, {
         type: "my_gold_goal_reached",
         title: "MY GOLD 목표 달성",
-        body: `${bodyParts.join(" · ")}에 도달했습니다. 현재 MY GOLD를 확인해 보세요.`,
+        body: `${bodyParts.join(" · ")}에 도달했어요. MY GOLD에서 확인해 보세요.`,
         link: "/my-gold/alerts",
         meta: {
           reached,
+          reachedCodes,
           goals,
           metrics,
           source,

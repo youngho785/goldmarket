@@ -64,15 +64,15 @@ export const reconcileCanceledMemberGoldUsageRequests = onSchedule({
       await Promise.allSettled([
         addNotificationForUser(changed.uid, {
           type: 'bonus_gold_usage_canceled',
-          title: 'MEMBER GOLD 사용 신청 정리',
-          body: '방문 예약이 취소 또는 거절되어 사용 신청이 종료됐습니다. 적립된 MEMBER GOLD는 그대로 유지됩니다.',
+          title: 'MEMBER GOLD 사용 신청이 종료됐어요',
+          body: '방문 예약이 취소 또는 거절되어 사용 신청이 종료됐어요. 적립된 MEMBER GOLD는 그대로 유지돼요.',
           link: '/member-gold',
           meta: {groupId: changed.groupId, amountG: changed.amountG},
         }),
         addNotificationForAdmins({
           type: 'admin_bonus_gold_usage_canceled',
-          title: 'MEMBER GOLD 취소 예약 신청 정리',
-          body: '취소 또는 거절된 예약에 남아 있던 MEMBER GOLD 사용 신청을 정리했습니다.',
+          title: 'MEMBER GOLD 사용 신청 정리 내역이 있어요',
+          body: '취소 또는 거절된 예약에 남아 있던 MEMBER GOLD 사용 신청을 정리했어요.',
           link: `/admin/gold-exchange?groupId=${encodeURIComponent(changed.groupId)}`,
           meta: {groupId: changed.groupId, customerUid: changed.uid},
         }),

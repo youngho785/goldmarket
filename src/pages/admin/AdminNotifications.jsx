@@ -240,8 +240,8 @@ const MY_GOLD_TEMPLATES = [
     label: "MY GOLD 시작 유도",
     targetType: "myGoldEmpty",
     category: "myGold",
-    title: "MY GOLD를 채워보세요",
-    body: "가지고 있는 금을 등록하고 오늘의 참고가치를 확인해 보세요.",
+    title: "가지고 있는 금, 얼마나 될까요?",
+    body: "MY GOLD에 금을 기록하고 오늘의 참고가치를 확인해 보세요.",
     link: "/my-gold",
   },
   {
@@ -256,8 +256,8 @@ const MY_GOLD_TEMPLATES = [
     label: "적립 순금 확인",
     targetType: "bonusGoldHolders",
     category: "myGold",
-    title: "적립된 MEMBER GOLD를 확인해 보세요",
-    body: "한국골드마켓에서 적립된 순금 혜택과 이용 가능 잔액을 확인해 보세요.",
+    title: "적립된 순금 혜택을 확인해 보세요",
+    body: "MEMBER GOLD의 현재 잔액과 이용 방법을 확인해 보세요.",
     link: "/member-gold",
   },
 ];

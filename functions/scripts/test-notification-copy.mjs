@@ -3,39 +3,49 @@ import test from 'node:test';
 import { resolveNotificationPushCopy, weeklyPushBody } from '../lib/notifications/pushCopy.js';
 import { notificationCategory, normalizeNotificationPreferences, shouldSendPushForUser } from '../lib/notifications/shared.js';
 
-test('weekly summary shows only seven-day change on the lock screen', () => {
+test('weekly MY GOLD push protects holdings and sounds natural', () => {
   const input = {
     type: 'my_gold_weekly',
     title: '이번 주 MY GOLD 리포트',
     body: '현재 참고가치 5,935,000원 · 실물 금 2개 · MEMBER GOLD 0.03g',
-    meta: { historicalValueWon: 6036667, currentValueWon: 5935000, changeWon: -101667, changePercent: -1.68 },
+    meta: {historicalValueWon:6036667,currentValueWon:5935000,changeWon:-101667,changePercent:-1.68},
   };
-  const push = resolveNotificationPushCopy(input);
-  assert.equal(push.title, '이번 주 MY GOLD 리포트');
-  assert.equal(push.body, '7일 전 대비 ▼ 101,667원 (-1.68%)\n지난주와 비교한 변화를 확인해 보세요.');
-  assert.equal(push.body.includes('5,935,000'), false);
-  assert.equal(push.body.includes('32.82'), false);
-  assert.match(input.body, /5,935,000/); // full in-app text stays available
+  const push=resolveNotificationPushCopy(input);
+  assert.equal(push.title,'이번 주 내 금의 가치를 확인해 보세요');
+  assert.equal(push.body,'지난주보다 MY GOLD의 참고가치가 내려갔어요. 최근 변화를 확인해 보세요.');
+  assert.equal(push.body.includes('5,935,000'),false);
+  assert.equal(push.body.includes('101,667'),false);
+  assert.match(input.body,/5,935,000/); // Full detail stays inside signed-in inbox.
 });
 
-test('weekly summary handles rise, unchanged value, and absent comparison', () => {
-  assert.equal(weeklyPushBody(152000, 2.35, true), '7일 전 대비 ▲ 152,000원 (+2.35%)\n지난주와 비교한 변화를 확인해 보세요.');
-  assert.equal(weeklyPushBody(0, 0, true), '7일 전 대비 변동 없음\n지난주와 비교한 변화를 확인해 보세요.');
-  const missing = resolveNotificationPushCopy({type:'my_gold_weekly', meta: {currentValueWon: 5100000, historicalValueWon: 0, changeWon: 0, changePercent: null}});
-  assert.equal(missing.body, '이번 주 MY GOLD 참고가치를 확인해 보세요.');
-  assert.equal(missing.body.includes('0.00%'), false);
+test('weekly rise, unchanged value, and absent comparison are distinguished', () => {
+  assert.equal(weeklyPushBody(152000,2.35,true),'지난주보다 MY GOLD의 참고가치가 올랐어요. 최근 변화를 확인해 보세요.');
+  assert.equal(weeklyPushBody(0,0,true),'지난주와 비교해 큰 변화가 없어요. 현재 가치를 확인해 보세요.');
+  const rise=resolveNotificationPushCopy({type:'my_gold_weekly',meta:{historicalValueWon:5000000,changeWon:152000,changePercent:2.35}});
+  assert.equal(rise.title,'이번 주 내 금의 가치가 올랐어요');
+  const stable=resolveNotificationPushCopy({type:'my_gold_weekly',meta:{historicalValueWon:5000000,changeWon:0,changePercent:0}});
+  assert.equal(stable.title,'이번 주 MY GOLD 리포트가 도착했어요');
+  const missing=resolveNotificationPushCopy({type:'my_gold_weekly',meta:{historicalValueWon:0,changeWon:0,changePercent:null}});
+  assert.equal(missing.body,'MY GOLD에 기록한 금의 현재 참고가치를 확인해 보세요.');
 });
 
-test('tomorrow reminder includes reserved time but no preparation text', () => {
-  const remind = resolveNotificationPushCopy({ type: 'exchange_visit_reminder', title: 'old', body: 'old', meta: {visitTime: '14:00'} });
-  assert.deepEqual(remind, { title: '내일 금교환 방문 안내', body: '내일 14:00 원일귀금속 방문 예약이 있습니다.' });
-  assert.equal(remind.body.includes('준비사항'), false);
-  assert.match(resolveNotificationPushCopy({type:'exchange_visit_reminder', meta:{visitTime:'unknown'}}).body, /예약 시간을 확인/);
+test('tomorrow reminder includes reserved time but no preparation instructions', () => {
+  const r=resolveNotificationPushCopy({type:'exchange_visit_reminder',meta:{visitTime:'14:00'}});
+  assert.deepEqual(r,{title:'내일 방문 예약이 있어요',body:'내일 14:00 원일귀금속 방문이 예정돼 있어요.'});
+  assert.equal(r.body.includes('준비사항'),false);
+  assert.match(resolveNotificationPushCopy({type:'exchange_visit_reminder',meta:{visitTime:'unknown'}}).body,/예약 시간을 확인/);
 });
 
-test('transactional completion exact approved thank-you wording', () => {
-  const copy = resolveNotificationPushCopy({type:'exchange_completed', title:'old', body:'old'});
-  assert.deepEqual(copy, {title: 'GOLD TO GOLD 교환 완료', body: '교환이 완료되었습니다. 감사합니다.'});
+test('gold exchange completion retains verified outcome and brand warmth', () => {
+  const copy=resolveNotificationPushCopy({type:'exchange_completed',title:'old',body:'old'});
+  assert.deepEqual(copy,{title:'GOLD TO GOLD 교환이 완료됐어요',body:'교환이 완료됐어요. 한국골드마켓을 이용해 주셔서 감사합니다.'});
+});
+
+test('one MY GOLD goal receives a specific privacy-safe push; multiple goals stay generic', () => {
+  assert.deepEqual(resolveNotificationPushCopy({type:'my_gold_goal_reached',meta:{reachedCodes:['price']}}),{
+    title:'설정한 금시세에 도달했어요',body:'순금 참고시세가 설정하신 목표 가격에 도달했어요.',
+  });
+  assert.equal(resolveNotificationPushCopy({type:'my_gold_goal_reached',meta:{reachedCodes:['value','bar']}}).title,'MY GOLD 목표에 도달했어요');
 });
 
 test('customer asset balances and administrator personal details are not exposed in system push text', () => {

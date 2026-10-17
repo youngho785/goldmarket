@@ -41,8 +41,8 @@ export const onSupportTicketCreate = onDocumentCreated(
       notificationId,
       {
         type: "support_new_inquiry",
-        title: "새로운 1:1 문의",
-        body: "새로운 1:1 문의가 등록되었습니다.",
+        title: "새로운 고객 문의가 도착했어요",
+        body: "새로운 고객 문의가 도착했어요. 확인해 주세요.",
         link: ticketLink("/admin/support", ticketId),
         meta: {
           supportTicketId: ticketId,
@@ -87,8 +87,8 @@ export const onSupportTicketAnswered = onDocumentUpdated(
 
     await notificationRef.set({
       type: "support_answered",
-      title: "1:1 문의 답변이 등록되었습니다",
-      body: "문의하신 내용에 답변이 도착했습니다.",
+      title: "문의하신 내용에 답변이 도착했어요",
+      body: "남겨주신 1:1 문의에 답변이 등록됐어요. 확인해 보세요.",
       link: ticketLink("/support", ticketId),
       meta: {
         supportTicketId: ticketId,
