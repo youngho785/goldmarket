@@ -1,5 +1,6 @@
 export const PRICE_FIELDS = ['pureGoldSellPerDon', 'gold18kSellPerDon', 'gold14kSellPerDon', 'pureGoldBuyPerDon', 'gold18kBuyPerDon', 'gold14kBuyPerDon'] as const;
 export type Market = Record<(typeof PRICE_FIELDS)[number], number>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- 기존 금시세 자료형 유지
 export type PriceRow = Record<string, any>;
 
 export function koreaDay(now = new Date()): string {
